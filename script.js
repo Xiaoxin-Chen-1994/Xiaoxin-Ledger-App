@@ -18,6 +18,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let currentUser = null;
+let currentLang = 'zh';
 let accounts = [];
 let persons = [];
 
@@ -47,8 +48,6 @@ auth.onAuthStateChanged(user => {
     currentUser = user;
     document.getElementById("login-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
-    document.getElementById("welcome").textContent =
-      `${translations[currentLang].welcome}, ${currentUser.email}`;
 
     db.collection("users").doc(user.uid).get().then(doc => {
       if (doc.exists) {
@@ -63,13 +62,14 @@ auth.onAuthStateChanged(user => {
           document.getElementById("color-scheme-select").value = data.colorScheme;
         }
         if (data.language) {
-          setLanguage(data.language);
-        } else {
-          setLanguage('zh');
+          currentLang = data.language;  
         }
-
+        setLanguage(currentLang);
       }
     });
+
+    document.getElementById("welcome").textContent =
+      `${translations[currentLang].welcome}, ${currentUser.email}`;
 
     showPage("home", document.getElementById("nav-home"));
     loadLedger(currentUser.uid);
@@ -110,9 +110,9 @@ function addEntry() {
 
   if (!type || !account || !datetime) {
     // Show error message
-    if (lang === "en") {
+    if (currentLang === "en") {
       showStatusMessage("Type, account, and date/time are required.", 'error');
-    } else if (lang === "zh") {
+    } else if (currentLang === "zh") {
       showStatusMessage("Type, account, and date/time are required.", "error");
     }
     return;
@@ -293,8 +293,6 @@ const translations = {
   }
 };
 
-let currentLang = "zh";
-
 function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
@@ -371,9 +369,9 @@ async function uploadHomeImage(file) {
   }, { merge: true });
 
   // Show status message
-  if (lang === "en") {
+  if (currentLang === "en") {
     showStatusMessage("User image has been uploaded to database", 'success');
-  } else if (lang === "zh") {
+  } else if (currentLang === "zh") {
     showStatusMessage("图片已成功上传至数据库", "success");
   }
 
@@ -480,9 +478,9 @@ function setColorScheme(scheme) {
   }
 
   // Show status message
-  if (lang === "en") {
+  if (currentLang === "en") {
     showStatusMessage("Color scheme is now changed", 'success');
-  } else if (lang === "zh") {
+  } else if (currentLang === "zh") {
     showStatusMessage("颜色方案已更新", "success");
   }
 }
