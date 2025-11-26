@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ledger App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Ledger App (Firebase)</h1>
+
+  <!-- Login / Signup Section -->
+  <div id="login-section">
+    <h2>Login or Signup</h2>
+    <input type="text" id="username" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <div>
+      <button onclick="signup()">Sign Up</button>
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+
+  <!-- Ledger Section -->
+  <div id="ledger-section" style="display:none;">
+    <h2 id="welcome"></h2>
+    <input type="text" id="entry" placeholder="Add transaction">
+    <button onclick="addEntry()">Add</button>
+    <ul id="ledger-list"></ul>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Firebase App (core SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+
+  <!-- Firebase Authentication -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+  <!-- Firebase Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+  <!-- Your App Logic -->
+  <script src="script.js"></script>
+</body>
+</html>
