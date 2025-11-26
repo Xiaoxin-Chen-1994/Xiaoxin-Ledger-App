@@ -18,28 +18,21 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let currentUser = null;
+let accounts = [];
+let persons = [];
 
-// --- Authentication Functions ---
-
-// Sign up new user
+// --- Authentication ---
 function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
-
   auth.createUserWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      alert("User registered successfully!");
-    })
-    .catch(error => {
-      alert(error.message);
-    });
+    .then(() => alert("User registered successfully!"))
+    .catch(error => alert(error.message));
 }
 
-// Login existing user
 function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
-
   auth.signInWithEmailAndPassword(email, password)
     .then(userCredential => {
       currentUser = userCredential.user;
@@ -48,12 +41,9 @@ function login() {
       document.getElementById("welcome").textContent = `Welcome, ${currentUser.email}`;
       loadLedger(currentUser.uid);
     })
-    .catch(error => {
-      alert(error.message);
-    });
+    .catch(error => alert(error.message));
 }
 
-// Logout
 function logout() {
   auth.signOut().then(() => {
     currentUser = null;
@@ -62,22 +52,93 @@ function logout() {
   });
 }
 
-// --- Ledger Functions ---
-
-// Add entry to Firestore
-function addEntry() {
-  const entry = document.getElementById("entry").value;
-  if (entry && currentUser) {
-    db.collection("ledgers").doc(currentUser.uid).collection("entries").add({
-      text: entry,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-      document.getElementById("entry").value = "";
-    });
-  }
+// --- Items helper ---
+function addItemRow() {
+  const container = document.getElementById("items-container");
+  const row = document.createElement("div");
+  row.className = "item-row";
+  row.innerHTML = `
+    <input type="text" class="item-name" placeholder="Item name">
+    <input type="number" step="0.01" class="item-unit-price" placeholder="Price per unit (optional)">
+    <input type="number" step="0.01" class="item-total-price" placeholder="Total price (optional)">
+  `;
+  container.appendChild(row);
 }
 
-// Load entries from Firestore
+// --- Ledger ---
+function addEntry() {
+  if (!currentUser) return;
+
+  const type = document.getElementById("type").value;
+  const account = document.getElementById("account").value.trim();
+  const datetime = document.getElementById("datetime").value;
+  const person = document.getElementById("person").value.trim();
+  const store = document.getElementById("store").value.trim();
+  const category = document.getElementById("category").value.trim();
+
+  if (!type || !account || !datetime) {
+    alert("Type, account, and date/time are required.");
+    return;
+  }
+
+  // Add new account/person to lists if not already present
+  if (account && !accounts.includes(account)) {
+    accounts.push(account);
+    updateDatalist("account-list", accounts);
+  }
+  if (person && !persons.includes(person)) {
+    persons.push(person);
+    updateDatalist("person-list", persons);
+  }
+
+  // Collect items
+  const itemRows = document.querySelectorAll("#items-container .item-row");
+  const items = [];
+  itemRows.forEach(row => {
+    const name = row.querySelector(".item-name").value.trim();
+    const unitPrice = row.querySelector(".item-unit-price").value;
+    const totalPrice = row.querySelector(".item-total-price").value;
+    if (name) {
+      items.push({
+        name,
+        unitPrice: unitPrice || null,
+        totalPrice: totalPrice || null
+      });
+    }
+  });
+
+  db.collection("ledgers").doc(currentUser.uid).collection("entries").add({
+    type,
+    account,
+    datetime,
+    person,
+    store,
+    category,
+    items,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    document.getElementById("transaction-form").reset();
+    // Reset items section to a single blank row
+    document.getElementById("items-container").innerHTML = `
+      <div class="item-row">
+        <input type="text" class="item-name" placeholder="Item name">
+        <input type="number" step="0.01" class="item-unit-price" placeholder="Price per unit (optional)">
+        <input type="number" step="0.01" class="item-total-price" placeholder="Total price (optional)">
+      </div>
+    `;
+  });
+}
+
+function updateDatalist(id, values) {
+  const datalist = document.getElementById(id);
+  datalist.innerHTML = "";
+  values.forEach(v => {
+    const option = document.createElement("option");
+    option.value = v;
+    datalist.appendChild(option);
+  });
+}
+
 function loadLedger(userId) {
   const list = document.getElementById("ledger-list");
   list.innerHTML = "";
@@ -86,8 +147,18 @@ function loadLedger(userId) {
     .onSnapshot(snapshot => {
       list.innerHTML = "";
       snapshot.forEach(doc => {
+        const data = doc.data();
         const li = document.createElement("li");
-        li.textContent = doc.data().text;
+
+        // Format items
+        let itemText = "";
+        if (data.items && data.items.length) {
+          itemText = data.items.map(i =>
+            `${i.name}${i.unitPrice ? ` @ ${i.unitPrice}` : ""}${i.totalPrice ? ` = ${i.totalPrice}` : ""}`
+          ).join(", ");
+        }
+
+        li.textContent = `${data.type} | ${data.account} | ${data.person || ""} | ${data.store || ""} | ${data.category || ""} | ${itemText} | ${data.datetime}`;
         list.appendChild(li);
       });
     });
