@@ -294,7 +294,7 @@ const translations = {
   }
 };
 
-function setLanguage(lang) {
+function setLanguage(lang, showMessage = false) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -341,11 +341,13 @@ function setLanguage(lang) {
     }, { merge: true });
   }
 
-  // Show status message
-  if (lang === "en") {
-    showStatusMessage("Language set to English", "success");
-  } else if (lang === "zh") {
-    showStatusMessage("语言已切换为 中文", "success");
+  // Only show message if explicitly requested
+  if (showMessage) {
+    if (lang === "en") {
+      showStatusMessage("Language set to English", "success");
+    } else if (lang === "zh") {
+      showStatusMessage("语言已切换为 中文", "success");
+    }
   }
 }
 
@@ -465,7 +467,7 @@ async function updateHomeKanban() {
 }
 
 // --- Color Scheme ---
-function setColorScheme(scheme) {
+function setColorScheme(scheme, showMessage = false) {
   if (scheme === "alt") {
     document.documentElement.classList.add("alt-scheme");
   } else {
@@ -477,11 +479,13 @@ function setColorScheme(scheme) {
     }, { merge: true });
   }
 
-  // Show status message
-  if (currentLang === "en") {
-    showStatusMessage("Color scheme is now changed", 'success');
-  } else if (currentLang === "zh") {
-    showStatusMessage("颜色方案已更新", "success");
+  // Only show message if explicitly requested
+  if (showMessage) {
+    if (currentLang === "en") {
+      showStatusMessage("Color scheme is now changed", 'success');
+    } else if (currentLang === "zh") {
+      showStatusMessage("颜色方案已更新", "success");
+    }
   }
 }
 

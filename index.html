@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ledger App</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <h1 id="app-title">Xiaoxin's Ledger App</h1>
 
@@ -23,11 +25,10 @@
   <!-- Home Section -->
   <div id="home-section" class="section" style="display:none;">
     <div class="home-hero">
-      <div class="home-image-wrapper" 
-           oncontextmenu="triggerHomeUpload(event)" 
-           onmousedown="handleHold(event)">
+      <div class="home-image-wrapper" oncontextmenu="triggerHomeUpload(event)" onmousedown="handleHold(event)">
         <img id="home-image" src="" alt="Custom picture">
-        <input type="file" id="home-image-upload" accept="image/*" style="display:none;" onchange="previewHomeImage(event)">
+        <input type="file" id="home-image-upload" accept="image/*" style="display:none;"
+          onchange="previewHomeImage(event)">
         <div class="home-overlay">
           <div id="home-month">11月·结余</div>
           <div id="home-balance">收入 - 支出</div>
@@ -117,12 +118,12 @@
     </div>
     <div class="lang-switch">
       <p>语言 / Language</p>
-      <button onclick="setLanguage('en')">English</button>
-      <button onclick="setLanguage('zh')">中文</button>
+      <button onclick="setLanguage('en', true)">English</button>
+      <button onclick="setLanguage('zh', true)">中文</button>
     </div>
     <div class="color-switch">
       <p>颜色方案 / Color Scheme</p>
-      <select id="color-scheme-select" onchange="setColorScheme(this.value)">
+      <select id="color-scheme-select" onchange="setColorScheme(this.value, true)">
         <option value="default">收入红 / 支出绿</option>
         <option value="alt">收入绿 / 支出红</option>
       </select>
@@ -152,4 +153,5 @@
   <!-- App Logic -->
   <script src="script.js"></script>
 </body>
+
 </html>
