@@ -1,3 +1,4 @@
+/* ===== Base Theme Variables ===== */
 :root {
   --bg: #f7f7f8;
   --card: #ffffff;
@@ -11,7 +12,7 @@
   --radius: 12px;
 }
 
-/* Dark mode (system preference) */
+/* ===== Dark Mode (system preference) ===== */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b0c0e;
@@ -26,8 +27,9 @@
   }
 }
 
+/* ===== Global Layout ===== */
 html {
-  font-size: 18px; /* larger base font */
+  font-size: 18px; /* desktop base */
 }
 
 body {
@@ -35,20 +37,28 @@ body {
   padding: 20px;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.6;
 }
 
 .container {
-  max-width: 600px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
+/* ===== Headings ===== */
 h1 {
   text-align: center;
-  font-size: 2rem;
+  font-size: 2.2rem; /* ~40px desktop */
+  margin: 0 0 20px;
 }
 
+h2 {
+  font-size: 1.6rem; /* ~29px desktop */
+  margin: 10px 0 15px;
+}
+
+/* ===== Sections ===== */
 .section {
   background: var(--card);
   border: 1px solid var(--border);
@@ -58,24 +68,31 @@ h1 {
   margin-top: 20px;
 }
 
+/* ===== Form Elements ===== */
 input {
   width: 100%;
-  margin: 8px 0;
+  margin: 10px 0;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
+input::placeholder {
+  color: var(--muted);
+}
+
+/* ===== Buttons ===== */
 button {
-  padding: 12px 16px;
-  margin: 6px 4px;
+  padding: 14px 18px;
+  margin: 8px 4px;
   border: none;
   border-radius: 8px;
   background: var(--primary);
   color: #fff;
-  font-size: 1rem;
+  font-size: 1.1rem;
   cursor: pointer;
+  min-height: 44px; /* finger-friendly */
 }
 
 button:hover {
@@ -88,12 +105,14 @@ button.secondary {
   border: 1px solid var(--border);
 }
 
+/* Button group */
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
+/* ===== Ledger List ===== */
 #ledger-list {
   list-style: none;
   padding: 0;
@@ -101,15 +120,19 @@ button.secondary {
 }
 
 #ledger-list li {
-  padding: 10px;
+  padding: 12px;
   background: var(--chip);
-  border-radius: 6px;
-  margin-bottom: 8px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 1rem;
 }
 
-/* Mobile adjustments */
+/* ===== Mobile Adjustments ===== */
 @media (max-width: 480px) {
-  html { font-size: 20px; }
+  html { font-size: 20px; } /* larger base on phones */
+  h1 { font-size: 2.4rem; } /* ~48px */
+  h2 { font-size: 1.8rem; } /* ~36px */
+  input, button { font-size: 1.2rem; }
   .actions { flex-direction: column; }
   button { width: 100%; }
 }
