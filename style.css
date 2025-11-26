@@ -1,4 +1,3 @@
-/* ===== Base Theme Variables ===== */
 :root {
   --bg: #f7f7f8;
   --card: #ffffff;
@@ -12,129 +11,31 @@
   --radius: 0.75rem;
 }
 
-/* ===== Dark Mode (system preference) ===== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0c0e;
-    --card: #121317;
-    --text: #eaeef3;
-    --muted: #a1a7b3;
-    --primary: #4da3ff;
-    --primary-hover: #7ab9ff;
-    --border: #262a32;
-    --chip: #1a2330;
-    --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
-  }
-}
-
-/* ===== Global Layout ===== */
-html {
-  font-size: 100%; /* 1rem = 16px default */
-}
-
+html { font-size: 100%; }
 body {
   margin: 0;
-  padding: 1.25rem;
+  padding-bottom: 3.5rem; /* space for nav bar */
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.6;
-  font-size: 1rem; /* ~16px body text */
 }
 
-.container {
-  max-width: 40rem; /* ~640px */
-  margin: 0 auto;
-}
-
-/* ===== Headings ===== */
-h1 {
-  text-align: center;
-  font-size: 1.75rem; /* ~28px */
-  margin: 0 0 1rem;
-}
-
-h2 {
-  font-size: 1.25rem; /* ~20px */
-  margin: 0.5rem 0 0.75rem;
-}
-
-/* ===== Sections ===== */
 .section {
   background: var(--card);
   border: 0.0625rem solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 1rem;
-  margin-top: 1rem;
+  margin: 1rem;
 }
 
-/* ===== Form Elements ===== */
-input {
-  width: 100%;
-  margin: 0.5rem 0;
-  padding: 0.75rem;
-  border: 0.0625rem solid var(--border);
-  border-radius: 0.5rem;
-  font-size: 1rem;
-}
+h1 { text-align: center; font-size: 1.75rem; margin: 1rem 0; }
+h2 { font-size: 1.25rem; margin: 0.5rem 0; }
 
-input::placeholder {
-  color: var(--muted);
-}
+label { display: block; margin-top: 0.75rem; font-weight: 600; }
 
-/* ===== Buttons ===== */
-button {
-  padding: 0.75rem 1rem;
-  margin: 0.5rem 0.25rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: var(--primary);
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  min-height: 2.75rem; /* ~44px touch target */
-}
-
-button:hover {
-  background: var(--primary-hover);
-}
-
-button.secondary {
-  background: transparent;
-  color: var(--text);
-  border: 0.0625rem solid var(--border);
-}
-
-/* Button group */
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-/* ===== Ledger List ===== */
-#ledger-list {
-  list-style: none;
-  padding: 0;
-  margin-top: 0.75rem;
-}
-
-#ledger-list li {
-  padding: 0.75rem;
-  background: var(--chip);
-  border-radius: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-}
-
-label {
-  display: block;
-  margin-top: 0.75rem;
-  font-weight: 600;
-}
-
-select, input[type="search"], input[list], input[type="datetime-local"] {
+select, input[type="search"], input[list], input[type="datetime-local"], input[type="text"], input[type="password"], input[type="number"] {
   width: 100%;
   margin-top: 0.25rem;
   padding: 0.75rem;
@@ -145,13 +46,57 @@ select, input[type="search"], input[list], input[type="datetime-local"] {
   color: var(--text);
 }
 
-.item-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
 }
+button:hover { background: var(--primary-hover); }
+button.secondary { background: transparent; color: var(--text); border: 0.0625rem solid var(--border); }
 
-.item-row input {
-  flex: 1 1 30%;
+#ledger-list { list-style: none; padding: 0; margin-top: 0.75rem; }
+#ledger-list li { padding: 0.75rem; background: var(--chip); border-radius: 0.5rem; margin-bottom: 0.5rem; }
+
+.item-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.item-row input { flex: 1 1 30%; }
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: var(--card);
+  border-top: 0.0625rem solid var(--border);
+  padding: 0.5rem 0;
+}
+.bottom-nav button {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.bottom-nav button.active { color: var(--primary); font-weight: bold; }
+
+/* Language switch */
+.lang-switch {
+  text-align: center;
+  margin: 0.5rem;
+}
+.lang-switch button {
+  margin: 0 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  cursor: pointer;
 }

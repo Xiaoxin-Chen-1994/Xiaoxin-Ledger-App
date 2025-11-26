@@ -1,23 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <!-- Correct viewport tag -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ledger App</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Ledger App (Firebase)</h1>
+  <h1 id="app-title">Ledger App (Firebase)</h1>
+
+  <!-- Language Switch -->
+  <div class="lang-switch">
+    <button onclick="setLanguage('en')">English</button>
+    <button onclick="setLanguage('zh')">中文</button>
+  </div>
 
   <!-- Login / Signup Section -->
   <div id="login-section" class="section">
-    <h2>Login or Signup</h2>
-    <input type="text" id="username" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
+    <h2 id="login-title">登录或注册</h2>
+    <input type="text" id="username" placeholder="邮箱">
+    <input type="password" id="password" placeholder="密码">
     <div class="actions">
-      <button onclick="signup()">Sign Up</button>
-      <button onclick="login()">Login</button>
+      <button id="signup-btn" onclick="signup()">注册</button>
+      <button id="login-btn" onclick="login()">登录</button>
     </div>
   </div>
 
@@ -27,57 +32,58 @@
 
     <!-- Transaction Form -->
     <form id="transaction-form">
-      <!-- Type -->
-      <label for="type">Type</label>
+      <label for="type" id="label-type">类型</label>
       <select id="type" required>
-        <option value="">Select type</option>
-        <option value="incoming">Incoming</option>
-        <option value="outgoing">Outgoing</option>
-        <option value="transfer">Transfer</option>
+        <option value="">选择类型</option>
+        <option value="incoming">收入</option>
+        <option value="outgoing">支出</option>
+        <option value="transfer">转账</option>
       </select>
 
-      <!-- Account (dynamic) -->
-      <label for="account">Account</label>
-      <input list="account-list" id="account" placeholder="Select or add account">
+      <label for="account" id="label-account">账户</label>
+      <input list="account-list" id="account" placeholder="选择或添加账户">
       <datalist id="account-list"></datalist>
 
-      <!-- Date & Time -->
-      <label for="datetime">Date & Time</label>
+      <label for="datetime" id="label-datetime">日期与时间</label>
       <input type="datetime-local" id="datetime" required>
 
-      <!-- Person (dynamic) -->
-      <label for="person">Person</label>
-      <input list="person-list" id="person" placeholder="Select or add person">
+      <label for="person" id="label-person">相关人</label>
+      <input list="person-list" id="person" placeholder="选择或添加人">
       <datalist id="person-list"></datalist>
 
-      <!-- Store Name -->
-      <label for="store">Store Name</label>
-      <input type="search" id="store" placeholder="Search store">
+      <label for="store" id="label-store">商店名称</label>
+      <input type="search" id="store" placeholder="搜索商店">
 
-      <!-- Category -->
-      <label for="category">Category</label>
-      <input type="search" id="category" placeholder="Search category">
+      <label for="category" id="label-category">类别</label>
+      <input type="search" id="category" placeholder="搜索类别">
 
-      <!-- Items -->
-      <label>Items</label>
+      <label id="label-items">项目</label>
       <div id="items-container">
         <div class="item-row">
-          <input type="text" class="item-name" placeholder="Item name">
-          <input type="number" step="0.01" class="item-unit-price" placeholder="Price per unit (optional)">
-          <input type="number" step="0.01" class="item-total-price" placeholder="Total price (optional)">
+          <input type="text" class="item-name" placeholder="项目名称">
+          <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
+          <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
         </div>
       </div>
-      <button type="button" onclick="addItemRow()">+ Add another item</button>
-
+      <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
 
       <div class="actions">
-        <button type="button" onclick="addEntry()">Add Transaction</button>
-        <button type="button" class="secondary" onclick="logout()">Logout</button>
+        <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
+        <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出</button>
       </div>
     </form>
 
     <ul id="ledger-list"></ul>
   </div>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav" style="display:none;">
+    <button id="nav-home" onclick="showPage('home')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts')">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction')">记一笔</button>
+    <button id="nav-charts" onclick="showPage('charts')">图表</button>
+    <button id="nav-settings" onclick="showPage('settings')">设置</button>
+  </nav>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
