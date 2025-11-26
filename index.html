@@ -74,41 +74,67 @@
 
   <!-- Ledger Section -->
   <div id="ledger-section" class="section" style="display:none;">
-    <form id="transaction-form">
-      <label for="type" id="label-type">类型</label>
-      <select id="type" required>
-        <option value="">选择类型</option>
-        <option value="incoming">收入</option>
-        <option value="outgoing">支出</option>
-        <option value="transfer">转账</option>
-      </select>
-      <label for="account" id="label-account">账户</label>
-      <input list="account-list" id="account" placeholder="选择或添加账户">
-      <datalist id="account-list"></datalist>
-      <label for="datetime" id="label-datetime">日期与时间</label>
-      <input type="datetime-local" id="datetime" required>
-      <label for="person" id="label-person">相关人</label>
-      <input list="person-list" id="person" placeholder="选择或添加人">
-      <datalist id="person-list"></datalist>
-      <label for="store" id="label-store">商店名称</label>
-      <input type="search" id="store" placeholder="搜索商店">
-      <label for="category" id="label-category">类别</label>
-      <input type="search" id="category" placeholder="搜索类别">
-      <label id="label-items">项目</label>
-      <div id="items-container">
-        <div class="item-row">
-          <input type="text" class="item-name" placeholder="项目名称">
-          <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
-          <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
-        </div>
+  <form id="transaction-form">
+    <!-- Type selector -->
+    <div class="type-selector">
+      <button type="button" data-type="incoming">收入</button>
+      <button type="button" data-type="outgoing">支出</button>
+      <button type="button" data-type="transfer">转账</button>
+    </div>
+    <input type="hidden" id="type" required>
+
+    <!-- Account -->
+    <label for="account" id="label-account">账户</label>
+    <input list="account-list" id="account" placeholder="选择或添加账户">
+    <datalist id="account-list"></datalist>
+
+    <!-- DateTime -->
+    <!-- Trigger Button -->
+    <label id="label-datetime">时间</label>
+    <button type="button" id="datetime-display" class="datetime-button"></button>
+
+    <!-- Custom Selector Panel -->
+    <div id="datetime-selector" class="datetime-selector" style="display:none;">
+      <div class="scroll-column" id="year-column"></div>
+      <div class="scroll-column" id="month-column"></div>
+      <div class="scroll-column" id="day-column"></div>
+      <div class="scroll-column" id="hour-column"></div>
+      <div class="scroll-column" id="minute-column"></div>
+      <button type="button" id="hide-datetime" class="hide-btn">▼</button>
+    </div>
+
+    <!-- Person -->
+    <label for="person" id="label-person">成员</label>
+    <input list="person-list" id="person" placeholder="选择或添加成员">
+    <datalist id="person-list"></datalist>
+
+    <!-- Store -->
+    <label for="store" id="label-store">商店名称</label>
+    <input type="search" id="store" placeholder="搜索商店">
+
+    <!-- Category -->
+    <label for="category" id="label-category">类别</label>
+    <input type="search" id="category" placeholder="搜索类别">
+
+    <!-- Items -->
+    <label id="label-items">项目</label>
+    <div id="items-container">
+      <div class="item-row">
+        <input type="text" class="item-name" placeholder="项目名称">
+        <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
+        <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
       </div>
-      <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
-      <div class="actions">
-        <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
-      </div>
-    </form>
-    <ul id="ledger-list"></ul>
-  </div>
+    </div>
+    <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
+
+    <!-- Submit -->
+    <div class="actions">
+      <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
+    </div>
+  </form>
+  <ul id="ledger-list"></ul>
+</div>
+
 
   <!-- Settings Section -->
   <div id="settings-section" class="section" style="display:none;">

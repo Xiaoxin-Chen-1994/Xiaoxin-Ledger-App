@@ -1,6 +1,6 @@
 :root {
   --bg: #f7f7f8;
-  --card: #ffffff;
+  --card: #rgba(255, 255, 255, 0.7);
   --text: #1f2328;
   --muted: #6b7280;
   --primary: #0a84ff;
@@ -22,7 +22,7 @@
 }
 
 /* Global glass effect*/
-#statusMessage {
+.bottom-nav, #statusMessage {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px); /* Safari support */
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -33,7 +33,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b0c0e;
-    --card: #121317;
+    --card: rgba(18, 19, 23, 0.7);
     --text: #eaeef3;
     --muted: #a1a7b3;
     --primary: #4da3ff;
@@ -49,7 +49,7 @@
   }
 
   /* Global glass effect*/
-  button, input, select, .editable-box, .banner-message, .sticky-header, #nav, #nav-toggle, #statusMessage {
+  .bottom-nav, #statusMessage {
     border: 1px solid rgba(255, 255, 255, 0.1); /* softer edge in dark mode */
     box-shadow: 0 0.5rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
@@ -79,8 +79,8 @@ h2 { font-size: 1.25rem; margin: 0.5rem 0; }
 
 label { display: block; margin-top: 0.75rem; font-weight: 600; }
 
-select, input[type="search"], input[list], input[type="datetime-local"],
-input[type="text"], input[type="password"], input[type="number"] {
+select, input[type="search"], input[list], 
+input[type="text"], input[type="password"], input[type="number"], .datetime-button {
   width: 100%;
   margin-top: 0.25rem;
   padding: 0.75rem;
@@ -89,6 +89,56 @@ input[type="text"], input[type="password"], input[type="number"] {
   font-size: 1rem;
   background: var(--card);
   color: var(--text);
+}
+
+.datetime-button:hover { background: var(--card); }
+
+.datetime-selector {
+  position: fixed;
+  bottom: 3.5rem; /* above nav bar */
+  left: 0;
+  width: 100%;
+  display: none;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 2000;
+}
+
+.scroll-column {
+  flex: 1;
+  height: 8rem;
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.scroll-column div {
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+.scroll-column .selected {
+  font-weight: bold;
+  color: #000;
+  background: var(--chip);
+  border-radius: 0.5rem;
+}
+
+
+.hide-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0 0.5rem;
 }
 
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
@@ -238,4 +288,27 @@ hr { border: none; border-top: 1px solid var(--border); }
   font-size: 1rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+.type-selector {
+  display: flex;
+  justify-content: space-around;
+  margin: 0.5rem 0;
+}
+
+.type-selector button {
+  flex: 1;
+  margin: 0 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.type-selector button.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: bold;
 }

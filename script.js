@@ -104,7 +104,7 @@ function addEntry() {
 
   const type = document.getElementById("type").value;
   const account = document.getElementById("account").value.trim();
-  const datetime = document.getElementById("datetime").value;
+  const datetime = document.getElementById("datetime-display").value;
   const person = document.getElementById("person").value.trim();
   const store = document.getElementById("store").value.trim();
   const category = document.getElementById("category").value.trim();
@@ -248,7 +248,7 @@ const translations = {
     thisYear: "This Year",
     type: "Type",
     account: "Account",
-    datetime: "Date & Time",
+    datetime: "Time",
     person: "Person",
     store: "Store Name",
     category: "Category",
@@ -278,7 +278,7 @@ const translations = {
     thisYear: "本年",
     type: "类型",
     account: "账户",
-    datetime: "日期与时间",
+    datetime: "时间",
     person: "相关人",
     store: "商店名称",
     category: "类别",
@@ -516,3 +516,160 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
   }, duration);
 
 }
+
+const selector = document.getElementById("datetime-selector");
+const dateBtn = document.getElementById("datetime-display");
+const hideBtn = document.getElementById("hide-datetime");
+
+// Toggle on date button click
+dateBtn.addEventListener("click", (e) => {
+  e.stopPropagation(); // don't trigger outside click handlers
+  const isOpen = selector.style.display === "flex";
+  selector.style.display = isOpen ? "none" : "flex";
+});
+
+// Hide with ▼ button
+hideBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  selector.style.display = "none";
+});
+
+// Prevent clicks inside the selector from closing it
+selector.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+// Clicking anywhere else (inputs, buttons, body) hides the selector
+document.addEventListener("click", () => {
+  selector.style.display = "none";
+});
+
+// Optional: focusing other inputs also hides it
+document.querySelectorAll("input, select, textarea, button:not(#datetime-display)").forEach(el => {
+  el.addEventListener("focus", () => {
+    selector.style.display = "none";
+  });
+});
+
+
+let selected = {};
+
+// Update display with prefix
+function updateDateTimeDisplay(date = new Date(selected.year, selected.month - 1, selected.day, selected.hour, selected.minute)) {
+  const display = document.getElementById("datetime-display");
+  if (!display) return;
+
+  const now = new Date();
+  const selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((selectedDate - todayDate) / (1000 * 60 * 60 * 24));
+
+  let prefix = "";
+  switch (diffDays) {
+    case -2: prefix = "前天 "; break;
+    case -1: prefix = "昨天 "; break;
+    case 0:  prefix = "今天 "; break;
+    case 1:  prefix = "明天 "; break;
+    case 2:  prefix = "后天 "; break;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  display.textContent = `${prefix}${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+// Generic scroll column
+function createScrollColumn(id, values, selectedVal, unit, onSelect) {
+  const container = document.getElementById(id);
+  container.innerHTML = "";
+  values.forEach(val => {
+    const item = document.createElement("div");
+    item.textContent = `${val}${unit}`;
+    item.className = val === selectedVal ? "selected" : "";
+    item.onclick = () => {
+      container.querySelectorAll("div").forEach(d => d.classList.remove("selected"));
+      item.classList.add("selected");
+      onSelect(val);
+      updateDateTimeDisplay();
+    };
+    container.appendChild(item);
+  });
+}
+
+// Circular day column
+function createCircularDayColumn(selectedDay) {
+  const container = document.getElementById("day-column");
+  container.innerHTML = "";
+
+  const days = Array.from({length: 31}, (_, i) => i + 1);
+  const repeated = [...days, ...days, ...days]; // 3x loop
+
+  repeated.forEach(day => {
+    const div = document.createElement("div");
+    div.textContent = `${day}日`;
+    div.dataset.day = day;
+    if (day === selectedDay) div.classList.add("selected");
+    container.appendChild(div);
+  });
+
+  // Scroll to middle set
+  const itemHeight = 24; // adjust to your CSS line-height
+  container.scrollTop = days.length * itemHeight;
+
+  container.addEventListener("scroll", () => {
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const threshold = itemHeight * 5;
+
+    if (container.scrollTop < threshold) {
+      container.scrollTop += days.length * itemHeight;
+    } else if (container.scrollTop > maxScroll - threshold) {
+      container.scrollTop -= days.length * itemHeight;
+    }
+
+    highlightDayFromScroll();
+  });
+}
+
+function highlightDayFromScroll() {
+  const container = document.getElementById("day-column");
+  const itemHeight = 24;
+  const index = Math.round(container.scrollTop / itemHeight);
+  const items = container.querySelectorAll("div");
+  items.forEach(d => d.classList.remove("selected"));
+
+  const selectedItem = items[index];
+  if (selectedItem) {
+    selectedItem.classList.add("selected");
+    selected.day = parseInt(selectedItem.dataset.day);
+    updateDateTimeDisplay();
+  }
+}
+
+// Populate all selectors
+function populateDateTimeSelectors() {
+  const now = new Date();
+  selected = {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    day: now.getDate(),
+    hour: now.getHours(),
+    minute: now.getMinutes()
+  };
+
+  createScrollColumn("year-column", Array.from({length: 9}, (_, i) => now.getFullYear() - 2 + i), selected.year, "年", val => selected.year = val);
+  createScrollColumn("month-column", Array.from({length: 12}, (_, i) => i + 1), selected.month, "月", val => selected.month = val);
+  createCircularDayColumn(selected.day); // looped day column
+  createScrollColumn("hour-column", Array.from({length: 24}, (_, i) => i), selected.hour, "时", val => selected.hour = val);
+  createScrollColumn("minute-column", Array.from({length: 60}, (_, i) => i), selected.minute, "分", val => selected.minute = val);
+
+  updateDateTimeDisplay();
+}
+
+// Initialize
+window.addEventListener("DOMContentLoaded", () => {
+  populateDateTimeSelectors();
+});
