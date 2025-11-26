@@ -306,7 +306,6 @@ function setLanguage(lang) {
   document.getElementById("login-btn").textContent = t.login;
 
   // Home text
-  document.getElementById("home-title").textContent = t.homeTitle;
   document.getElementById("home-month").textContent = t.monthBalance;
   document.getElementById("home-balance").textContent = t.incomeMinusExpense;
   document.getElementById("home-summary").textContent = t.monthlySummary;
