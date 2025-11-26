@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ledger App</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <h1 id="app-title">Xiaoxin's Ledger App</h1>
+  <h1 id="app-title">Ledger App (Firebase)</h1>
 
   <!-- Login / Signup Section -->
   <div id="login-section" class="section">
@@ -26,10 +24,11 @@
   <div id="home-section" class="section" style="display:none;">
     <h2 id="home-title">首页</h2>
     <div class="home-hero">
-      <div class="home-image-wrapper" oncontextmenu="triggerHomeUpload(event)" onmousedown="handleHold(event)">
+      <div class="home-image-wrapper" 
+           oncontextmenu="triggerHomeUpload(event)" 
+           onmousedown="handleHold(event)">
         <img id="home-image" src="" alt="Custom picture">
-        <input type="file" id="home-image-upload" accept="image/*" style="display:none;"
-          onchange="previewHomeImage(event)">
+        <input type="file" id="home-image-upload" accept="image/*" style="display:none;" onchange="previewHomeImage(event)">
         <div class="home-overlay">
           <div id="home-month">11月·结余</div>
           <div id="home-balance">收入 - 支出</div>
@@ -43,7 +42,10 @@
           <div class="kanban-title" id="kanban-today-title">今天</div>
           <div class="kanban-sub" id="today-sub">最新交易</div>
         </div>
-        <div class="kanban-right" id="today-summary">收入 0 | 支出 0</div>
+        <div class="kanban-right">
+          <div id="today-income" class="income">收入 0.00</div>
+          <div id="today-expense" class="expense">支出 0.00</div>
+        </div>
       </div>
       <hr>
       <div class="kanban-row">
@@ -51,7 +53,10 @@
           <div class="kanban-title" id="kanban-month-title">本月</div>
           <div class="kanban-sub" id="month-sub">11月 1日–30日</div>
         </div>
-        <div class="kanban-right" id="month-summary">收入 0 | 支出 0</div>
+        <div class="kanban-right">
+          <div id="month-income" class="income">收入 0.00</div>
+          <div id="month-expense" class="expense">支出 0.00</div>
+        </div>
       </div>
       <hr>
       <div class="kanban-row">
@@ -59,7 +64,10 @@
           <div class="kanban-title" id="kanban-year-title">本年</div>
           <div class="kanban-sub" id="year-sub">2025</div>
         </div>
-        <div class="kanban-right" id="year-summary">收入 0 | 支出 0</div>
+        <div class="kanban-right">
+          <div id="year-income" class="income">收入 0.00</div>
+          <div id="year-expense" class="expense">支出 0.00</div>
+        </div>
       </div>
     </div>
   </div>
@@ -98,7 +106,6 @@
       <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
       <div class="actions">
         <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
-        <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出</button>
       </div>
     </form>
     <ul id="ledger-list"></ul>
@@ -111,6 +118,16 @@
       <p>语言 / Language</p>
       <button onclick="setLanguage('en')">English</button>
       <button onclick="setLanguage('zh')">中文</button>
+    </div>
+    <div class="color-switch">
+      <p>颜色方案 / Color Scheme</p>
+      <select id="color-scheme-select" onchange="setColorScheme(this.value)">
+        <option value="default">收入红 / 支出绿</option>
+        <option value="alt">收入绿 / 支出红</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button type="button" class="secondary" onclick="logout()">退出登录</button>
     </div>
   </div>
 
@@ -131,5 +148,4 @@
   <!-- App Logic -->
   <script src="script.js"></script>
 </body>
-
 </html>

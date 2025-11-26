@@ -34,37 +34,33 @@ function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      currentUser = userCredential.user;
-
-      // Hide login, show nav and default to home
-      document.getElementById("login-section").style.display = "none";
-      document.querySelector(".bottom-nav").style.display = "flex";
-
-      document.getElementById("welcome").textContent =
-        `${translations[currentLang].welcome}, ${currentUser.email}`;
-
-      // Default to 首页
-      showPage("home", document.getElementById("nav-home"));
-
-      // Start listening/loading ledger list (optional here)
-      loadLedger(currentUser.uid);
-
-      // Update home kanban summaries
-      updateHomeKanban();
-    })
     .catch(error => alert(error.message));
 }
 
 function logout() {
-  auth.signOut().then(() => {
+  auth.signOut();
+}
+
+// --- Persistent login state ---
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById("login-section").style.display = "none";
+    document.querySelector(".bottom-nav").style.display = "flex";
+    document.getElementById("welcome").textContent =
+      `${translations[currentLang].welcome}, ${currentUser.email}`;
+    showPage("home", document.getElementById("nav-home"));
+    loadLedger(currentUser.uid);
+    updateHomeKanban();
+  } else {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
     document.getElementById("home-section").style.display = "none";
     document.getElementById("ledger-section").style.display = "none";
+    document.getElementById("settings-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "none";
-  });
-}
+  }
+});
 
 // --- Items helper ---
 function addItemRow() {
@@ -122,11 +118,11 @@ function addEntry() {
   db.collection("ledgers").doc(currentUser.uid).collection("entries").add({
     type,
     account,
-    datetime, // string from input
+    datetime,
     person,
     store,
     category,
-    items, // array of item objects
+    items,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     document.getElementById("transaction-form").reset();
@@ -137,7 +133,6 @@ function addEntry() {
         <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
       </div>
     `;
-    // Refresh home summaries
     updateHomeKanban();
   });
 }
@@ -163,30 +158,15 @@ function loadLedger(userId) {
       snapshot.forEach(doc => {
         const data = doc.data();
         const li = document.createElement("li");
-
-        // Items formatting
-        let itemText = "";
-        if (data.items && data.items.length) {
-          itemText = data.items.map(i =>
-            `${i.name}${i.unitPrice ? ` @ ${i.unitPrice}` : ""}${i.totalPrice ? ` = ${i.totalPrice}` : ""}`
-          ).join(", ");
-        }
-
-        li.textContent =
-          `${data.type} | ${data.account} | ${data.person || ""} | ${data.store || ""} | ${data.category || ""} | ${itemText} | ${data.datetime}`;
+        li.textContent = `${data.type} | ${data.account} | ${data.person || ""} | ${data.store || ""} | ${data.category || ""} | ${data.datetime}`;
         list.appendChild(li);
         latest = data;
       });
-
-      // Update latest transaction under 今天
       if (latest) {
-        const latestText = formatLatest(latest);
-        document.getElementById("today-sub").textContent = latestText;
+        document.getElementById("today-sub").textContent = formatLatest(latest);
       } else {
         document.getElementById("today-sub").textContent = "暂无交易";
       }
-
-      // Refresh kanban summaries too
       updateHomeKanban();
     });
 }
@@ -195,18 +175,10 @@ function formatLatest(data) {
   const typeLabel = data.type === "incoming" ? "收入"
                     : data.type === "outgoing" ? "支出"
                     : "转账";
-  let amountText = "";
-  if (data.items && data.items.length) {
-    const totals = data.items
-      .map(i => parseFloat(i.totalPrice))
-      .filter(v => !isNaN(v));
-    if (totals.length) {
-      amountText = `金额 ${totals.reduce((a,b)=>a+b,0).toFixed(2)}`;
-    }
-  }
-  return `${typeLabel} | ${data.account} | ${data.store || ""} ${amountText} | ${data.datetime || ""}`.trim();
+  return `${typeLabel} | ${data.account} | ${data.store || ""} | ${data.datetime || ""}`.trim();
 }
 
+// --- Navigation ---
 function showPage(page, clickedButton) {
   document.getElementById("login-section").style.display = "none";
   document.getElementById("home-section").style.display = "none";
@@ -229,7 +201,6 @@ function showPage(page, clickedButton) {
   buttons.forEach(btn => btn.classList.remove("active"));
   if (clickedButton) clickedButton.classList.add("active");
 }
-
 
 // --- Language Switcher ---
 const translations = {
@@ -263,7 +234,7 @@ const translations = {
     navCharts: "Charts",
     navSettings: "Settings"
   },
-  zh: {
+    zh: {
     loginTitle: "登录或注册",
     email: "邮箱",
     password: "密码",
@@ -356,7 +327,7 @@ function previewHomeImage(event) {
 
 // Right-click triggers upload
 function triggerHomeUpload(event) {
-  event.preventDefault(); // prevent context menu
+  event.preventDefault();
   document.getElementById("home-image-upload").click();
 }
 
@@ -366,21 +337,18 @@ function handleHold(event) {
   if (event.button === 0) { // left mouse or touch
     holdTimer = setTimeout(() => {
       document.getElementById("home-image-upload").click();
-    }, 800); // 0.8s hold
+    }, 800);
   }
 }
-
 document.addEventListener("mouseup", () => clearTimeout(holdTimer));
 document.addEventListener("touchend", () => clearTimeout(holdTimer));
 
-
-// --- Home: Kanban summaries (simple client-side calc) ---
+// --- Home: Kanban summaries ---
 async function updateHomeKanban() {
   if (!currentUser) return;
   const entriesSnap = await db.collection("ledgers").doc(currentUser.uid).collection("entries").get();
   const entries = entriesSnap.docs.map(d => d.data());
 
-  // Helper to parse totals by type and date filter
   const sumBy = (filterFn) => {
     let income = 0, expense = 0;
     entries.filter(filterFn).forEach(e => {
@@ -396,7 +364,7 @@ async function updateHomeKanban() {
 
   const now = new Date();
   const y = now.getFullYear();
-  const m = now.getMonth(); // 0-based
+  const m = now.getMonth();
   const startOfDay = new Date(y, m, now.getDate(), 0, 0, 0);
   const endOfDay = new Date(y, m, now.getDate(), 23, 59, 59);
   const startOfMonth = new Date(y, m, 1, 0, 0, 0);
@@ -404,16 +372,13 @@ async function updateHomeKanban() {
   const startOfYear = new Date(y, 0, 1, 0, 0, 0);
   const endOfYear = new Date(y, 11, 31, 23, 59, 59);
 
-  // Parse datetime string to Date
   const parseEntryDate = (e) => e.datetime ? new Date(e.datetime) : null;
-
   const inRange = (date, start, end) => date && date >= start && date <= end;
 
   const todaySums = sumBy(e => inRange(parseEntryDate(e), startOfDay, endOfDay));
   const monthSums = sumBy(e => inRange(parseEntryDate(e), startOfMonth, endOfMonth));
   const yearSums = sumBy(e => inRange(parseEntryDate(e), startOfYear, endOfYear));
 
-  // Update overlay month labels
   const monthLabel = `${m + 1}月·结余`;
   document.getElementById("home-month").textContent = monthLabel;
   document.getElementById("home-summary").textContent =
@@ -421,18 +386,25 @@ async function updateHomeKanban() {
   document.getElementById("home-balance").textContent =
     `${(monthSums.income - monthSums.expense).toFixed(2)}`;
 
-  // Update kanban subs
   document.getElementById("month-sub").textContent =
     `${m + 1}月 1日–${new Date(y, m + 1, 0).getDate()}日`;
   document.getElementById("year-sub").textContent = `${y}`;
 
-  // Update right-side summaries
-  document.getElementById("today-summary").textContent =
-    `收入 ${todaySums.income.toFixed(2)} | 支出 ${todaySums.expense.toFixed(2)}`;
-  document.getElementById("month-summary").textContent =
-    `收入 ${monthSums.income.toFixed(2)} | 支出 ${monthSums.expense.toFixed(2)}`;
-  document.getElementById("year-summary").textContent =
-    `收入 ${yearSums.income.toFixed(2)} | 支出 ${yearSums.expense.toFixed(2)}`;
+  document.getElementById("today-income").textContent = `收入 ${todaySums.income.toFixed(2)}`;
+  document.getElementById("today-expense").textContent = `支出 ${todaySums.expense.toFixed(2)}`;
+  document.getElementById("month-income").textContent = `收入 ${monthSums.income.toFixed(2)}`;
+  document.getElementById("month-expense").textContent = `支出 ${monthSums.expense.toFixed(2)}`;
+  document.getElementById("year-income").textContent = `收入 ${yearSums.income.toFixed(2)}`;
+  document.getElementById("year-expense").textContent = `支出 ${yearSums.expense.toFixed(2)}`;
+}
+
+// --- Color Scheme ---
+function setColorScheme(scheme) {
+  if (scheme === "alt") {
+    document.documentElement.classList.add("alt-scheme");
+  } else {
+    document.documentElement.classList.remove("alt-scheme");
+  }
 }
 
 // Initial language
