@@ -64,7 +64,10 @@ auth.onAuthStateChanged(user => {
       }
       if (data.language) {
         setLanguage(data.language);
-      }
+      } else{ 
+        setLanguage('zh');
+      } 
+
     }
   });
 
@@ -457,6 +460,3 @@ function setColorScheme(scheme) {
     }, { merge: true });
   }
 }
-
-// Initial language
-setLanguage('zh');
