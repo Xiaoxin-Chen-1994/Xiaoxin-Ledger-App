@@ -26,15 +26,15 @@ function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.createUserWithEmailAndPassword(email, password)
-    .then(() => alert("注册成功"))
-    .catch(error => alert(error.message));
+    .then(() => showStatusMessage("注册成功", 'success'))
+    .catch(error => showStatusMessage(error.message, 'error'));
 }
 
 function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-    .catch(error => alert(error.message));
+    .catch(error => showStatusMessage(error.message, 'error'));
 }
 
 function logout() {
@@ -51,25 +51,25 @@ auth.onAuthStateChanged(user => {
       `${translations[currentLang].welcome}, ${currentUser.email}`;
 
     db.collection("users").doc(user.uid).get().then(doc => {
-    if (doc.exists) {
-      const data = doc.data();
-      if (data.homeImageUrl) {
-        const img = document.getElementById("home-image");
-        img.src = data.homeImageUrl;
-        img.style.display = "block";
-      }
-      if (data.colorScheme) {
-        setColorScheme(data.colorScheme);
-        document.getElementById("color-scheme-select").value = data.colorScheme;
-      }
-      if (data.language) {
-        setLanguage(data.language);
-      } else{ 
-        setLanguage('zh');
-      } 
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.homeImageUrl) {
+          const img = document.getElementById("home-image");
+          img.src = data.homeImageUrl;
+          img.style.display = "block";
+        }
+        if (data.colorScheme) {
+          setColorScheme(data.colorScheme);
+          document.getElementById("color-scheme-select").value = data.colorScheme;
+        }
+        if (data.language) {
+          setLanguage(data.language);
+        } else {
+          setLanguage('zh');
+        }
 
-    }
-  });
+      }
+    });
 
     showPage("home", document.getElementById("nav-home"));
     loadLedger(currentUser.uid);
@@ -109,7 +109,12 @@ function addEntry() {
   const category = document.getElementById("category").value.trim();
 
   if (!type || !account || !datetime) {
-    alert("Type, account, and date/time are required.");
+    // Show error message
+    if (lang === "en") {
+      showStatusMessage("Type, account, and date/time are required.", 'error');
+    } else if (lang === "zh") {
+      showStatusMessage("Type, account, and date/time are required.", "error");
+    }
     return;
   }
 
@@ -195,8 +200,8 @@ function loadLedger(userId) {
 
 function formatLatest(data) {
   const typeLabel = data.type === "incoming" ? "收入"
-                    : data.type === "outgoing" ? "支出"
-                    : "转账";
+    : data.type === "outgoing" ? "支出"
+      : "转账";
   return `${typeLabel} | ${data.account} | ${data.store || ""} | ${data.datetime || ""}`.trim();
 }
 
@@ -212,9 +217,9 @@ function showPage(page, clickedButton) {
   } else if (page === "home") {
     document.getElementById("home-section").style.display = "block";
   } else if (page === "accounts") {
-    alert("账户 page placeholder");
+    showStatusMessage("账户 page placeholder", 'info');
   } else if (page === "charts") {
-    alert("图表 page placeholder");
+    showStatusMessage("图表 page placeholder", 'info');
   } else if (page === "settings") {
     document.getElementById("settings-section").style.display = "block";
   }
@@ -256,7 +261,7 @@ const translations = {
     navCharts: "Charts",
     navSettings: "Settings"
   },
-    zh: {
+  zh: {
     loginTitle: "登录或注册",
     email: "邮箱",
     password: "密码",
@@ -337,6 +342,13 @@ function setLanguage(lang) {
       language: lang
     }, { merge: true });
   }
+
+  // Show status message
+  if (lang === "en") {
+    showStatusMessage("Language set to English", "success");
+  } else if (lang === "zh") {
+    showStatusMessage("语言已切换为 中文", "success");
+  }
 }
 
 const storage = firebase.storage();
@@ -357,6 +369,13 @@ async function uploadHomeImage(file) {
   await db.collection("users").doc(currentUser.uid).set({
     homeImageUrl: url
   }, { merge: true });
+
+  // Show status message
+  if (lang === "en") {
+    showStatusMessage("User image has been uploaded to database", 'success');
+  } else if (lang === "zh") {
+    showStatusMessage("图片已成功上传至数据库", "success");
+  }
 
   // Update UI
   const img = document.getElementById("home-image");
@@ -404,7 +423,7 @@ async function updateHomeKanban() {
       const total = (e.items || [])
         .map(i => parseFloat(i.totalPrice))
         .filter(v => !isNaN(v))
-        .reduce((a,b)=>a+b,0);
+        .reduce((a, b) => a + b, 0);
       if (e.type === "incoming") income += total;
       if (e.type === "outgoing") expense += total;
     });
@@ -459,4 +478,39 @@ function setColorScheme(scheme) {
       colorScheme: scheme
     }, { merge: true });
   }
+
+  // Show status message
+  if (lang === "en") {
+    showStatusMessage("Color scheme is now changed", 'success');
+  } else if (lang === "zh") {
+    showStatusMessage("颜色方案已更新", "success");
+  }
+}
+
+function showStatusMessage(message, type = 'info', duration = 2000) {
+  const status = document.getElementById('statusMessage');
+  status.textContent = message;
+  status.style.display = 'inline-block';
+
+  // Reset styles
+  status.style.backgroundColor = '';
+  status.style.color = '';
+
+  // Apply color based on type
+  switch (type) {
+    case 'success':
+      status.style.color = 'green';
+      break;
+    case 'error':
+      status.style.color = '#B22222';
+      break;
+    default: // 'info'
+      status.style.color = '';
+      break;
+  }
+
+  setTimeout(() => {
+    status.style.display = 'none';
+  }, duration);
+
 }

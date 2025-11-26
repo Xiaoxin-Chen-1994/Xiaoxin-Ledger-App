@@ -21,6 +21,14 @@
   --expense-color: #d32f2f;
 }
 
+/* Global glass effect*/
+#statusMessage {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -33,6 +41,17 @@
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
+  }
+
+  #statusMessage {
+    background-color: rgba(34, 34, 34, 0.6); /* translucent dark gray */
+    color: #dddddd;
+  }
+
+  /* Global glass effect*/
+  button, input, select, .editable-box, .banner-message, .sticky-header, #nav, #nav-toggle, #statusMessage {
+    border: 1px solid rgba(255, 255, 255, 0.1); /* softer edge in dark mode */
+    box-shadow: 0 0.5rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
 }
 
@@ -185,3 +204,25 @@ hr { border: none; border-top: 1px solid var(--border); }
 
 /* Settings section */
 .color-switch, .lang-switch { margin-top: 1rem; }
+
+#statusMessage {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(34, 34, 34, 0.6); /* dark translucent */
+  color: #dddddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  z-index: 1000;
+  font-weight: bold;
+  display: none; /* hidden until shown */
+  width: fit-content;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 90%;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
