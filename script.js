@@ -26,10 +26,84 @@ let persons = [];
 function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(() => showStatusMessage("注册成功", 'success'))
+
+  firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then(cred => {
+      const user = cred.user;
+      const householdId = user.uid; // personal household id
+
+      // Create household
+      firebase.firestore().collection("households").doc(householdId).set({
+        name: `${email}的账本`,
+        admin: user.uid,
+        members: [user.uid]
+      });
+
+      // Create user doc
+      firebase.firestore().collection("users").doc(user.uid).set({
+        email: email,
+        personalHouseholdId: householdId,
+        households: [householdId]
+      });
+    })
     .catch(error => showStatusMessage(error.message, 'error'));
 }
+
+function loadHouseholds(userUid) {
+  firebase.firestore().collection("users").doc(userUid).get().then(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+    const select = document.getElementById("household-select");
+    select.innerHTML = "";
+
+    data.households.forEach(hid => {
+      firebase.firestore().collection("households").doc(hid).get().then(hdoc => {
+        if (hdoc.exists) {
+          const opt = document.createElement("option");
+          opt.value = hid;
+          opt.textContent = hdoc.data().name;
+          select.appendChild(opt);
+        }
+      });
+    });
+  });
+}
+
+function showHouseholds(userUid) {
+  const list = document.getElementById("household-list");
+  list.innerHTML = "";
+
+  db.collection("users").doc(userUid).get().then(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+
+    data.households.forEach(hid => {
+      db.collection("households").doc(hid).get().then(hdoc => {
+        if (hdoc.exists) {
+          const li = document.createElement("li");
+          const hdata = hdoc.data();
+          li.textContent = hdata.name;
+
+          // Leave button (disabled for personal household)
+          if (hdata.admin !== userUid) {
+            const btn = document.createElement("button");
+            btn.textContent = "退出 / Leave";
+            btn.className = "secondary";
+            btn.onclick = () => leaveHousehold(hid, userUid);
+            li.appendChild(btn);
+          } else {
+            const span = document.createElement("span");
+            span.textContent = " (个人账本)";
+            li.appendChild(span);
+          }
+
+          list.appendChild(li);
+        }
+      });
+    });
+  });
+}
+
 
 function login() {
   const email = document.getElementById("username").value;
@@ -45,8 +119,12 @@ function logout() {
 // --- Persistent login state ---
 auth.onAuthStateChanged(user => {
   if (user) {
+    loadHouseholds(user.uid);
+    showHouseholds(user.uid);
+    
     currentUser = user;
     document.getElementById("login-section").style.display = "none";
+    document.getElementById("login-lang-switch").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
     document.getElementById("settings-welcome").textContent =
       `${translations[currentLang].welcome}, ${currentUser.email}`;
@@ -92,8 +170,7 @@ function addItemRow() {
   row.className = "item-row";
   row.innerHTML = `
     <input type="text" class="item-name" placeholder="项目名称">
-    <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
-    <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
+    <input type="text" class="item-notes" placeholder="价格">
   `;
   container.appendChild(row);
 }
@@ -102,23 +179,21 @@ function addItemRow() {
 function addEntry() {
   if (!currentUser) return;
 
+  // Household selector dropdown
+  const householdId = document.getElementById("household-select").value;
+  if (!householdId) {
+    showStatus("请选择账本 / Please select a household");
+    return;
+  }
+
   const type = document.getElementById("type").value;
   const account = document.getElementById("account").value.trim();
-  const datetime = document.getElementById("datetime-display").value;
+  const datetime = document.getElementById("datetime-display").textContent; // use textContent if you display formatted date
   const person = document.getElementById("person").value.trim();
   const store = document.getElementById("store").value.trim();
   const category = document.getElementById("category").value.trim();
 
-  if (!type || !account || !datetime) {
-    // Show error message
-    if (currentLang === "en") {
-      showStatusMessage("Type, account, and date/time are required.", 'error');
-    } else if (currentLang === "zh") {
-      showStatusMessage("Type, account, and date/time are required.", "error");
-    }
-    return;
-  }
-
+  // Update datalists
   if (account && !accounts.includes(account)) {
     accounts.push(account);
     updateDatalist("account-list", accounts);
@@ -128,22 +203,22 @@ function addEntry() {
     updateDatalist("person-list", persons);
   }
 
+  // Collect items
   const itemRows = document.querySelectorAll("#items-container .item-row");
   const items = [];
   itemRows.forEach(row => {
     const name = row.querySelector(".item-name").value.trim();
-    const unitPrice = row.querySelector(".item-unit-price").value;
-    const totalPrice = row.querySelector(".item-total-price").value;
+    const notes = row.querySelector(".item-notes").value;
     if (name) {
       items.push({
         name,
-        unitPrice: unitPrice || null,
-        totalPrice: totalPrice || null
+        notes: notes || null
       });
     }
   });
 
-  db.collection("ledgers").doc(currentUser.uid).collection("entries").add({
+  // 🔑 Store transaction under selected household
+  db.collection("households").doc(householdId).collection("transactions").add({
     type,
     account,
     datetime,
@@ -151,17 +226,21 @@ function addEntry() {
     store,
     category,
     items,
+    createdBy: currentUser.uid,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
+    // Reset form
     document.getElementById("transaction-form").reset();
     document.getElementById("items-container").innerHTML = `
       <div class="item-row">
         <input type="text" class="item-name" placeholder="项目名称">
-        <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
-        <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
+        <input type="text" class="item-notes" placeholder="价格">
       </div>
     `;
-    updateHomeKanban();
+    updateHomeKanban(householdId); // pass householdId so kanban updates for that household
+  }).catch(err => {
+    console.error("Error adding transaction:", err);
+    showStatus("添加交易失败");
   });
 }
 
@@ -488,6 +567,34 @@ function setColorScheme(scheme, showMessage = false) {
     }
   }
 }
+
+function joinHousehold(householdId, userUid) {
+  firebase.firestore().collection("households").doc(householdId).update({
+    members: firebase.firestore.FieldValue.arrayUnion(userUid)
+  });
+  firebase.firestore().collection("users").doc(userUid).update({
+    households: firebase.firestore.FieldValue.arrayUnion(householdId)
+  });
+}
+
+function leaveHousehold(householdId, userUid) {
+  db.collection("households").doc(householdId).get().then(doc => {
+    if (doc.exists && doc.data().admin === userUid) {
+      showStatus("不能退出个人账本 / Cannot leave personal household");
+      return;
+    }
+    doc.ref.update({
+      members: firebase.firestore.FieldValue.arrayRemove(userUid)
+    });
+    db.collection("users").doc(userUid).update({
+      households: firebase.firestore.FieldValue.arrayRemove(householdId)
+    }).then(() => {
+      showStatus("已退出该账本 / Left household");
+      showHouseholds(userUid); // refresh list
+    });
+  });
+}
+
 
 function showStatusMessage(message, type = 'info', duration = 2000) {
   const status = document.getElementById('statusMessage');

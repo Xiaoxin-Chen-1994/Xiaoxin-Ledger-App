@@ -21,6 +21,11 @@
       <button id="login-btn" onclick="login()">登录</button>
     </div>
   </div>
+  <div id="login-lang-switch" class="login-lang-switch">
+    <p>语言 / Language</p>
+    <button onclick="setLanguage('en', true)">English</button>
+    <button onclick="setLanguage('zh', true)">中文</button>
+  </div>
 
   <!-- Home Section -->
   <div id="home-section" class="section" style="display:none;">
@@ -107,6 +112,9 @@
     <label for="person" id="label-person">成员</label>
     <input list="person-list" id="person" placeholder="选择或添加成员">
     <datalist id="person-list"></datalist>
+    <!-- Household -->
+    <label for="household" id="label-household">家庭</label>
+    <select id="household-select"></select>
 
     <!-- Store -->
     <label for="store" id="label-store">商店名称</label>
@@ -121,8 +129,7 @@
     <div id="items-container">
       <div class="item-row">
         <input type="text" class="item-name" placeholder="项目名称">
-        <input type="number" step="0.01" class="item-unit-price" placeholder="单价 (可选)">
-        <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
+        <input type="text" class="item-notes" placeholder="价格">
       </div>
     </div>
     <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
@@ -154,6 +161,11 @@
         <option value="alt">收入绿 / 支出红</option>
       </select>
     </div>
+    <div id="households-section">
+      <h3>我的账本 / My Households</h3>
+      <ul id="household-list"></ul>
+    </div>
+    
     <div class="actions">
       <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
     </div>
