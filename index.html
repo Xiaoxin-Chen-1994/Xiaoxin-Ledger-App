@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ledger App</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <h1 id="app-title">Ledger App (Firebase)</h1>
 
-  <!-- Language Switch -->
-  <div class="lang-switch">
-    <button onclick="setLanguage('en')">English</button>
-    <button onclick="setLanguage('zh')">中文</button>
-  </div>
+<body>
+  <h1 id="app-title">Xiaoxin's Ledger App</h1>
 
   <!-- Login / Signup Section -->
   <div id="login-section" class="section">
@@ -26,11 +22,51 @@
     </div>
   </div>
 
+  <!-- Home Section -->
+  <div id="home-section" class="section" style="display:none;">
+    <h2 id="home-title">首页</h2>
+    <div class="home-hero">
+      <div class="home-image-wrapper" oncontextmenu="triggerHomeUpload(event)" onmousedown="handleHold(event)">
+        <img id="home-image" src="" alt="Custom picture">
+        <input type="file" id="home-image-upload" accept="image/*" style="display:none;"
+          onchange="previewHomeImage(event)">
+        <div class="home-overlay">
+          <div id="home-month">11月·结余</div>
+          <div id="home-balance">收入 - 支出</div>
+          <div id="home-summary">本月收入 0 | 本月支出 0</div>
+        </div>
+      </div>
+    </div>
+    <div class="kanban">
+      <div class="kanban-row">
+        <div class="kanban-left">
+          <div class="kanban-title" id="kanban-today-title">今天</div>
+          <div class="kanban-sub" id="today-sub">最新交易</div>
+        </div>
+        <div class="kanban-right" id="today-summary">收入 0 | 支出 0</div>
+      </div>
+      <hr>
+      <div class="kanban-row">
+        <div class="kanban-left">
+          <div class="kanban-title" id="kanban-month-title">本月</div>
+          <div class="kanban-sub" id="month-sub">11月 1日–30日</div>
+        </div>
+        <div class="kanban-right" id="month-summary">收入 0 | 支出 0</div>
+      </div>
+      <hr>
+      <div class="kanban-row">
+        <div class="kanban-left">
+          <div class="kanban-title" id="kanban-year-title">本年</div>
+          <div class="kanban-sub" id="year-sub">2025</div>
+        </div>
+        <div class="kanban-right" id="year-summary">收入 0 | 支出 0</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Ledger Section -->
   <div id="ledger-section" class="section" style="display:none;">
     <h2 id="welcome"></h2>
-
-    <!-- Transaction Form -->
     <form id="transaction-form">
       <label for="type" id="label-type">类型</label>
       <select id="type" required>
@@ -39,24 +75,18 @@
         <option value="outgoing">支出</option>
         <option value="transfer">转账</option>
       </select>
-
       <label for="account" id="label-account">账户</label>
       <input list="account-list" id="account" placeholder="选择或添加账户">
       <datalist id="account-list"></datalist>
-
       <label for="datetime" id="label-datetime">日期与时间</label>
       <input type="datetime-local" id="datetime" required>
-
       <label for="person" id="label-person">相关人</label>
       <input list="person-list" id="person" placeholder="选择或添加人">
       <datalist id="person-list"></datalist>
-
       <label for="store" id="label-store">商店名称</label>
       <input type="search" id="store" placeholder="搜索商店">
-
       <label for="category" id="label-category">类别</label>
       <input type="search" id="category" placeholder="搜索类别">
-
       <label id="label-items">项目</label>
       <div id="items-container">
         <div class="item-row">
@@ -66,23 +96,31 @@
         </div>
       </div>
       <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
-
       <div class="actions">
         <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
         <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出</button>
       </div>
     </form>
-
     <ul id="ledger-list"></ul>
+  </div>
+
+  <!-- Settings Section -->
+  <div id="settings-section" class="section" style="display:none;">
+    <h2 id="settings-title">设置</h2>
+    <div class="lang-switch">
+      <p>语言 / Language</p>
+      <button onclick="setLanguage('en')">English</button>
+      <button onclick="setLanguage('zh')">中文</button>
+    </div>
   </div>
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts')">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction')">记一笔</button>
-    <button id="nav-charts" onclick="showPage('charts')">图表</button>
-    <button id="nav-settings" onclick="showPage('settings')">设置</button>
+    <button id="nav-home" onclick="showPage('home', this)">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts', this)">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction', this)">记一笔</button>
+    <button id="nav-charts" onclick="showPage('charts', this)">图表</button>
+    <button id="nav-settings" onclick="showPage('settings', this)">设置</button>
   </nav>
 
   <!-- Firebase SDKs -->
@@ -90,7 +128,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-  <!-- Your App Logic -->
+  <!-- App Logic -->
   <script src="script.js"></script>
 </body>
+
 </html>

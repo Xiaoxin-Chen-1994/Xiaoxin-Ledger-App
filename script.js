@@ -26,7 +26,7 @@ function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.createUserWithEmailAndPassword(email, password)
-    .then(() => alert("User registered successfully!"))
+    .then(() => alert("注册成功"))
     .catch(error => alert(error.message));
 }
 
@@ -36,53 +36,35 @@ function login() {
   auth.signInWithEmailAndPassword(email, password)
     .then(userCredential => {
       currentUser = userCredential.user;
+
+      // Hide login, show nav and default to home
       document.getElementById("login-section").style.display = "none";
-      document.getElementById("ledger-section").style.display = "none"; // hide ledger initially
-      document.querySelector(".bottom-nav").style.display = "flex"; // show nav bar
+      document.querySelector(".bottom-nav").style.display = "flex";
 
       document.getElementById("welcome").textContent =
         `${translations[currentLang].welcome}, ${currentUser.email}`;
 
-      // Default to home page
-      showPage("home");
+      // Default to 首页
+      showPage("home", document.getElementById("nav-home"));
+
+      // Start listening/loading ledger list (optional here)
+      loadLedger(currentUser.uid);
+
+      // Update home kanban summaries
+      updateHomeKanban();
     })
     .catch(error => alert(error.message));
 }
-
 
 function logout() {
   auth.signOut().then(() => {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
+    document.getElementById("home-section").style.display = "none";
     document.getElementById("ledger-section").style.display = "none";
-    document.querySelector(".bottom-nav").style.display = "none"; // hide nav bar
+    document.querySelector(".bottom-nav").style.display = "none";
   });
 }
-
-function showPage(page) {
-  // Hide all main sections
-  document.getElementById("login-section").style.display = "none";
-  document.getElementById("ledger-section").style.display = "none";
-
-  if (page === "transaction") {
-    document.getElementById("ledger-section").style.display = "block";
-  } else if (page === "home") {
-    // For now, just show a placeholder alert or create a home section
-    alert("首页 page placeholder");
-  } else if (page === "accounts") {
-    alert("账户 page placeholder");
-  } else if (page === "charts") {
-    alert("图表 page placeholder");
-  } else if (page === "settings") {
-    alert("设置 page placeholder");
-  }
-
-  // Highlight active button
-  const buttons = document.querySelectorAll(".bottom-nav button");
-  buttons.forEach(btn => btn.classList.remove("active"));
-  event.target.classList.add("active");
-}
-
 
 // --- Items helper ---
 function addItemRow() {
@@ -97,7 +79,7 @@ function addItemRow() {
   container.appendChild(row);
 }
 
-// --- Ledger ---
+// --- Ledger add entry ---
 function addEntry() {
   if (!currentUser) return;
 
@@ -113,7 +95,6 @@ function addEntry() {
     return;
   }
 
-  // Add new account/person to lists if not already present
   if (account && !accounts.includes(account)) {
     accounts.push(account);
     updateDatalist("account-list", accounts);
@@ -123,7 +104,6 @@ function addEntry() {
     updateDatalist("person-list", persons);
   }
 
-  // Collect items
   const itemRows = document.querySelectorAll("#items-container .item-row");
   const items = [];
   itemRows.forEach(row => {
@@ -142,15 +122,14 @@ function addEntry() {
   db.collection("ledgers").doc(currentUser.uid).collection("entries").add({
     type,
     account,
-    datetime,
+    datetime, // string from input
     person,
     store,
     category,
-    items,
+    items, // array of item objects
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     document.getElementById("transaction-form").reset();
-    // Reset items section to a single blank row
     document.getElementById("items-container").innerHTML = `
       <div class="item-row">
         <input type="text" class="item-name" placeholder="项目名称">
@@ -158,6 +137,8 @@ function addEntry() {
         <input type="number" step="0.01" class="item-total-price" placeholder="总价 (可选)">
       </div>
     `;
+    // Refresh home summaries
+    updateHomeKanban();
   });
 }
 
@@ -178,11 +159,12 @@ function loadLedger(userId) {
     .orderBy("timestamp")
     .onSnapshot(snapshot => {
       list.innerHTML = "";
+      let latest = null;
       snapshot.forEach(doc => {
         const data = doc.data();
         const li = document.createElement("li");
 
-        // Format items
+        // Items formatting
         let itemText = "";
         if (data.items && data.items.length) {
           itemText = data.items.map(i =>
@@ -193,25 +175,61 @@ function loadLedger(userId) {
         li.textContent =
           `${data.type} | ${data.account} | ${data.person || ""} | ${data.store || ""} | ${data.category || ""} | ${itemText} | ${data.datetime}`;
         list.appendChild(li);
+        latest = data;
       });
+
+      // Update latest transaction under 今天
+      if (latest) {
+        const latestText = formatLatest(latest);
+        document.getElementById("today-sub").textContent = latestText;
+      } else {
+        document.getElementById("today-sub").textContent = "暂无交易";
+      }
+
+      // Refresh kanban summaries too
+      updateHomeKanban();
     });
 }
 
-// --- Navigation ---
-function showPage(page) {
+function formatLatest(data) {
+  const typeLabel = data.type === "incoming" ? "收入"
+                    : data.type === "outgoing" ? "支出"
+                    : "转账";
+  let amountText = "";
+  if (data.items && data.items.length) {
+    const totals = data.items
+      .map(i => parseFloat(i.totalPrice))
+      .filter(v => !isNaN(v));
+    if (totals.length) {
+      amountText = `金额 ${totals.reduce((a,b)=>a+b,0).toFixed(2)}`;
+    }
+  }
+  return `${typeLabel} | ${data.account} | ${data.store || ""} ${amountText} | ${data.datetime || ""}`.trim();
+}
+
+function showPage(page, clickedButton) {
   document.getElementById("login-section").style.display = "none";
+  document.getElementById("home-section").style.display = "none";
   document.getElementById("ledger-section").style.display = "none";
+  document.getElementById("settings-section").style.display = "none";
 
   if (page === "transaction") {
     document.getElementById("ledger-section").style.display = "block";
-  } else {
-    alert(`${page} page placeholder`);
+  } else if (page === "home") {
+    document.getElementById("home-section").style.display = "block";
+  } else if (page === "accounts") {
+    alert("账户 page placeholder");
+  } else if (page === "charts") {
+    alert("图表 page placeholder");
+  } else if (page === "settings") {
+    document.getElementById("settings-section").style.display = "block";
   }
 
   const buttons = document.querySelectorAll(".bottom-nav button");
   buttons.forEach(btn => btn.classList.remove("active"));
-  event.target.classList.add("active");
+  if (clickedButton) clickedButton.classList.add("active");
 }
+
 
 // --- Language Switcher ---
 const translations = {
@@ -222,6 +240,13 @@ const translations = {
     signup: "Sign Up",
     login: "Login",
     welcome: "Welcome",
+    homeTitle: "Home",
+    monthBalance: "Nov · Balance",
+    incomeMinusExpense: "Income - Expense",
+    monthlySummary: "Income this month 0 | Expense this month 0",
+    today: "Today",
+    thisMonth: "This Month",
+    thisYear: "This Year",
     type: "Type",
     account: "Account",
     datetime: "Date & Time",
@@ -245,6 +270,13 @@ const translations = {
     signup: "注册",
     login: "登录",
     welcome: "欢迎",
+    homeTitle: "首页",
+    monthBalance: "11月·结余",
+    incomeMinusExpense: "收入 - 支出",
+    monthlySummary: "本月收入 0 | 本月支出 0",
+    today: "今天",
+    thisMonth: "本月",
+    thisYear: "本年",
     type: "类型",
     account: "账户",
     datetime: "日期与时间",
@@ -263,20 +295,30 @@ const translations = {
   }
 };
 
-let currentLang = "zh"
+let currentLang = "zh";
 
 function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
 
-  // Login section
+  // Login text
   document.getElementById("login-title").textContent = t.loginTitle;
   document.getElementById("username").placeholder = t.email;
   document.getElementById("password").placeholder = t.password;
   document.getElementById("signup-btn").textContent = t.signup;
   document.getElementById("login-btn").textContent = t.login;
 
-  // Ledger form labels
+  // Home text
+  document.getElementById("home-title").textContent = t.homeTitle;
+  document.getElementById("home-month").textContent = t.monthBalance;
+  document.getElementById("home-balance").textContent = t.incomeMinusExpense;
+  document.getElementById("home-summary").textContent = t.monthlySummary;
+
+  document.getElementById("kanban-today-title").textContent = t.today;
+  document.getElementById("kanban-month-title").textContent = t.thisMonth;
+  document.getElementById("kanban-year-title").textContent = t.thisYear;
+
+  // Ledger labels
   document.getElementById("label-type").textContent = t.type;
   document.getElementById("label-account").textContent = t.account;
   document.getElementById("label-datetime").textContent = t.datetime;
@@ -285,15 +327,113 @@ function setLanguage(lang) {
   document.getElementById("label-category").textContent = t.category;
   document.getElementById("label-items").textContent = t.items;
 
-  // Buttons inside form
+  // Buttons
   document.getElementById("add-item-btn").textContent = t.addItem;
   document.getElementById("add-transaction-btn").textContent = t.addTransaction;
   document.getElementById("logout-btn").textContent = t.logout;
 
-  // Navigation bar
+  // Nav
   document.getElementById("nav-home").textContent = t.navHome;
   document.getElementById("nav-accounts").textContent = t.navAccounts;
   document.getElementById("nav-transaction").textContent = t.navTransaction;
   document.getElementById("nav-charts").textContent = t.navCharts;
   document.getElementById("nav-settings").textContent = t.navSettings;
 }
+
+// --- Home: image preview ---
+function previewHomeImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById("home-image");
+      img.src = e.target.result;
+      img.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// Right-click triggers upload
+function triggerHomeUpload(event) {
+  event.preventDefault(); // prevent context menu
+  document.getElementById("home-image-upload").click();
+}
+
+// Long press (hold) triggers upload
+let holdTimer;
+function handleHold(event) {
+  if (event.button === 0) { // left mouse or touch
+    holdTimer = setTimeout(() => {
+      document.getElementById("home-image-upload").click();
+    }, 800); // 0.8s hold
+  }
+}
+
+document.addEventListener("mouseup", () => clearTimeout(holdTimer));
+document.addEventListener("touchend", () => clearTimeout(holdTimer));
+
+
+// --- Home: Kanban summaries (simple client-side calc) ---
+async function updateHomeKanban() {
+  if (!currentUser) return;
+  const entriesSnap = await db.collection("ledgers").doc(currentUser.uid).collection("entries").get();
+  const entries = entriesSnap.docs.map(d => d.data());
+
+  // Helper to parse totals by type and date filter
+  const sumBy = (filterFn) => {
+    let income = 0, expense = 0;
+    entries.filter(filterFn).forEach(e => {
+      const total = (e.items || [])
+        .map(i => parseFloat(i.totalPrice))
+        .filter(v => !isNaN(v))
+        .reduce((a,b)=>a+b,0);
+      if (e.type === "incoming") income += total;
+      if (e.type === "outgoing") expense += total;
+    });
+    return { income, expense };
+  };
+
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-based
+  const startOfDay = new Date(y, m, now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(y, m, now.getDate(), 23, 59, 59);
+  const startOfMonth = new Date(y, m, 1, 0, 0, 0);
+  const endOfMonth = new Date(y, m + 1, 0, 23, 59, 59);
+  const startOfYear = new Date(y, 0, 1, 0, 0, 0);
+  const endOfYear = new Date(y, 11, 31, 23, 59, 59);
+
+  // Parse datetime string to Date
+  const parseEntryDate = (e) => e.datetime ? new Date(e.datetime) : null;
+
+  const inRange = (date, start, end) => date && date >= start && date <= end;
+
+  const todaySums = sumBy(e => inRange(parseEntryDate(e), startOfDay, endOfDay));
+  const monthSums = sumBy(e => inRange(parseEntryDate(e), startOfMonth, endOfMonth));
+  const yearSums = sumBy(e => inRange(parseEntryDate(e), startOfYear, endOfYear));
+
+  // Update overlay month labels
+  const monthLabel = `${m + 1}月·结余`;
+  document.getElementById("home-month").textContent = monthLabel;
+  document.getElementById("home-summary").textContent =
+    `本月收入 ${monthSums.income.toFixed(2)} | 本月支出 ${monthSums.expense.toFixed(2)}`;
+  document.getElementById("home-balance").textContent =
+    `${(monthSums.income - monthSums.expense).toFixed(2)}`;
+
+  // Update kanban subs
+  document.getElementById("month-sub").textContent =
+    `${m + 1}月 1日–${new Date(y, m + 1, 0).getDate()}日`;
+  document.getElementById("year-sub").textContent = `${y}`;
+
+  // Update right-side summaries
+  document.getElementById("today-summary").textContent =
+    `收入 ${todaySums.income.toFixed(2)} | 支出 ${todaySums.expense.toFixed(2)}`;
+  document.getElementById("month-summary").textContent =
+    `收入 ${monthSums.income.toFixed(2)} | 支出 ${monthSums.expense.toFixed(2)}`;
+  document.getElementById("year-summary").textContent =
+    `收入 ${yearSums.income.toFixed(2)} | 支出 ${yearSums.expense.toFixed(2)}`;
+}
+
+// Initial language
+setLanguage('zh');
