@@ -49,6 +49,25 @@ auth.onAuthStateChanged(user => {
     document.querySelector(".bottom-nav").style.display = "flex";
     document.getElementById("welcome").textContent =
       `${translations[currentLang].welcome}, ${currentUser.email}`;
+
+    db.collection("users").doc(user.uid).get().then(doc => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.homeImageUrl) {
+        const img = document.getElementById("home-image");
+        img.src = data.homeImageUrl;
+        img.style.display = "block";
+      }
+      if (data.colorScheme) {
+        setColorScheme(data.colorScheme);
+        document.getElementById("color-scheme-select").value = data.colorScheme;
+      }
+      if (data.language) {
+        setLanguage(data.language);
+      }
+    }
+  });
+
     showPage("home", document.getElementById("nav-home"));
     loadLedger(currentUser.uid);
     updateHomeKanban();
@@ -309,21 +328,48 @@ function setLanguage(lang) {
   document.getElementById("nav-transaction").textContent = t.navTransaction;
   document.getElementById("nav-charts").textContent = t.navCharts;
   document.getElementById("nav-settings").textContent = t.navSettings;
+
+  if (currentUser) {
+    db.collection("users").doc(currentUser.uid).set({
+      language: lang
+    }, { merge: true });
+  }
 }
+
+const storage = firebase.storage();
+
+async function uploadHomeImage(file) {
+  if (!currentUser) return;
+
+  // Create a storage ref under the user’s folder
+  const storageRef = storage.ref(`users/${currentUser.uid}/homeImage.jpg`);
+
+  // Upload file
+  await storageRef.put(file);
+
+  // Get download URL
+  const url = await storageRef.getDownloadURL();
+
+  // Save URL in Firestore under user settings
+  await db.collection("users").doc(currentUser.uid).set({
+    homeImageUrl: url
+  }, { merge: true });
+
+  // Update UI
+  const img = document.getElementById("home-image");
+  img.src = url;
+  img.style.display = "block";
+}
+
 
 // --- Home: image preview ---
 function previewHomeImage(event) {
   const file = event.target.files[0];
   if (file) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = document.getElementById("home-image");
-      img.src = e.target.result;
-      img.style.display = "block";
-    };
-    reader.readAsDataURL(file);
+    uploadHomeImage(file);
   }
 }
+
 
 // Right-click triggers upload
 function triggerHomeUpload(event) {
@@ -404,6 +450,11 @@ function setColorScheme(scheme) {
     document.documentElement.classList.add("alt-scheme");
   } else {
     document.documentElement.classList.remove("alt-scheme");
+  }
+  if (currentUser) {
+    db.collection("users").doc(currentUser.uid).set({
+      colorScheme: scheme
+    }, { merge: true });
   }
 }
 
