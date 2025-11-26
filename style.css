@@ -226,3 +226,16 @@ hr { border: none; border-top: 1px solid var(--border); }
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
 }
+
+.settings-header {
+  display: flex;
+  justify-content: space-between; /* pushes title left, welcome right */
+  align-items: center;
+}
+
+#settings-welcome {
+  text-align: right;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}

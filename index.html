@@ -22,7 +22,6 @@
 
   <!-- Home Section -->
   <div id="home-section" class="section" style="display:none;">
-    <h2 id="home-title">首页</h2>
     <div class="home-hero">
       <div class="home-image-wrapper" 
            oncontextmenu="triggerHomeUpload(event)" 
@@ -74,7 +73,6 @@
 
   <!-- Ledger Section -->
   <div id="ledger-section" class="section" style="display:none;">
-    <h2 id="welcome"></h2>
     <form id="transaction-form">
       <label for="type" id="label-type">类型</label>
       <select id="type" required>
@@ -113,7 +111,10 @@
 
   <!-- Settings Section -->
   <div id="settings-section" class="section" style="display:none;">
-    <h2 id="settings-title">设置</h2>
+    <div class="settings-header">
+      <h2 id="settings-title">设置</h2>
+      <span id="settings-welcome"></span>
+    </div>
     <div class="lang-switch">
       <p>语言 / Language</p>
       <button onclick="setLanguage('en')">English</button>

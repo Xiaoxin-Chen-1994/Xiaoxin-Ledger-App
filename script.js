@@ -48,6 +48,8 @@ auth.onAuthStateChanged(user => {
     currentUser = user;
     document.getElementById("login-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
+    document.getElementById("settings-welcome").textContent =
+      `${translations[currentLang].welcome}, ${currentUser.email}`;
 
     db.collection("users").doc(user.uid).get().then(doc => {
       if (doc.exists) {
@@ -68,8 +70,6 @@ auth.onAuthStateChanged(user => {
       }
     });
 
-    document.getElementById("welcome").textContent =
-      `${translations[currentLang].welcome}, ${currentUser.email}`;
 
     showPage("home", document.getElementById("nav-home"));
     loadLedger(currentUser.uid);
@@ -81,6 +81,7 @@ auth.onAuthStateChanged(user => {
     document.getElementById("ledger-section").style.display = "none";
     document.getElementById("settings-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "none";
+    document.getElementById("settings-welcome").textContent = "";
   }
 });
 
