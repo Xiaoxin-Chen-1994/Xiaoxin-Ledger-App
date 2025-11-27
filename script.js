@@ -64,6 +64,12 @@ let accounts = [];
 let persons = [];
 let households = [];
 let householdIds = [];
+let inputTransactionTime = null;
+let inputHouseholdId = null;
+let inputPerson = null;
+let inputStore = null;
+let inputCategory = null;
+let inputItems = null;
 
 // --- Authentication ---
 function signup() {
@@ -261,27 +267,99 @@ function setCurrentTime(button) {
 
   const prefix = getDatePrefix(now);
 
-  button.textContent = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  inputTransactionTime = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`
+
+  button.textContent = inputTransactionTime;
   button.dataset.value = now.toISOString();
 }
 
 function setCurrentHousehold(button) {
+  inputHouseholdId = households[0].id;
   button.textContent = households[0].name;
   button.dataset.value = households[0].id;
 }
 
-
-// --- Items helper ---
-function addItemRow() {
-  const container = document.getElementById("items-container");
+function createItemRow() {
   const row = document.createElement("div");
   row.className = "item-row";
-  row.innerHTML = `
-    <input type="text" class="item-name" placeholder="项目名称">
-    <input type="text" class="item-notes" placeholder="价格">
-  `;
-  container.appendChild(row);
+
+  const content = document.createElement("div");
+  content.className = "item-content";
+
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "item-name";
+  nameInput.placeholder = "物品";
+
+  const notesInput = document.createElement("input");
+  notesInput.type = "text";
+  notesInput.className = "item-notes";
+  notesInput.placeholder = "价格";
+
+  content.appendChild(nameInput);
+  content.appendChild(notesInput);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.textContent = "删除";
+
+  row.appendChild(content);
+  row.appendChild(deleteBtn);
+
+  row.addEventListener("contextmenu", e => {
+    e.preventDefault(); // prevent the browser’s default right‑click menu
+    row.classList.add("show-delete"); // reveal delete button
+  });
+
+  row.addEventListener("click", e => {
+    // only hide if clicking outside the delete button
+    if (!e.target.classList.contains("delete-btn")) {
+      row.classList.remove("show-delete");
+    }
+  });
+
+  // Swipe detection
+  let startX = 0;
+  row.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+  });
+  row.addEventListener("touchend", e => {
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    if (diff > 50) {
+      row.classList.add("show-delete");   // swipe left
+    } else if (diff < -50) {
+      row.classList.remove("show-delete"); // swipe right
+    }
+  });
+
+  // Delete button
+  deleteBtn.addEventListener("click", () => {
+    row.remove();
+  });
+
+  return row;
 }
+
+// Attach to all add-item buttons
+document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
+  addBtn.addEventListener("click", () => {
+    const group = addBtn.closest(".item-group");
+    const newRow = createItemRow();
+    group.insertBefore(newRow, addBtn);
+  });
+});
+
+// Upgrade any existing rows in HTML
+document.querySelectorAll(".item-row").forEach(row => {
+  const name = row.querySelector(".item-name")?.value || "";
+  const notes = row.querySelector(".item-notes")?.value || "";
+  const upgraded = createItemRow(name, notes);
+  row.replaceWith(upgraded);
+});
+
+
 
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -292,8 +370,156 @@ function switchTab(index) {
   currentIndex = index;
   wrapper.style.transform = `translateX(-${index * 100}%)`;
 
+  // Update active button
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
+
+  // Find the active tab container
+  const activeTab = document.querySelectorAll(".transaction-page")[index];
+
+  // datetime
+  const datetimeEl = activeTab.querySelector(".selector-button[data-type='datetime']");
+  if (datetimeEl && inputTransactionTime) {
+    datetimeEl.textContent = inputTransactionTime;
+  }
+
+  // person
+  const personEl = activeTab.querySelector("input[list='person-list']");
+  if (personEl && inputPerson) {
+    personEl.value = inputPerson;
+  }
+
+  // household
+  const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
+ 
+  const household = households.find(h => h.id === inputHouseholdId);
+
+  if (household) {
+    householdEl.textContent = household.name;   // show the name on the button
+    householdEl.dataset.value = household.id;   // keep the id in data-value
+  }
+
+  // category
+  const categoryEl = activeTab.querySelector("input[type='search'][id$='category']");
+  if (categoryEl && inputCategory) {
+    categoryEl.value = inputCategory;
+  }
+
+  // store
+  const storeEl = activeTab.querySelector("input[type='search'][id$='store']");
+  if (storeEl && inputStore) {
+    storeEl.value = inputStore;
+  }
+
+  // Parse the string into an array of {name, notes}
+  let parsedItems = (inputItems || "")
+    .split("|")
+    .filter(pair => pair) // remove empty strings
+    .map(pair => {
+      const [name, notes] = pair.split(":");
+      return { name: name || "", notes: notes || "" };
+    });
+  // Keep at least one empty row
+  if (parsedItems.length === 0) {
+    parsedItems = [{ name: "", notes: "" }];
+  }
+  // Render all items into that tab
+  renderItems(parsedItems, activeTab);
+}
+
+// parsedItems is now an array of { name, notes }
+function renderItems(parsedItems, activeTab) {
+  const itemGroup = activeTab.querySelector(".item-group");
+  if (!itemGroup) return;
+
+  // Find the "Add another item" button so we can keep it at the bottom
+  const addBtn = itemGroup.querySelector("button[id$='add-item-btn']");
+
+  // Clear everything
+  itemGroup.innerHTML = "";
+
+  // Rebuild rows from parsedItems
+  parsedItems.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "item-row";
+
+    const content = document.createElement("div");
+    content.className = "item-content";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "item-name";
+    nameInput.placeholder = "物品";
+    nameInput.value = item.name;
+
+    const notesInput = document.createElement("input");
+    notesInput.type = "text";
+    notesInput.className = "item-notes";
+    notesInput.placeholder = "价格";
+    notesInput.value = item.notes;
+
+    content.appendChild(nameInput);
+    content.appendChild(notesInput);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "删除";
+
+    row.appendChild(content);
+    row.appendChild(deleteBtn);
+
+    // --- Swipe detection ---
+    let startX = 0;
+    row.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+    });
+    row.addEventListener("touchend", e => {
+      const endX = e.changedTouches[0].clientX;
+      const diff = startX - endX;
+      if (diff > 50) {
+        row.classList.add("show-delete");   // swipe left
+      } else if (diff < -50) {
+        row.classList.remove("show-delete"); // swipe right
+      }
+    });
+
+    // --- Right‑click (desktop) ---
+    row.addEventListener("contextmenu", e => {
+      e.preventDefault();
+      row.classList.add("show-delete");
+    });
+
+    row.addEventListener("click", e => {
+      // only hide if clicking outside the delete button
+      if (!e.target.classList.contains("delete-btn")) {
+        row.classList.remove("show-delete");
+      }
+    });
+
+    // --- Delete button ---
+    deleteBtn.addEventListener("click", () => {
+      row.remove();
+      document.querySelectorAll(".item-group").forEach(group => {
+        // Collect all rows in this group
+        const rows = group.querySelectorAll(".item-row");
+
+        // Build array of {name, notes}
+        const itemsArray = Array.from(rows).map(row => ({
+          name: row.querySelector(".item-name").value.trim(),
+          notes: row.querySelector(".item-notes").value.trim()
+        }));
+
+        // Merge into string
+        inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
+      });
+    });
+
+    itemGroup.appendChild(row);
+  });
+
+  // Re‑append the add button at the end
+  if (addBtn) itemGroup.appendChild(addBtn);
 }
 
 // Button click
@@ -349,7 +575,7 @@ function addEntry() {
   // Household selector dropdown
   const householdId = document.getElementById("household-select").value;
   if (!householdId) {
-    showStatus("请选择账本 / Please select a household");
+    showStatus("请选择家庭 / Please select a household");
     return;
   }
 
@@ -498,7 +724,7 @@ function showPage(name) {
 
   if (name === "transaction-page") {
     const activeIndex = currentIndex; // income=0, expense=1, transfer=2
-    const formIds = ["income-form", "expense-form", "transfer-form"];
+    const formIds = ["expense-form", "income-form", "transfer-form"];
     const formId = formIds[activeIndex];
 
     if (isTransactionFormEmpty(formId)) {
@@ -542,10 +768,6 @@ function goBack() {
 }
 
 window.addEventListener("popstate", goBack);
-document.addEventListener("keydown", e => {
-  if (e.key === "Backspace") goBack();
-});
-
 
 // --- Language Switcher ---
 const translations = {
@@ -1269,9 +1491,10 @@ function updateSelectorPreview() {
     const dateObj = new Date(y, m - 1, d, h, min);
     const prefix = getDatePrefix(dateObj); // assumes you already have this
 
-    lastButton.textContent =
-      `${prefix}${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ` +
+    inputTransactionTime = `${prefix}${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ` +
       `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+
+    lastButton.textContent = inputTransactionTime;
 
     lastButton.dataset.value = dateObj.toISOString();
 
@@ -1280,7 +1503,14 @@ function updateSelectorPreview() {
 
     if (!hhEl) return;
 
-    lastButton.textContent = hhEl.textContent;
+    const household = households.find(
+      h => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
+    );
+
+    if (household) {
+      inputHouseholdId = household.id;           // use the id directly
+      lastButton.textContent = household.name;
+    }
   }
 }
 
@@ -1402,4 +1632,22 @@ document.addEventListener("click", e => {
   if (!datetimeSelector.contains(e.target)) {
     datetimeSelector.style.display = "none";
   }
+});
+
+const itemGroup = document.querySelector(".item-group");
+
+document.querySelectorAll(".item-group").forEach(group => {
+  group.addEventListener("input", () => {
+    // Collect all rows in this group
+    const rows = group.querySelectorAll(".item-row");
+
+    // Build array of {name, notes}
+    const itemsArray = Array.from(rows).map(row => ({
+      name: row.querySelector(".item-name").value.trim(),
+      notes: row.querySelector(".item-notes").value.trim()
+    }));
+
+    // Merge into string
+    inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
+  });
 });

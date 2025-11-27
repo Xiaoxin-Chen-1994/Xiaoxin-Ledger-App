@@ -86,13 +86,64 @@
 
       <!-- Tabs -->
       <div class="transaction-tabs">
-        <button class="tab-btn active" data-index="0">收入</button>
-        <button class="tab-btn" data-index="1">支出</button>
+        <button class="tab-btn active" data-index="0">支出</button>
+        <button class="tab-btn" data-index="1">收入</button>
         <button class="tab-btn" data-index="2">转账</button>
       </div>
 
       <!-- ✅ Wrapper contains ONLY the 3 pages -->
       <div class="transaction-wrapper" id="transaction-wrapper">
+
+        <!-- Expense -->
+        <div class="transaction-page" id="expense-form">
+          <form class="transaction-form">
+            <div class="form-row">
+              <label>账户</label>
+              <input list="account-list" id="expense-account">
+            </div>
+
+            <div class="form-row">
+              <label>时间</label>
+              <button type="button" id="expense-datetime" class="selector-button" data-type="datetime"></button>
+            </div>
+
+            <div class="form-row">
+              <label>成员</label>
+              <input list="person-list" id="expense-person">
+            </div>
+
+            <div class="form-row">
+              <label>家庭</label>
+              <button type="button" id="expense-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>类别</label>
+              <input type="search" id="expense-category">
+            </div>
+
+            <div class="form-row">
+              <label>商家</label>
+              <input type="search" id="expense-store">
+            </div>
+
+            <div class="form-row" id="items-form">
+              <label>物品</label>
+              <div class="item-group">
+                <div class="item-row">
+                  <input type="text" class="item-name" placeholder="物品">
+                  <input type="text" class="item-notes" placeholder="价格">
+                </div>
+                <button type="button" id="expense-add-item-btn">Add another item</button>
+              </div>
+            </div>
+
+
+            <div class="actions">
+              <button type="button" onclick="addEntry('expense')">添加支出</button>
+            </div>
+          </form>
+        </div>
 
         <!-- Income -->
         <div class="transaction-page" id="income-form">
@@ -118,68 +169,31 @@
             </div>
 
             <div class="form-row">
-              <label>商家</label>
-              <input type="search" id="income-store">
-            </div>
-
-            <div class="form-row">
               <label>类别</label>
               <input type="search" id="income-category">
             </div>
 
-            <label>项目</label>
-            <div class="item-row">
-              <input type="text" class="item-name">
-              <input type="text" class="item-notes">
+            <div class="form-row">
+              <label>商家</label>
+              <input type="search" id="income-store">
+            </div>
+
+            <div class="form-row" id="items-form">
+              <label>物品</label>
+              <div class="item-group">
+                <div class="item-row">
+                  <div class="item-content">
+                    <input type="text" class="item-name" placeholder="物品">
+                    <input type="text" class="item-notes" placeholder="价格">
+                  </div>
+                  <button type="button" class="delete-btn">删除</button>
+                </div>
+                <button type="button" id="income-add-item-btn">Add another item</button>
+              </div>
             </div>
 
             <div class="actions">
               <button type="button" onclick="addEntry('income')">添加收入</button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Expense -->
-        <div class="transaction-page" id="expense-form">
-          <form class="transaction-form">
-            <div class="form-row">
-              <label>账户</label>
-              <input list="account-list" id="expense-account">
-            </div>
-
-            <div class="form-row">
-              <label>时间</label>
-              <button type="button" id="expense-datetime" class="selector-button" data-type="datetime"></button>
-            </div>
-
-            <div class="form-row">
-              <label>成员</label>
-              <input list="person-list" id="expense-person">
-            </div>
-
-            <div class="form-row">
-              <label>家庭</label>
-              <button type="button" id="income-household" class="selector-button" data-type="household"></button>
-            </div>
-
-            <div class="form-row">
-              <label>商家</label>
-              <input type="search" id="expense-store">
-            </div>
-
-            <div class="form-row">
-              <label>类别</label>
-              <input type="search" id="expense-category">
-            </div>
-
-            <label>项目</label>
-            <div class="item-row">
-              <input type="text" class="item-name">
-              <input type="text" class="item-notes">
-            </div>
-
-            <div class="actions">
-              <button type="button" onclick="addEntry('expense')">添加支出</button>
             </div>
           </form>
         </div>
@@ -199,14 +213,14 @@
     </div>
 
     <!-- Selector panels -->
-    <div id="household-selector" class="datetime-selector">
+    <div id="household-selector" class="selector">
       <button type="button" class="datetime-close"
         onclick="document.getElementById('household-selector').style.display='none'">收起 ▼</button>
 
       <div class="dt-col household-col"></div>
     </div>
 
-    <div id="datetime-selector" class="datetime-selector">
+    <div id="datetime-selector" class="selector">
       <button type="button" class="datetime-close"
         onclick="document.getElementById('datetime-selector').style.display='none'">收起 ▼</button>
 
@@ -224,55 +238,51 @@
       <h2 id="settings-title">设置</h2>
       <span id="settings-welcome"></span>
     </div>
-    <div class="lang-switch">
+
+    <!-- Language -->
+    <section class="settings-section lang-switch">
       <p>语言 / Language</p>
-      <button onclick="setLanguage('en', true)">English</button>
-      <button onclick="setLanguage('zh', true)">中文</button>
-    </div>
-    <div class="color-switch">
+      <button class="settings-button" onclick="setLanguage('en', true)">English</button>
+      <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
+    </section>
+
+    <!-- Color scheme -->
+    <section class="settings-section color-switch">
       <p>颜色方案 / Color Scheme</p>
       <select id="color-scheme-select" onchange="setColorScheme(this.value, true)">
         <option value="default">收入红 / 支出绿</option>
         <option value="alt">收入绿 / 支出红</option>
       </select>
-    </div>
-    <div class="household-row">
-      <span class="household-label">我的家庭:</span>
-      <div id="household-actions" class="settings-section">
+    </section>
 
-        <button id="invite-btn">邀请加入我的家庭</button>
-        <button id="manage-btn">从我的家庭中移除用户</button>
-        <button id="leave-btn">将我从他人的家庭中移除</button>
-
-        <!-- Invite UI -->
-        <div id="invite-panel" style="display:none; margin-top:15px;">
-          <p style="color:#c00; font-weight:bold;">
-            注意：受邀用户只能加入您自己的 household，不能加入您所在的他人的 household
-          </p>
-
-          <input id="invite-email" type="email" placeholder="输入对方的邮箱" style="width:100%; padding:8px; margin-top:10px;">
-          <button id="invite-confirm" style="margin-top:10px;">确认邀请</button>
+    <!-- Household -->
+    <section class="settings-section household-row">
+      <p>我的家庭:</p>
+      <div id="household-actions">
+        <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
+        <div id="invite-panel" class="panel hidden">
+          <p>注意：受邀用户只能加入您自己的 household，不能加入您所在的他人的 household</p>
+          <input id="invite-email" type="email" placeholder="输入对方的邮箱">
+          <button id="invite-confirm" class="settings-button primary">确认邀请</button>
         </div>
 
-        <!-- Manage UI -->
-        <div id="manage-panel" style="display:none">
+        <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
+        <div id="manage-panel" class="panel hidden">
           <h4>成员管理</h4>
-          <ul id="member-list"></ul>
+          <ul id="member-list" class="household-list"></ul>
         </div>
-        <div id="leave-household-panel" style="display:none;">
+
+        <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
+        <div id="leave-household-panel" class="panel hidden">
           <h4>他人的家庭</h4>
-          <ul id="leave-household-list"></ul>
+          <ul id="leave-household-list" class="household-list"></ul>
         </div>
-
-
       </div>
-
-    </div>
+    </section>
 
     <div class="actions">
       <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
     </div>
-  </div>
   </div>
 
   <!-- Bottom Navigation Bar -->

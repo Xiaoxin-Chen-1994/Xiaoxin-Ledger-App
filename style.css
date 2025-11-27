@@ -33,11 +33,12 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b0c0e;
+    --btnBg: #252525;
     --card: rgba(18, 19, 23, 0.7);
     --text: #eaeef3;
     --muted: #a1a7b3;
-    --primary: #4da3ff;
-    --primary-hover: #7ab9ff;
+    --primary: #337bc8;
+    --primary-hover: #0e58ac;
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
@@ -180,15 +181,9 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   display: none;             /* Chrome/Safari */
 }
 
-#household-actions {
-  margin: 16px 0;
-  padding: 16px;
-  border-radius: 8px;
-  background: #fafafa;
-  border: 1px solid #eee;
-}
-
-#household-actions button {
+/* Shared interactive element style */
+.settings-section button,
+.settings-section select {
   display: block;
   width: 100%;
   padding: 10px 12px;
@@ -196,68 +191,61 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #f5f5f5;
-  color: #333;
   font-size: 14px;
   text-align: left;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-#household-actions button:hover {
-  background: #eee;
+/* Hover/focus states */
+.settings-section button:hover,
+.settings-section select:hover,
+.settings-section select:focus {
+  background: var(--primary);
   border-color: #ccc;
+  outline: none;
 }
 
-#invite-btn {
-  background: #e8f3ff;
-  border-color: #c3dafc;
+.lang-switch {
+  display: flex;
+  align-items: center;   /* vertically center label and buttons */
+  gap: 12px;             /* spacing between label and buttons */
 }
 
-#invite-btn:hover {
-  background: #d8e9ff;
+.lang-switch p {
+  margin: 0;             /* remove default paragraph margin */
+  flex-shrink: 0;        /* keep the label from shrinking */
 }
 
-#manage-btn {
-  background: #f7f5ff;
-  border-color: #d9d2ff;
+.lang-switch .settings-button {
+  display: inline-block; /* buttons inline */
+  width: auto;           /* don’t stretch full width */
+  margin: 0;             /* reset margins */
 }
 
-#manage-btn:hover {
-  background: #ece7ff;
-}
-
-#leave-btn {
-  background: #fff3f3;
-  border-color: #f3c4c4;
-  color: #b00020;
-}
-
-#leave-btn:hover {
-  background: #ffe5e5;
-}
-
-#invite-panel {
-  margin-top: 12px;
+#invite-panel,
+#manage-panel,
+#leave-household-panel {
+  margin: 12px 12px;
   padding: 12px;
   border-radius: 6px;
   background: #fff;
   border: 1px solid #eee;
+  display: none;
 }
 
 #invite-panel p {
   margin: 0 0 8px 0;
   color: #b00020;
-  font-size: 13px;
-  line-height: 1.4;
   font-weight: 600;
 }
 
+/* Input field */
 #invite-email {
   width: 100%;
   padding: 8px 10px;
   border-radius: 4px;
   border: 1px solid #ccc;
-  font-size: 14px;
   box-sizing: border-box;
 }
 
@@ -267,11 +255,10 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
 }
 
+/* Confirm button overrides */
 #invite-confirm {
   margin-top: 8px;
-  display: inline-block;
   width: auto;
-  padding: 6px 12px;
   background: #4285f4;
   border-color: #4285f4;
   color: #fff;
@@ -279,56 +266,55 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 }
 
 #invite-confirm:hover {
-  background: #3367d6;
+  background: #1c4db8;
   border-color: #3367d6;
 }
 
-#manage-panel, #leave-household-panel {
-  margin-top: 12px;
-  display: block;
-  padding: 10px;
-  border-radius: 6px;
-  background: #fff;
-  border: 1px solid #eee;
-}
-
-#manage-panel h4, #leave-household-panel h4 {
+/* Panel headings */
+#manage-panel h4,
+#leave-household-panel h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
   font-weight: 600;
   color: #333;
 }
 
-#member-list, #leave-household-list {
+/* Member & household lists */
+#member-list,
+#leave-household-list {
   list-style: none;
   padding: 0;
-  margin-top: 10px;
-  margin: 0;
+  margin: 10px 0 0 0;
 }
 
-#member-list li, #leave-household-list li {
+#member-list li,
+#leave-household-list li {
   position: relative;
-  padding: 12px 10px; /* no right padding, we will slide content */
+  padding: 12px 10px;
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
   cursor: pointer;
   font-size: 14px;
   color: #444;
   user-select: none;
-  overflow: hidden; /* ✅ ensures delete button doesn't overflow */
+  overflow: hidden;
 }
 
-#member-list li:last-child, #leave-household-list li:last-child {
+#member-list li:last-child,
+#leave-household-list li:last-child {
   border-bottom: none;
 }
 
-#member-list li:hover, #leave-household-list li:hover {
+#member-list li:hover,
+#leave-household-list li:hover {
   background: #fafafa;
 }
 
-#member-list .delete-btn, #leave-household-list .delete-btn {
+/* Delete button */
+#member-list .delete-btn,
+#leave-household-list .delete-btn {
   position: absolute;
-  right: -80px; /* ✅ hidden off-screen initially */
+  right: -80px;
   top: 0;
   height: 100%;
   width: 80px;
@@ -337,15 +323,81 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   border: none;
   font-size: 14px;
   cursor: pointer;
-  transition: right 0.2s ease; /* ✅ smooth slide-in */
+  transition: right 0.2s ease;
 }
-#delete-btn {
-  top:0px;
-}
-#member-list .delete-btn:hover, #leave-household-list .delete-btn:hover {
+
+#member-list .delete-btn:hover,
+#leave-household-list .delete-btn:hover {
   background: #b71c1c;
 }
 
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .settings-section button,
+  .settings-section select,
+  .settings-section select {
+    background: var(--btnBg);
+    border-color: #ccc;
+    outline: none;
+  }
+
+  .settings-section button:hover,
+  .settings-section select:hover,
+  .settings-section select:focus {
+    background: var(--primary-hover);
+    border-color: #ccc;
+    outline: none;
+  }
+
+  #invite-panel,
+  #manage-panel,
+  #leave-household-panel {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+
+  #invite-panel p {
+    color: #ed6f6f;
+  }
+
+  #invite-email {
+    background: #1e1e1e;
+    border-color: #555;
+    color: #eee;
+  }
+
+  #invite-email:focus {
+    border-color: #4285f4;
+    box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.4);
+  }
+
+  #manage-panel h4,
+  #leave-household-panel h4 {
+    color: #eee;
+  }
+
+  #member-list li,
+  #leave-household-list li {
+    background: #2a2a2a;
+    color: #eee;
+    border-bottom: 1px solid #444;
+  }
+
+  #member-list li:hover,
+  #leave-household-list li:hover {
+    background: #333;
+  }
+
+  #member-list .delete-btn,
+  #leave-household-list .delete-btn {
+    background: #d32f2f;
+  }
+
+  #member-list .delete-btn:hover,
+  #leave-household-list .delete-btn:hover {
+    background: #b71c1c;
+  }
+}
 
 select, input[type="search"], input[list], 
 input[type="text"], input[type="password"], input[type="number"], .selector-button {
@@ -360,28 +412,78 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
 }
 
 .form-row {
-  display: flex;
-  align-items: center;
+  display: flex;          /* label + item-group side by side */
+  align-items: flex-start;
   gap: 1rem;
   margin: 0.75rem 0;
 }
 
-.form-row label,
-.form-row .household-label {
-  flex: 0 0 5rem; /* fixed width for labels */
+.form-row label {
+  flex: 0 0 5rem;         /* fixed width for label */
   font-weight: 600;
 }
 
-.form-row input,
-.form-row button,
-.form-row .household-container {
-  flex: 1; /* take remaining space */
+.item-group {
+  display: flex;
+  flex-direction: column; /* stack item-rows and button vertically */
+  gap: 8px;
+  flex: 1;
+}
+
+.item-row {
+  display: flex;          /* inputs side by side */
+  gap: 8px;
+}
+
+.item-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  transition: transform 0.3s ease;
+}
+
+.delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  background: crimson;
+  color: white;
+  border: none;
+  transform: translateX(100%); /* hidden by default */
+  transition: transform 0.3s ease;
+}
+
+.item-row.show-delete .item-content {
+  transform: translateX(-80px); /* slide inputs left */
+}
+
+.item-row.show-delete .delete-btn {
+  transform: translateX(0); /* reveal delete button */
+}
+
+#expense-add-item-btn, #income-add-item-btn {
+  align-self: flex-start; /* keep button aligned with inputs */
+  padding: 6px 12px;
 }
 
 .selector-button:hover { background: var(--card); }
 
 /* Selector panel fixed at bottom */
-.datetime-selector {
+.selector {
   position: fixed;
   bottom: 60px; /* above nav bar */
   left: 0;
@@ -393,26 +495,20 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
   z-index: 9999;
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  display: none;
 }
 
-/* ✅ Close button floats ABOVE columns */
 .datetime-close {
   position: absolute;
   top: -40px;          /* move above selector */
   right: 10px;
-  background: var(--primary-hover);
+  background: var(--primary);
   border: none;
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
   z-index: 10000;
   font-size: 16px;
-}
-
-/* Columns */
-.datetime-selector {
-  display: none;
-  width: 100%;
 }
 
 .dt-col {
@@ -443,13 +539,28 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
 }
 
 .dt-item.selected {
-  background: #007aff;
+  background: var(--primary);
   color: white;
   border-radius: 6px;
 }
 
+@media (prefers-color-scheme: dark) {
+  .selector {
+    background: var(--btnBg);
+  }
+
+  .dt-item.selected {
+    background: var(--primary);
+    color: white;
+  }
+
+  .datetime-close {
+    background: var(--primary);
+  }
+}
 
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+
 button {
   flex: 1;
   padding: 0.75rem;
@@ -475,9 +586,6 @@ button.secondary {
   margin-bottom: 0.5rem;
 }
 
-.item-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
-.item-row input { flex: 1 1 30%; }
-
 /* Bottom Navigation */
 .bottom-nav {
   position: fixed;
@@ -498,25 +606,6 @@ button.secondary {
   cursor: pointer;
 }
 .bottom-nav button.active { color: var(--primary); font-weight: bold; }
-
-/* Language switch */
-.lang-switch {
-  text-align: center;
-  margin: 0.5rem;
-}
-.lang-switch button {
-  margin: 0 0.25rem;
-  padding: 0.5rem 0.75rem;
-  border: 0.0625rem solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--card);
-  color: var(--text);
-  cursor: pointer;
-}
-.lang-switch button:hover {
-  background: var(--primary);
-  color: #fff;
-}
 
 /* Home hero and overlay */
 .home-hero { position: relative; margin-bottom: 1rem; }
