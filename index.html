@@ -128,10 +128,10 @@
             </div>
 
             <div class="form-row" id="items-form">
-              <label>物品</label>
+              <label>条目</label>
               <div class="item-group">
                 <div class="item-row">
-                  <input type="text" class="item-name" placeholder="物品">
+                  <input type="text" class="item-name" placeholder="条目">
                   <input type="text" class="item-notes" placeholder="价格">
                 </div>
                 <button type="button" id="expense-add-item-btn">Add another item</button>
@@ -179,11 +179,11 @@
             </div>
 
             <div class="form-row" id="items-form">
-              <label>物品</label>
+              <label>条目</label>
               <div class="item-group">
                 <div class="item-row">
                   <div class="item-content">
-                    <input type="text" class="item-name" placeholder="物品">
+                    <input type="text" class="item-name" placeholder="条目">
                     <input type="text" class="item-notes" placeholder="价格">
                   </div>
                   <button type="button" class="delete-btn">删除</button>
@@ -259,9 +259,15 @@
     <section class="settings-section household-row">
       <p>我的家庭:</p>
       <div id="household-actions">
+        <button id="rename-btn" class="settings-button">重命名我的家庭</button>
+        <div id="rename-panel" class="panel hidden">
+          <input id="rename-household">
+          <button id="rename-confirm" class="settings-button primary">确认修改</button>
+        </div>
+
         <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
         <div id="invite-panel" class="panel hidden">
-          <p>注意：受邀用户只能加入您自己的 household，不能加入您所在的他人的 household</p>
+          <p>注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
           <input id="invite-email" type="email" placeholder="输入对方的邮箱">
           <button id="invite-confirm" class="settings-button primary">确认邀请</button>
         </div>

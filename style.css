@@ -189,6 +189,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   padding: 10px 12px;
   margin-bottom: 8px;
   border: 1px solid #ddd;
+  color: var(--text);
   border-radius: 6px;
   background: #f5f5f5;
   font-size: 14px;
@@ -223,6 +224,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   margin: 0;             /* reset margins */
 }
 
+#rename-panel,
 #invite-panel,
 #manage-panel,
 #leave-household-panel {
@@ -241,7 +243,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 }
 
 /* Input field */
-#invite-email {
+#rename-household, #invite-email {
   width: 100%;
   padding: 8px 10px;
   border-radius: 4px;
@@ -249,14 +251,14 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   box-sizing: border-box;
 }
 
-#invite-email:focus {
+#rename-household:focus, #invite-email:focus {
   outline: none;
   border-color: #4285f4;
   box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
 }
 
 /* Confirm button overrides */
-#invite-confirm {
+#rename-confirm, #invite-confirm {
   margin-top: 8px;
   width: auto;
   background: #4285f4;
@@ -265,7 +267,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   text-align: center;
 }
 
-#invite-confirm:hover {
+#rename-confirm:hover, #invite-confirm:hover {
   background: #1c4db8;
   border-color: #3367d6;
 }
@@ -337,6 +339,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   .settings-section select,
   .settings-section select {
     background: var(--btnBg);
+    color: var(--text);
     border-color: #ccc;
     outline: none;
   }
@@ -349,6 +352,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
     outline: none;
   }
 
+  #rename-panel, 
   #invite-panel,
   #manage-panel,
   #leave-household-panel {
@@ -360,13 +364,13 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
     color: #ed6f6f;
   }
 
-  #invite-email {
+  #rename-household, #invite-email {
     background: #1e1e1e;
     border-color: #555;
     color: #eee;
   }
 
-  #invite-email:focus {
+  #rename-household:focus, #invite-email:focus {
     border-color: #4285f4;
     box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.4);
   }

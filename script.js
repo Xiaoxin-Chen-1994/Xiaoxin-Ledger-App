@@ -64,6 +64,7 @@ let accounts = [];
 let persons = [];
 let households = [];
 let householdIds = [];
+let inputType = null;
 let inputTransactionTime = null;
 let inputHouseholdId = null;
 let inputPerson = null;
@@ -289,7 +290,7 @@ function createItemRow() {
   const nameInput = document.createElement("input");
   nameInput.type = "text";
   nameInput.className = "item-name";
-  nameInput.placeholder = "物品";
+  nameInput.placeholder = "条目";
 
   const notesInput = document.createElement("input");
   notesInput.type = "text";
@@ -449,7 +450,7 @@ function renderItems(parsedItems, activeTab) {
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.className = "item-name";
-    nameInput.placeholder = "物品";
+    nameInput.placeholder = "条目";
     nameInput.value = item.name;
 
     const notesInput = document.createElement("input");
@@ -572,14 +573,8 @@ const fieldMap = {
 function addEntry() {
   if (!currentUser) return;
 
-  // Household selector dropdown
-  const householdId = document.getElementById("household-select").value;
-  if (!householdId) {
-    showStatus("请选择家庭 / Please select a household");
-    return;
-  }
-
-  const type = document.getElementById("type").value;
+  const householdId = inputHouseholdId; // regardless of household name
+  const type = inputType; // regardless of language
 
   // Read fields depending on type
   let account, person, store, category, fromAccount, toAccount;
@@ -1022,13 +1017,23 @@ function setColorScheme(scheme, showMessage = false) {
   }
 }
 
+document.getElementById("rename-btn").onclick = () => {
+  document.getElementById("rename-panel").style.display = "block";
+  document.getElementById("rename-household").value = households[0].name;
+  document.getElementById("invite-panel").style.display = "none";
+  document.getElementById("manage-panel").style.display = "none";
+  document.getElementById("leave-household-panel").style.display = "none";
+};
+
 document.getElementById("invite-btn").onclick = () => {
+  document.getElementById("rename-panel").style.display = "none";
   document.getElementById("invite-panel").style.display = "block";
   document.getElementById("manage-panel").style.display = "none";
   document.getElementById("leave-household-panel").style.display = "none";
 };
 
 document.getElementById("manage-btn").onclick = () => {
+  document.getElementById("rename-panel").style.display = "none";
   document.getElementById("invite-panel").style.display = "none";
   document.getElementById("manage-panel").style.display = "block";
   document.getElementById("leave-household-panel").style.display = "none";
@@ -1036,11 +1041,31 @@ document.getElementById("manage-btn").onclick = () => {
 };
 
 document.getElementById("leave-btn").onclick = () => {
+  document.getElementById("rename-panel").style.display = "none";
   document.getElementById("invite-panel").style.display = "none";
   document.getElementById("manage-panel").style.display = "none";
   document.getElementById("leave-household-panel").style.display = "block";
   loadMyHouseholds();
 };
+
+document.getElementById("rename-confirm").addEventListener("click", async () => {
+  const newName = document.getElementById("rename-household").value.trim();
+
+  if (!newName) {
+    alert("请输入新的家庭名称");
+    return;
+  }
+
+  try {
+    // Reference to the household document
+    const householdRef = db.collection("households").doc(households[0].id);
+    householdRef.update({ name: newName });
+
+    console.log("Household renamed successfully!");
+  } catch (err) {
+    console.error("Error renaming household:", err);
+  }
+});
 
 document.getElementById("invite-confirm").onclick = async () => {
   const email = document.getElementById("invite-email").value.trim();
