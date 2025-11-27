@@ -856,14 +856,14 @@ async function loadHouseholdMembers() {
       showDeleteButton(li, uid);
     };
 
-    // Swipe right (mobile)
+    // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
       li._startX = e.touches[0].clientX;
     });
 
     li.addEventListener("touchend", e => {
       const dx = e.changedTouches[0].clientX - li._startX;
-      if (dx > 50) showDeleteButton(li, uid);
+      if (dx < -50) showDeleteButton(li, uid);
     });
 
     list.appendChild(li);
