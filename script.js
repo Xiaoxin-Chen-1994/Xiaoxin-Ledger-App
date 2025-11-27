@@ -850,11 +850,17 @@ async function loadHouseholdMembers() {
     li.style.borderBottom = "1px solid #eee";
     li.style.position = "relative";
 
+    document.addEventListener("contextmenu", e => {
+  console.log("GLOBAL contextmenu fired on:", e.target);
+});
+
     // Right-click to show delete
     li.oncontextmenu = e => {
-      e.preventDefault();
-      showDeleteButton(li, uid);
-    };
+  console.log("contextmenu fired for", uid); // debug
+  e.preventDefault();
+  showDeleteButton(li, uid);
+};
+
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
@@ -863,7 +869,13 @@ async function loadHouseholdMembers() {
 
     li.addEventListener("touchend", e => {
       const dx = e.changedTouches[0].clientX - li._startX;
-      if (dx < -50) showDeleteButton(li, uid);
+      let deleteBtn = null;
+      if (dx < -50) {
+        deleteBtn = showDeleteButton(li, uid);
+      }
+      if (dx < -50) {
+        deleteBtn.style.display = 'none';
+      }
     });
 
     list.appendChild(li);
@@ -886,6 +898,8 @@ function showDeleteButton(li, uid) {
   btn.onclick = () => confirmRemoveMember(uid);
 
   li.appendChild(btn);
+
+  return btn
 }
 
 async function confirmRemoveMember(uid) {
