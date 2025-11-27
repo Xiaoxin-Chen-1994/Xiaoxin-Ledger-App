@@ -1,3 +1,44 @@
+// Data structure: 
+// users/{userId}
+//   - profile
+//       email: string
+//       language: string
+//       homeImage: string
+//   - households: [householdId]   // membership links
+
+// households/{householdId}
+//   - name: string
+//   - members: [userId]           // array of user IDs
+
+//   accounts (subcollection)
+//     accounts/{accountId}
+//       name: string
+//       type: string ("cash" | "bank" | "credit")
+
+//   categories (subcollection)
+//     categories/{categoryId}
+//       primary: string
+//       secondary: [string]
+
+//   collections (subcollection)
+//     collections/{collectionId}
+//       primary: string
+//       secondary: [string]
+
+//   entries (subcollection)
+//     entries/{entryId}
+//       type: string ("income" | "expense" | "transfer")
+//       categoryId: string         // reference to categories/{categoryId}
+//       collectionId: string       // reference to collections/{collectionId}
+//       accountId: string          // reference to accounts/{accountId}
+//       personId: string           // reference to household member
+//       store: string
+//       datetime: timestamp
+//       items: [ { name: string, notes: string, amount: number } ]
+//       amount: number
+//       createdBy: string          // userId
+
+
 // --- Firebase Initialization ---
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -21,6 +62,8 @@ let currentUser = null;
 let currentLang = 'zh';
 let accounts = [];
 let persons = [];
+let households = [];
+let householdIds = [];
 
 // --- Authentication ---
 function signup() {
@@ -33,15 +76,24 @@ function signup() {
       const householdId = user.uid; // personal household id
 
       // Create household
+      const householdName = currentLang === "en"
+        ? `${email}'s Ledger`
+        : `${email}的账本`;
+
       firebase.firestore().collection("households").doc(householdId).set({
-        name: `${email}的账本`,
+        name: householdName,
         admin: user.uid,
         members: [user.uid]
       });
 
       // Create user doc
       firebase.firestore().collection("users").doc(user.uid).set({
-        email: email,
+        profile: {
+          email: email,
+          language: currentLang,
+          homeImage: "",
+          settings: {}
+        },
         personalHouseholdId: householdId,
         households: [householdId]
       });
@@ -49,59 +101,9 @@ function signup() {
     .catch(error => showStatusMessage(error.message, 'error'));
 }
 
-function loadHouseholds(userUid) {
-  firebase.firestore().collection("users").doc(userUid).get().then(doc => {
-    if (!doc.exists) return;
-    const data = doc.data();
-    const select = document.getElementById("household-select");
-    select.innerHTML = "";
-
-    data.households.forEach(hid => {
-      firebase.firestore().collection("households").doc(hid).get().then(hdoc => {
-        if (hdoc.exists) {
-          const opt = document.createElement("option");
-          opt.value = hid;
-          opt.textContent = hdoc.data().name;
-          select.appendChild(opt);
-        }
-      });
-    });
-  });
-}
-
-function showHouseholds(userUid) {
-  const list = document.getElementById("household-list");
-  list.innerHTML = "";
-
-  db.collection("users").doc(userUid).get().then(doc => {
-    if (!doc.exists) return;
-    const data = doc.data();
-
-    data.households.forEach(hid => {
-      db.collection("households").doc(hid).get().then(hdoc => {
-        if (hdoc.exists) {
-          const li = document.createElement("li");
-          const hdata = hdoc.data();
-          li.textContent = hdata.name;
-
-          // Leave button (disabled for personal household)
-          if (hdata.admin !== userUid) {
-            const btn = document.createElement("button");
-            btn.textContent = "退出 / Leave";
-            btn.className = "secondary";
-            btn.onclick = () => leaveHousehold(hid, userUid);
-            li.appendChild(btn);
-          } else {
-            const span = document.createElement("span");
-            span.textContent = " (个人账本)";
-            li.appendChild(span);
-          }
-
-          list.appendChild(li);
-        }
-      });
-    });
-  });
+function selectHousehold(householdId, containerId) {
+  console.log(`Selected household ${householdId} in ${containerId}`);
+  showStatusMessage(`Switched to household ${householdId}`, "success");
 }
 
 
@@ -117,51 +119,136 @@ function logout() {
 }
 
 // --- Persistent login state ---
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
   if (user) {
-    loadHouseholds(user.uid);
-    showHouseholds(user.uid);
-    
     currentUser = user;
+
+    const userRef = firebase.firestore().collection("users").doc(user.uid);
+
+    // ✅ Load profile subdocument
+    const profileSnap = await userRef.collection("profile").doc("profile").get();
+    const profile = profileSnap.exists ? profileSnap.data() : {};
+
+    // ✅ Load household membership array
+    const userDoc = await userRef.get();
+    householdIds = userDoc.exists ? (userDoc.data().households || []) : [];
+
+    // ✅ Load household documents
+    const householdDocs = await Promise.all(
+      householdIds.map(hid =>
+        firebase.firestore().collection("households").doc(hid).get()
+      )
+    );
+
+    // ✅ Convert to array of { id, name }
+    households = householdDocs
+      .filter(doc => doc.exists)
+      .map(doc => ({
+        id: doc.id,
+        name: doc.data().name
+      }));
+
+    // ✅ Initialize household selector
+    initHouseholdSelector(households);
+
+    // ✅ UI updates
     document.getElementById("login-section").style.display = "none";
     document.getElementById("login-lang-switch").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
+
+    // ✅ Welcome text
     document.getElementById("settings-welcome").textContent =
-      `${translations[currentLang].welcome}, ${currentUser.email}`;
+      `${translations[currentLang].welcome}, ${profile.email || currentUser.email}`;
 
-    db.collection("users").doc(user.uid).get().then(doc => {
-      if (doc.exists) {
-        const data = doc.data();
-        if (data.homeImageUrl) {
-          const img = document.getElementById("home-image");
-          img.src = data.homeImageUrl;
-          img.style.display = "block";
-        }
-        if (data.colorScheme) {
-          setColorScheme(data.colorScheme);
-          document.getElementById("color-scheme-select").value = data.colorScheme;
-        }
-        if (data.language) {
-          currentLang = data.language;  
-        }
-        setLanguage(currentLang);
-      }
-    });
+    // ✅ Apply profile settings
+    if (profile.homeImage) {
+      const img = document.getElementById("home-image");
+      img.src = profile.homeImage;
+      img.style.display = "block";
+    }
 
+    if (profile.language) {
+      currentLang = profile.language;
+      setLanguage(currentLang);
+    }
 
-    showPage("home", document.getElementById("nav-home"));
+    if (profile.colorScheme) {
+      setColorScheme(profile.colorScheme);
+      document.getElementById("color-scheme-select").value = profile.colorScheme;
+    }
+
+    // ✅ Load main app
+    showPage("home-page");
     loadLedger(currentUser.uid);
     updateHomeKanban();
   } else {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
-    document.getElementById("home-section").style.display = "none";
-    document.getElementById("ledger-section").style.display = "none";
-    document.getElementById("settings-section").style.display = "none";
+    document.getElementById("home-page").style.display = "none";
+    document.getElementById("transaction-page").style.display = "none";
+    document.getElementById("settings-page").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "none";
     document.getElementById("settings-welcome").textContent = "";
   }
 });
+
+function initHouseholdSelector(households) {
+  const col = document.querySelector("#household-selector .household-col");
+
+  // Use names for display
+  const names = households.map(h => h.name);
+
+  createList(col, names);
+  enableSnap(col);
+
+  // Save for later lookup (ID ↔ name)
+  window._householdList = households;
+}
+
+
+function isTransactionFormEmpty(formId) {
+  const form = document.querySelector(`#${formId} .transaction-form`);
+  if (!form) return true;
+
+  // All text-like inputs
+  const inputs = form.querySelectorAll("input[type='text'], input[type='search'], input[list]");
+
+  for (let input of inputs) {
+    if (input.value.trim() !== "") return false;
+  }
+
+  // Check item rows
+  const itemNames = form.querySelectorAll(".item-name");
+  const itemNotes = form.querySelectorAll(".item-notes");
+
+  for (let i = 0; i < itemNames.length; i++) {
+    if (itemNames[i].value.trim() !== "") return false;
+    if (itemNotes[i].value.trim() !== "") return false;
+  }
+
+  return true;
+}
+
+function setCurrentTime(button) {
+  const now = new Date();
+
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+
+  const prefix = getDatePrefix(now);
+
+  button.textContent = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  button.dataset.value = now.toISOString();
+}
+
+function setCurrentHousehold(button) {
+  button.textContent = households[0].name;
+  button.dataset.value = households[0].id;
+}
+
 
 // --- Items helper ---
 function addItemRow() {
@@ -175,6 +262,65 @@ function addItemRow() {
   container.appendChild(row);
 }
 
+const wrapper = document.getElementById("transaction-wrapper");
+const tabButtons = document.querySelectorAll(".tab-btn");
+
+let currentIndex = 0;
+
+function switchTab(index) {
+  currentIndex = index;
+  wrapper.style.transform = `translateX(-${index * 100}%)`;
+
+  tabButtons.forEach(btn => btn.classList.remove("active"));
+  tabButtons[index].classList.add("active");
+}
+
+// Button click
+tabButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    switchTab(parseInt(btn.dataset.index));
+  });
+});
+
+// Swipe support
+let startX = 0;
+
+wrapper.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
+});
+
+wrapper.addEventListener("touchend", e => {
+  let endX = e.changedTouches[0].clientX;
+  let diff = startX - endX;
+
+  if (Math.abs(diff) > 50) {
+    if (diff > 0 && currentIndex < 2) switchTab(currentIndex + 1);
+    if (diff < 0 && currentIndex > 0) switchTab(currentIndex - 1);
+  }
+});
+
+const fieldMap = {
+  income: {
+    account: "income-account",
+    datetime: "income-datetime",
+    person: "income-person",
+    store: "income-source",
+    category: "income-category"
+  },
+  expense: {
+    account: "expense-account",
+    datetime: "expense-datetime",
+    person: "expense-person",
+    store: "expense-store",
+    category: "expense-category"
+  },
+  transfer: {
+    datetime: "transfer-datetime",
+    fromAccount: "transfer-from",
+    toAccount: "transfer-to"
+  }
+};
+
 // --- Ledger add entry ---
 function addEntry() {
   if (!currentUser) return;
@@ -187,11 +333,27 @@ function addEntry() {
   }
 
   const type = document.getElementById("type").value;
-  const account = document.getElementById("account").value.trim();
-  const datetime = document.getElementById("datetime-display").textContent; // use textContent if you display formatted date
-  const person = document.getElementById("person").value.trim();
-  const store = document.getElementById("store").value.trim();
-  const category = document.getElementById("category").value.trim();
+
+  // Read fields depending on type
+  let account, person, store, category, fromAccount, toAccount;
+
+  if (type === "income" || type === "expense") {
+    const map = fieldMap[type];
+
+    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
+    account = document.getElementById(map.account).value.trim();
+    person = document.getElementById(map.person).value.trim();
+    store = document.getElementById(map.store).value.trim();
+    category = document.getElementById(map.category).value.trim();
+  }
+
+  if (type === "transfer") {
+    const map = fieldMap.transfer;
+
+    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
+    fromAccount = document.getElementById(map.fromAccount).value.trim();
+    toAccount = document.getElementById(map.toAccount).value.trim();
+  }
 
   // Update datalists
   if (account && !accounts.includes(account)) {
@@ -255,7 +417,9 @@ function updateDatalist(id, values) {
 }
 
 function loadLedger(userId) {
-  const list = document.getElementById("ledger-list");
+  const list = document.getElementById("ledger-list"); // or new ID
+  if (!list) return; // safety check
+
   list.innerHTML = "";
   db.collection("ledgers").doc(userId).collection("entries")
     .orderBy("timestamp")
@@ -269,14 +433,13 @@ function loadLedger(userId) {
         list.appendChild(li);
         latest = data;
       });
-      if (latest) {
-        document.getElementById("today-sub").textContent = formatLatest(latest);
-      } else {
-        document.getElementById("today-sub").textContent = "暂无交易";
-      }
+      document.getElementById("today-sub").textContent = latest
+        ? formatLatest(latest)
+        : "暂无交易";
       updateHomeKanban();
     });
 }
+
 
 function formatLatest(data) {
   const typeLabel = data.type === "incoming" ? "收入"
@@ -285,29 +448,76 @@ function formatLatest(data) {
   return `${typeLabel} | ${data.account} | ${data.store || ""} | ${data.datetime || ""}`.trim();
 }
 
-// --- Navigation ---
-function showPage(page, clickedButton) {
-  document.getElementById("login-section").style.display = "none";
-  document.getElementById("home-section").style.display = "none";
-  document.getElementById("ledger-section").style.display = "none";
-  document.getElementById("settings-section").style.display = "none";
 
-  if (page === "transaction") {
-    document.getElementById("ledger-section").style.display = "block";
-  } else if (page === "home") {
-    document.getElementById("home-section").style.display = "block";
-  } else if (page === "accounts") {
-    showStatusMessage("账户 page placeholder", 'info');
-  } else if (page === "charts") {
-    showStatusMessage("图表 page placeholder", 'info');
-  } else if (page === "settings") {
-    document.getElementById("settings-section").style.display = "block";
+const pagesWrapper = document.getElementById("pages-wrapper");
+// define base pages
+const basePages = ["home-page", "accounts-page", "charts-page", "settings-page"];
+
+// history stacks for each base page
+let historyStacks = {
+  home: ["home-page"],
+  accounts: ["accounts-page"],
+  charts: ["charts-page"],
+  settings: ["settings-page"]
+};
+
+// track which base we’re currently in
+let currentBase = "home-page";
+
+function showPage(name) {
+  const target = document.getElementById(name);
+  if (!target) return;
+
+  if (name === "transaction-page") {
+    const activeIndex = currentIndex; // income=0, expense=1, transfer=2
+    const formIds = ["income-form", "expense-form", "transfer-form"];
+    const formId = formIds[activeIndex];
+
+    if (isTransactionFormEmpty(formId)) {
+      let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
+      if (btn) setCurrentTime(btn);
+      btn = document.querySelector(`#${formId} .selector-button[data-type='household']`);
+      if (btn) setCurrentHousehold(btn);
+    }
   }
 
-  const buttons = document.querySelectorAll(".bottom-nav button");
-  buttons.forEach(btn => btn.classList.remove("active"));
-  if (clickedButton) clickedButton.classList.add("active");
+  // ✅ If the page is already active, do nothing
+  if (target.classList.contains('active')) {
+    return;
+  }
+
+  if (basePages.includes(name)) {
+    // reset stack if navigating to a base page
+    currentBase = name;
+    historyStacks[name] = [name];
+  } else {
+    // push child page onto current base stack
+    historyStacks[currentBase].push(name);
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  if (target) {
+    target.classList.add('active');
+  } else {
+    console.error("Page not found:", name);
+  }
 }
+
+function goBack() {
+  const stack = historyStacks[currentBase];
+  if (stack.length > 1) {
+    stack.pop(); // remove current page
+    const prev = stack[stack.length - 1];
+    stack.pop(); // remove previous page as well because it will be appended again
+    showPage(prev);
+  }
+}
+
+window.addEventListener("popstate", goBack);
+document.addEventListener("keydown", e => {
+  if (e.key === "Backspace") goBack();
+});
+
 
 // --- Language Switcher ---
 const translations = {
@@ -394,18 +604,12 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("kanban-year-title").textContent = t.thisYear;
 
   // Ledger labels
-  document.getElementById("label-type").textContent = t.type;
-  document.getElementById("label-account").textContent = t.account;
-  document.getElementById("label-datetime").textContent = t.datetime;
-  document.getElementById("label-person").textContent = t.person;
-  document.getElementById("label-store").textContent = t.store;
-  document.getElementById("label-category").textContent = t.category;
-  document.getElementById("label-items").textContent = t.items;
+
 
   // Buttons
-  document.getElementById("add-item-btn").textContent = t.addItem;
-  document.getElementById("add-transaction-btn").textContent = t.addTransaction;
-  document.getElementById("logout-btn").textContent = t.logout;
+  // document.getElementById("add-item-btn").textContent = t.addItem;
+  // document.getElementById("add-transaction-btn").textContent = t.addTransaction;
+  // document.getElementById("logout-btn").textContent = t.logout;
 
   // Nav
   document.getElementById("nav-home").textContent = t.navHome;
@@ -568,31 +772,169 @@ function setColorScheme(scheme, showMessage = false) {
   }
 }
 
-function joinHousehold(householdId, userUid) {
-  firebase.firestore().collection("households").doc(householdId).update({
-    members: firebase.firestore.FieldValue.arrayUnion(userUid)
+document.getElementById("invite-btn").onclick = () => {
+  document.getElementById("invite-panel").style.display = "block";
+  document.getElementById("manage-panel").style.display = "none";
+};
+
+document.getElementById("manage-btn").onclick = () => {
+  document.getElementById("invite-panel").style.display = "none";
+  document.getElementById("manage-panel").style.display = "block";
+  loadHouseholdMembers();
+};
+
+document.getElementById("leave-btn").onclick = () => {
+  leaveHousehold();
+};
+
+document.getElementById("invite-confirm").onclick = async () => {
+  const email = document.getElementById("invite-email").value.trim();
+  if (!email) return alert("请输入邮箱");
+
+  const myHouseholdId = householdIds[0]; // you already track this
+
+  // 1. Find user by email
+  const userQuery = await firebase.firestore()
+    .collection("users")
+    .where("profile.email", "==", email)
+    .get();
+
+  if (userQuery.empty) {
+    alert("未找到该用户");
+    return;
+  }
+
+  const invitedUserDoc = userQuery.docs[0];
+  const invitedUserId = invitedUserDoc.id;
+
+  // 2. Add household to invited user
+  await invitedUserDoc.ref.update({
+    households: firebase.firestore.FieldValue.arrayUnion(myHouseholdId)
   });
-  firebase.firestore().collection("users").doc(userUid).update({
-    households: firebase.firestore.FieldValue.arrayUnion(householdId)
-  });
+
+  // 3. Add invited user to household members
+  await firebase.firestore()
+    .collection("households")
+    .doc(myHouseholdId)
+    .update({
+      members: firebase.firestore.FieldValue.arrayUnion(invitedUserId)
+    });
+
+  alert("邀请成功，对方已加入您的 household");
+  document.getElementById("invite-email").value = "";
+};
+
+async function loadHouseholdMembers() {
+  const list = document.getElementById("member-list");
+  list.innerHTML = "";
+
+  const householdDoc = await firebase.firestore()
+    .collection("households")
+    .doc(householdIds[0])
+    .get();
+
+  const members = (householdDoc.data().members || []).slice(1);
+
+  for (const uid of members) {
+    const userDoc = await firebase.firestore()
+      .collection("users")
+      .doc(uid)
+      .get();
+    const profileSnap = userDoc.data().profile;
+
+    const email = profileSnap.email;
+
+    const li = document.createElement("li");
+    li.textContent = email;
+    li.style.padding = "10px";
+    li.style.borderBottom = "1px solid #eee";
+    li.style.position = "relative";
+
+    // Right-click to show delete
+    li.oncontextmenu = e => {
+      e.preventDefault();
+      showDeleteButton(li, uid);
+    };
+
+    // Swipe right (mobile)
+    li.addEventListener("touchstart", e => {
+      li._startX = e.touches[0].clientX;
+    });
+
+    li.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].clientX - li._startX;
+      if (dx > 50) showDeleteButton(li, uid);
+    });
+
+    list.appendChild(li);
+  }
 }
 
-function leaveHousehold(householdId, userUid) {
-  db.collection("households").doc(householdId).get().then(doc => {
-    if (doc.exists && doc.data().admin === userUid) {
-      showStatus("不能退出个人账本 / Cannot leave personal household");
-      return;
-    }
-    doc.ref.update({
-      members: firebase.firestore.FieldValue.arrayRemove(userUid)
+function showDeleteButton(li, uid) {
+  let btn = li.querySelector(".delete-btn");
+  if (btn) return;
+
+  btn = document.createElement("button");
+  btn.textContent = "删除";
+  btn.className = "delete-btn";
+  btn.style.position = "absolute";
+  btn.style.right = "10px";
+  btn.style.top = "8px";
+  btn.style.background = "#c00";
+  btn.style.color = "#fff";
+
+  btn.onclick = () => confirmRemoveMember(uid);
+
+  li.appendChild(btn);
+}
+
+async function confirmRemoveMember(uid) {
+  if (!confirm("确定要将该成员移出 household 吗？")) return;
+
+  const hid = householdIds[0];
+
+  // Remove from household members
+  await firebase.firestore()
+    .collection("households")
+    .doc(hid)
+    .update({
+      members: firebase.firestore.FieldValue.arrayRemove(uid)
     });
-    db.collection("users").doc(userUid).update({
-      households: firebase.firestore.FieldValue.arrayRemove(householdId)
-    }).then(() => {
-      showStatus("已退出该账本 / Left household");
-      showHouseholds(userUid); // refresh list
+
+  // Remove household from user
+  await firebase.firestore()
+    .collection("users")
+    .doc(uid)
+    .update({
+      households: firebase.firestore.FieldValue.arrayRemove(hid)
     });
-  });
+
+  loadHouseholdMembers();
+}
+
+async function leaveHousehold() {
+  const hid = currentHouseholdId;
+  const uid = currentUser.uid;
+
+  if (!confirm("确定要退出该 household 吗？")) return;
+
+  // Remove myself from household members
+  await firebase.firestore()
+    .collection("households")
+    .doc(hid)
+    .update({
+      members: firebase.firestore.FieldValue.arrayRemove(uid)
+    });
+
+  // Remove household from my user doc
+  await firebase.firestore()
+    .collection("users")
+    .doc(uid)
+    .update({
+      households: firebase.firestore.FieldValue.arrayRemove(hid)
+    });
+
+  alert("已退出该 household");
 }
 
 
@@ -624,159 +966,285 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
 
 }
 
-const selector = document.getElementById("datetime-selector");
-const dateBtn = document.getElementById("datetime-display");
-const hideBtn = document.getElementById("hide-datetime");
+const datePrefixes = {
+  zh: ["前天", "昨天", "今天", "明天", "后天"],
+  en: ["2 days ago", "yesterday", "today", "tomorrow", "in 2 days"]
+};
 
-// Toggle on date button click
-dateBtn.addEventListener("click", (e) => {
-  e.stopPropagation(); // don't trigger outside click handlers
-  const isOpen = selector.style.display === "flex";
-  selector.style.display = isOpen ? "none" : "flex";
-});
+function getDatePrefix(targetDate) {
+  const today = new Date();
 
-// Hide with ▼ button
-hideBtn.addEventListener("click", (e) => {
-  e.stopPropagation();
-  selector.style.display = "none";
-});
+  // Normalize both dates to midnight
+  today.setHours(0, 0, 0, 0);
+  const t = new Date(targetDate);
+  t.setHours(0, 0, 0, 0);
 
-// Prevent clicks inside the selector from closing it
-selector.addEventListener("click", (e) => {
-  e.stopPropagation();
-});
-
-// Clicking anywhere else (inputs, buttons, body) hides the selector
-document.addEventListener("click", () => {
-  selector.style.display = "none";
-});
-
-// Optional: focusing other inputs also hides it
-document.querySelectorAll("input, select, textarea, button:not(#datetime-display)").forEach(el => {
-  el.addEventListener("focus", () => {
-    selector.style.display = "none";
-  });
-});
-
-
-let selected = {};
-
-// Update display with prefix
-function updateDateTimeDisplay(date = new Date(selected.year, selected.month - 1, selected.day, selected.hour, selected.minute)) {
-  const display = document.getElementById("datetime-display");
-  if (!display) return;
-
-  const now = new Date();
-  const selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffDays = Math.round((selectedDate - todayDate) / (1000 * 60 * 60 * 24));
+  // Difference in days
+  const diffDays = Math.round((t - today) / (1000 * 60 * 60 * 24));
 
   let prefix = "";
   switch (diffDays) {
     case -2: prefix = "前天 "; break;
     case -1: prefix = "昨天 "; break;
-    case 0:  prefix = "今天 "; break;
-    case 1:  prefix = "明天 "; break;
-    case 2:  prefix = "后天 "; break;
+    case 0: prefix = "今天 "; break;
+    case 1: prefix = "明天 "; break;
+    case 2: prefix = "后天 "; break;
+    default: prefix = ""; break;
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  display.textContent = `${prefix}${year}-${month}-${day} ${hours}:${minutes}`;
+  return prefix;
 }
 
-// Generic scroll column
-function createScrollColumn(id, values, selectedVal, unit, onSelect) {
-  const container = document.getElementById(id);
-  container.innerHTML = "";
-  values.forEach(val => {
-    const item = document.createElement("div");
-    item.textContent = `${val}${unit}`;
-    item.className = val === selectedVal ? "selected" : "";
-    item.onclick = () => {
-      container.querySelectorAll("div").forEach(d => d.classList.remove("selected"));
-      item.classList.add("selected");
-      onSelect(val);
-      updateDateTimeDisplay();
-    };
-    container.appendChild(item);
-  });
-}
+const datetimeSelector = document.getElementById("datetime-selector");
+const householdSelector = document.getElementById("household-selector");
+let lastButton = null;
 
-// Circular day column
-function createCircularDayColumn(selectedDay) {
-  const container = document.getElementById("day-column");
-  container.innerHTML = "";
+function createList(col, values) {
+  col.innerHTML = ""; // clear existing items
 
-  const days = Array.from({length: 31}, (_, i) => i + 1);
-  const repeated = [...days, ...days, ...days]; // 3x loop
-
-  repeated.forEach(day => {
+  // top spacer
+  const topSpacerCount = 1; // number of empty rows to allow centering
+  for (let i = 0; i < topSpacerCount; i++) {
     const div = document.createElement("div");
-    div.textContent = `${day}日`;
-    div.dataset.day = day;
-    if (day === selectedDay) div.classList.add("selected");
-    container.appendChild(div);
+    div.className = "dt-item spacer";
+    col.appendChild(div);
+  }
+
+  // real items
+  values.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "dt-item";
+    div.textContent = v;
+    col.appendChild(div);
   });
 
-  // Scroll to middle set
-  const itemHeight = 24; // adjust to your CSS line-height
-  container.scrollTop = days.length * itemHeight;
+  // bottom spacer
+  const bottomSpacerCount = 2; // number of empty rows to allow centering
+  for (let i = 0; i < bottomSpacerCount; i++) {
+    const div = document.createElement("div");
+    div.className = "dt-item spacer";
+    col.appendChild(div);
+  }
+}
 
-  container.addEventListener("scroll", () => {
-    const maxScroll = container.scrollHeight - container.clientHeight;
-    const threshold = itemHeight * 5;
 
-    if (container.scrollTop < threshold) {
-      container.scrollTop += days.length * itemHeight;
-    } else if (container.scrollTop > maxScroll - threshold) {
-      container.scrollTop -= days.length * itemHeight;
+/* Snap after scroll stops */
+function enableSnap(col) {
+  let timeout;
+
+  col.addEventListener("scroll", () => {
+    clearTimeout(timeout);
+
+    const items = [...col.querySelectorAll(".dt-item")];
+    const center = col.scrollTop + col.clientHeight / 2;
+
+    // ✅ LIVE highlight while scrolling
+    let closest = null;
+    let minDist = Infinity;
+
+    items.forEach(item => {
+      const itemCenter = item.offsetTop + item.clientHeight / 2;
+      const dist = Math.abs(itemCenter - center);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = item;
+      }
+    });
+
+    if (closest) {
+      items.forEach(i => i.classList.remove("selected"));
+      closest.classList.add("selected");
     }
 
-    highlightDayFromScroll();
+    // ✅ Snap AFTER scrolling stops
+    timeout = setTimeout(() => {
+      col.scrollTop =
+        closest.offsetTop - (col.clientHeight / 2 - closest.clientHeight / 2);
+    }, 80);
   });
+
 }
 
-function highlightDayFromScroll() {
-  const container = document.getElementById("day-column");
-  const itemHeight = 24;
-  const index = Math.round(container.scrollTop / itemHeight);
-  const items = container.querySelectorAll("div");
-  items.forEach(d => d.classList.remove("selected"));
+const dtCols = datetimeSelector.querySelectorAll(".year-col, .month-col, .day-col, .hour-col, .minute-col");
 
-  const selectedItem = items[index];
-  if (selectedItem) {
-    selectedItem.classList.add("selected");
-    selected.day = parseInt(selectedItem.dataset.day);
-    updateDateTimeDisplay();
+dtCols.forEach(col => {
+  col.addEventListener("scroll", () => {
+    // debounce so it fires after snapping
+    clearTimeout(col._timer);
+    col._timer = setTimeout(() => {
+      if (col === datetimeSelector.querySelector(".year-col") || col === datetimeSelector.querySelector(".month-col")) {
+        const day = getSelectedValue(".day-col")
+        updateDayColumn();
+        scrollToValue(datetimeSelector.querySelector(".day-col"), day)
+      }
+      updateSelectorPreview();
+    }, 80);
+  });
+});
+
+const hhCols = householdSelector.querySelectorAll(".household-col");
+
+hhCols.forEach(col => {
+  col.addEventListener("scroll", () => {
+    // debounce so it fires after snapping
+    clearTimeout(col._timer);
+    col._timer = setTimeout(() => {
+      updateSelectorPreview();
+    }, 80);
+  });
+});
+
+function updateSelectorPreview() {
+  if (!lastButton) return;
+  if (lastButton.dataset.type === "datetime") {
+    const yEl = datetimeSelector.querySelector(".year-col .selected");
+    const mEl = datetimeSelector.querySelector(".month-col .selected");
+    const dEl = datetimeSelector.querySelector(".day-col .selected");
+    const hEl = datetimeSelector.querySelector(".hour-col .selected");
+    const minEl = datetimeSelector.querySelector(".minute-col .selected");
+
+    if (!yEl || !mEl || !dEl || !hEl || !minEl) return;
+
+    const y = Number(yEl.textContent);
+    const m = Number(mEl.textContent);
+    const d = Number(dEl.textContent);
+    const h = Number(hEl.textContent);
+    const min = Number(minEl.textContent);
+
+    const dateObj = new Date(y, m - 1, d, h, min);
+    const prefix = getDatePrefix(dateObj); // assumes you already have this
+
+    lastButton.textContent =
+      `${prefix}${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ` +
+      `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+
+    lastButton.dataset.value = dateObj.toISOString();
+
+  } else if (lastButton.dataset.type === "household") {
+    const hhEl = householdSelector.querySelector(".household-col .selected");
+
+    if (!hhEl) return;
+
+    lastButton.textContent = hhEl.textContent;
   }
 }
 
-// Populate all selectors
-function populateDateTimeSelectors() {
-  const now = new Date();
-  selected = {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-    day: now.getDate(),
-    hour: now.getHours(),
-    minute: now.getMinutes()
-  };
+/* Scroll to a specific value */
+function scrollToValue(col, value) {
+  const items = [...col.querySelectorAll(".dt-item")];
+  let target = items.find(i => i.textContent == value);
+  if (!target) return;
 
-  createScrollColumn("year-column", Array.from({length: 9}, (_, i) => now.getFullYear() - 2 + i), selected.year, "年", val => selected.year = val);
-  createScrollColumn("month-column", Array.from({length: 12}, (_, i) => i + 1), selected.month, "月", val => selected.month = val);
-  createCircularDayColumn(selected.day); // looped day column
-  createScrollColumn("hour-column", Array.from({length: 24}, (_, i) => i), selected.hour, "时", val => selected.hour = val);
-  createScrollColumn("minute-column", Array.from({length: 60}, (_, i) => i), selected.minute, "分", val => selected.minute = val);
+  items.forEach(i => i.classList.remove("selected"));
+  target.classList.add("selected");
 
-  updateDateTimeDisplay();
+  col.scrollTop =
+    target.offsetTop - (col.clientHeight / 2 - target.clientHeight / 2);
 }
 
-// Initialize
-window.addEventListener("DOMContentLoaded", () => {
-  populateDateTimeSelectors();
+// Remove known prefixes
+function removeDatePrefix(text) {
+  const prefixes = datePrefixes[currentLang] || [];
+  if (prefixes.length === 0) return text;
+
+  // Escape special regex characters in prefixes
+  const escaped = prefixes.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  const regex = new RegExp(`^(${escaped.join("|")})\\s*`, "i");
+
+  return text.replace(regex, "");
+}
+
+/* Parse datetime from button */
+function parseButtonDate(btn) {
+  let text = btn.textContent.trim();
+
+  text = removeDatePrefix(text);
+
+  const [datePart, timePart] = text.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.split(":").map(Number);
+
+  return { year: y, month: m, day: d, hour: h, minute: min };
+}
+
+/* Initialize selector */
+(function initSelector() {
+  const yearCol = datetimeSelector.querySelector(".year-col");
+  const monthCol = datetimeSelector.querySelector(".month-col");
+  const hourCol = datetimeSelector.querySelector(".hour-col");
+  const minuteCol = datetimeSelector.querySelector(".minute-col");
+
+  createList(yearCol, Array.from({ length: 2100 - 2010 + 1 }, (_, i) => 2010 + i));
+  createList(monthCol, Array.from({ length: 12 }, (_, i) => i + 1));
+  createList(hourCol, Array.from({ length: 24 }, (_, i) => i));
+  createList(minuteCol, Array.from({ length: 60 }, (_, i) => i));
+  updateDayColumn();
+
+  enableSnap(datetimeSelector.querySelector(".year-col"));
+  enableSnap(datetimeSelector.querySelector(".month-col"));
+  enableSnap(datetimeSelector.querySelector(".day-col"));
+  enableSnap(datetimeSelector.querySelector(".hour-col"));
+  enableSnap(datetimeSelector.querySelector(".minute-col"));
+
+  enableSnap(householdSelector.querySelector(".household-col"));
+})();
+
+function updateDayColumn() {
+  const year = getSelectedValue(".year-col");
+  const month = getSelectedValue(".month-col");
+
+  const days = daysInMonth(year, month);
+
+  const dayCol = datetimeSelector.querySelector(".day-col");
+  createList(dayCol, Array.from({ length: days }, (_, i) => i + 1));
+
+  enableSnap(dayCol); // re-enable snapping after rebuilding
+}
+
+function getSelectedValue(selector) {
+  const col = datetimeSelector.querySelector(selector);
+  const selected = col.querySelector(".selected");
+  return selected ? Number(selected.textContent) : null;
+}
+
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate(); // elegant JS trick
+}
+
+/* Open selector */
+document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    lastButton = btn;
+
+    datetimeSelector.style.display = "flex";
+
+    const { year, month, day, hour, minute } = parseButtonDate(btn);
+
+    scrollToValue(datetimeSelector.querySelector(".year-col"), year);
+    scrollToValue(datetimeSelector.querySelector(".month-col"), month);
+    scrollToValue(datetimeSelector.querySelector(".day-col"), day);
+    scrollToValue(datetimeSelector.querySelector(".hour-col"), hour);
+    scrollToValue(datetimeSelector.querySelector(".minute-col"), minute);
+  });
+});
+
+document.querySelectorAll(".selector-button[data-type='household']")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      lastButton = btn;
+
+      householdSelector.style.display = "flex";
+
+      scrollToValue(householdSelector.querySelector(".household-col"), btn.textContent);
+    });
+  });
+
+/* Close when clicking outside */
+document.addEventListener("click", e => {
+  if (!datetimeSelector.contains(e.target)) {
+    datetimeSelector.style.display = "none";
+  }
 });

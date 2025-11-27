@@ -9,7 +9,10 @@
 </head>
 
 <body>
-  <h1 id="app-title">Xiaoxin's Ledger App</h1>
+  <div class="header-bar">
+    <button id="return-btn" onclick="goBack()">返回</button>
+    <h1 id="app-title">Xiaoxin's Ledger App</h1>
+  </div>
 
   <!-- Login / Signup Section -->
   <div id="login-section" class="section">
@@ -27,124 +30,196 @@
     <button onclick="setLanguage('zh', true)">中文</button>
   </div>
 
-  <!-- Home Section -->
-  <div id="home-section" class="section" style="display:none;">
-    <div class="home-hero">
-      <div class="home-image-wrapper" oncontextmenu="triggerHomeUpload(event)" onmousedown="handleHold(event)">
-        <img id="home-image" src="" alt="Custom picture">
-        <input type="file" id="home-image-upload" accept="image/*" style="display:none;"
-          onchange="previewHomeImage(event)">
-        <div class="home-overlay">
-          <div id="home-month">11月·结余</div>
-          <div id="home-balance">收入 - 支出</div>
-          <div id="home-summary">本月收入 0 | 本月支出 0</div>
+  <div class="pages-wrapper" id="pages-wrapper">
+    <!-- Home Section -->
+    <div class="page" id="home-page">
+      <div class="home-hero">
+        <div class="home-image-wrapper" oncontextmenu="triggerHomeUpload(event)" onmousedown="handleHold(event)">
+          <img id="home-image" src="" alt="Custom picture">
+          <input type="file" id="home-image-upload" accept="image/*" style="display:none;"
+            onchange="previewHomeImage(event)">
+          <div class="home-overlay">
+            <div id="home-month">11月·结余</div>
+            <div id="home-balance">收入 - 支出</div>
+            <div id="home-summary">本月收入 0 | 本月支出 0</div>
+          </div>
+        </div>
+      </div>
+      <div class="kanban">
+        <div class="kanban-row">
+          <div class="kanban-left">
+            <div class="kanban-title" id="kanban-today-title">今天</div>
+            <div class="kanban-sub" id="today-sub">最新交易</div>
+          </div>
+          <div class="kanban-right">
+            <div id="today-income" class="income">收入 0.00</div>
+            <div id="today-expense" class="expense">支出 0.00</div>
+          </div>
+        </div>
+        <hr>
+        <div class="kanban-row">
+          <div class="kanban-left">
+            <div class="kanban-title" id="kanban-month-title">本月</div>
+            <div class="kanban-sub" id="month-sub">11月 1日–30日</div>
+          </div>
+          <div class="kanban-right">
+            <div id="month-income" class="income">收入 0.00</div>
+            <div id="month-expense" class="expense">支出 0.00</div>
+          </div>
+        </div>
+        <hr>
+        <div class="kanban-row">
+          <div class="kanban-left">
+            <div class="kanban-title" id="kanban-year-title">本年</div>
+            <div class="kanban-sub" id="year-sub">2025</div>
+          </div>
+          <div class="kanban-right">
+            <div id="year-income" class="income">收入 0.00</div>
+            <div id="year-expense" class="expense">支出 0.00</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="kanban">
-      <div class="kanban-row">
-        <div class="kanban-left">
-          <div class="kanban-title" id="kanban-today-title">今天</div>
-          <div class="kanban-sub" id="today-sub">最新交易</div>
-        </div>
-        <div class="kanban-right">
-          <div id="today-income" class="income">收入 0.00</div>
-          <div id="today-expense" class="expense">支出 0.00</div>
-        </div>
+
+    <!-- Ledger Section -->
+    <div class="page" id="transaction-page">
+
+      <!-- Tabs -->
+      <div class="transaction-tabs">
+        <button class="tab-btn active" data-index="0">收入</button>
+        <button class="tab-btn" data-index="1">支出</button>
+        <button class="tab-btn" data-index="2">转账</button>
       </div>
-      <hr>
-      <div class="kanban-row">
-        <div class="kanban-left">
-          <div class="kanban-title" id="kanban-month-title">本月</div>
-          <div class="kanban-sub" id="month-sub">11月 1日–30日</div>
+
+      <!-- ✅ Wrapper contains ONLY the 3 pages -->
+      <div class="transaction-wrapper" id="transaction-wrapper">
+
+        <!-- Income -->
+        <div class="transaction-page" id="income-form">
+          <form class="transaction-form">
+            <div class="form-row">
+              <label>账户</label>
+              <input list="account-list" id="income-account">
+            </div>
+
+            <div class="form-row">
+              <label>时间</label>
+              <button type="button" id="income-datetime" class="selector-button" data-type="datetime"></button>
+            </div>
+
+            <div class="form-row">
+              <label>成员</label>
+              <input list="person-list" id="income-person">
+            </div>
+
+            <div class="form-row">
+              <label>家庭</label>
+              <button type="button" id="income-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>商家</label>
+              <input type="search" id="income-store">
+            </div>
+
+            <div class="form-row">
+              <label>类别</label>
+              <input type="search" id="income-category">
+            </div>
+
+            <label>项目</label>
+            <div class="item-row">
+              <input type="text" class="item-name">
+              <input type="text" class="item-notes">
+            </div>
+
+            <div class="actions">
+              <button type="button" onclick="addEntry('income')">添加收入</button>
+            </div>
+          </form>
         </div>
-        <div class="kanban-right">
-          <div id="month-income" class="income">收入 0.00</div>
-          <div id="month-expense" class="expense">支出 0.00</div>
+
+        <!-- Expense -->
+        <div class="transaction-page" id="expense-form">
+          <form class="transaction-form">
+            <div class="form-row">
+              <label>账户</label>
+              <input list="account-list" id="expense-account">
+            </div>
+
+            <div class="form-row">
+              <label>时间</label>
+              <button type="button" id="expense-datetime" class="selector-button" data-type="datetime"></button>
+            </div>
+
+            <div class="form-row">
+              <label>成员</label>
+              <input list="person-list" id="expense-person">
+            </div>
+
+            <div class="form-row">
+              <label>家庭</label>
+              <button type="button" id="income-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>商家</label>
+              <input type="search" id="expense-store">
+            </div>
+
+            <div class="form-row">
+              <label>类别</label>
+              <input type="search" id="expense-category">
+            </div>
+
+            <label>项目</label>
+            <div class="item-row">
+              <input type="text" class="item-name">
+              <input type="text" class="item-notes">
+            </div>
+
+            <div class="actions">
+              <button type="button" onclick="addEntry('expense')">添加支出</button>
+            </div>
+          </form>
         </div>
+
+        <!-- Transfer -->
+        <div class="transaction-page" id="transfer-form">
+          <form class="transaction-form">
+            <div class="actions">
+              <button type="button" onclick="addEntry('transfer')">添加转账</button>
+            </div>
+          </form>
+        </div>
+
       </div>
-      <hr>
-      <div class="kanban-row">
-        <div class="kanban-left">
-          <div class="kanban-title" id="kanban-year-title">本年</div>
-          <div class="kanban-sub" id="year-sub">2025</div>
-        </div>
-        <div class="kanban-right">
-          <div id="year-income" class="income">收入 0.00</div>
-          <div id="year-expense" class="expense">支出 0.00</div>
-        </div>
-      </div>
+
+      <ul id="ledger-list"></ul>
+    </div>
+
+    <!-- Selector panels -->
+    <div id="household-selector" class="datetime-selector">
+      <button type="button" class="datetime-close"
+        onclick="document.getElementById('household-selector').style.display='none'">收起 ▼</button>
+
+      <div class="dt-col household-col"></div>
+    </div>
+
+    <div id="datetime-selector" class="datetime-selector">
+      <button type="button" class="datetime-close"
+        onclick="document.getElementById('datetime-selector').style.display='none'">收起 ▼</button>
+
+      <div class="dt-col year-col"></div>
+      <div class="dt-col month-col"></div>
+      <div class="dt-col day-col"></div>
+      <div class="dt-col hour-col"></div>
+      <div class="dt-col minute-col"></div>
     </div>
   </div>
 
-  <!-- Ledger Section -->
-  <div id="ledger-section" class="section" style="display:none;">
-  <form id="transaction-form">
-    <!-- Type selector -->
-    <div class="type-selector">
-      <button type="button" data-type="incoming">收入</button>
-      <button type="button" data-type="outgoing">支出</button>
-      <button type="button" data-type="transfer">转账</button>
-    </div>
-    <input type="hidden" id="type" required>
-
-    <!-- Account -->
-    <label for="account" id="label-account">账户</label>
-    <input list="account-list" id="account" placeholder="选择或添加账户">
-    <datalist id="account-list"></datalist>
-
-    <!-- DateTime -->
-    <!-- Trigger Button -->
-    <label id="label-datetime">时间</label>
-    <button type="button" id="datetime-display" class="datetime-button"></button>
-
-    <!-- Custom Selector Panel -->
-    <div id="datetime-selector" class="datetime-selector" style="display:none;">
-      <div class="scroll-column" id="year-column"></div>
-      <div class="scroll-column" id="month-column"></div>
-      <div class="scroll-column" id="day-column"></div>
-      <div class="scroll-column" id="hour-column"></div>
-      <div class="scroll-column" id="minute-column"></div>
-      <button type="button" id="hide-datetime" class="hide-btn">▼</button>
-    </div>
-
-    <!-- Person -->
-    <label for="person" id="label-person">成员</label>
-    <input list="person-list" id="person" placeholder="选择或添加成员">
-    <datalist id="person-list"></datalist>
-    <!-- Household -->
-    <label for="household" id="label-household">家庭</label>
-    <select id="household-select"></select>
-
-    <!-- Store -->
-    <label for="store" id="label-store">商店名称</label>
-    <input type="search" id="store" placeholder="搜索商店">
-
-    <!-- Category -->
-    <label for="category" id="label-category">类别</label>
-    <input type="search" id="category" placeholder="搜索类别">
-
-    <!-- Items -->
-    <label id="label-items">项目</label>
-    <div id="items-container">
-      <div class="item-row">
-        <input type="text" class="item-name" placeholder="项目名称">
-        <input type="text" class="item-notes" placeholder="价格">
-      </div>
-    </div>
-    <button type="button" id="add-item-btn" onclick="addItemRow()">+ 添加项目</button>
-
-    <!-- Submit -->
-    <div class="actions">
-      <button type="button" id="add-transaction-btn" onclick="addEntry()">添加交易</button>
-    </div>
-  </form>
-  <ul id="ledger-list"></ul>
-</div>
-
-
   <!-- Settings Section -->
-  <div id="settings-section" class="section" style="display:none;">
+  <div class="page" id="settings-page">
     <div class="settings-header">
       <h2 id="settings-title">设置</h2>
       <span id="settings-welcome"></span>
@@ -161,24 +236,49 @@
         <option value="alt">收入绿 / 支出红</option>
       </select>
     </div>
-    <div id="households-section">
-      <h3>我的账本 / My Households</h3>
-      <ul id="household-list"></ul>
+    <div class="household-row">
+      <span class="household-label">我的家庭:</span>
+      <div id="household-actions" class="settings-section">
+
+        <button id="invite-btn">邀请加入我的家庭</button>
+        <button id="manage-btn">从我的家庭中移除用户</button>
+        <button id="leave-btn">将我从他人的家庭中移除</button>
+
+        <!-- Invite UI -->
+        <div id="invite-panel" style="display:none; margin-top:15px;">
+          <p style="color:#c00; font-weight:bold;">
+            注意：受邀用户只能加入您自己的 household，不能加入您所在的他人的 household
+          </p>
+
+          <input id="invite-email" type="email" placeholder="输入对方的邮箱" style="width:100%; padding:8px; margin-top:10px;">
+          <button id="invite-confirm" style="margin-top:10px;">确认邀请</button>
+        </div>
+
+        <!-- Manage UI -->
+        <div id="manage-panel" style="display:none; margin-top:15px;">
+          <h4>成员管理</h4>
+          <ul id="member-list" style="list-style:none; padding:0;"></ul>
+        </div>
+
+      </div>
+
     </div>
-    
+
     <div class="actions">
       <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
     </div>
   </div>
+  </div>
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home', this)">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts', this)">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction', this)">记一笔</button>
-    <button id="nav-charts" onclick="showPage('charts', this)">图表</button>
-    <button id="nav-settings" onclick="showPage('settings', this)">设置</button>
+    <button id="nav-home" onclick="showPage('home-page')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts-page')">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction-page')">记一笔</button>
+    <button id="nav-charts" onclick="showPage('charts-page')">图表</button>
+    <button id="nav-settings" onclick="showPage('settings-page')">设置</button>
   </nav>
+
 
   <div id="statusMessage"></div>
 

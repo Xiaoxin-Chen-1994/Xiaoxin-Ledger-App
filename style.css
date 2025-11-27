@@ -1,6 +1,6 @@
 :root {
   --bg: #f7f7f8;
-  --card: #rgba(255, 255, 255, 0.7);
+  --card: rgba(255, 255, 255, 0.7);
   --text: #1f2328;
   --muted: #6b7280;
   --primary: #0a84ff;
@@ -65,22 +65,283 @@ body {
   line-height: 1.6;
 }
 
+.pages-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.page {
+  position: absolute;
+  top: 3.5rem;
+  left: 0.5rem;
+  width: 98%;
+  height: 100%;
+  overflow-y: auto;
+  display: none; /* hide all pages by default */
+}
+
+.page.active {
+  display: block; /* only the active page is shown */
+  min-height: 50rem;
+}
+
+
 .section {
   background: var(--card);
   border: 0.0625rem solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 1rem;
-  margin: 1rem;
+  margin: 0; /* remove margin so pages align edge to edge */
+  height: 100%; /* fill page height */
 }
 
-h1 { text-align: center; font-size: 1.75rem; margin: 1rem 0; }
+.header-bar {
+  position: relative;
+  width: 100%;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* centers the title */
+  background: var(--card);
+  border-bottom: 0.0625rem solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+}
+
+.header-bar h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  text-align: center;
+}
+
+#return-btn {
+  position: absolute;        /* pin button to the left */
+  left: 1rem;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+#return-btn:hover {
+  color: var(--primary-hover);
+}
+
 h2 { font-size: 1.25rem; margin: 0.5rem 0; }
 
 label { display: block; margin-top: 0.75rem; font-weight: 600; }
 
+.transaction-tabs {
+  display: flex;
+  justify-content: space-around;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.transaction-tabs .tab-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  margin: 0 0.25rem;
+}
+
+.transaction-tabs .tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Horizontal slider */
+.transaction-wrapper {
+  display: flex;
+  width: 100%;
+  transition: transform 0.3s ease;
+}
+
+#transaction-page {
+  padding-bottom: 3.6rem;
+  overflow: hidden !important;
+}
+
+.transaction-page {
+  flex: 0 0 100%;
+  width: 100%;
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+  overflow-y: scroll;        /* still scrollable */
+}
+
+.transaction-page::-webkit-scrollbar {
+  display: none;             /* Chrome/Safari */
+}
+
+#household-actions {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fafafa;
+  border: 1px solid #eee;
+}
+
+#household-actions button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#household-actions button:hover {
+  background: #eee;
+  border-color: #ccc;
+}
+
+#invite-btn {
+  background: #e8f3ff;
+  border-color: #c3dafc;
+}
+
+#invite-btn:hover {
+  background: #d8e9ff;
+}
+
+#manage-btn {
+  background: #f7f5ff;
+  border-color: #d9d2ff;
+}
+
+#manage-btn:hover {
+  background: #ece7ff;
+}
+
+#leave-btn {
+  background: #fff3f3;
+  border-color: #f3c4c4;
+  color: #b00020;
+}
+
+#leave-btn:hover {
+  background: #ffe5e5;
+}
+
+#invite-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+#invite-panel p {
+  margin: 0 0 8px 0;
+  color: #b00020;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+#invite-email {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+#invite-email:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
+}
+
+#invite-confirm {
+  margin-top: 8px;
+  display: inline-block;
+  width: auto;
+  padding: 6px 12px;
+  background: #4285f4;
+  border-color: #4285f4;
+  color: #fff;
+  text-align: center;
+}
+
+#invite-confirm:hover {
+  background: #3367d6;
+  border-color: #3367d6;
+}
+
+#manage-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+#manage-panel h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+#member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#member-list li {
+  position: relative;
+  padding: 10px 40px 10px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #444;
+  user-select: none;
+}
+
+#member-list li:last-child {
+  border-bottom: none;
+}
+
+#member-list li:hover {
+  background: #fafafa;
+}
+
+#member-list .delete-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: none;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#member-list .delete-btn:hover {
+  background: #b71c1c;
+}
+
+
 select, input[type="search"], input[list], 
-input[type="text"], input[type="password"], input[type="number"], .datetime-button {
+input[type="text"], input[type="password"], input[type="number"], .selector-button {
   width: 100%;
   margin-top: 0.25rem;
   padding: 0.75rem;
@@ -91,55 +352,95 @@ input[type="text"], input[type="password"], input[type="number"], .datetime-butt
   color: var(--text);
 }
 
-.datetime-button:hover { background: var(--card); }
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
 
+.form-row label,
+.form-row .household-label {
+  flex: 0 0 5rem; /* fixed width for labels */
+  font-weight: 600;
+}
+
+.form-row input,
+.form-row button,
+.form-row .household-container {
+  flex: 1; /* take remaining space */
+}
+
+.selector-button:hover { background: var(--card); }
+
+/* Selector panel fixed at bottom */
 .datetime-selector {
   position: fixed;
-  bottom: 3.5rem; /* above nav bar */
+  bottom: 60px; /* above nav bar */
   left: 0;
   width: 100%;
+  background: white;
+  border-top: 1px solid #ccc;
+  padding: 1rem 0.5rem 0.5rem 0.5rem;
   display: none;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border);
-  padding: 0.5rem 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 2000;
+  z-index: 9999;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
 }
 
-.scroll-column {
-  flex: 1;
-  height: 8rem;
-  overflow-y: scroll;
-  scroll-behavior: smooth;
-  text-align: center;
-  font-size: 1rem;
-  color: var(--text);
-}
-
-.scroll-column div {
-  padding: 0.25rem 0;
-  cursor: pointer;
-}
-.scroll-column .selected {
-  font-weight: bold;
-  color: #000;
-  background: var(--chip);
-  border-radius: 0.5rem;
-}
-
-
-.hide-btn {
-  background: none;
+/* ✅ Close button floats ABOVE columns */
+.datetime-close {
+  position: absolute;
+  top: -40px;          /* move above selector */
+  right: 10px;
+  background: var(--primary-hover);
   border: none;
-  font-size: 1.5rem;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  color: var(--text);
-  padding: 0 0.5rem;
+  z-index: 10000;
+  font-size: 16px;
 }
+
+/* Columns */
+.datetime-selector {
+  display: none;
+  width: 100%;
+}
+
+.dt-col {
+  flex: 1;
+  height: 150px;
+  overflow-y: auto;
+  float: left;
+  border-right: 1px solid #eee;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.dt-col::-webkit-scrollbar {
+  display: none;             /* Chrome/Safari */
+}
+
+.dt-col:last-child {
+  border-right: none;
+}
+
+/* Items */
+.dt-item {
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 16px;
+}
+
+.dt-item.selected {
+  background: #007aff;
+  color: white;
+  border-radius: 6px;
+}
+
 
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
 button {
