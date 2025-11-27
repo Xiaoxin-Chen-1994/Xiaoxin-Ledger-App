@@ -111,7 +111,28 @@ function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-    .catch(error => showStatusMessage(error.message, 'error'));
+  .catch(error => {
+    let message;
+    switch (error.code) {
+      case 'auth/user-not-found':
+        message = 'No account exists with this email.';
+        break;
+      case 'auth/invalid-login-credentials':
+        message = 'Incorrect password. Please try again.';
+        break;
+      case 'auth/invalid-email':
+        message = 'The email address is not valid.';
+        break;
+      case 'auth/user-disabled':
+        message = 'This account has been disabled. Contact support.';
+        break;
+      default:
+        message = error.message;
+        console.log(error)
+    }
+    showStatusMessage(message, 'error');
+  });
+
 }
 
 function logout() {
@@ -123,14 +144,14 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
 
-    const userRef = firebase.firestore().collection("users").doc(user.uid);
-
+    const userDoc = await firebase.firestore()
+      .collection("users")
+      .doc(user.uid)
+      .get();
     // ✅ Load profile subdocument
-    const profileSnap = await userRef.collection("profile").doc("profile").get();
-    const profile = profileSnap.exists ? profileSnap.data() : {};
+    const profile = userDoc.data().profile
 
     // ✅ Load household membership array
-    const userDoc = await userRef.get();
     householdIds = userDoc.exists ? (userDoc.data().households || []) : [];
 
     // ✅ Load household documents
@@ -467,6 +488,13 @@ let currentBase = "home-page";
 function showPage(name) {
   const target = document.getElementById(name);
   if (!target) return;
+
+  document.getElementById("login-section").style.display = "none";
+  document.getElementById("home-page").style.display = "none";
+  document.getElementById("transaction-page").style.display = "none";
+  document.getElementById("settings-page").style.display = "none";
+
+  document.getElementById(name).style.display = "block";
 
   if (name === "transaction-page") {
     const activeIndex = currentIndex; // income=0, expense=1, transfer=2
