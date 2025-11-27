@@ -775,16 +775,21 @@ function setColorScheme(scheme, showMessage = false) {
 document.getElementById("invite-btn").onclick = () => {
   document.getElementById("invite-panel").style.display = "block";
   document.getElementById("manage-panel").style.display = "none";
+  document.getElementById("leave-household-panel").style.display = "none";
 };
 
 document.getElementById("manage-btn").onclick = () => {
   document.getElementById("invite-panel").style.display = "none";
   document.getElementById("manage-panel").style.display = "block";
+  document.getElementById("leave-household-panel").style.display = "none";
   loadHouseholdMembers();
 };
 
 document.getElementById("leave-btn").onclick = () => {
-  leaveHousehold();
+  document.getElementById("invite-panel").style.display = "none";
+  document.getElementById("manage-panel").style.display = "none";
+  document.getElementById("leave-household-panel").style.display = "block";
+  loadMyHouseholds();
 };
 
 document.getElementById("invite-confirm").onclick = async () => {
@@ -798,6 +803,7 @@ document.getElementById("invite-confirm").onclick = async () => {
     .collection("users")
     .where("profile.email", "==", email)
     .get();
+  console.log(userQuery)
 
   if (userQuery.empty) {
     alert("未找到该用户");
@@ -835,6 +841,18 @@ async function loadHouseholdMembers() {
 
   const members = (householdDoc.data().members || []).slice(1);
 
+  // ✅ If user is only in 1 household (their own)
+  if (members.length <= 1) {
+    const msg = document.createElement("div");
+    msg.textContent = "您的家庭中没有其他成员";
+    msg.style.padding = "12px";
+    msg.style.color = "#666";
+    msg.style.textAlign = "center";
+    msg.style.fontSize = "14px";
+    list.appendChild(msg);
+    return; // ✅ Stop here — nothing else to load
+  }
+
   for (const uid of members) {
     const userDoc = await firebase.firestore()
       .collection("users")
@@ -850,17 +868,15 @@ async function loadHouseholdMembers() {
     li.style.borderBottom = "1px solid #eee";
     li.style.position = "relative";
 
-    document.addEventListener("contextmenu", e => {
-  console.log("GLOBAL contextmenu fired on:", e.target);
-});
-
     // Right-click to show delete
     li.oncontextmenu = e => {
-  console.log("contextmenu fired for", uid); // debug
-  e.preventDefault();
-  showDeleteButton(li, uid);
-};
+      e.preventDefault();
+      showDeleteButton(li, uid);
+    };
 
+    li.onclick = () => {
+      hideDeleteButton(li);
+    };
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
@@ -869,13 +885,8 @@ async function loadHouseholdMembers() {
 
     li.addEventListener("touchend", e => {
       const dx = e.changedTouches[0].clientX - li._startX;
-      let deleteBtn = null;
-      if (dx < -50) {
-        deleteBtn = showDeleteButton(li, uid);
-      }
-      if (dx < -50) {
-        deleteBtn.style.display = 'none';
-      }
+      if (dx < -50) showDeleteButton(li, uid); // swipe left
+      if (dx > 50) hideDeleteButton(li); // swipe right
     });
 
     list.appendChild(li);
@@ -884,22 +895,30 @@ async function loadHouseholdMembers() {
 
 function showDeleteButton(li, uid) {
   let btn = li.querySelector(".delete-btn");
-  if (btn) return;
+  if (btn) {
+    btn.style.display = "inline-block"; // display again
+    return;
+  }
 
   btn = document.createElement("button");
   btn.textContent = "删除";
   btn.className = "delete-btn";
   btn.style.position = "absolute";
   btn.style.right = "10px";
-  btn.style.top = "8px";
+  btn.style.top = "0px";
   btn.style.background = "#c00";
   btn.style.color = "#fff";
 
   btn.onclick = () => confirmRemoveMember(uid);
 
   li.appendChild(btn);
+}
 
-  return btn
+function hideDeleteButton(li) {
+  const btn = li.querySelector(".delete-btn");
+  if (btn) {
+    btn.style.display = "none";   // ✅ slide out of view
+  }
 }
 
 async function confirmRemoveMember(uid) {
@@ -926,11 +945,96 @@ async function confirmRemoveMember(uid) {
   loadHouseholdMembers();
 }
 
-async function leaveHousehold() {
-  const hid = currentHouseholdId;
-  const uid = currentUser.uid;
+async function loadMyHouseholds() {
+  const list = document.getElementById("leave-household-list");
+  list.innerHTML = "";
 
+  // ✅ If user is only in 1 household (their own)
+  if (householdIds.length <= 1) {
+    const msg = document.createElement("div");
+    msg.textContent = "您没有加入其他人的家庭";
+    msg.style.padding = "12px";
+    msg.style.color = "#666";
+    msg.style.textAlign = "center";
+    msg.style.fontSize = "14px";
+    list.appendChild(msg);
+    return; // ✅ Stop here — nothing else to load
+  }
+
+  // ✅ Skip the first household (primary)
+  const leaveable = householdIds.slice(1);
+
+  for (const hid of leaveable) {
+    const householdDoc = await firebase.firestore()
+      .collection("households")
+      .doc(hid)
+      .get();
+
+    const name = householdDoc.data().name;
+
+    const li = document.createElement("li");
+    li.textContent = name;
+    li.style.padding = "10px";
+    li.style.borderBottom = "1px solid #eee";
+    li.style.position = "relative";
+
+    // Right-click to show delete
+    li.oncontextmenu = e => {
+      e.preventDefault();
+      showLeaveButton(li, hid);
+    };
+
+    li.onclick = () => {
+      hideLeaveButton(li);
+    };
+
+    // Swipe left (mobile)
+    li.addEventListener("touchstart", e => {
+      li._startX = e.touches[0].clientX;
+    });
+
+    li.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].clientX - li._startX;
+      if (dx < -50) showLeaveButton(li, hid); // swipe left
+      if (dx > 50) hideLeaveButton(li); // swipe right
+    });
+
+    list.appendChild(li);
+  }
+}
+
+function showLeaveButton(li, uid) {
+  let btn = li.querySelector(".delete-btn");
+  if (btn) {
+    btn.style.display = "inline-block"; // display again
+    return;
+  }
+
+  btn = document.createElement("button");
+  btn.textContent = "离开";
+  btn.className = "delete-btn";
+  btn.style.position = "absolute";
+  btn.style.right = "10px";
+  btn.style.top = "0px";
+  btn.style.background = "#c00";
+  btn.style.color = "#fff";
+
+  btn.onclick = () => confirmLeaveHousehold(uid);
+
+  li.appendChild(btn);
+}
+
+function hideLeaveButton(li) {
+  const btn = li.querySelector(".delete-btn");
+  if (btn) {
+    btn.style.display = "none"; 
+  }
+}
+
+async function confirmLeaveHousehold(hid) {
   if (!confirm("确定要退出该 household 吗？")) return;
+
+  const uid = currentUser.uid;
 
   // Remove myself from household members
   await firebase.firestore()
@@ -948,9 +1052,18 @@ async function leaveHousehold() {
       households: firebase.firestore.FieldValue.arrayRemove(hid)
     });
 
-  alert("已退出该 household");
-}
+  const updatedUserDoc = await firebase.firestore()
+  .collection("users")
+  .doc(uid)
+  .get();
 
+  householdIds = updatedUserDoc.data().households || [];
+
+  alert("已退出该 household");
+  
+  // Refresh list
+  loadMyHouseholds();
+}
 
 function showStatusMessage(message, type = 'info', duration = 2000) {
   const status = document.getElementById('statusMessage');
