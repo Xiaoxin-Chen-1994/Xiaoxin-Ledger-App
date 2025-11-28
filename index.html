@@ -31,7 +31,7 @@
     </small>
   </div>
 
-  <div class="login-settings">
+  <div id="login-settings" class="login-settings">
     <div id="login-lang-switch" class="login-lang-switch">
       <p>语言 / Language</p>
       <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
@@ -234,6 +234,8 @@
     </div>
 
     <div id="datetime-selector" class="selector">
+      <button type="button" class="datetime-today"
+        onclick=clickToSetNow()>现在</button>
       <button type="button" class="datetime-close"
         onclick="document.getElementById('datetime-selector').style.display='none'">收起 ▼</button>
 

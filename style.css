@@ -295,6 +295,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 .selector {
   position: fixed;
   left: 0;
+  bottom: 0.1rem;
   width: 100%;
   background: white;
   border-top: 1px solid #ccc;
@@ -306,10 +307,9 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   display: none;
 }
 
-.datetime-close {
+.datetime-today, .datetime-close {
   position: absolute;
   top: calc(var(--font-size) * -1.85); /* move above selector */
-  right: 10px;
   background: var(--primary);
   border: none;
   padding: 6px 10px;
@@ -317,6 +317,14 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   cursor: pointer;
   z-index: 10000;
   font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+}
+
+.datetime-today {
+  left: 10px;
+}
+
+.datetime-close {
+  right: 10px;
 }
 
 .dt-col {

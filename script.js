@@ -201,7 +201,7 @@ auth.onAuthStateChanged(async user => {
 
     // ✅ UI updates
     document.getElementById("login-section").style.display = "none";
-    document.getElementById("login-lang-switch").style.display = "none";
+    document.getElementById("login-settings").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
 
     // ✅ Welcome text
@@ -268,7 +268,7 @@ auth.onAuthStateChanged(async user => {
   } else {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
-    document.getElementById("login-lang-switch").style.display = "flex";
+    document.getElementById("login-settings").style.display = "flex";
     document.getElementById("home-page").style.display = "none";
     document.getElementById("return-btn").style.display = "none";
     document.getElementById("transaction-page").style.display = "none";
@@ -1881,6 +1881,17 @@ function getSelectedValue(selector) {
 
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate(); // elegant JS trick
+}
+
+function clickToSetNow() {
+  const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2
+  const formIds = ["expense-form", "income-form", "transfer-form"];
+  const formId = formIds[activeIndex];
+
+  let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
+  if (btn) setCurrentTime(btn);
+
+  document.getElementById('datetime-selector').style.display='none'
 }
 
 /* Open selector */
