@@ -876,6 +876,7 @@ const translations = {
     type: "Type",
     account: "Account",
     datetime: "Time",
+    datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
     person: "Person",
     store: "Store Name",
     category: "Category",
@@ -919,6 +920,7 @@ const translations = {
     type: "类型",
     account: "账户",
     datetime: "时间",
+    datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
     person: "相关人",
     store: "商店名称",
     category: "类别",
@@ -1629,29 +1631,26 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
 
 }
 
-const datePrefixes = {
-  zh: ["前天", "昨天", "今天", "明天", "后天"],
-  en: ["2 days ago", "yesterday", "today", "tomorrow", "in 2 days"]
-};
-
 function getDatePrefix(targetDate) {
+  t = translations[currentLang];
+
   const today = new Date();
 
   // Normalize both dates to midnight
   today.setHours(0, 0, 0, 0);
-  const t = new Date(targetDate);
-  t.setHours(0, 0, 0, 0);
+  const time = new Date(targetDate);
+  time.setHours(0, 0, 0, 0);
 
   // Difference in days
-  const diffDays = Math.round((t - today) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round((time - today) / (1000 * 60 * 60 * 24));
 
   let prefix = "";
   switch (diffDays) {
-    case -2: prefix = "前天 "; break;
-    case -1: prefix = "昨天 "; break;
-    case 0: prefix = "今天 "; break;
-    case 1: prefix = "明天 "; break;
-    case 2: prefix = "后天 "; break;
+    case -2: prefix = t.datePrefixes[0]; break;
+    case -1: prefix = t.datePrefixes[1]; break;
+    case 0: prefix = t.datePrefixes[2]; break;
+    case 1: prefix = t.datePrefixes[3]; break;
+    case 2: prefix = t.datePrefixes[4]; break;
     default: prefix = ""; break;
   }
 
@@ -1660,6 +1659,12 @@ function getDatePrefix(targetDate) {
 
 const datetimeSelector = document.getElementById("datetime-selector");
 const householdSelector = document.getElementById("household-selector");
+
+const selectorList = [
+  datetimeSelector,
+  householdSelector,
+];
+
 let lastButton = null;
 
 function createList(col, values) {
@@ -1760,6 +1765,7 @@ hhCols.forEach(col => {
 function updateSelectorPreview() {
   if (!lastButton) return;
   if (lastButton.dataset.type === "datetime") {
+    
     const yEl = datetimeSelector.querySelector(".year-col .selected");
     const mEl = datetimeSelector.querySelector(".month-col .selected");
     const dEl = datetimeSelector.querySelector(".day-col .selected");
@@ -1815,7 +1821,10 @@ function scrollToValue(col, value) {
 
 // Remove known prefixes
 function removeDatePrefix(text) {
-  const prefixes = datePrefixes[currentLang] || [];
+  t = translations[currentLang];
+
+  const prefixes = t.datePrefixes || [];
+
   if (prefixes.length === 0) return text;
 
   // Escape special regex characters in prefixes
@@ -1890,8 +1899,6 @@ function clickToSetNow() {
 
   let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
   if (btn) setCurrentTime(btn);
-
-  document.getElementById('datetime-selector').style.display='none'
 }
 
 /* Open selector */
@@ -1899,6 +1906,12 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
   btn.addEventListener("click", e => {
     e.stopPropagation();
     lastButton = btn;
+
+    selectorList.forEach(sel => {
+      if (!sel.contains(e.target)) {
+        sel.style.display = "none";
+      }
+    });
 
     datetimeSelector.style.display = "flex";
 
@@ -1918,6 +1931,12 @@ document.querySelectorAll(".selector-button[data-type='household']")
       e.stopPropagation();
       lastButton = btn;
 
+      selectorList.forEach(sel => {
+        if (!sel.contains(e.target)) {
+          sel.style.display = "none";
+        }
+      });
+      
       householdSelector.style.display = "flex";
 
       scrollToValue(householdSelector.querySelector(".household-col"), btn.textContent);
@@ -1926,8 +1945,12 @@ document.querySelectorAll(".selector-button[data-type='household']")
 
 /* Close when clicking outside */
 document.addEventListener("click", e => {
+  console.log(e.target)
   if (!datetimeSelector.contains(e.target)) {
     datetimeSelector.style.display = "none";
+  }
+  if (!householdSelector.contains(e.target)) {
+    householdSelector.style.display = "none";
   }
 });
 

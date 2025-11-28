@@ -295,9 +295,10 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 .selector {
   position: fixed;
   left: 0;
+  height: 30%;
   bottom: 0.1rem;
   width: 100%;
-  background: white;
+  background: rgb(255, 233, 209);
   border-top: 1px solid #ccc;
   padding: 1rem 0.5rem 0.5rem 0.5rem;
   display: none;
@@ -307,10 +308,11 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   display: none;
 }
 
-.datetime-today, .datetime-close {
+.datetime-now, .datetime-close {
   position: absolute;
   top: calc(var(--font-size) * -1.85); /* move above selector */
-  background: var(--primary);
+  background: rgb(255, 216, 172);
+  color:var(--text);
   border: none;
   padding: 6px 10px;
   border-radius: 6px;
@@ -319,8 +321,12 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
 }
 
-.datetime-today {
+.datetime-now {
   left: 10px;
+}
+
+.datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
+  background: rgb(255, 216, 172);
 }
 
 .datetime-close {
@@ -329,7 +335,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 
 .dt-col {
   flex: 1;
-  height: 150px;
+  height: 100%;
   overflow-y: auto;
   float: left;
   border-right: 1px solid #eee;
@@ -349,29 +355,39 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 /* Items */
 .dt-item {
   height: 40px;
+  color: #858585;
   line-height: 40px;
   text-align: center;
-  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */
 }
 
 .dt-item.selected {
-  background: var(--primary);
+  background: rgb(254, 187, 111);
   color: white;
   border-radius: 6px;
+  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
 }
 
 @media (prefers-color-scheme: dark) {
   .selector {
-    background: var(--btnBg);
+    background: rgb(72, 43, 9);
+  }
+
+  .dt-item {
+    color: #858585;
   }
 
   .dt-item.selected {
-    background: var(--primary);
+    background: rgb(124, 74, 16);
     color: white;
   }
 
-  .datetime-close {
-    background: var(--primary);
+  .datetime-now, .datetime-close {
+    background: rgb(124, 74, 16);
+  }
+
+  .datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
+    background: rgb(124, 74, 16);
   }
 }
 
@@ -403,7 +419,7 @@ button.secondary {
 /* Bottom Navigation */
 .bottom-nav {
   position: fixed;
-  bottom: 1rem;
+  bottom: 0.5rem;
   left: 50%;
   transform: translateX(-50%);   /* center horizontally */
   width: 90%;
