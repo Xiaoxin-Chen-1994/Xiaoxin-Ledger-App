@@ -421,7 +421,7 @@ button.secondary {
   width: 100%;
   height: auto;         /* keep aspect ratio */
   min-height: 250px;    /* don’t shrink below this */
-  max-height: 400px;    /* don’t grow taller than this */
+  max-height: 350px;    /* don’t grow taller than this */
   background: var(--border); /* blank placeholder */
   border-radius: var(--radius);
   overflow: hidden;
