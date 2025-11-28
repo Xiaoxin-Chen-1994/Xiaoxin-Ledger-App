@@ -9,6 +9,7 @@
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
   --radius: 0.75rem;
+  --font-size: 1.2rem;
 
   /* Default scheme: income red, expense green */
   --income-color: #d32f2f;
@@ -26,7 +27,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px); /* Safari support */
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0.6rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 /* Dark mode support */
@@ -52,11 +53,11 @@
   /* Global glass effect*/
   .bottom-nav, #statusMessage {
     border: 1px solid rgba(255, 255, 255, 0.1); /* softer edge in dark mode */
-    box-shadow: 0 0.5rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
+    box-shadow: 0 0.6rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
 }
 
-html { font-size: 100%; }
+html { font-size: var(--font-size); }
 body {
   margin: 0;
   padding-bottom: 3.5rem; /* space for nav bar */
@@ -113,7 +114,7 @@ body {
 
 .header-bar h1 {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
   text-align: center;
 }
 
@@ -123,16 +124,37 @@ body {
   background: transparent;
   border: none;
   color: var(--primary);
-  font-size: 1rem;
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
   cursor: pointer;
 }
 #return-btn:hover {
   color: var(--primary-hover);
 }
 
-h2 { font-size: 1.25rem; margin: 0.5rem 0; }
+h2 { font-size: calc(var(--font-size) * 1.1); margin: 0.5rem 0; }
 
 label { display: block; margin-top: 0.75rem; font-weight: 600; }
+
+.forgot-password button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: calc(var(--font-size) * 1);
+  cursor: pointer;
+  text-decoration: underline;
+  margin-top: 0.5rem;
+}
+
+.forgot-password button:hover {
+  background: none;
+}
+
+.reset-hint {
+  margin-left: 0.8rem;   /* adds spacing from the left */
+  display: block;
+  font-size: calc(var(--font-size) * 0.7);
+  color: var(--muted); /* softer text color */
+}
 
 .transaction-tabs {
   display: flex;
@@ -181,6 +203,336 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   display: none;             /* Chrome/Safari */
 }
 
+select, input[type="search"], input[list], 
+input[type="text"], input[type="password"], input[type="number"], .selector-button {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.5rem;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
+  background: var(--card);
+  color: var(--text);
+}
+
+.form-row {
+  display: flex;          /* label + item-group side by side */
+  align-items: flex-start;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.form-row label {
+  flex: 0 0 5rem;         /* fixed width for label */
+  font-weight: 600;
+}
+
+.item-group {
+  display: flex;
+  flex-direction: column; /* stack item-rows and button vertically */
+  gap: 8px;
+  flex: 1;
+}
+
+.item-row {
+  display: flex;          /* inputs side by side */
+  gap: 8px;
+}
+
+.item-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  transition: transform 0.3s ease;
+}
+
+.delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3.6rem;
+  background: crimson;
+  color: white;
+  border: none;
+  transform: translateX(100%); /* hidden by default */
+  transition: transform 0.3s ease;
+}
+
+.item-row.show-delete .item-content {
+  transform: translateX(-80px); /* slide inputs left */
+}
+
+.item-row.show-delete .delete-btn {
+  transform: translateX(0); /* reveal delete button */
+}
+
+#expense-add-item-btn, #income-add-item-btn {
+  align-self: flex-start; /* keep button aligned with inputs */
+  padding: 6px 12px;
+}
+
+.selector-button:hover { background: var(--card); }
+
+/* Selector panel fixed at bottom */
+.selector {
+  position: fixed;
+  bottom: 60px; /* above nav bar */
+  left: 0;
+  width: 100%;
+  background: white;
+  border-top: 1px solid #ccc;
+  padding: 1rem 0.5rem 0.5rem 0.5rem;
+  display: none;
+  z-index: 9999;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  display: none;
+}
+
+.datetime-close {
+  position: absolute;
+  top: calc(var(--font-size) * -1.85); /* move above selector */
+  right: 10px;
+  background: var(--primary);
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10000;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+}
+
+.dt-col {
+  flex: 1;
+  height: 150px;
+  overflow-y: auto;
+  float: left;
+  border-right: 1px solid #eee;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.dt-col::-webkit-scrollbar {
+  display: none;             /* Chrome/Safari */
+}
+
+.dt-col:last-child {
+  border-right: none;
+}
+
+/* Items */
+.dt-item {
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+}
+
+.dt-item.selected {
+  background: var(--primary);
+  color: white;
+  border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .selector {
+    background: var(--btnBg);
+  }
+
+  .dt-item.selected {
+    background: var(--primary);
+    color: white;
+  }
+
+  .datetime-close {
+    background: var(--primary);
+  }
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+#logout-btn:hover {background:var(--primary-hover);}
+
+button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: #fff;
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
+  cursor: pointer;
+}
+button:hover { background: var(--primary-hover); }
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 0.0625rem solid var(--border);
+}
+
+#ledger-list { list-style: none; padding: 0; margin-top: 0.75rem; }
+#ledger-list li {
+  padding: 0.75rem;
+  background: var(--chip);
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);   /* center horizontally */
+  width: 90%;
+  max-width: 600px;
+  display: flex;
+  justify-content: space-around;
+  background: var(--card);
+  border-radius: 1.5rem;          /* rounded edges */
+  border-top: 0.00625rem solid var(--border);
+  padding: 0.75rem 1rem;
+  z-index: 1000;
+}
+.bottom-nav button {
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
+  color: var(--text);
+  cursor: pointer;
+}
+
+.bottom-nav button:hover { background: none; }
+
+/* Home hero and overlay */
+.home-hero { position: relative; margin-bottom: 1rem; }
+.home-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px; /* reserved area */
+  background: var(--border); /* blank placeholder */
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.home-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none; /* hidden until uploaded */
+}
+.home-overlay {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+}
+
+/* Kanban rows */
+.kanban { margin-top: 1rem; }
+.kanban-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.35rem 0;
+}
+.kanban-title { font-weight: bold; }
+.kanban-sub { font-size: calc(var(--font-size) * 0.7); color: var(--muted); }
+.kanban-right { text-align: right; }
+.income { color: var(--income-color); }
+.expense { color: var(--expense-color); }
+hr { border: none; border-top: 1px solid var(--border); }
+
+#statusMessage {
+  position: fixed;
+  bottom: calc(var(--font-size) * 5.5);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(219, 219, 219, 0.6); /* dark translucent */
+  color: #313131;
+  padding: 10px 20px;
+  border-radius: 6px;
+  z-index: 999;
+  font-weight: bold;
+  display: none; /* hidden until shown */
+  width: fit-content;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 90%;
+}
+
+/* Settings section */
+
+.settings-header {
+  display: flex;
+  justify-content: space-between; /* pushes title left, welcome right */
+  align-items: center;
+}
+
+#settings-welcome {
+  text-align: right;
+  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */;;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.settings-section {
+  margin-block: 1rem;   /* top & bottom */
+  margin-inline: 0;     /* left & right */
+}
+
+.lang-switch,
+.settings-section.color-switch {
+  display: flex;
+  align-items: center;   /* vertical alignment */
+  gap: 0.5rem;
+}
+
+/* Labels: fixed width on the left */
+.lang-switch p,
+.settings-section.color-switch p {
+  margin: 0;
+  flex: 0 0 8rem;        /* fixed width, adjust 8rem as needed */
+  text-align: left;
+}
+
+.settings-section.household-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start; /* align all children to the top */
+}
+
+.settings-section.household-row p {
+  margin: 0;
+  flex: 0 0 8rem;   /* fixed width label */
+  align-self: flex-start; /* ensure this one stays at the top */
+}
+
+/* Controls: take remaining space on the right */
+.settings-section select,
+.settings-section button,
+.settings-section div {
+  flex: 1;               /* stretch to fill remaining space */
+  width: auto;           /* override 100% width */
+}
+
 /* Shared interactive element style */
 .settings-section button,
 .settings-section select {
@@ -192,36 +544,44 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   color: var(--text);
   border-radius: 6px;
   background: #f5f5f5;
-  font-size: 14px;
+  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */;
   text-align: left;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 /* Hover/focus states */
-.settings-section button:hover,
-.settings-section select:hover,
-.settings-section select:focus {
+.settings-section button:hover {
   background: var(--primary);
   border-color: #ccc;
   outline: none;
 }
 
-.lang-switch {
-  display: flex;
-  align-items: center;   /* vertically center label and buttons */
-  gap: 12px;             /* spacing between label and buttons */
+.login-lang-switch {
+  width: 70%;
+  display: flex;          /* lay out children in a row */
+  gap: 0.5rem;            /* spacing between buttons */
+  justify-content: center;/* center the whole row horizontally */
+  align-items: center;    /* vertical alignment */
+  position: fixed;        /* take it out of normal flow */
+  bottom: 1rem;           /* distance from bottom edge */
+  left: 50%;              /* center horizontally */
+  transform: translateX(-50%); /* adjust centering */
+  background: var(--card);     /* optional: give it a background */
+  padding: 0.5rem 1rem;        /* optional: spacing inside */
+  border-radius: 1rem;         /* optional: rounded edges */
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); /* optional: floating look */
 }
 
-.lang-switch p {
-  margin: 0;             /* remove default paragraph margin */
-  flex-shrink: 0;        /* keep the label from shrinking */
-}
-
-.lang-switch .settings-button {
-  display: inline-block; /* buttons inline */
-  width: auto;           /* don’t stretch full width */
-  margin: 0;             /* reset margins */
+.settings-button {
+  height: calc(var(--font-size) * 2);
+  display: flex;                /* flex container */
+  align-items: center;          /* vertical centering */
+  justify-content: center;      /* horizontal centering */
+  width: auto;
+  margin: 0;
+  padding: 0 1rem;              /* optional: add horizontal padding */
+  box-sizing: border-box;       /* ensures padding doesn’t break height */
 }
 
 #rename-panel,
@@ -237,6 +597,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 }
 
 #invite-panel p {
+  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   margin: 0 0 8px 0;
   color: #b00020;
   font-weight: 600;
@@ -276,7 +637,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 #manage-panel h4,
 #leave-household-panel h4 {
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   font-weight: 600;
   color: #333;
 }
@@ -296,7 +657,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   color: #444;
   user-select: none;
   overflow: hidden;
@@ -316,14 +677,14 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 #member-list .delete-btn,
 #leave-household-list .delete-btn {
   position: absolute;
-  right: -80px;
+  right: -1rem;
   top: 0;
   height: 100%;
-  width: 80px;
+  width: 3rem;
   background: #d32f2f;
   color: #fff;
   border: none;
-  font-size: 14px;
+  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   cursor: pointer;
   transition: right 0.2s ease;
 }
@@ -344,9 +705,7 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
     outline: none;
   }
 
-  .settings-section button:hover,
-  .settings-section select:hover,
-  .settings-section select:focus {
+  .settings-section button:hover {
     background: var(--primary-hover);
     border-color: #ccc;
     outline: none;
@@ -401,294 +760,6 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
   #leave-household-list .delete-btn:hover {
     background: #b71c1c;
   }
-}
-
-select, input[type="search"], input[list], 
-input[type="text"], input[type="password"], input[type="number"], .selector-button {
-  width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.75rem;
-  border: 0.0625rem solid var(--border);
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  background: var(--card);
-  color: var(--text);
-}
-
-.form-row {
-  display: flex;          /* label + item-group side by side */
-  align-items: flex-start;
-  gap: 1rem;
-  margin: 0.75rem 0;
-}
-
-.form-row label {
-  flex: 0 0 5rem;         /* fixed width for label */
-  font-weight: 600;
-}
-
-.item-group {
-  display: flex;
-  flex-direction: column; /* stack item-rows and button vertically */
-  gap: 8px;
-  flex: 1;
-}
-
-.item-row {
-  display: flex;          /* inputs side by side */
-  gap: 8px;
-}
-
-.item-row input {
-  flex: 1;
-  min-width: 0;
-}
-
-.item-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-
-.item-content {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-  transition: transform 0.3s ease;
-}
-
-.delete-btn {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 80px;
-  background: crimson;
-  color: white;
-  border: none;
-  transform: translateX(100%); /* hidden by default */
-  transition: transform 0.3s ease;
-}
-
-.item-row.show-delete .item-content {
-  transform: translateX(-80px); /* slide inputs left */
-}
-
-.item-row.show-delete .delete-btn {
-  transform: translateX(0); /* reveal delete button */
-}
-
-#expense-add-item-btn, #income-add-item-btn {
-  align-self: flex-start; /* keep button aligned with inputs */
-  padding: 6px 12px;
-}
-
-.selector-button:hover { background: var(--card); }
-
-/* Selector panel fixed at bottom */
-.selector {
-  position: fixed;
-  bottom: 60px; /* above nav bar */
-  left: 0;
-  width: 100%;
-  background: white;
-  border-top: 1px solid #ccc;
-  padding: 1rem 0.5rem 0.5rem 0.5rem;
-  display: none;
-  z-index: 9999;
-  border-radius: 12px 12px 0 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  display: none;
-}
-
-.datetime-close {
-  position: absolute;
-  top: -40px;          /* move above selector */
-  right: 10px;
-  background: var(--primary);
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  z-index: 10000;
-  font-size: 16px;
-}
-
-.dt-col {
-  flex: 1;
-  height: 150px;
-  overflow-y: auto;
-  float: left;
-  border-right: 1px solid #eee;
-  scroll-behavior: smooth;
-  -ms-overflow-style: none;  /* IE/Edge */
-  scrollbar-width: none;     /* Firefox */
-}
-
-.dt-col::-webkit-scrollbar {
-  display: none;             /* Chrome/Safari */
-}
-
-.dt-col:last-child {
-  border-right: none;
-}
-
-/* Items */
-.dt-item {
-  height: 40px;
-  line-height: 40px;
-  text-align: center;
-  font-size: 16px;
-}
-
-.dt-item.selected {
-  background: var(--primary);
-  color: white;
-  border-radius: 6px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .selector {
-    background: var(--btnBg);
-  }
-
-  .dt-item.selected {
-    background: var(--primary);
-    color: white;
-  }
-
-  .datetime-close {
-    background: var(--primary);
-  }
-}
-
-.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-
-button {
-  flex: 1;
-  padding: 0.75rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: var(--primary);
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-}
-button:hover { background: var(--primary-hover); }
-button.secondary {
-  background: transparent;
-  color: var(--text);
-  border: 0.0625rem solid var(--border);
-}
-
-#ledger-list { list-style: none; padding: 0; margin-top: 0.75rem; }
-#ledger-list li {
-  padding: 0.75rem;
-  background: var(--chip);
-  border-radius: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Bottom Navigation */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  justify-content: space-around;
-  background: var(--card);
-  border-top: 0.0625rem solid var(--border);
-  padding: 0.5rem 0;
-}
-.bottom-nav button {
-  flex: 1;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: var(--text);
-  cursor: pointer;
-}
-.bottom-nav button.active { color: var(--primary); font-weight: bold; }
-
-/* Home hero and overlay */
-.home-hero { position: relative; margin-bottom: 1rem; }
-.home-image-wrapper {
-  position: relative;
-  width: 100%;
-  height: 200px; /* reserved area */
-  background: var(--border); /* blank placeholder */
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.home-image-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: none; /* hidden until uploaded */
-}
-.home-overlay {
-  position: absolute;
-  bottom: 0.5rem;
-  left: 0.5rem;
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  padding: 0.5rem 0.6rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-}
-
-/* Kanban rows */
-.kanban { margin-top: 1rem; }
-.kanban-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.35rem 0;
-}
-.kanban-title { font-weight: bold; }
-.kanban-sub { font-size: 0.8rem; color: var(--muted); }
-.kanban-right { text-align: right; }
-.income { color: var(--income-color); }
-.expense { color: var(--expense-color); }
-hr { border: none; border-top: 1px solid var(--border); }
-
-/* Settings section */
-.color-switch, .lang-switch { margin-top: 1rem; }
-
-#statusMessage {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(34, 34, 34, 0.6); /* dark translucent */
-  color: #dddddd;
-  padding: 10px 20px;
-  border-radius: 6px;
-  z-index: 1000;
-  font-weight: bold;
-  display: none; /* hidden until shown */
-  width: fit-content;
-  text-align: center;
-  white-space: nowrap;
-  max-width: 90%;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-}
-
-.settings-header {
-  display: flex;
-  justify-content: space-between; /* pushes title left, welcome right */
-  align-items: center;
-}
-
-#settings-welcome {
-  text-align: right;
-  font-size: 1rem;
-  color: var(--muted);
-  font-weight: 600;
 }
 
 .type-selector {

@@ -23,11 +23,18 @@
       <button id="signup-btn" onclick="signup()">注册</button>
       <button id="login-btn" onclick="login()">登录</button>
     </div>
+    <div class="forgot-password">
+      <button id="forgot-btn" onclick="forgotPassword()">重置密码</button>
+    </div>
+    <small id="reset-hint" class="reset-hint">
+      如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作。
+    </small>
   </div>
+  
   <div id="login-lang-switch" class="login-lang-switch">
     <p>语言 / Language</p>
-    <button onclick="setLanguage('en', true)">English</button>
-    <button onclick="setLanguage('zh', true)">中文</button>
+    <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
+    <button class="settings-button" onclick="setLanguage('en', true)">English</button>
   </div>
 
   <div class="pages-wrapper" id="pages-wrapper">
@@ -242,13 +249,13 @@
     <!-- Language -->
     <section class="settings-section lang-switch">
       <p>语言 / Language</p>
-      <button class="settings-button" onclick="setLanguage('en', true)">English</button>
       <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
+      <button class="settings-button" onclick="setLanguage('en', true)">English</button>
     </section>
 
     <!-- Color scheme -->
     <section class="settings-section color-switch">
-      <p>颜色方案 / Color Scheme</p>
+      <p id="color-scheme-title">颜色方案</p>
       <select id="color-scheme-select" onchange="setColorScheme(this.value, true)">
         <option value="default">收入红 / 支出绿</option>
         <option value="alt">收入绿 / 支出红</option>
@@ -257,7 +264,7 @@
 
     <!-- Household -->
     <section class="settings-section household-row">
-      <p>我的家庭:</p>
+      <p>我的家庭</p>
       <div id="household-actions">
         <button id="rename-btn" class="settings-button">重命名我的家庭</button>
         <div id="rename-panel" class="panel hidden">
@@ -293,11 +300,11 @@
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home-page')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts-page')">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction-page')">记一笔</button>
-    <button id="nav-charts" onclick="showPage('charts-page')">图表</button>
-    <button id="nav-settings" onclick="showPage('settings-page')">设置</button>
+    <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts')">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction')">记一笔</button>
+    <button id="nav-values" onclick="showPage('values', 'nav-values')">价值</button>
+    <button id="nav-settings" onclick="showPage('settings', 'nav-settings')">设置</button>
   </nav>
 
 

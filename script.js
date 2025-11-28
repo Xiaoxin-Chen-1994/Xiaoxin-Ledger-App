@@ -64,7 +64,7 @@ let accounts = [];
 let persons = [];
 let households = [];
 let householdIds = [];
-let inputType = null;
+let inputTypeIndex = 0;
 let inputTransactionTime = null;
 let inputHouseholdId = null;
 let inputPerson = null;
@@ -142,6 +142,21 @@ function login() {
 
 }
 
+function resetPassword() {
+  const email = document.getElementById("username").value;
+
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      // Success: email sent
+      alert("Password reset email sent!");
+    })
+    .catch((error) => {
+      // Handle Errors here.
+      console.error(error.code, error.message);
+      alert("Error: " + error.message);
+    });
+}
+
 function logout() {
   auth.signOut();
 }
@@ -206,13 +221,15 @@ auth.onAuthStateChanged(async user => {
     }
 
     // ✅ Load main app
-    showPage("home-page");
+    showPage("home", "nav-home");
     loadLedger(currentUser.uid);
     updateHomeKanban();
   } else {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
+    document.getElementById("login-lang-switch").style.display = "flex";
     document.getElementById("home-page").style.display = "none";
+    document.getElementById("return-btn").style.display = "none";
     document.getElementById("transaction-page").style.display = "none";
     document.getElementById("settings-page").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "none";
@@ -365,10 +382,8 @@ document.querySelectorAll(".item-row").forEach(row => {
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
 
-let currentIndex = 0;
-
 function switchTab(index) {
-  currentIndex = index;
+  inputTypeIndex = index;
   wrapper.style.transform = `translateX(-${index * 100}%)`;
 
   // Update active button
@@ -542,8 +557,8 @@ wrapper.addEventListener("touchend", e => {
   let diff = startX - endX;
 
   if (Math.abs(diff) > 50) {
-    if (diff > 0 && currentIndex < 2) switchTab(currentIndex + 1);
-    if (diff < 0 && currentIndex > 0) switchTab(currentIndex - 1);
+    if (diff > 0 && inputTypeIndex < 2) switchTab(inputTypeIndex + 1);
+    if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1);
   }
 });
 
@@ -574,7 +589,7 @@ function addEntry() {
   if (!currentUser) return;
 
   const householdId = inputHouseholdId; // regardless of household name
-  const type = inputType; // regardless of language
+  const type = inputTypeIndex; // regardless of language
 
   // Read fields depending on type
   let account, person, store, category, fromAccount, toAccount;
@@ -690,35 +705,75 @@ function formatLatest(data) {
   return `${typeLabel} | ${data.account} | ${data.store || ""} | ${data.datetime || ""}`.trim();
 }
 
-
-const pagesWrapper = document.getElementById("pages-wrapper");
 // define base pages
-const basePages = ["home-page", "accounts-page", "charts-page", "settings-page"];
+const basePages = ["home", "accounts", "transaction", "values", "settings"];
 
 // history stacks for each base page
 let historyStacks = {
-  home: ["home-page"],
-  accounts: ["accounts-page"],
-  charts: ["charts-page"],
-  settings: ["settings-page"]
+  home: [["home", "nav-home"]],
+  accounts: [["accounts", "nav-accounts"]],
+  transaction: [["transaction", "nav-transaction"]],
+  values: [["values", "nav-values"]],
+  settings: [["settings", "nav-settings"]]
 };
 
 // track which base we’re currently in
-let currentBase = "home-page";
+let currentBase = "home";
 
-function showPage(name) {
-  const target = document.getElementById(name);
-  if (!target) return;
+function showPage(name, navBtn=null) {
+  let stack = null;
+  let target = null;
+  let latest = null;
+  let latestPage = null;
+  let latestNavBtn = null;
 
+  // reset nav button colors
+  document.getElementById("nav-home").style.backgroundColor = "";
+  document.getElementById("nav-accounts").style.backgroundColor = "";
+  document.getElementById("nav-transaction").style.backgroundColor = "";
+  document.getElementById("nav-values").style.backgroundColor = "";
+  document.getElementById("nav-settings").style.backgroundColor = "";
+
+  if (basePages.includes(name)) { // when clicking the base nav buttons, look for the latest stack
+    currentBase = name;
+    stack = historyStacks[name];
+    latest = stack ? stack[stack.length - 1] : [name, navBtn];
+    [latestPage, latestNavBtn] = latest;
+    target = document.getElementById(latestPage + "-page");
+
+    if (!target) return;
+
+    if (navBtn && stack.length < 2) { // if already returned to base
+      document.getElementById(navBtn).style.backgroundColor = "var(--primary)";
+      document.getElementById("return-btn").style.display = "none";
+    } else {
+      document.getElementById("return-btn").style.display = "block";
+    };
+
+  } else {
+    latestPage = name;
+    target = document.getElementById(latestPage + "-page");
+
+    if (!target) return;
+    
+    if (name+"-page" === "transaction-page") {
+      document.getElementById("nav-transaction").style.backgroundColor = "var(--primary)";
+    }
+    document.getElementById("return-btn").style.display = "block";
+  }
+  
+  // hide all pages
   document.getElementById("login-section").style.display = "none";
   document.getElementById("home-page").style.display = "none";
   document.getElementById("transaction-page").style.display = "none";
   document.getElementById("settings-page").style.display = "none";
 
-  document.getElementById(name).style.display = "block";
+  // show the latest page
+  target.style.display = "block";
 
-  if (name === "transaction-page") {
-    const activeIndex = currentIndex; // income=0, expense=1, transfer=2
+  // transaction page special handling
+  if (latestPage+"-page" === "transaction-page") {
+    const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2
     const formIds = ["expense-form", "income-form", "transfer-form"];
     const formId = formIds[activeIndex];
 
@@ -730,18 +785,12 @@ function showPage(name) {
     }
   }
 
-  // ✅ If the page is already active, do nothing
-  if (target.classList.contains('active')) {
-    return;
-  }
-
-  if (basePages.includes(name)) {
-    // reset stack if navigating to a base page
-    currentBase = name;
-    historyStacks[name] = [name];
-  } else {
-    // push child page onto current base stack
-    historyStacks[currentBase].push(name);
+  stack = historyStacks[currentBase];
+  // If reaching base page or the page is already active, do nothing
+  const isBaseAndFresh = basePages.includes(latestPage) && stack.length < 2;
+  const isAlreadyActive = stack?.[stack.length - 1]?.[0] === latestPage;
+  if (!isBaseAndFresh && !isAlreadyActive) {
+    historyStacks[currentBase].push([latestPage, navBtn]); // add to the history stacks
   }
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -756,9 +805,13 @@ function goBack() {
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
     stack.pop(); // remove current page
-    const prev = stack[stack.length - 1];
-    stack.pop(); // remove previous page as well because it will be appended again
-    showPage(prev);
+    const [prevPage, prevNavBtn] = stack[stack.length - 1]; // get the previous entry
+    
+    if (stack.length > 1) {
+      stack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
+    }
+
+    showPage(prevPage, prevNavBtn);
   }
 }
 
@@ -772,6 +825,8 @@ const translations = {
     password: "Password",
     signup: "Sign Up",
     login: "Login",
+    forgotBtn: "Reset password",
+    resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
     welcome: "Welcome",
     homeTitle: "Home",
     monthBalance: "Nov · Balance",
@@ -789,11 +844,12 @@ const translations = {
     items: "Items",
     addItem: "+ Add Item",
     addTransaction: "Add Transaction",
+    colorSchemeTitle:"Color Scheme", 
     logout: "Logout",
     navHome: "Home",
     navAccounts: "Accounts",
-    navTransaction: "Add",
-    navCharts: "Charts",
+    navTransaction: "Create",
+    navValues: "Values",
     navSettings: "Settings"
   },
   zh: {
@@ -802,6 +858,8 @@ const translations = {
     password: "密码",
     signup: "注册",
     login: "登录",
+    forgotBtn: "重置密码",
+    resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
     welcome: "欢迎",
     homeTitle: "首页",
     monthBalance: "11月·结余",
@@ -819,11 +877,12 @@ const translations = {
     items: "项目",
     addItem: "+ 添加项目",
     addTransaction: "添加交易",
+    colorSchemeTitle:"颜色方案", 
     logout: "退出",
     navHome: "首页",
     navAccounts: "账户",
     navTransaction: "记一笔",
-    navCharts: "图表",
+    navValues: "价值",
     navSettings: "设置"
   }
 };
@@ -838,6 +897,8 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("password").placeholder = t.password;
   document.getElementById("signup-btn").textContent = t.signup;
   document.getElementById("login-btn").textContent = t.login;
+  document.getElementById("forgot-btn").textContent = t.forgotBtn;
+  document.getElementById("reset-hint").textContent = t.resetHint;
 
   // Home text
   document.getElementById("home-month").textContent = t.monthBalance;
@@ -856,11 +917,14 @@ function setLanguage(lang, showMessage = false) {
   // document.getElementById("add-transaction-btn").textContent = t.addTransaction;
   // document.getElementById("logout-btn").textContent = t.logout;
 
+  // Settings
+  document.getElementById("color-scheme-title").textContent = t.colorSchemeTitle;
+
   // Nav
   document.getElementById("nav-home").textContent = t.navHome;
   document.getElementById("nav-accounts").textContent = t.navAccounts;
   document.getElementById("nav-transaction").textContent = t.navTransaction;
-  document.getElementById("nav-charts").textContent = t.navCharts;
+  document.getElementById("nav-values").textContent = t.navValues;
   document.getElementById("nav-settings").textContent = t.navSettings;
 
   if (currentUser) {
@@ -872,7 +936,7 @@ function setLanguage(lang, showMessage = false) {
   // Only show message if explicitly requested
   if (showMessage) {
     if (lang === "en") {
-      showStatusMessage("Language set to English", "success");
+      showStatusMessage("Language switched to English", "success");
     } else if (lang === "zh") {
       showStatusMessage("语言已切换为 中文", "success");
     }
@@ -1018,35 +1082,65 @@ function setColorScheme(scheme, showMessage = false) {
 }
 
 document.getElementById("rename-btn").onclick = () => {
-  document.getElementById("rename-panel").style.display = "block";
-  document.getElementById("rename-household").value = households[0].name;
+  const panel = document.getElementById("rename-panel");
+  const isVisible = panel.style.display === "block";
+
+  // hide all panels first
   document.getElementById("invite-panel").style.display = "none";
   document.getElementById("manage-panel").style.display = "none";
   document.getElementById("leave-household-panel").style.display = "none";
+
+  if (isVisible) {
+    panel.style.display = "none"; // toggle off
+  } else {
+    panel.style.display = "block"; // toggle on
+    document.getElementById("rename-household").value = households[0].name;
+  }
 };
 
 document.getElementById("invite-btn").onclick = () => {
+  const panel = document.getElementById("invite-panel");
+  const isVisible = panel.style.display === "block";
+
   document.getElementById("rename-panel").style.display = "none";
-  document.getElementById("invite-panel").style.display = "block";
   document.getElementById("manage-panel").style.display = "none";
   document.getElementById("leave-household-panel").style.display = "none";
+
+  panel.style.display = isVisible ? "none" : "block";
 };
 
 document.getElementById("manage-btn").onclick = () => {
+  const panel = document.getElementById("manage-panel");
+  const isVisible = panel.style.display === "block";
+
   document.getElementById("rename-panel").style.display = "none";
   document.getElementById("invite-panel").style.display = "none";
-  document.getElementById("manage-panel").style.display = "block";
   document.getElementById("leave-household-panel").style.display = "none";
-  loadHouseholdMembers();
+
+  if (isVisible) {
+    panel.style.display = "none";
+  } else {
+    panel.style.display = "block";
+    loadHouseholdMembers();
+  }
 };
 
 document.getElementById("leave-btn").onclick = () => {
+  const panel = document.getElementById("leave-household-panel");
+  const isVisible = panel.style.display === "block";
+
   document.getElementById("rename-panel").style.display = "none";
   document.getElementById("invite-panel").style.display = "none";
   document.getElementById("manage-panel").style.display = "none";
-  document.getElementById("leave-household-panel").style.display = "block";
-  loadMyHouseholds();
+
+  if (isVisible) {
+    panel.style.display = "none";
+  } else {
+    panel.style.display = "block";
+    loadMyHouseholds();
+  }
 };
+
 
 document.getElementById("rename-confirm").addEventListener("click", async () => {
   const newName = document.getElementById("rename-household").value.trim();
@@ -1123,7 +1217,7 @@ async function loadHouseholdMembers() {
     msg.style.padding = "12px";
     msg.style.color = "#666";
     msg.style.textAlign = "center";
-    msg.style.fontSize = "14px";
+    msg.style.fontSize = "calc(var(--font-size) * 0.7)";
     list.appendChild(msg);
     return; // ✅ Stop here — nothing else to load
   }
@@ -1231,7 +1325,7 @@ async function loadMyHouseholds() {
     msg.style.padding = "12px";
     msg.style.color = "#666";
     msg.style.textAlign = "center";
-    msg.style.fontSize = "14px";
+    msg.style.fontSize = "calc(var(--font-size) * 0.7)";
     list.appendChild(msg);
     return; // ✅ Stop here — nothing else to load
   }
@@ -1341,7 +1435,9 @@ async function confirmLeaveHousehold(hid) {
 }
 
 function showStatusMessage(message, type = 'info', duration = 2000) {
+
   const status = document.getElementById('statusMessage');
+
   status.textContent = message;
   status.style.display = 'inline-block';
 
