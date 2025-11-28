@@ -98,7 +98,7 @@ function signup() {
         profile: {
           email: email,
           language: currentLang,
-          homeImage: "",
+          homeImages: "",
           settings: {}
         },
         personalHouseholdId: householdId,
@@ -166,10 +166,12 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
 
+    console.time("Load userDoc");
     const userDoc = await firebase.firestore()
       .collection("users")
       .doc(user.uid)
       .get();
+    console.timeEnd("Load userDoc");
     // ✅ Load profile subdocument
     const profile = userDoc.data().profile
 
@@ -177,11 +179,13 @@ auth.onAuthStateChanged(async user => {
     householdIds = userDoc.exists ? (userDoc.data().households || []) : [];
 
     // ✅ Load household documents
+    console.time("Load household documents");
     const householdDocs = await Promise.all(
       householdIds.map(hid =>
         firebase.firestore().collection("households").doc(hid).get()
       )
     );
+    console.timeEnd("Load household documents");
 
     // ✅ Convert to array of { id, name }
     households = householdDocs
@@ -204,10 +208,35 @@ auth.onAuthStateChanged(async user => {
       `${translations[currentLang].welcome}, ${profile.email || currentUser.email}`;
 
     // ✅ Apply profile settings
-    if (profile.homeImage) {
+    if (profile.homeImages && Array.isArray(profile.homeImages) && profile.homeImages.length > 0) {
       const img = document.getElementById("home-image");
-      img.src = profile.homeImage;
-      img.style.display = "block";
+
+      const randomIndex = Math.floor(Math.random() * profile.homeImages.length);
+      const randomUrl = profile.homeImages[randomIndex].trim();
+
+      if (randomUrl !== "") {
+        console.log("Random homepage image (preloading):", randomUrl);
+
+        // Create a new Image object to preload
+        const preloader = new Image();
+        preloader.onload = () => {
+          // Once loaded in background, show it
+          img.src = randomUrl;
+          img.style.display = "block";
+        };
+        preloader.onerror = () => {
+          // If loading fails, hide
+          img.style.display = "none";
+        };
+
+        // Start loading in background
+        preloader.src = randomUrl;
+      } else {
+        img.style.display = "none";
+      }
+    } else {
+      const img = document.getElementById("home-image");
+      img.style.display = "none";
     }
 
     if (profile.language) {
@@ -249,7 +278,6 @@ function initHouseholdSelector(households) {
   // Save for later lookup (ID ↔ name)
   window._householdList = households;
 }
-
 
 function isTransactionFormEmpty(formId) {
   const form = document.querySelector(`#${formId} .transaction-form`);
@@ -376,8 +404,6 @@ document.querySelectorAll(".item-row").forEach(row => {
   const upgraded = createItemRow(name, notes);
   row.replaceWith(upgraded);
 });
-
-
 
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -845,6 +871,14 @@ const translations = {
     addItem: "+ Add Item",
     addTransaction: "Add Transaction",
     colorSchemeTitle:"Color Scheme", 
+    colorSchemeSwitched:"Color scheme is now changed",
+    colorSchemeSwitchFailed: "Failed to save color scheme",
+    languageSwitched:"Language switched to English",
+    languageSwitchFailed: "Failed to save language",
+    homeImageTitle: "Homepage Image",
+    homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
+    homeImageSaved: "Homepage images saved",
+    homeImageSaveFailed: "Failed to save homepage images",
     logout: "Logout",
     navHome: "Home",
     navAccounts: "Accounts",
@@ -878,6 +912,14 @@ const translations = {
     addItem: "+ 添加项目",
     addTransaction: "添加交易",
     colorSchemeTitle:"颜色方案", 
+    colorSchemeSwitched:"颜色方案已更新",
+    colorSchemeSwitchFailed: "颜色方案保存出错",
+    languageSwitched:"语言已切换为 中文",
+    languageSwitchFailed: "语言保存出错",
+    homeImageTitle: "首页图",
+    homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
+    homeImageSaved: "首页图链接已保存",
+    homeImageSaveFailed: "首页图保存出错",
     logout: "退出",
     navHome: "首页",
     navAccounts: "账户",
@@ -919,6 +961,8 @@ function setLanguage(lang, showMessage = false) {
 
   // Settings
   document.getElementById("color-scheme-title").textContent = t.colorSchemeTitle;
+  document.getElementById("home-image-title").textContent = t.homeImageTitle;
+  document.getElementById("home-image-instruction").textContent = t.homeImageInstruction;
 
   // Nav
   document.getElementById("nav-home").textContent = t.navHome;
@@ -928,80 +972,124 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("nav-settings").textContent = t.navSettings;
 
   if (currentUser) {
-    db.collection("users").doc(currentUser.uid).set({
-      language: lang
-    }, { merge: true });
+    firebase.firestore()
+      .collection("users")
+      .doc(currentUser.uid)
+      .update({
+        "profile.language": lang   // update only this nested field
+      })
+      .then(() => {
+        if (showMessage) {
+          showStatusMessage(t.languageSwitched, "success");
+        }
+      })
+      .catch(err => {
+        console.error("Error saving language:", err);
+        showStatusMessage(t.languageSwitchFailed, "error");
+      });
   }
+  
+}
 
-  // Only show message if explicitly requested
-  if (showMessage) {
-    if (lang === "en") {
-      showStatusMessage("Language switched to English", "success");
-    } else if (lang === "zh") {
-      showStatusMessage("语言已切换为 中文", "success");
+// Ensure this runs after DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  wireHomeImageSettings();
+});
+
+let homeImages = []; // start empty; load later
+
+function wireHomeImageSettings() {
+  const manageBtn = document.getElementById("manage-home-image-btn");
+  const addBtn = document.getElementById("add-home-image-btn");
+  const saveBtn = document.getElementById("save-home-image-btn");
+
+  manageBtn?.addEventListener("click", toggleHomeImageEditor);
+  addBtn?.addEventListener("click", addHomeImageRow);
+  saveBtn?.addEventListener("click", saveHomeImages);
+}
+
+async function toggleHomeImageEditor() {
+  const editor = document.getElementById("home-image-panel");
+
+  if (editor.style.display === "none" || editor.style.display === "") {
+    editor.style.display = "block";
+
+    // 🔑 Load latest data from Firestore before rendering
+    if (currentUser) {
+      const userDoc = await firebase.firestore()
+        .collection("users")
+        .doc(currentUser.uid)
+        .get();
+
+      const profile = userDoc.data()?.profile || {};
+      homeImages = Array.isArray(profile.homeImages) ? profile.homeImages : [];
+
+      renderHomeImageList(homeImages);
+    } else {
+      // fallback if no user
+      renderHomeImageList(homeImages);
     }
-  }
-}
-
-const storage = firebase.storage();
-
-async function uploadHomeImage(file) {
-  if (!currentUser) return;
-
-  // Create a storage ref under the user’s folder
-  const storageRef = storage.ref(`users/${currentUser.uid}/homeImage.jpg`);
-
-  // Upload file
-  await storageRef.put(file);
-
-  // Get download URL
-  const url = await storageRef.getDownloadURL();
-
-  // Save URL in Firestore under user settings
-  await db.collection("users").doc(currentUser.uid).set({
-    homeImageUrl: url
-  }, { merge: true });
-
-  // Show status message
-  if (currentLang === "en") {
-    showStatusMessage("User image has been uploaded to database", 'success');
-  } else if (currentLang === "zh") {
-    showStatusMessage("图片已成功上传至数据库", "success");
-  }
-
-  // Update UI
-  const img = document.getElementById("home-image");
-  img.src = url;
-  img.style.display = "block";
-}
-
-
-// --- Home: image preview ---
-function previewHomeImage(event) {
-  const file = event.target.files[0];
-  if (file) {
-    uploadHomeImage(file);
+  } else {
+    editor.style.display = "none";
   }
 }
 
 
-// Right-click triggers upload
-function triggerHomeUpload(event) {
-  event.preventDefault();
-  document.getElementById("home-image-upload").click();
+function renderHomeImageList(urls = []) {
+  const list = document.getElementById("home-image-list");
+  list.innerHTML = "";
+
+  urls.forEach((url, index) => {
+    const row = document.createElement("div");
+    row.className = "home-image-row";
+
+    const input = document.createElement("input");
+    input.type = "url";
+    input.value = url;
+    input.addEventListener("change", () => (homeImages[index] = input.value));
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      homeImages.splice(index, 1);
+      renderHomeImageList(homeImages);
+    });
+
+    row.appendChild(input);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
 }
 
-// Long press (hold) triggers upload
-let holdTimer;
-function handleHold(event) {
-  if (event.button === 0) { // left mouse or touch
-    holdTimer = setTimeout(() => {
-      document.getElementById("home-image-upload").click();
-    }, 800);
-  }
+function addHomeImageRow() {
+  homeImages.push("");
+  renderHomeImageList(homeImages);
 }
-document.addEventListener("mouseup", () => clearTimeout(holdTimer));
-document.addEventListener("touchend", () => clearTimeout(holdTimer));
+
+function saveHomeImages() {
+  const t = translations[currentLang];
+
+  const inputs = document.querySelectorAll("#home-image-list input[type='url']");
+  const urls = Array.from(inputs)
+    .map(input => input.value.trim())
+    .filter(url => url.length > 0);
+
+  homeImages = urls;
+
+  firebase.firestore()
+    .collection("users")
+    .doc(currentUser.uid)
+    .update({
+      "profile.homeImages": homeImages   // update just this nested field
+    })
+    .then(() => {
+      showStatusMessage(t.homeImageSaved, "success");
+    })
+    .catch(err => {
+      showStatusMessage(t.homeImageSaveFailed, "error");
+    });
+}
 
 // --- Home: Kanban summaries ---
 async function updateHomeKanban() {
@@ -1060,24 +1148,30 @@ async function updateHomeKanban() {
 
 // --- Color Scheme ---
 function setColorScheme(scheme, showMessage = false) {
+  t = translations[currentLang];
+
   if (scheme === "alt") {
     document.documentElement.classList.add("alt-scheme");
   } else {
     document.documentElement.classList.remove("alt-scheme");
   }
-  if (currentUser) {
-    db.collection("users").doc(currentUser.uid).set({
-      colorScheme: scheme
-    }, { merge: true });
-  }
 
-  // Only show message if explicitly requested
-  if (showMessage) {
-    if (currentLang === "en") {
-      showStatusMessage("Color scheme is now changed", 'success');
-    } else if (currentLang === "zh") {
-      showStatusMessage("颜色方案已更新", "success");
-    }
+  if (currentUser) {
+    firebase.firestore()
+      .collection("users")
+      .doc(currentUser.uid)
+      .update({
+        "profile.colorScheme": scheme   // update only this nested field
+      })
+      .then(() => {
+        if (showMessage) {
+          showStatusMessage(t.colorSchemeSwitched, "success");
+        }
+      })
+      .catch(err => {
+        console.error("Error saving color scheme:", err);
+        showStatusMessage(t.colorSchemeSwitchFailed, "error");
+      });
   }
 }
 

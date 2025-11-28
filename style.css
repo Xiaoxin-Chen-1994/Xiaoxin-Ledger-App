@@ -75,7 +75,6 @@ body {
 
 .page {
   position: absolute;
-  top: 3.5rem;
   left: 0.5rem;
   width: 98%;
   height: 100%;
@@ -363,9 +362,6 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
   }
 }
 
-.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-#logout-btn:hover {background:var(--primary-hover);}
-
 button {
   flex: 1;
   padding: 0.75rem;
@@ -513,13 +509,13 @@ hr { border: none; border-top: 1px solid var(--border); }
   text-align: left;
 }
 
-.settings-section.household-row {
+.settings-section.household-row, .settings-section.home-image {
   display: flex;
   gap: 0.5rem;
   align-items: flex-start; /* align all children to the top */
 }
 
-.settings-section.household-row p {
+.settings-section.household-row p, .settings-section.home-image p {
   margin: 0;
   flex: 0 0 8rem;   /* fixed width label */
   align-self: flex-start; /* ensure this one stays at the top */
@@ -584,6 +580,106 @@ hr { border: none; border-top: 1px solid var(--border); }
   box-sizing: border-box;       /* ensures padding doesn’t break height */
 }
 
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+
+#logout-btn {
+  padding: 10px 12px;
+  margin-block: 2rem;   /* top & bottom */
+  margin-inline: 0;     /* left & right */
+  border: 1px solid #ddd;
+  color: var(--text);
+  border-radius: 6px;
+  background: #f5f5f5;
+  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#logout-btn:hover {background:var(--primary-hover);}
+
+/* Each row */
+.home-image-row {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: stretch; /* children equal height */
+  margin-bottom: 0.5rem;
+}
+
+.home-image-row input[type="url"],
+.home-image-row button {
+  box-sizing: border-box;   /* width/height include padding + border */
+  height: calc(var(--font-size) * 1.4);           /* explicit same height */
+}
+
+/* Input expands */
+.home-image-row input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Button stays narrow */
+.home-image-row button {
+  flex: 0 0 auto;
+  width: calc(var(--font-size) * 4);
+  margin-left: 0.5rem;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+
+  display: flex;            /* center text vertically */
+  align-items: center;
+  justify-content: center;
+}
+.home-image-row button:hover {
+  background: #c0392b;
+}
+
+/* Controls (Add + Hide) */
+.home-image-controls {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Override any global width/flow that makes buttons full-width */
+.home-image-controls > button {
+  flex: 0 0 auto;
+  width: auto !important;
+  display: inline-flex !important; /* avoid block/full-width */
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#add-home-image-btn {
+  background: #2ecc71;
+  color: #fff;
+}
+#add-home-image-btn:hover {
+  background: #27ae60;
+}
+
+#hide-home-image-btn {
+  background: #bdc3c7;
+  color: #333;
+}
+#hide-home-image-btn:hover {
+  background: #95a5a6;
+}
+
+#home-image-panel,
 #rename-panel,
 #invite-panel,
 #manage-panel,
@@ -596,6 +692,11 @@ hr { border: none; border-top: 1px solid var(--border); }
   display: none;
 }
 
+#home-image-panel p {
+  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  margin: 0 0 8px 0;
+}
+
 #invite-panel p {
   font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   margin: 0 0 8px 0;
@@ -604,7 +705,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 }
 
 /* Input field */
-#rename-household, #invite-email {
+#rename-household, #invite-email, .home-image-row input[type="url"] {
   width: 100%;
   padding: 8px 10px;
   border-radius: 4px;
@@ -612,7 +713,7 @@ hr { border: none; border-top: 1px solid var(--border); }
   box-sizing: border-box;
 }
 
-#rename-household:focus, #invite-email:focus {
+#rename-household:focus, #invite-email:focus, .home-image-row input[type="url"]:focus {
   outline: none;
   border-color: #4285f4;
   box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
@@ -698,19 +799,21 @@ hr { border: none; border-top: 1px solid var(--border); }
 @media (prefers-color-scheme: dark) {
   .settings-section button,
   .settings-section select,
-  .settings-section select {
+  .settings-section select,
+  #logout-btn {
     background: var(--btnBg);
     color: var(--text);
     border-color: #ccc;
     outline: none;
   }
 
-  .settings-section button:hover {
+  .settings-section button:hover, #logout-btn:hover {
     background: var(--primary-hover);
     border-color: #ccc;
     outline: none;
   }
 
+  #home-image-panel,
   #rename-panel, 
   #invite-panel,
   #manage-panel,
@@ -719,17 +822,21 @@ hr { border: none; border-top: 1px solid var(--border); }
     border-color: #444;
   }
 
+  #home-image-panel p {
+    color: var(--text);
+  }
+
   #invite-panel p {
     color: #ed6f6f;
   }
 
-  #rename-household, #invite-email {
+  #rename-household, #invite-email, .home-image-row input[type="url"] {
     background: #1e1e1e;
     border-color: #555;
     color: #eee;
   }
 
-  #rename-household:focus, #invite-email:focus {
+  #rename-household:focus, #invite-email:focus, .home-image-row input[type="url"]:focus {
     border-color: #4285f4;
     box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.4);
   }
