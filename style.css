@@ -9,7 +9,7 @@
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
   --radius: 0.75rem;
-  --font-size: 1.2rem;
+  --font-size: 1rem;
 
   /* Default scheme: income red, expense green */
   --income-color: #d32f2f;
