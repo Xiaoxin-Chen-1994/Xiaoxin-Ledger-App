@@ -137,7 +137,7 @@ body {
 
 h2 { font-size: calc(var(--font-size) * 1.1); margin: 0.5rem 0; }
 
-label { display: block; margin-top: 0.75rem; font-weight: 600; }
+label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 1); font-weight: 600; }
 
 .forgot-password button {
   background: none;
@@ -208,9 +208,9 @@ label { display: block; margin-top: 0.75rem; font-weight: 600; }
 }
 
 select, input[type="search"], input[list], 
-input[type="text"], input[type="password"], input[type="number"], .selector-button {
+input[type="text"], input[type="password"], input[type="url"], .selector-button {
   width: 100%;
-  margin-top: 0.25rem;
+  margin: 0.25rem;
   padding: 0.75rem;
   border: 0.0625rem solid var(--border);
   border-radius: 0.5rem;
@@ -227,20 +227,23 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
 }
 
 .form-row label {
-  flex: 0 0 5rem;         /* fixed width for label */
+  flex: 0 0 15%;         /* fixed width for label */
   font-weight: 600;
 }
 
 .item-group {
   display: flex;
   flex-direction: column; /* stack item-rows and button vertically */
-  gap: 8px;
   flex: 1;
 }
 
 .item-row {
   display: flex;          /* inputs side by side */
-  gap: 8px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  position: relative;
+  align-items: center;
+  overflow: hidden;
 }
 
 .item-row input {
@@ -248,11 +251,8 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
   min-width: 0;
 }
 
-.item-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
+.item-row .item-name {
+  flex: 2;        /* give item-name twice the space */
 }
 
 .item-content {
@@ -286,6 +286,7 @@ input[type="text"], input[type="password"], input[type="number"], .selector-butt
 #expense-add-item-btn, #income-add-item-btn {
   align-self: flex-start; /* keep button aligned with inputs */
   padding: 6px 12px;
+  margin: 0.25rem;
 }
 
 .selector-button:hover { background: var(--card); }
@@ -505,6 +506,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 }
 
 .lang-switch,
+.settings-section.fontsize-change,
 .settings-section.color-switch {
   display: flex;
   align-items: center;   /* vertical alignment */
@@ -512,6 +514,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 }
 
 .lang-switch p,
+.settings-section.fontsize-change p,
 .settings-section.color-switch p {
   margin: 0;
   width: 20%; /* width */
@@ -711,6 +714,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 }
 
 #home-image-panel p {
+  width: 100%;   /* fill parent */
   font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
   margin: 0 0 8px 0;
 }

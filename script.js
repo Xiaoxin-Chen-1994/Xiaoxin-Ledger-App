@@ -99,6 +99,7 @@ function signup() {
           email: email,
           language: currentLang,
           homeImages: "",
+          fontsize: "",
           settings: {}
         },
         personalHouseholdId: householdId,
@@ -242,6 +243,10 @@ auth.onAuthStateChanged(async user => {
     if (profile.language) {
       currentLang = profile.language;
       setLanguage(currentLang);
+    }
+
+    if (profile.fontsize) {
+      document.documentElement.style.setProperty("--font-size", profile.fontsize);
     }
 
     if (profile.colorScheme) {
@@ -870,11 +875,13 @@ const translations = {
     items: "Items",
     addItem: "+ Add Item",
     addTransaction: "Add Transaction",
+    languageSwitched:"Language switched to English",
+    languageSwitchFailed: "Failed to save language",
+    fontsizeChanged: "Fontsize changed",
+    fontsizeChangeFailed: "Failed to save fontsize",
     colorSchemeTitle:"Color Scheme", 
     colorSchemeSwitched:"Color scheme is now changed",
     colorSchemeSwitchFailed: "Failed to save color scheme",
-    languageSwitched:"Language switched to English",
-    languageSwitchFailed: "Failed to save language",
     homeImageTitle: "Homepage Image",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
     homeImageSaved: "Homepage images saved",
@@ -911,11 +918,13 @@ const translations = {
     items: "项目",
     addItem: "+ 添加项目",
     addTransaction: "添加交易",
+    languageSwitched:"语言已切换为 中文",
+    languageSwitchFailed: "语言保存出错",
+    fontsizeChanged: "字体大小已更改",
+    fontsizeChangeFailed: "字体大小保存出错",
     colorSchemeTitle:"颜色方案", 
     colorSchemeSwitched:"颜色方案已更新",
     colorSchemeSwitchFailed: "颜色方案保存出错",
-    languageSwitched:"语言已切换为 中文",
-    languageSwitchFailed: "语言保存出错",
     homeImageTitle: "首页图",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
@@ -989,6 +998,50 @@ function setLanguage(lang, showMessage = false) {
       });
   }
   
+}
+
+function increaseFontsize() {
+  adjustFontsize(0.1); // increase by 0.1rem
+}
+
+function decreaseFontsize() {
+  adjustFontsize(-0.1); // decrease by 0.1rem
+}
+
+function adjustFontsize(delta) {
+  // Get current value from CSS variable
+  const current = getComputedStyle(document.documentElement)
+    .getPropertyValue("--font-size")
+    .trim();
+
+  // Parse numeric part (assumes rem unit)
+  let value = parseFloat(current.replace("rem", ""));
+  value = Math.max(0.5, value + delta); // clamp to minimum 0.5rem
+
+  const newSize = value.toFixed(1) + "rem";
+
+  // Apply to CSS variable
+  document.documentElement.style.setProperty("--font-size", newSize);
+
+  // Save to Firestore
+  const currentUser = firebase.auth().currentUser;
+  if (currentUser) {
+    firebase.firestore()
+      .collection("users")
+      .doc(currentUser.uid)
+      .update({
+        "profile.fontsize": newSize
+      })
+      .then(() => {
+        if (showMessage) {
+          showStatusMessage(t.fontsizeChanged, "success");
+        }
+      })
+      .catch(err => {
+        console.error("Error saving language:", err);
+        showStatusMessage(t.fontsizeChangeFailed, "error");
+      });
+  }
 }
 
 // Ensure this runs after DOM is ready
