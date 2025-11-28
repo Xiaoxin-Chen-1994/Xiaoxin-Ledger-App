@@ -9,7 +9,7 @@
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
   --radius: 0.75rem;
-  --font-size: 1rem;
+  --font-size: 1.1rem;
 
   /* Default scheme: income red, expense green */
   --income-color: #d32f2f;
@@ -75,11 +75,16 @@ body {
 
 .page {
   position: absolute;
-  left: 0.5rem;
-  width: 98%;
+  left: 2%;
+  width: 96%;
   height: 100%;
   overflow-y: auto;
   display: none; /* hide all pages by default */
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE/Edge (legacy) */
+}
+.page::-webkit-scrollbar {
+  display: none;               /* Chrome, Safari, Opera */
 }
 
 .page.active {
@@ -404,12 +409,15 @@ button.secondary {
   z-index: 1000;
 }
 .bottom-nav button {
-  flex: 1;
+  flex: 0 1 auto;   /* don't force equal growth, allow shrink */
+  min-width: auto;  /* respect intrinsic content size */
   background: none;
   border: none;
-  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 1);
   color: var(--text);
-  cursor: pointer;
+  white-space: normal;     /* allow wrapping */
+  word-break: break-word;  /* break long words if needed */
+  text-align: center;
 }
 
 .bottom-nav button:hover { background: none; }
@@ -420,7 +428,7 @@ button.secondary {
   position: relative;
   width: 100%;
   height: auto;         /* keep aspect ratio */
-  min-height: 250px;    /* don’t shrink below this */
+  min-height: 100px;    /* don’t shrink below this */
   max-height: 350px;    /* don’t grow taller than this */
   background: var(--border); /* blank placeholder */
   border-radius: var(--radius);
@@ -503,12 +511,14 @@ hr { border: none; border-top: 1px solid var(--border); }
   gap: 0.5rem;
 }
 
-/* Labels: fixed width on the left */
 .lang-switch p,
 .settings-section.color-switch p {
   margin: 0;
-  flex: 0 0 8rem;        /* fixed width, adjust 8rem as needed */
+  width: 20%; /* width */
   text-align: left;
+  white-space: normal;     /* allow wrapping */
+  word-break: break-word;  /* break long words if needed */
+  text-align: center;
 }
 
 .settings-section.household-row, .settings-section.home-image {
@@ -519,8 +529,11 @@ hr { border: none; border-top: 1px solid var(--border); }
 
 .settings-section.household-row p, .settings-section.home-image p {
   margin: 0;
-  flex: 0 0 8rem;   /* fixed width label */
+  width: 20%; /* width */
   align-self: flex-start; /* ensure this one stays at the top */
+  white-space: normal;     /* allow wrapping */
+  word-break: break-word;  /* break long words if needed */
+  text-align: center;
 }
 
 /* Controls: take remaining space on the right */
@@ -564,6 +577,9 @@ hr { border: none; border-top: 1px solid var(--border); }
   position: fixed;        /* take it out of normal flow */
   bottom: 1rem;           /* distance from bottom edge */
   left: 50%;              /* center horizontally */
+  white-space: normal;     /* allow wrapping */
+  word-break: break-word;  /* break long words if needed */
+  text-align: center;
   transform: translateX(-50%); /* adjust centering */
   background: var(--card);     /* optional: give it a background */
   padding: 0.5rem 1rem;        /* optional: spacing inside */
