@@ -245,8 +245,15 @@ auth.onAuthStateChanged(async user => {
       setLanguage(currentLang);
     }
 
-    if (profile.fontsize) {
-      document.documentElement.style.setProperty("--font-size", profile.fontsize);
+    
+    if (isMobileBrowser()) {
+      if (profile.fontsizeMobile) {
+        document.documentElement.style.setProperty("--font-size", profile.fontsizeMobile);
+      }
+    } else {
+      if (profile.fontsizeDesktop) {
+        document.documentElement.style.setProperty("--font-size", profile.fontsizeDesktop);
+      }
     }
 
     if (profile.colorScheme) {
@@ -1000,6 +1007,10 @@ function setLanguage(lang, showMessage = false) {
   
 }
 
+function isMobileBrowser() {
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 function increaseFontsize() {
   adjustFontsize(0.1); // increase by 0.1rem
 }
@@ -1009,6 +1020,8 @@ function decreaseFontsize() {
 }
 
 function adjustFontsize(delta) {
+  const t = translations[currentLang];
+
   // Get current value from CSS variable
   const current = getComputedStyle(document.documentElement)
     .getPropertyValue("--font-size")
@@ -1026,16 +1039,15 @@ function adjustFontsize(delta) {
   // Save to Firestore
   const currentUser = firebase.auth().currentUser;
   if (currentUser) {
+    const field = isMobileBrowser() ? "profile.fontsizeMobile" : "profile.fontsizeDesktop";
     firebase.firestore()
       .collection("users")
       .doc(currentUser.uid)
       .update({
-        "profile.fontsize": newSize
+        [field]: newSize
       })
       .then(() => {
-        if (showMessage) {
-          showStatusMessage(t.fontsizeChanged, "success");
-        }
+        showStatusMessage(t.fontsizeChanged, "success");
       })
       .catch(err => {
         console.error("Error saving language:", err);
@@ -1138,6 +1150,12 @@ function saveHomeImages() {
     })
     .then(() => {
       showStatusMessage(t.homeImageSaved, "success");
+
+      const img = document.getElementById("home-image");
+      const randomIndex = Math.floor(Math.random() * homeImages.length);
+      const randomUrl = homeImages[randomIndex].trim();
+      img.src = randomUrl;
+      img.style.display = "block";
     })
     .catch(err => {
       showStatusMessage(t.homeImageSaveFailed, "error");

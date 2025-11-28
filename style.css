@@ -469,7 +469,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 
 #statusMessage {
   position: fixed;
-  bottom: calc(var(--font-size) * 5.5);
+  bottom: calc(var(--font-size)*5.5);
   left: 50%;
   transform: translateX(-50%);
   background-color: rgba(219, 219, 219, 0.6); /* dark translucent */
