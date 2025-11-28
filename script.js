@@ -109,12 +109,6 @@ function signup() {
     .catch(error => showStatusMessage(error.message, 'error'));
 }
 
-function selectHousehold(householdId, containerId) {
-  console.log(`Selected household ${householdId} in ${containerId}`);
-  showStatusMessage(`Switched to household ${householdId}`, "success");
-}
-
-
 function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
@@ -215,8 +209,6 @@ auth.onAuthStateChanged(async user => {
       const randomUrl = profile.homeImages[randomIndex].trim();
 
       if (randomUrl !== "") {
-        console.log("Random homepage image (preloading):", randomUrl);
-
         // Create a new Image object to preload
         const preloader = new Image();
         preloader.onload = () => {
@@ -275,19 +267,6 @@ auth.onAuthStateChanged(async user => {
     document.getElementById("settings-welcome").textContent = "";
   }
 });
-
-function initHouseholdSelector(households) {
-  const col = document.querySelector("#household-selector .household-col");
-
-  // Use names for display
-  const names = households.map(h => h.name);
-
-  createList(col, names);
-  enableSnap(col);
-
-  // Save for later lookup (ID ↔ name)
-  window._householdList = households;
-}
 
 function isTransactionFormEmpty(formId) {
   const form = document.querySelector(`#${formId} .transaction-form`);
@@ -1343,7 +1322,6 @@ document.getElementById("invite-confirm").onclick = async () => {
     .collection("users")
     .where("profile.email", "==", email)
     .get();
-  console.log(userQuery)
 
   if (userQuery.empty) {
     alert("未找到该用户");
@@ -1674,97 +1652,81 @@ let lastButton = null;
 function createList(col, values) {
   col.innerHTML = ""; // clear existing items
 
-  // top spacer
-  const topSpacerCount = 1; // number of empty rows to allow centering
-  for (let i = 0; i < topSpacerCount; i++) {
-    const div = document.createElement("div");
-    div.className = "dt-item spacer";
-    col.appendChild(div);
-  }
-
-  // real items
   values.forEach(v => {
     const div = document.createElement("div");
     div.className = "dt-item";
     div.textContent = v;
     col.appendChild(div);
   });
-
-  // bottom spacer
-  const bottomSpacerCount = 2; // number of empty rows to allow centering
-  for (let i = 0; i < bottomSpacerCount; i++) {
-    const div = document.createElement("div");
-    div.className = "dt-item spacer";
-    col.appendChild(div);
-  }
 }
-
 
 /* Snap after scroll stops */
-function enableSnap(col) {
-  let timeout;
+function ScrollToSelectItem(col, value=null) {
+  // Helper to update selection
+  function selectItem(item) {
+    if (!item) return;
+    [...col.querySelectorAll(".dt-item")].forEach(i => i.classList.remove("selected"));
+    item.classList.add("selected");
+    item.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
 
-  col.addEventListener("scroll", () => {
-    clearTimeout(timeout);
-
+  // If a value was passed in, find the matching item
+  if (value) {
     const items = [...col.querySelectorAll(".dt-item")];
-    const center = col.scrollTop + col.clientHeight / 2;
-
-    // ✅ LIVE highlight while scrolling
-    let closest = null;
-    let minDist = Infinity;
-
-    items.forEach(item => {
-      const itemCenter = item.offsetTop + item.clientHeight / 2;
-      const dist = Math.abs(itemCenter - center);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = item;
-      }
-    });
-
-    if (closest) {
-      items.forEach(i => i.classList.remove("selected"));
-      closest.classList.add("selected");
+    // If value is a number, compare numerically
+    let target;
+    if (typeof value === "number") {
+      target = items.find(i => parseInt(i.textContent, 10) === value);
+    } else {
+      // Otherwise compare as string (trim to avoid whitespace issues)
+      target = items.find(i => i.textContent.trim() === String(value));
     }
 
-    // ✅ Snap AFTER scrolling stops
-    timeout = setTimeout(() => {
-      col.scrollTop =
-        closest.offsetTop - (col.clientHeight / 2 - closest.clientHeight / 2);
-    }, 80);
-  });
+    if (target) {
+      selectItem(target);
+    }
+  }
 
+  // Wheel / trackpad scroll
+  col.addEventListener("wheel", (e) => {
+    const selected = col.querySelector(".dt-item.selected");
+    if (!selected) return;
+
+    if (e.deltaY > 0) {
+      // scrolling down → next item
+      selectItem(selected.nextElementSibling);
+    } else if (e.deltaY < 0) {
+      // scrolling up → previous item
+      selectItem(selected.previousElementSibling);
+    }
+
+    updateSelectorPreview()
+  }, { passive: true });
+
+  // Touch swipe
+  let touchStartY = null;
+  col.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+    updateSelectorPreview()
+  }, { passive: true });
+
+  col.addEventListener("touchend", (e) => {
+    if (touchStartY == null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const selected = col.querySelector(".dt-item.selected");
+    if (!selected) return;
+
+    if (dy < 0) {
+      // finger moved up → content intended to scroll down → next item
+      selectItem(selected.nextElementSibling);
+    } else if (dy > 0) {
+      // finger moved down → content intended to scroll up → previous item
+      selectItem(selected.previousElementSibling);
+    }
+    touchStartY = null;
+    updateSelectorPreview()
+  }, { passive: true });
 }
-
-const dtCols = datetimeSelector.querySelectorAll(".year-col, .month-col, .day-col, .hour-col, .minute-col");
-
-dtCols.forEach(col => {
-  col.addEventListener("scroll", () => {
-    // debounce so it fires after snapping
-    clearTimeout(col._timer);
-    col._timer = setTimeout(() => {
-      if (col === datetimeSelector.querySelector(".year-col") || col === datetimeSelector.querySelector(".month-col")) {
-        const day = getSelectedValue(".day-col")
-        updateDayColumn();
-        scrollToValue(datetimeSelector.querySelector(".day-col"), day)
-      }
-      updateSelectorPreview();
-    }, 80);
-  });
-});
-
-const hhCols = householdSelector.querySelectorAll(".household-col");
-
-hhCols.forEach(col => {
-  col.addEventListener("scroll", () => {
-    // debounce so it fires after snapping
-    clearTimeout(col._timer);
-    col._timer = setTimeout(() => {
-      updateSelectorPreview();
-    }, 80);
-  });
-});
 
 function updateSelectorPreview() {
   if (!lastButton) return;
@@ -1810,19 +1772,6 @@ function updateSelectorPreview() {
   }
 }
 
-/* Scroll to a specific value */
-function scrollToValue(col, value) {
-  const items = [...col.querySelectorAll(".dt-item")];
-  let target = items.find(i => i.textContent == value);
-  if (!target) return;
-
-  items.forEach(i => i.classList.remove("selected"));
-  target.classList.add("selected");
-
-  col.scrollTop =
-    target.offsetTop - (col.clientHeight / 2 - target.clientHeight / 2);
-}
-
 // Remove known prefixes
 function removeDatePrefix(text) {
   t = translations[currentLang];
@@ -1863,16 +1812,16 @@ function parseButtonDate(btn) {
   createList(monthCol, Array.from({ length: 12 }, (_, i) => i + 1));
   createList(hourCol, Array.from({ length: 24 }, (_, i) => i));
   createList(minuteCol, Array.from({ length: 60 }, (_, i) => i));
-  updateDayColumn();
-
-  enableSnap(datetimeSelector.querySelector(".year-col"));
-  enableSnap(datetimeSelector.querySelector(".month-col"));
-  enableSnap(datetimeSelector.querySelector(".day-col"));
-  enableSnap(datetimeSelector.querySelector(".hour-col"));
-  enableSnap(datetimeSelector.querySelector(".minute-col"));
-
-  enableSnap(householdSelector.querySelector(".household-col"));
 })();
+
+function initHouseholdSelector(households) {
+  const col = document.querySelector("#household-selector .household-col");
+
+  // Use names for display
+  const names = households.map(h => h.name);
+
+  createList(col, names);
+}
 
 function updateDayColumn() {
   const year = getSelectedValue(".year-col");
@@ -1882,8 +1831,6 @@ function updateDayColumn() {
 
   const dayCol = datetimeSelector.querySelector(".day-col");
   createList(dayCol, Array.from({ length: days }, (_, i) => i + 1));
-
-  enableSnap(dayCol); // re-enable snapping after rebuilding
 }
 
 function getSelectedValue(selector) {
@@ -1903,6 +1850,14 @@ function clickToSetNow() {
 
   let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
   if (btn) setCurrentTime(btn);
+
+  const { year, month, day, hour, minute } = parseButtonDate(btn);
+
+  ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
+  ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
+  ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+  ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
+  ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
 /* Open selector */
@@ -1911,21 +1866,24 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
     e.stopPropagation();
     lastButton = btn;
 
+    // first hide all selectors
     selectorList.forEach(sel => {
       if (!sel.contains(e.target)) {
         sel.style.display = "none";
       }
     });
 
+    // Show the desired selector
     datetimeSelector.style.display = "flex";
 
     const { year, month, day, hour, minute } = parseButtonDate(btn);
 
-    scrollToValue(datetimeSelector.querySelector(".year-col"), year);
-    scrollToValue(datetimeSelector.querySelector(".month-col"), month);
-    scrollToValue(datetimeSelector.querySelector(".day-col"), day);
-    scrollToValue(datetimeSelector.querySelector(".hour-col"), hour);
-    scrollToValue(datetimeSelector.querySelector(".minute-col"), minute);
+    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
+    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
+    updateDayColumn();
+    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
+    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
   });
 });
 
@@ -1943,13 +1901,12 @@ document.querySelectorAll(".selector-button[data-type='household']")
       
       householdSelector.style.display = "flex";
 
-      scrollToValue(householdSelector.querySelector(".household-col"), btn.textContent);
+      ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
     });
   });
 
 /* Close when clicking outside */
 document.addEventListener("click", e => {
-  console.log(e.target)
   if (!datetimeSelector.contains(e.target)) {
     datetimeSelector.style.display = "none";
   }

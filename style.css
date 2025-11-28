@@ -299,27 +299,31 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   height: 30%;
   bottom: 0.1rem;
   width: 100%;
-  background: rgb(255, 233, 209);
+  background: var(--bg);
   border-top: 1px solid #ccc;
   padding: 1rem 0.5rem 0.5rem 0.5rem;
   display: none;
-  z-index: 9999;
+  z-index: 10000;
   border-radius: 12px 12px 0 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 -0.6rem 1rem rgba(0, 0, 0, 0.15);
   display: none;
 }
 
 .datetime-now, .datetime-close {
   position: absolute;
   top: calc(var(--font-size) * -1.85); /* move above selector */
-  background: rgb(255, 216, 172);
+  background: var(--bg);
   color:var(--text);
-  border: none;
+  border-top: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-bottom: none; /* no bottom border */
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
-  z-index: 10000;
+  z-index: 10001;
   font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+  box-shadow: 0 -0.3rem 1rem rgba(0, 0, 0, 0.15);
 }
 
 .datetime-now {
@@ -327,7 +331,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 }
 
 .datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
-  background: rgb(255, 216, 172);
+  background: var(--bg);
 }
 
 .datetime-close {
@@ -356,15 +360,15 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 /* Items */
 .dt-item {
   height: 40px;
-  color: #858585;
+  color: #5e5e5e;
   line-height: 40px;
   text-align: center;
   font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */
 }
 
 .dt-item.selected {
-  background: rgb(254, 187, 111);
-  color: white;
+  background: #a9a9a9;
+  color: var(--text);
   border-radius: 6px;
   font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
 }
