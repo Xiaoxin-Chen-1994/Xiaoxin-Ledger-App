@@ -571,7 +571,7 @@ hr { border: none; border-top: 1px solid var(--border); }
   outline: none;
 }
 
-.login-lang-switch {
+.login-lang-switch, .login-fontsize-change {
   width: 70%;
   display: flex;          /* lay out children in a row */
   gap: 0.5rem;            /* spacing between buttons */
