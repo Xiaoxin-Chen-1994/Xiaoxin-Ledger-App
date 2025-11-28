@@ -57,14 +57,24 @@
   }
 }
 
-html { font-size: var(--font-size); }
+html { font-size: var(--font-size)}
 body {
   margin: 0;
-  padding-bottom: 3.5rem; /* space for nav bar */
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.6;
+}
+
+.section {
+  background: var(--card);
+  border: 0.0625rem solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  margin: 0; /* remove margin so pages align edge to edge */
+  height: 100%; /* fill page height */
+  position: relative;
 }
 
 .pages-wrapper {
@@ -90,17 +100,6 @@ body {
 .page.active {
   display: block; /* only the active page is shown */
   min-height: 50rem;
-}
-
-
-.section {
-  background: var(--card);
-  border: 0.0625rem solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 1rem;
-  margin: 0; /* remove margin so pages align edge to edge */
-  height: 100%; /* fill page height */
 }
 
 .header-bar {
@@ -163,7 +162,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 .transaction-tabs {
   display: flex;
   justify-content: space-around;
-  margin: 0.5rem 0 1rem 0;
+  margin: 0.5rem 0 0.25rem 0;
 }
 
 .transaction-tabs .tab-btn {
@@ -209,21 +208,20 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 
 select, input[type="search"], input[list], 
 input[type="text"], input[type="password"], input[type="url"], .selector-button {
-  width: 100%;
-  margin: 0.25rem;
+  width: 98%;
+  margin: 1%;
   padding: 0.75rem;
   border: 0.0625rem solid var(--border);
   border-radius: 0.5rem;
   font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   background: var(--card);
   color: var(--text);
+  box-sizing: border-box;        /* include padding + border in width */
 }
 
 .form-row {
   display: flex;          /* label + item-group side by side */
   align-items: flex-start;
-  gap: 1rem;
-  margin: 0.75rem 0;
 }
 
 .form-row label {
@@ -239,8 +237,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 
 .item-row {
   display: flex;          /* inputs side by side */
-  margin-right: 8px;
-  margin-bottom: 8px;
+  margin-right: 0px;
   position: relative;
   align-items: center;
   overflow: hidden;
@@ -256,27 +253,31 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 }
 
 .item-content {
+  width: 100%;
   flex: 1;
   display: flex;
-  gap: 8px;
+  gap: 0rem;
   transition: transform 0.3s ease;
 }
 
 .delete-btn {
   position: absolute;
   right: 0;
-  top: 0;
-  bottom: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
   width: 3.6rem;
   background: crimson;
   color: white;
   border: none;
-  transform: translateX(100%); /* hidden by default */
+  transform: translateX(3.7rem); /* hidden by default */
   transition: transform 0.3s ease;
+  display: flex;            /* flexbox for centering */
+  align-items: center;      /* vertical centering */
+  justify-content: center;  /* horizontal centering */
 }
 
 .item-row.show-delete .item-content {
-  transform: translateX(-80px); /* slide inputs left */
+  transform: translateX(-3.7rem); /* slide inputs left */
 }
 
 .item-row.show-delete .delete-btn {
@@ -286,7 +287,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 #expense-add-item-btn, #income-add-item-btn {
   align-self: flex-start; /* keep button aligned with inputs */
   padding: 6px 12px;
-  margin: 0.25rem;
+  margin-top: 0.25rem;
 }
 
 .selector-button:hover { background: var(--card); }
@@ -419,7 +420,7 @@ button.secondary {
 /* Bottom Navigation */
 .bottom-nav {
   position: fixed;
-  bottom: 0.5rem;
+  bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);   /* center horizontally */
   width: 90%;
@@ -570,19 +571,19 @@ hr { border: none; border-top: 1px solid var(--border); }
   width: auto;           /* override 100% width */
 }
 
-/* Shared interactive element style */
 .settings-section button,
 .settings-section select {
-  display: block;
+  display: flex;
+  align-items: center;     /* vertical centering */
+  justify-content: flex-start; /* horizontal alignment to the left */
+
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  margin: 0.1rem;
   border: 1px solid #ddd;
-  color: var(--text);
   border-radius: 6px;
   background: #f5f5f5;
-  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */;
-  text-align: left;
+  font-size: calc(var(--font-size) * 1.0);
+  color: var(--text);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -597,17 +598,19 @@ hr { border: none; border-top: 1px solid var(--border); }
 .login-settings {
   width: 80%;
   max-width: 500px;
+  margin-top: 2rem;   /* spacing from previous content */
+  margin-left: auto;
+  margin-right: auto; /* center horizontally */
+
   display: flex;
   flex-direction: column;   /* stack panels vertically */
   align-items: center;      /* center children horizontally */
-  position: fixed;
   bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
   background: var(--card);
   padding: 0.5rem 1rem;
   border-radius: 1rem;
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+  font-size: calc(var(--font-size) * 0.8);
 
   /* text handling applies to all children */
   text-align: center;
@@ -622,7 +625,7 @@ hr { border: none; border-top: 1px solid var(--border); }
   justify-content: space-between;
   align-items: center;
   width: 100%;              /* match parent width */
-  margin: 0.25rem 0;        /* vertical spacing only */
+  margin: 0.1rem 0;        /* vertical spacing only */
   gap: 1rem;
 }
 
@@ -646,13 +649,13 @@ hr { border: none; border-top: 1px solid var(--border); }
 
 #logout-btn {
   padding: 10px 12px;
-  margin-block: 2rem;   /* top & bottom */
+  margin-top: 1rem;   /* top & bottom */
   margin-inline: 0;     /* left & right */
   border: 1px solid #ddd;
   color: var(--text);
   border-radius: 6px;
   background: #f5f5f5;
-  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 1.0); /* a percentage of the base font size */;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -761,7 +764,10 @@ hr { border: none; border-top: 1px solid var(--border); }
 }
 
 #invite-panel p {
-  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  display: block;        /* ensure it's a block element */
+  width: 100%;           /* span full parent width */
+  box-sizing: border-box;
+  font-size: calc(var(--font-size) * 0.9);
   margin: 0 0 8px 0;
   color: #b00020;
   font-weight: 600;
@@ -801,7 +807,7 @@ hr { border: none; border-top: 1px solid var(--border); }
 #manage-panel h4,
 #leave-household-panel h4 {
   margin: 0 0 8px 0;
-  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   font-weight: 600;
   color: #333;
 }
@@ -821,7 +827,7 @@ hr { border: none; border-top: 1px solid var(--border); }
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
   cursor: pointer;
-  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   color: #444;
   user-select: none;
   overflow: hidden;
@@ -848,7 +854,7 @@ hr { border: none; border-top: 1px solid var(--border); }
   background: #d32f2f;
   color: #fff;
   border: none;
-  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   cursor: pointer;
   transition: right 0.2s ease;
 }

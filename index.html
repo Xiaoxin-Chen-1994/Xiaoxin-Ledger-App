@@ -29,20 +29,21 @@
     <small id="reset-hint" class="reset-hint">
       如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作。
     </small>
-  </div>
 
-  <div id="login-settings" class="login-settings">
-    <div id="login-lang-switch" class="login-lang-switch">
-      <p>语言 / Language</p>
-      <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
-      <button class="settings-button" onclick="setLanguage('en', true)">English</button>
+    <div id="login-settings" class="login-settings">
+      <div id="login-lang-switch" class="login-lang-switch">
+        <p>语言 / Language</p>
+        <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
+        <button class="settings-button" onclick="setLanguage('en', true)">English</button>
+      </div>
+
+      <div id="login-fontsize-change" class="login-fontsize-change">
+        <p>字体大小</p>
+        <button class="settings-button" onclick="decreaseFontsize()">-</button>
+        <button class="settings-button" onclick="increaseFontsize()">+</button>
+      </div>
     </div>
 
-    <div id="login-fontsize-change" class="login-fontsize-change">
-      <p>字体大小</p>
-      <button class="settings-button" onclick="decreaseFontsize()">-</button>
-      <button class="settings-button" onclick="increaseFontsize()">+</button>
-    </div>
   </div>
 
   <div class="pages-wrapper" id="pages-wrapper">
@@ -234,8 +235,7 @@
     </div>
 
     <div id="datetime-selector" class="selector">
-      <button type="button" class="datetime-now"
-        onclick=clickToSetNow()>现在</button>
+      <button type="button" class="datetime-now" onclick=clickToSetNow()>现在</button>
       <button type="button" class="datetime-close"
         onclick="document.getElementById('datetime-selector').style.display='none'">收起 ▼</button>
 

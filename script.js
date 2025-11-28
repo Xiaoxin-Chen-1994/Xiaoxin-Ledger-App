@@ -201,7 +201,6 @@ auth.onAuthStateChanged(async user => {
 
     // ✅ UI updates
     document.getElementById("login-section").style.display = "none";
-    document.getElementById("login-settings").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
 
     // ✅ Welcome text
@@ -268,7 +267,6 @@ auth.onAuthStateChanged(async user => {
   } else {
     currentUser = null;
     document.getElementById("login-section").style.display = "block";
-    document.getElementById("login-settings").style.display = "flex";
     document.getElementById("home-page").style.display = "none";
     document.getElementById("return-btn").style.display = "none";
     document.getElementById("transaction-page").style.display = "none";
@@ -366,11 +364,12 @@ function createItemRow() {
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
-    e.preventDefault(); // prevent the browser’s default right‑click menu
+    e.stopPropagation(); // prevent wrapper from seeing this touch
     row.classList.add("show-delete"); // reveal delete button
   });
 
   row.addEventListener("click", e => {
+    e.stopPropagation(); // prevent wrapper from seeing this touch
     // only hide if clicking outside the delete button
     if (!e.target.classList.contains("delete-btn")) {
       row.classList.remove("show-delete");
@@ -380,9 +379,11 @@ function createItemRow() {
   // Swipe detection
   let startX = 0;
   row.addEventListener("touchstart", e => {
+    e.stopPropagation(); // prevent wrapper from seeing this touch
     startX = e.touches[0].clientX;
   });
   row.addEventListener("touchend", e => {
+    e.stopPropagation(); // prevent wrapper from seeing this touch
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
     if (diff > 50) {
@@ -526,9 +527,11 @@ function renderItems(parsedItems, activeTab) {
     // --- Swipe detection ---
     let startX = 0;
     row.addEventListener("touchstart", e => {
+      e.stopPropagation(); // prevent wrapper from seeing this touch
       startX = e.touches[0].clientX;
     });
     row.addEventListener("touchend", e => {
+      e.stopPropagation(); // prevent wrapper from seeing this touch
       const endX = e.changedTouches[0].clientX;
       const diff = startX - endX;
       if (diff > 50) {
@@ -540,11 +543,12 @@ function renderItems(parsedItems, activeTab) {
 
     // --- Right‑click (desktop) ---
     row.addEventListener("contextmenu", e => {
-      e.preventDefault();
+      e.stopPropagation(); // prevent wrapper from seeing this touch
       row.classList.add("show-delete");
     });
 
     row.addEventListener("click", e => {
+      e.stopPropagation(); // prevent wrapper from seeing this touch
       // only hide if clicking outside the delete button
       if (!e.target.classList.contains("delete-btn")) {
         row.classList.remove("show-delete");
@@ -1384,7 +1388,7 @@ async function loadHouseholdMembers() {
     msg.style.padding = "12px";
     msg.style.color = "#666";
     msg.style.textAlign = "center";
-    msg.style.fontSize = "calc(var(--font-size) * 0.7)";
+    msg.style.fontSize = "calc(var(--font-size) * 0.9)";
     list.appendChild(msg);
     return; // ✅ Stop here — nothing else to load
   }
@@ -1492,7 +1496,7 @@ async function loadMyHouseholds() {
     msg.style.padding = "12px";
     msg.style.color = "#666";
     msg.style.textAlign = "center";
-    msg.style.fontSize = "calc(var(--font-size) * 0.7)";
+    msg.style.fontSize = "calc(var(--font-size) * 0.9)";
     list.appendChild(msg);
     return; // ✅ Stop here — nothing else to load
   }
