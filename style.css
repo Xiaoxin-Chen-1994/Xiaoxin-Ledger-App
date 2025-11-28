@@ -294,7 +294,6 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 /* Selector panel fixed at bottom */
 .selector {
   position: fixed;
-  bottom: 60px; /* above nav bar */
   left: 0;
   width: 100%;
   background: white;
@@ -571,23 +570,41 @@ hr { border: none; border-top: 1px solid var(--border); }
   outline: none;
 }
 
-.login-lang-switch, .login-fontsize-change {
-  width: 70%;
-  display: flex;          /* lay out children in a row */
-  gap: 0.5rem;            /* spacing between buttons */
-  justify-content: center;/* center the whole row horizontally */
-  align-items: center;    /* vertical alignment */
-  position: fixed;        /* take it out of normal flow */
-  bottom: 1rem;           /* distance from bottom edge */
-  left: 50%;              /* center horizontally */
-  white-space: normal;     /* allow wrapping */
-  word-break: break-word;  /* break long words if needed */
+.login-settings {
+  width: 80%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;   /* stack panels vertically */
+  align-items: center;      /* center children horizontally */
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+
+  /* text handling applies to all children */
   text-align: center;
-  transform: translateX(-50%); /* adjust centering */
-  background: var(--card);     /* optional: give it a background */
-  padding: 0.5rem 1rem;        /* optional: spacing inside */
-  border-radius: 1rem;         /* optional: rounded edges */
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); /* optional: floating look */
+  white-space: normal;
+  word-break: break-word;
+}
+
+.login-lang-switch,
+.login-fontsize-change {
+  display: flex;
+  flex-direction: row;      /* label left, buttons right */
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;              /* match parent width */
+  margin: 0.25rem 0;        /* vertical spacing only */
+  gap: 1rem;
+}
+
+.login-lang-switch p,
+.login-fontsize-change p {
+  width: 20%; 
 }
 
 .settings-button {
