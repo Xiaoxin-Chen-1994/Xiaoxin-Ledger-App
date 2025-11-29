@@ -380,11 +380,11 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   }
 
   .dt-item {
-    color: #a4a4a4;
+    color: #b5b5b5;
   }
 
   .dt-item.selected {
-    background: rgb(179, 179, 179);
+    background: rgb(90, 90, 90);
     color: var(--text);
   }
 
