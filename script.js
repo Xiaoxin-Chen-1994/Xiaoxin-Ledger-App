@@ -6,6 +6,22 @@
 //       homeImage: string
 //   - households: [householdId]   // membership links
 
+//   - defaults
+//       /expense
+//          householdId: string
+//          categoryId: string
+//          collectionId: string
+//          accountId: string
+//          personId: string
+//       /income
+//          householdId: string
+//          categoryId: string
+//          collectionId: string
+//          accountId: string
+//          personId: string
+//       /transfer
+//          TBD
+
 // households/{householdId}
 //   - name: string
 //   - members: [userId]           // array of user IDs
@@ -24,6 +40,10 @@
 //     collections/{collectionId}
 //       primary: string
 //       secondary: [string]
+// 
+//   persons (subcollection)
+//     persons/{personId}
+//       name: string
 
 //   entries (subcollection)
 //     entries/{entryId}
@@ -31,7 +51,7 @@
 //       categoryId: string         // reference to categories/{categoryId}
 //       collectionId: string       // reference to collections/{collectionId}
 //       accountId: string          // reference to accounts/{accountId}
-//       personId: string           // reference to household member
+//       personId: string           // reference to predefined persons
 //       store: string
 //       datetime: timestamp
 //       items: [ { name: string, notes: string, amount: number } ]
@@ -75,7 +95,7 @@ let inputItems = null;
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
   let current = getComputedStyle(document.documentElement)
-                  .getPropertyValue("--font-size");
+    .getPropertyValue("--font-size");
   // Trim and parse (assumes it's in rem)
   current = parseFloat(current);
   // Subtract 0.1
@@ -125,27 +145,27 @@ function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   auth.signInWithEmailAndPassword(email, password)
-  .catch(error => {
-    let message;
-    switch (error.code) {
-      case 'auth/user-not-found':
-        message = 'No account exists with this email.';
-        break;
-      case 'auth/invalid-login-credentials':
-        message = 'Incorrect password. Please try again.';
-        break;
-      case 'auth/invalid-email':
-        message = 'The email address is not valid.';
-        break;
-      case 'auth/user-disabled':
-        message = 'This account has been disabled. Contact support.';
-        break;
-      default:
-        message = error.message;
-        console.log(error)
-    }
-    showStatusMessage(message, 'error');
-  });
+    .catch(error => {
+      let message;
+      switch (error.code) {
+        case 'auth/user-not-found':
+          message = 'No account exists with this email.';
+          break;
+        case 'auth/invalid-login-credentials':
+          message = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          message = 'The email address is not valid.';
+          break;
+        case 'auth/user-disabled':
+          message = 'This account has been disabled. Contact support.';
+          break;
+        default:
+          message = error.message;
+          console.log(error)
+      }
+      showStatusMessage(message, 'error');
+    });
 
 }
 
@@ -204,6 +224,7 @@ auth.onAuthStateChanged(async user => {
 
     // ✅ Initialize household selector
     initHouseholdSelector(households);
+    toggleHouseholdFormRows(householdIds);
 
     // ✅ UI updates
     document.getElementById("login-section").style.display = "none";
@@ -248,7 +269,6 @@ auth.onAuthStateChanged(async user => {
       setLanguage(currentLang);
     }
 
-    
     if (isMobileBrowser()) {
       if (profile.fontsizeMobile) {
         document.documentElement.style.setProperty("--font-size", profile.fontsizeMobile);
@@ -279,6 +299,19 @@ auth.onAuthStateChanged(async user => {
     document.getElementById("settings-welcome").textContent = "";
   }
 });
+
+function toggleHouseholdFormRows(householdIds) {
+  // Hide the form row if only one household
+  if (householdIds.length === 1) {
+    document.querySelectorAll(".household-form-row").forEach(row => {
+      row.style.display = "none";
+    });
+  } else {
+    document.querySelectorAll(".household-form-row").forEach(row => {
+      row.style.display = "flex";
+    });
+  }
+}
 
 function isTransactionFormEmpty(formId) {
   const form = document.querySelector(`#${formId} .transaction-form`);
@@ -441,7 +474,7 @@ function switchTab(index) {
 
   // household
   const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
- 
+
   const household = households.find(h => h.id === inputHouseholdId);
 
   if (household) {
@@ -765,7 +798,7 @@ let historyStacks = {
 // track which base we’re currently in
 let currentBase = "home";
 
-function showPage(name, navBtn=null) {
+function showPage(name, navBtn = null) {
   let stack = null;
   let target = null;
   let latest = null;
@@ -800,13 +833,13 @@ function showPage(name, navBtn=null) {
     target = document.getElementById(latestPage + "-page");
 
     if (!target) return;
-    
-    if (name+"-page" === "transaction-page") {
+
+    if (name + "-page" === "transaction-page") {
       document.getElementById("nav-transaction").style.backgroundColor = "var(--primary)";
     }
     document.getElementById("return-btn").style.display = "block";
   }
-  
+
   // hide all pages
   document.getElementById("login-section").style.display = "none";
   document.getElementById("home-page").style.display = "none";
@@ -817,7 +850,7 @@ function showPage(name, navBtn=null) {
   target.style.display = "block";
 
   // transaction page special handling
-  if (latestPage+"-page" === "transaction-page") {
+  if (latestPage + "-page" === "transaction-page") {
     const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2
     const formIds = ["expense-form", "income-form", "transfer-form"];
     const formId = formIds[activeIndex];
@@ -851,7 +884,7 @@ function goBack() {
   if (stack.length > 1) {
     stack.pop(); // remove current page
     const [prevPage, prevNavBtn] = stack[stack.length - 1]; // get the previous entry
-    
+
     if (stack.length > 1) {
       stack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
     }
@@ -890,12 +923,12 @@ const translations = {
     items: "Items",
     addItem: "+ Add Item",
     addTransaction: "Add Transaction",
-    languageSwitched:"Language switched to English",
+    languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
     fontsizeChanged: "Fontsize changed",
     fontsizeChangeFailed: "Failed to save fontsize",
-    colorSchemeTitle:"Color Scheme", 
-    colorSchemeSwitched:"Color scheme is now changed",
+    colorSchemeTitle: "Color Scheme",
+    colorSchemeSwitched: "Color scheme is now changed",
     colorSchemeSwitchFailed: "Failed to save color scheme",
     homeImageTitle: "Homepage Image",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
@@ -934,12 +967,12 @@ const translations = {
     items: "项目",
     addItem: "+ 添加项目",
     addTransaction: "添加交易",
-    languageSwitched:"语言已切换为 中文",
+    languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
     fontsizeChanged: "字体大小已更改",
     fontsizeChangeFailed: "字体大小保存出错",
-    colorSchemeTitle:"颜色方案", 
-    colorSchemeSwitched:"颜色方案已更新",
+    colorSchemeTitle: "颜色方案",
+    colorSchemeSwitched: "颜色方案已更新",
     colorSchemeSwitchFailed: "颜色方案保存出错",
     homeImageTitle: "首页图",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
@@ -1013,7 +1046,7 @@ function setLanguage(lang, showMessage = false) {
         showStatusMessage(t.languageSwitchFailed, "error");
       });
   }
-  
+
 }
 
 function isMobileBrowser() {
@@ -1578,7 +1611,7 @@ function showLeaveButton(li, uid) {
 function hideLeaveButton(li) {
   const btn = li.querySelector(".delete-btn");
   if (btn) {
-    btn.style.display = "none"; 
+    btn.style.display = "none";
   }
 }
 
@@ -1604,14 +1637,27 @@ async function confirmLeaveHousehold(hid) {
     });
 
   const updatedUserDoc = await firebase.firestore()
-  .collection("users")
-  .doc(uid)
-  .get();
+    .collection("users")
+    .doc(uid)
+    .get();
 
   householdIds = updatedUserDoc.data().households || [];
+  if (!householdIds.includes(inputHouseholdId)) {
+    const household = households.find(
+      h => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
+    );
+
+    if (household) {
+      inputHouseholdId = household.id;           // use the id directly
+      const householdName = household.name;
+      ScrollToSelectItem(householdSelector.querySelector(".household-col"), householdName);
+    }
+  }
+
+  toggleHouseholdFormRows(householdIds);
 
   alert("已退出该 household");
-  
+
   // Refresh list
   loadMyHouseholds();
 }
@@ -1694,7 +1740,7 @@ function createList(col, values) {
 }
 
 /* Snap after scroll stops */
-function ScrollToSelectItem(col, value=null) {
+function ScrollToSelectItem(col, value = null) {
   // Helper to update selection
   function selectItem(item) {
     if (!item) return;
@@ -1770,7 +1816,7 @@ function ScrollToSelectItem(col, value=null) {
 function updateSelectorPreview() {
   if (!lastButton) return;
   if (lastButton.dataset.type === "datetime") {
-    
+
     const yEl = datetimeSelector.querySelector(".year-col .selected");
     const mEl = datetimeSelector.querySelector(".month-col .selected");
     const dEl = datetimeSelector.querySelector(".day-col .selected");
@@ -1937,7 +1983,7 @@ document.querySelectorAll(".selector-button[data-type='household']")
           sel.style.display = "none";
         }
       });
-      
+
       householdSelector.style.display = "flex";
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);

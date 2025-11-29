@@ -111,6 +111,16 @@
         <!-- Expense -->
         <div class="transaction-page" id="expense-form">
           <form class="transaction-form">
+            <div id="expense-household-form-row" class="form-row">
+              <label>家庭</label>
+              <button type="button" id="expense-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>金额</label>
+              <input list="amount" id="expense-amount">
+            </div>
+
             <div class="form-row">
               <label>账户</label>
               <input list="account-list" id="expense-account">
@@ -124,11 +134,6 @@
             <div class="form-row">
               <label>成员</label>
               <input list="person-list" id="expense-person">
-            </div>
-
-            <div class="form-row">
-              <label>家庭</label>
-              <button type="button" id="expense-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
@@ -162,6 +167,16 @@
         <!-- Income -->
         <div class="transaction-page" id="income-form">
           <form class="transaction-form">
+            <div id="income-household-form-row" class="form-row">
+              <label>家庭</label>
+              <button type="button" id="income-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>金额</label>
+              <input list="amount" id="income-amount">
+            </div>
+
             <div class="form-row">
               <label>账户</label>
               <input list="account-list" id="income-account">
@@ -175,11 +190,6 @@
             <div class="form-row">
               <label>成员</label>
               <input list="person-list" id="income-person">
-            </div>
-
-            <div class="form-row">
-              <label>家庭</label>
-              <button type="button" id="income-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
@@ -215,6 +225,16 @@
         <!-- Transfer -->
         <div class="transaction-page" id="transfer-form">
           <form class="transaction-form">
+            <div id="transfer-household-form-row" class="form-row">
+              <label>家庭</label>
+              <button type="button" id="transfer-household" class="selector-button" data-type="household"></button>
+            </div>
+
+            <div class="form-row">
+              <label>金额</label>
+              <input list="amount" id="transfer-amount">
+            </div>
+
             <div class="actions">
               <button type="button" onclick="addEntry('transfer')">添加转账</button>
             </div>
