@@ -222,7 +222,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 .amount-row {
   position: relative;              /* allow absolute children */
   width: 100%;
-  height: calc(var(--font-size) * 3.2);
+  height: calc(var(--font-size) * 3.7);
   border-top: none;
   border-left: none;
   border-right: none;
@@ -233,9 +233,9 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 }
 
 .amount-button {
-  font-size: calc(var(--font-size) * 2);
+  font-size: calc(var(--font-size) * 2.5);
   position: absolute; /* now bottom works */
-  bottom: calc(var(--font-size) * 0.5);
+  bottom: calc(var(--font-size) * 0.7);
   color: var(--text);
   background-color: var(--bg);
   border: none;
