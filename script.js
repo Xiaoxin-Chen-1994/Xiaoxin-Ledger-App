@@ -72,20 +72,20 @@ let inputStore = null;
 let inputCategory = null;
 let inputItems = null;
 
+if (isMobileBrowser()) { // use a smaller font for mobile
+  // Get current value of --font-size
+  let current = getComputedStyle(document.documentElement)
+                  .getPropertyValue("--font-size");
+  // Trim and parse (assumes it's in rem)
+  current = parseFloat(current);
+  // Subtract 0.1
+  let newSize = current - 0.1;
+  // Set it back with unit
+  document.documentElement.style.setProperty("--font-size", newSize + "rem");
+}
+
 // --- Authentication ---
 function signup() {
-  if (isMobileBrowser()) { // use a smaller font for mobile
-    // Get current value of --font-size
-    let current = getComputedStyle(document.documentElement)
-                    .getPropertyValue("--font-size");
-    // Trim and parse (assumes it's in rem)
-    current = parseFloat(current);
-    // Subtract 0.1
-    let newSize = current - 0.1;
-    // Set it back with unit
-    document.documentElement.style.setProperty("--font-size", newSize + "rem");
-  }
-
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
 
