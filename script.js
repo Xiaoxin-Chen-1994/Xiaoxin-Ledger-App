@@ -890,6 +890,8 @@ let historyStacks = {
 let currentBase = "home";
 
 function showPage(name, navBtn = null) {
+  t = translations[currentLang];
+
   let stack = null;
   let target = null;
   let latest = null;
@@ -942,6 +944,8 @@ function showPage(name, navBtn = null) {
 
   // transaction page special handling
   if (latestPage + "-page" === "transaction-page") {
+    document.getElementById("app-title").textContent = t.navTransaction;
+
     const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
     const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
     const formId = formIds[activeIndex];
@@ -963,7 +967,10 @@ function showPage(name, navBtn = null) {
       btn = document.querySelector(`#${formId} .selector-button[data-type='household']`);
       if (btn) setCurrentHousehold(btn);
     }
+  } else {
+    document.getElementById("app-title").textContent = "Xiaoxin's Ledger App";
   }
+
 
   stack = historyStacks[currentBase];
   // If reaching base page or the page is already active, do nothing
