@@ -377,6 +377,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 @media (prefers-color-scheme: dark) {
   .selector {
     background: var(--bg);
+    box-shadow: 0 -0.6rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
 
   .dt-item {
@@ -391,6 +392,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   .datetime-now, .datetime-close {
     background: var(--bg);
     color:var(--text);
+    box-shadow: 0 -0.3rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
 
   .datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
