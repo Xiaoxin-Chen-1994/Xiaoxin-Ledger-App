@@ -343,12 +343,14 @@ function createItemRow() {
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
-    e.stopPropagation(); // prevent wrapper from seeing this touch
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     row.classList.add("show-delete"); // reveal delete button
   });
 
   row.addEventListener("click", e => {
-    e.stopPropagation(); // prevent wrapper from seeing this touch
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     // only hide if clicking outside the delete button
     if (!e.target.classList.contains("delete-btn")) {
       row.classList.remove("show-delete");
@@ -358,11 +360,13 @@ function createItemRow() {
   // Swipe detection
   let startX = 0;
   row.addEventListener("touchstart", e => {
-    e.stopPropagation(); // prevent wrapper from seeing this touch
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     startX = e.touches[0].clientX;
   });
   row.addEventListener("touchend", e => {
-    e.stopPropagation(); // prevent wrapper from seeing this touch
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
     if (diff > 50) {
@@ -506,11 +510,13 @@ function renderItems(parsedItems, activeTab) {
     // --- Swipe detection ---
     let startX = 0;
     row.addEventListener("touchstart", e => {
-      e.stopPropagation(); // prevent wrapper from seeing this touch
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       startX = e.touches[0].clientX;
     });
     row.addEventListener("touchend", e => {
-      e.stopPropagation(); // prevent wrapper from seeing this touch
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       const endX = e.changedTouches[0].clientX;
       const diff = startX - endX;
       if (diff > 50) {
@@ -522,12 +528,14 @@ function renderItems(parsedItems, activeTab) {
 
     // --- Right‑click (desktop) ---
     row.addEventListener("contextmenu", e => {
-      e.stopPropagation(); // prevent wrapper from seeing this touch
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       row.classList.add("show-delete");
     });
 
     row.addEventListener("click", e => {
-      e.stopPropagation(); // prevent wrapper from seeing this touch
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       // only hide if clicking outside the delete button
       if (!e.target.classList.contains("delete-btn")) {
         row.classList.remove("show-delete");
@@ -570,10 +578,14 @@ tabButtons.forEach(btn => {
 let startX = 0;
 
 wrapper.addEventListener("touchstart", e => {
+  // do not add preventDefault otherwise the selectors won't show!
+  // e.preventDefault();   // stop the browser from scrolling the page
   startX = e.touches[0].clientX;
 });
 
 wrapper.addEventListener("touchend", e => {
+  // do not add preventDefault otherwise the selectors won't show!
+  // e.preventDefault();   // stop the browser from scrolling the page
   let endX = e.changedTouches[0].clientX;
   let diff = startX - endX;
 
@@ -1388,7 +1400,8 @@ async function loadHouseholdMembers() {
 
     // Right-click to show delete
     li.oncontextmenu = e => {
-      e.preventDefault();
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       showDeleteButton(li, uid);
     };
 
@@ -1398,10 +1411,14 @@ async function loadHouseholdMembers() {
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       li._startX = e.touches[0].clientX;
     });
 
     li.addEventListener("touchend", e => {
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       const dx = e.changedTouches[0].clientX - li._startX;
       if (dx < -50) showDeleteButton(li, uid); // swipe left
       if (dx > 50) hideDeleteButton(li); // swipe right
@@ -1414,18 +1431,18 @@ async function loadHouseholdMembers() {
 function showDeleteButton(li, uid) {
   let btn = li.querySelector(".delete-btn");
   if (btn) {
-    btn.style.display = "inline-block"; // display again
+    btn.style.display = "block"; // display again
     return;
   }
 
   btn = document.createElement("button");
   btn.textContent = "删除";
   btn.className = "delete-btn";
-  btn.style.position = "absolute";
-  btn.style.right = "10px";
-  btn.style.top = "0px";
-  btn.style.background = "#c00";
-  btn.style.color = "#fff";
+  btn.style.width = "4rem";
+  btn.style.transform = "translateX(-1rem)"; // display
+  btn.style.alignItems = "center";      /* vertical centering */
+  btn.style.justifyContent = "center";  /* horizontal centering */
+
 
   btn.onclick = () => confirmRemoveMember(uid);
 
@@ -1498,7 +1515,8 @@ async function loadMyHouseholds() {
 
     // Right-click to show delete
     li.oncontextmenu = e => {
-      e.preventDefault();
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       showLeaveButton(li, hid);
     };
 
@@ -1508,10 +1526,14 @@ async function loadMyHouseholds() {
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       li._startX = e.touches[0].clientX;
     });
 
     li.addEventListener("touchend", e => {
+      e.preventDefault();   // stop the browser from scrolling the page
+      e.stopPropagation();  // stop the event from bubbling up to parent elements
       const dx = e.changedTouches[0].clientX - li._startX;
       if (dx < -50) showLeaveButton(li, hid); // swipe left
       if (dx > 50) hideLeaveButton(li); // swipe right
@@ -1524,18 +1546,17 @@ async function loadMyHouseholds() {
 function showLeaveButton(li, uid) {
   let btn = li.querySelector(".delete-btn");
   if (btn) {
-    btn.style.display = "inline-block"; // display again
+    btn.style.display = "block"; // display again
     return;
   }
 
   btn = document.createElement("button");
   btn.textContent = "离开";
   btn.className = "delete-btn";
-  btn.style.position = "absolute";
-  btn.style.right = "10px";
-  btn.style.top = "0px";
-  btn.style.background = "#c00";
-  btn.style.color = "#fff";
+  btn.style.width = "4rem";
+  btn.style.transform = "translateX(-1rem)"; // display
+  btn.style.alignItems = "center";      /* vertical centering */
+  btn.style.justifyContent = "center";  /* horizontal centering */
 
   btn.onclick = () => confirmLeaveHousehold(uid);
 
@@ -1689,6 +1710,8 @@ function ScrollToSelectItem(col, value=null) {
 
   // Wheel / trackpad scroll
   col.addEventListener("wheel", (e) => {
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     const selected = col.querySelector(".dt-item.selected");
     if (!selected) return;
 
@@ -1701,16 +1724,20 @@ function ScrollToSelectItem(col, value=null) {
     }
 
     updateSelectorPreview()
-  }, { passive: true });
+  }, { passive: false });
 
   // Touch swipe
   let touchStartY = null;
   col.addEventListener("touchstart", (e) => {
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     touchStartY = e.touches[0].clientY;
     updateSelectorPreview()
-  }, { passive: true });
+  }, { passive: false });
 
   col.addEventListener("touchend", (e) => {
+    e.preventDefault();   // stop the browser from scrolling the page
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     if (touchStartY == null) return;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const selected = col.querySelector(".dt-item.selected");
@@ -1725,7 +1752,7 @@ function ScrollToSelectItem(col, value=null) {
     }
     touchStartY = null;
     updateSelectorPreview()
-  }, { passive: true });
+  }, { passive: false });
 }
 
 function updateSelectorPreview() {

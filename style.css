@@ -343,6 +343,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   height: 100%;
   overflow-y: auto;
   float: left;
+  justify-content: center; /* centers items vertically */
   border-right: 1px solid #eee;
   scroll-behavior: smooth;
   -ms-overflow-style: none;  /* IE/Edge */
