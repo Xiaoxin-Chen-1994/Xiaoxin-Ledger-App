@@ -43,6 +43,15 @@
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
+    
+    --income-color: rgb(248, 70, 70);
+    --expense-color: rgb(10, 190, 10);
+  }
+
+  /* Alternate scheme: income green, expense red */
+  :root.alt-scheme {
+    --income-color: rgb(10, 190, 10);
+    --expense-color: rgb(248, 70, 70);
   }
 
   #statusMessage {
@@ -85,8 +94,8 @@ body {
 
 .page {
   position: absolute;
-  left: 2%;
-  width: 96%;
+  left: 4%;
+  width: 92%;
   height: 100%;
   overflow-y: auto;
   display: none; /* hide all pages by default */
@@ -223,10 +232,11 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   position: relative;              /* allow absolute children */
   width: 100%;
   height: calc(var(--font-size) * 3.7);
+  margin-bottom: 0.5rem;
   border-top: none;
   border-left: none;
   border-right: none;
-  border-bottom: 3px solid var(--text);
+  border-bottom: 3px solid #e8a01a;
   background-color: var(--bg);
   display: flex;
   align-items: center;             /* keep button vertically centered */
@@ -262,6 +272,87 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 #income-amount {
   color: var(--income-color);
 }
+
+#exchange-transfer-amount-row {
+  display: grid;
+  grid-template-columns: auto 1fr;   /* left column for arrow, right column for rows */
+  grid-template-rows: auto auto;     /* two rows for from/to */
+  gap: 0.5rem 1rem;                  /* row gap, column gap */
+  align-items: center;
+}
+#exchange-transfer-amount-row > label {
+  grid-row: 1 / span 2;              /* arrow spans both rows */
+  grid-column: 1;                    /* stays in left column */
+  align-self: center;                /* vertically centered between rows */
+  font-size: 1.5rem;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;                /* enable offset positioning */
+  bottom: calc(var(--font-size) * 0.6); /* adjust upward */
+}
+#exchange-transfer-from-amount-row {
+  grid-row: 1;
+  grid-column: 2;
+  height: calc(var(--font-size) * 4.5);
+  margin-bottom: 0rem;
+  border-bottom: 1px solid #b6b6b6;
+}
+#exchange-transfer-to-amount-row {
+  grid-row: 2;
+  grid-column: 2;
+  height: calc(var(--font-size) * 4.5);
+}
+
+.transfer-accounts {
+  width: 100%;
+  display: flex;
+  flex-direction: row;       /* horizontal layout */
+  align-items: flex-start;   /* align tops of columns */
+  margin-bottom: 0.25rem;
+}
+
+/* Each account block: label on top, button below */
+.transfer-account {
+  flex: 1;                       
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding-top: calc(var(--font-size) * 1.5); /* space for absolute label */
+}
+/* Centered ⇌ indicator between blocks */
+#tranfer-between-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  width: 2rem;
+  height: 2rem;
+  align-self: center;         /* center vertically in row */
+}
+
+#exchange-rate-label {
+  display: flex;                /* make label a flex container */
+  justify-content: center;      /* center text horizontally */
+  align-items: center;          /* center text vertically */
+  width: 100%;                  /* stretch across parent */
+  height: 100%;                 /* stretch vertically if parent has height */
+  font-size: 1rem;              /* adjust as needed */
+  color: grey;
+}
+
+.currency, .transfer-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: calc(var(--font-size) * 0.8);
+  line-height: calc(var(--font-size) * 0.3);
+  color: grey;
+  text-align: left;
+  width: 100%;
+  z-index: 100;
+}
+
 .calculation {
   position: absolute;
   bottom: 0;
@@ -270,6 +361,26 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   color: grey;
   text-align: left;
   width: 100%;
+}
+
+#exchange-rate-from-label {
+  position: absolute;
+  right: 0;
+  font-size: calc(var(--font-size) * 0.8);
+  color: grey;
+  text-align: right;
+  width: 50%;
+}
+
+#exchange-rate-to-label {
+  position: absolute;
+  right: 0;
+  font-size: calc(var(--font-size) * 0.8);
+  line-height: calc(var(--font-size) * 0.3);
+  color: grey;
+  text-align: right;
+  width: 50%;
+  z-index: 100;
 }
 
 .form-row {
@@ -350,7 +461,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   position: fixed;
   left: 0;
   height: 30%;
-  bottom: 0.1rem;
+  bottom: 0;
   width: 100%;
   background: var(--bg);
   border-top: 1px solid #ccc;
@@ -359,7 +470,11 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   z-index: 10000;
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -0.6rem 1rem rgba(0, 0, 0, 0.15);
-  display: none;
+  display: flex;
+
+   /* start hidden: pushed down off screen */
+  transform: translateY(120%);
+  transition: transform 0.3s ease;
 }
 
 .datetime-now, .datetime-close {
@@ -450,6 +565,12 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
 
   .datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
     background: var(--bg);
+  }
+  .amount-row {
+    border-bottom: 3px solid #e97210;
+  }
+  #exchange-transfer-from-amount-row {
+    border-bottom: 1px solid #555555;
   }
 }
 

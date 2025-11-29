@@ -172,7 +172,7 @@
               <button type="button" id="income-amount" class="amount-button">0.00</button>
               <label id="income-calculation" class="calculation"></label>
             </div>
-            
+
             <div id="income-household-form-row" class="form-row">
               <label>家庭</label>
               <button type="button" id="income-household" class="selector-button" data-type="household"></button>
@@ -226,19 +226,23 @@
         <!-- Transfer -->
         <div class="transaction-page" id="transfer-form">
           <form class="transaction-form">
-            <div id="simple-transfer-amount-row" class="amount-row">
+            <div id="simple-transfer-amount-row" class="amount-row" style="display:none;">
               <button type="button" id="transfer-amount" class="amount-button">0.00</button>
               <label id="transfer-calculation" class="calculation"></label>
             </div>
-            <div id="exchange-transfer-amount-row" class="amount-row">
+            <div id="exchange-transfer-amount-row">
               <label>⇂</label>
               <div id="exchange-transfer-from-amount-row" class="amount-row">
+                <label id="transfer-from-currency" class="currency">CAD</label>
                 <button type="button" id="transfer-from-amount" class="amount-button">0.00</button>
-                <label id="transfer-from-calculation" class="calculation"></label>
+                <label id="transfer-from-calculation" class="calculation">2+2</label>
+                <label id="exchange-rate-from-label">⇂ 汇率：5.10</label>
               </div>
               <div id="exchange-transfer-to-amount-row" class="amount-row">
+                <label id="transfer-to-currency" class="currency">USD</label>
                 <button type="button" id="transfer-to-amount" class="amount-button">0.00</button>
-                <label id="transfer-to-calculation" class="calculation"></label>
+                <label id="transfer-to-calculation" class="calculation">1+1</label>
+                <label id="exchange-rate-to-label">↿ 汇率：0.20</label>
               </div>
             </div>
 
@@ -250,23 +254,14 @@
             <div class="form-row">
               <label>账户</label>
               <div class="transfer-accounts">
-                <div class="transfer-between-accounts">
-                  <div class="transfer-account">
-                    <label>转出</label>
-                    <button type="button" id="transfer-from-account" class="selector-button" data-type="account">
-                  </div>
-                  <label>⇌</label>
-                  <div class="transfer-account">
-                    <label>转入</label>
-                    <button type="button" id="transfer-to-account" class="selector-button" data-type="account">
-                  </div>
+                <div class="transfer-account">
+                  <label class="transfer-label">转出</label>
+                  <button type="button" id="transfer-from-account" class="selector-button" data-type="account">
                 </div>
-                <div class="exchange-rate-section">
-                  <label>汇率：</label>
-                  <div class="exchange-rates">
-                    <label id="exchange-rate-to">⇀</label>
-                    <label id="exchange-rate-reverse">↽</label>
-                  </div>
+                <label id="tranfer-between-indicator">⇌</label>
+                <div class="transfer-account">
+                  <label class="transfer-label">转入</label>
+                  <button type="button" id="transfer-to-account" class="selector-button" data-type="account">
                 </div>
               </div>
             </div>
@@ -324,7 +319,7 @@
     <!-- Selector panels -->
     <div id="household-selector" class="selector">
       <button type="button" class="datetime-close"
-        onclick="document.getElementById('household-selector').style.display='none'">收起 ▼</button>
+        onclick="document.getElementById('household-selector').style.transform = 'translateY(120%)'">收起 ▼</button>
 
       <div class="dt-col household-col"></div>
     </div>
@@ -332,7 +327,7 @@
     <div id="datetime-selector" class="selector">
       <button type="button" class="datetime-now" onclick=clickToSetNow()>现在</button>
       <button type="button" class="datetime-close"
-        onclick="document.getElementById('datetime-selector').style.display='none'">收起 ▼</button>
+        onclick="document.getElementById('datetime-selector').style.transform = 'translateY(120%)'">收起 ▼</button>
 
       <div class="dt-col year-col"></div>
       <div class="dt-col month-col"></div>

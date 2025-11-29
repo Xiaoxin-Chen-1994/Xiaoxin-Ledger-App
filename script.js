@@ -717,7 +717,7 @@ wrapper.addEventListener("touchend", e => {
   let diff = startX - endX;
 
   if (Math.abs(diff) > 50) {
-    if (diff > 0 && inputTypeIndex < 2) switchTab(inputTypeIndex + 1);
+    if (diff > 0 && inputTypeIndex < (tabButtons.length-1)) switchTab(inputTypeIndex + 1);
     if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1);
   }
 });
@@ -948,7 +948,18 @@ function showPage(name, navBtn = null) {
 
     if (isTransactionFormEmpty(formId)) {
       let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
-      if (btn) setCurrentTime(btn);
+      if (btn) {
+        setCurrentTime(btn);
+        
+        const { year, month, day, hour, minute } = parseButtonDate(btn);
+
+        ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
+        ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
+        updateDayColumn();
+        ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+        ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
+        ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
+      };
       btn = document.querySelector(`#${formId} .selector-button[data-type='household']`);
       if (btn) setCurrentHousehold(btn);
     }
@@ -2042,24 +2053,15 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
     e.stopPropagation();
     lastButton = btn;
 
-    // first hide all selectors
+    // first hide all other selectors
     selectorList.forEach(sel => {
-      if (!sel.contains(e.target)) {
-        sel.style.display = "none";
+      if (sel !== datetimeSelector) {
+        sel.style.transform = "translateY(120%)";
       }
     });
 
     // Show the desired selector
-    datetimeSelector.style.display = "flex";
-
-    const { year, month, day, hour, minute } = parseButtonDate(btn);
-
-    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
-    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
-    updateDayColumn();
-    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
-    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
-    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
+    datetimeSelector.style.transform = "translateY(0)";
   });
 });
 
@@ -2069,13 +2071,14 @@ document.querySelectorAll(".selector-button[data-type='household']")
       e.stopPropagation();
       lastButton = btn;
 
+      // first hide all other selectors
       selectorList.forEach(sel => {
-        if (!sel.contains(e.target)) {
-          sel.style.display = "none";
+        if (sel !== householdSelector) {
+          sel.style.transform = "translateY(120%)";
         }
       });
 
-      householdSelector.style.display = "flex";
+      householdSelector.style.transform = "translateY(0)";
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
     });
@@ -2084,10 +2087,10 @@ document.querySelectorAll(".selector-button[data-type='household']")
 /* Close when clicking outside */
 document.addEventListener("click", e => {
   if (!datetimeSelector.contains(e.target)) {
-    datetimeSelector.style.display = "none";
+    datetimeSelector.style.transform = "translateY(120%)";
   }
   if (!householdSelector.contains(e.target)) {
-    householdSelector.style.display = "none";
+    householdSelector.style.transform = "translateY(120%)";
   }
 });
 
