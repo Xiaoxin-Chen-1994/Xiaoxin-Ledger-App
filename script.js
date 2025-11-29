@@ -927,9 +927,6 @@ function showPage(name, navBtn = null) {
 
     if (!target) return;
 
-    if (name + "-page" === "transaction-page") {
-      document.getElementById("nav-transaction").style.backgroundColor = "var(--primary)";
-    }
     document.getElementById("return-btn").style.display = "block";
   }
 
