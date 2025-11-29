@@ -12,14 +12,14 @@
   --font-size: 1.1rem;
 
   /* Default scheme: income red, expense green */
-  --income-color: #d32f2f;
-  --expense-color: #2e7d32;
+  --income-color: rgb(223, 34, 34);
+  --expense-color: green;
 }
 
 /* Alternate scheme: income green, expense red */
 :root.alt-scheme {
-  --income-color: #2e7d32;
-  --expense-color: #d32f2f;
+  --income-color: green;
+  --expense-color: rgb(223, 34, 34);
 }
 
 /* Global glass effect*/
@@ -217,6 +217,59 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   background: var(--card);
   color: var(--text);
   box-sizing: border-box;        /* include padding + border in width */
+}
+
+.amount-row {
+  position: relative;              /* allow absolute children */
+  width: 100%;
+  height: calc(var(--font-size) * 3.2);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 3px solid var(--text);
+  background-color: var(--bg);
+  display: flex;
+  align-items: center;             /* keep button vertically centered */
+}
+
+.amount-button {
+  font-size: calc(var(--font-size) * 2);
+  position: absolute; /* now bottom works */
+  bottom: calc(var(--font-size) * 0.5);
+  color: var(--text);
+  background-color: var(--bg);
+  border: none;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.amount-button:hover,
+.amount-button:focus {
+  background-color: var(--bg);
+}
+
+#expense-amount-row {
+  border-bottom: 3px solid var(--expense-color);
+}
+#expense-amount {
+  color: var(--expense-color);
+}
+#income-amount-row {
+  border-bottom: 3px solid var(--income-color);
+}
+#income-amount {
+  color: var(--income-color);
+}
+.calculation {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font-size: calc(var(--font-size) * 0.8);
+  color: grey;
+  text-align: left;
+  width: 100%;
 }
 
 .form-row {

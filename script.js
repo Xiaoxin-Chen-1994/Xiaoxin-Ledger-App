@@ -3,7 +3,8 @@
 //   - profile
 //       email: string
 //       language: string
-//       homeImage: string
+//       homeImages: string
+//       fontsize: string
 //   - households: [householdId]   // membership links
 
 //   - defaults
@@ -20,7 +21,9 @@
 //          accountId: string
 //          personId: string
 //       /transfer
-//          TBD
+//          fromAccountId: string
+//          toAccountId: string
+//          personId: string
 
 // households/{householdId}
 //   - name: string
@@ -57,6 +60,7 @@
 //       items: [ { name: string, notes: string, amount: number } ]
 //       amount: number
 //       createdBy: string          // userId
+//       lastModifiedBy: string     // userId
 
 
 // --- Firebase Initialization ---
@@ -119,6 +123,7 @@ function signup() {
         ? `${email}'s Ledger`
         : `${email}的账本`;
 
+      // Create household doc
       firebase.firestore().collection("households").doc(householdId).set({
         name: householdName,
         admin: user.uid,
@@ -130,13 +135,90 @@ function signup() {
         profile: {
           email: email,
           language: currentLang,
-          homeImages: "",
+          homeImages: [],
           fontsize: "",
           settings: {}
         },
         personalHouseholdId: householdId,
         households: [householdId]
       });
+
+      // Initialize user defaults with empty placeholders
+      const defaultsRef = firebase.firestore()
+        .collection("users")
+        .doc(user.uid)
+        .collection("defaults");
+
+      defaultsRef.doc("expense").set({
+        householdId: "",
+        categoryId: "",
+        collectionId: "",
+        accountId: "",
+        personId: ""
+      });
+
+      defaultsRef.doc("income").set({
+        householdId: "",
+        categoryId: "",
+        collectionId: "",
+        accountId: "",
+        personId: ""
+      });
+
+      defaultsRef.doc("transfer").set({
+        householdId: "",
+        fromAccountId: "",
+        toAccountId: "",
+        personId: ""
+      });
+
+      defaultsRef.doc("balance").set({
+        householdId: "",
+        accountId: "",
+        personId: ""
+      });
+
+      // Initialize household subcollections with empty placeholders
+      const householdRef = firebase.firestore().collection("households").doc(householdId);
+
+      // Accounts
+      householdRef.collection("accounts").doc().set({
+        name: "",
+        type: ""
+      });
+
+      // Categories
+      householdRef.collection("categories").doc().set({
+        primary: "",
+        secondary: []
+      });
+
+      // Collections
+      householdRef.collection("collections").doc().set({
+        primary: "",
+        secondary: []
+      });
+
+      // Persons
+      householdRef.collection("persons").doc().set({
+        name: ""
+      });
+
+      // Entries
+      householdRef.collection("entries").doc().set({
+        type: "",
+        categoryId: "",
+        collectionId: "",
+        accountId: "",
+        personId: "",
+        store: "",
+        datetime: null,
+        items: [],
+        amount: 0,
+        createdBy: "",
+        lastModifiedBy: ""
+      });
+
     })
     .catch(error => showStatusMessage(error.message, 'error'));
 }
@@ -641,24 +723,32 @@ wrapper.addEventListener("touchend", e => {
 });
 
 const fieldMap = {
-  income: {
-    account: "income-account",
-    datetime: "income-datetime",
-    person: "income-person",
-    store: "income-source",
-    category: "income-category"
-  },
   expense: {
+    amount: "expense-amount",
     account: "expense-account",
     datetime: "expense-datetime",
     person: "expense-person",
     store: "expense-store",
     category: "expense-category"
   },
+  income: {
+    amount: "income-amount",
+    account: "income-account",
+    datetime: "income-datetime",
+    person: "income-person",
+    store: "income-source",
+    category: "income-category"
+  },
   transfer: {
+    amountSimple: "transfer-amount",
+    amountFrom: "transfer-from-amount",
+    amountTo: "transfer-to-amount",
     datetime: "transfer-datetime",
     fromAccount: "transfer-from",
     toAccount: "transfer-to"
+  },
+  balance: {
+    amount: "balance-amount",
   }
 };
 
@@ -680,14 +770,15 @@ function addEntry() {
     person = document.getElementById(map.person).value.trim();
     store = document.getElementById(map.store).value.trim();
     category = document.getElementById(map.category).value.trim();
-  }
-
-  if (type === "transfer") {
+  } else if (type === "transfer") {
     const map = fieldMap.transfer;
 
     datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
     fromAccount = document.getElementById(map.fromAccount).value.trim();
     toAccount = document.getElementById(map.toAccount).value.trim();
+  } else if (type === "balance") {
+    const map = fieldMap.balance;
+
   }
 
   // Update datalists
@@ -851,8 +942,8 @@ function showPage(name, navBtn = null) {
 
   // transaction page special handling
   if (latestPage + "-page" === "transaction-page") {
-    const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2
-    const formIds = ["expense-form", "income-form", "transfer-form"];
+    const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
+    const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
     const formId = formIds[activeIndex];
 
     if (isTransactionFormEmpty(formId)) {
@@ -1929,8 +2020,8 @@ function daysInMonth(year, month) {
 }
 
 function clickToSetNow() {
-  const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2
-  const formIds = ["expense-form", "income-form", "transfer-form"];
+  const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
+  const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
   const formId = formIds[activeIndex];
 
   let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
