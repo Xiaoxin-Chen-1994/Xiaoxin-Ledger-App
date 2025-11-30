@@ -16,6 +16,21 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
+    fetch(event.request).then(response => {
+      return response;
+    }).catch(() => {
+      // Offline: serve from cache
+      return caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) {
+          // Tell the page we’re offline
+          self.clients.matchAll().then(clients => {
+            clients.forEach(client => client.postMessage({ offline: true }));
+          });
+          return cachedResponse;
+        }
+        return new Response('Offline resource not available', { status: 404 });
+      });
+    })
   );
 });
+

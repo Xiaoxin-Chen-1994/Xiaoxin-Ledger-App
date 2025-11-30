@@ -118,6 +118,12 @@ db.enablePersistence()
     console.error('Persistence error:', err);
   });
 
+navigator.serviceWorker.addEventListener('message', event => {
+  if (event.data.offline) {
+    document.getElementById('offline-banner').style.display = 'block';
+  }
+});
+
 // --- Authentication ---
 function signup() {
   const email = document.getElementById("username").value;
