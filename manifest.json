@@ -1,6 +1,6 @@
 {
   "name": "Xiaoxin's Ledger App",
-  "short_name": "Ledger",
+  "short_name": "My Ledger",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -79,6 +79,7 @@ let inputItems = null;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
+    showMessage('Service Worker registered', 'success')
 }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
