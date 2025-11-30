@@ -1183,11 +1183,11 @@ function isMobileBrowser() {
 }
 
 function increaseFontsize() {
-  adjustFontsize(0.1); // increase by 0.1rem
+  adjustFontsize(0.05); // increase fontsize
 }
 
 function decreaseFontsize() {
-  adjustFontsize(-0.1); // decrease by 0.1rem
+  adjustFontsize(-0.05); // decrease fontsize
 }
 
 function adjustFontsize(delta) {
