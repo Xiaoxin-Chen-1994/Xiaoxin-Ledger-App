@@ -143,6 +143,19 @@ body {
   color: var(--primary-hover);
 }
 
+#save-btn-headerbar {
+  position: absolute;        /* pin button to the right */
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
+  cursor: pointer;
+}
+#save-btn-headerbar:hover {
+  color: var(--primary-hover);
+}
+
 h2 { font-size: calc(var(--font-size) * 1.1); margin: 0.5rem 0; }
 
 label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 1); font-weight: 600; }

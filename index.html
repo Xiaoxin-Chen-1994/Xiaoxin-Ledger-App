@@ -17,6 +17,7 @@
   <div class="header-bar">
     <button id="return-btn" onclick="goBack()" style="display: none;">返回</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
+    <button id="save-btn-headerbar" onclick="addEntry()" style="display: none;">保存</button>
   </div>
 
   <!-- Login / Signup Section -->
@@ -165,7 +166,7 @@
 
 
             <div class="actions">
-              <button type="button" onclick="addEntry('expense')">添加支出</button>
+              <button type="button" onclick="addEntry()">保存</button>
             </div>
           </form>
         </div>
@@ -223,7 +224,7 @@
             </div>
 
             <div class="actions">
-              <button type="button" onclick="addEntry('income')">添加收入</button>
+              <button type="button" onclick="addEntry()">保存</button>
             </div>
           </form>
         </div>
@@ -277,7 +278,7 @@
             </div>
 
             <div class="actions">
-              <button type="button" onclick="addEntry('transfer')">添加转账</button>
+              <button type="button" onclick="addEntry()">保存</button>
             </div>
           </form>
         </div>
@@ -311,7 +312,7 @@
             </div>
 
             <div class="actions">
-              <button type="button" onclick="addEntry('balance')">设定余额</button>
+              <button type="button" onclick="addEntry()">保存</button>
             </div>
           </form>
         </div>

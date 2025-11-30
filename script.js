@@ -965,6 +965,7 @@ function showPage(name, navBtn = null) {
   // transaction page special handling
   if (latestPage + "-page" === "transaction-page") {
     document.getElementById("app-title").textContent = t.navTransaction;
+    document.getElementById("save-btn-headerbar").style.display = "block";
 
     const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
     const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
