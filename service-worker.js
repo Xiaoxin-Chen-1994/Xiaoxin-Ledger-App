@@ -14,36 +14,25 @@ self.addEventListener('install', event => {
   );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request).then(response => {
-      // Network succeeded → tell page to hide banner
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => client.postMessage({ offline: false }));
-      });
-      return response;
-    }).catch(() => {
-      // Network failed → try cache
-      return caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) {
-          // Tell page to show banner
-          self.clients.matchAll().then(clients => {
-            clients.forEach(client => client.postMessage({ offline: true }));
-          });
-          return cachedResponse;
-        }
-        // No cache and network failed
-        self.clients.matchAll().then(clients => {
-          clients.forEach(client => client.postMessage({ offline: true }));
-        });
-        return new Response('Offline resource not available', {
-          status: 404,
-          statusText: 'Not Found'
-        });
-      });
-    })
-  );
-});
+let offlineState = null;
 
+function notifyClients(state) {
+  if (state !== offlineState) {
+    offlineState = state;
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => client.postMessage({ offline: state }));
+    });
+  }
+}
 
-
+event.respondWith(
+  fetch(event.request).then(response => {
+    notifyClients(false); // online
+    return response;
+  }).catch(() => {
+    return caches.match(event.request).then(cachedResponse => {
+      notifyClients(true); // offline
+      return cachedResponse || new Response('Offline resource not available', { status: 404 });
+    });
+  })
+);

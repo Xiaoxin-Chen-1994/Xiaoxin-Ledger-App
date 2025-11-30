@@ -79,7 +79,6 @@ let inputItems = null;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
-  showStatusMessage('Service Worker registered', 'success')
 }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
@@ -121,22 +120,16 @@ db.enablePersistence()
 
 let isOffline = false;
 
-if (navigator.serviceWorker) {
+navigator.serviceWorker.ready.then(() => {
   navigator.serviceWorker.addEventListener('message', event => {
-    const offline = !!event.data.offline;
-    if (offline !== isOffline) {
-      isOffline = offline;
-      const banner = document.getElementById('offline-banner');
-      if (offline) {
-        banner.style.display = 'block';
-        console.log('showing banner');
-      } else {
-        banner.style.display = 'none';
-        console.log('hiding banner');
-      }
+    const banner = document.getElementById('offline-banner');
+    if (event.data.offline) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
     }
   });
-}
+});
 
 // --- Authentication ---
 function signup() {
