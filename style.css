@@ -5,7 +5,7 @@
   --muted: #6b7280;
   --primary-base: #e88b1a; /* user choice */
   --primary: var(--primary-base);
-  --primary-hover: color-mix(in srgb, var(--primary-base) 80%, black);
+  --primary-hover: color-mix(in srgb, var(--primary) 80%, black);
   --border: #e5e7eb;
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
@@ -40,7 +40,7 @@
     --text: #eaeef3;
     --muted: #a1a7b3;
     --primary: color-mix(in srgb, var(--primary-base) 80%, white);
-    --primary-hover: color-mix(in srgb, var(--primary-base) 80%, white);
+    --primary-hover: color-mix(in srgb, var(--primary) 80%, white);
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
