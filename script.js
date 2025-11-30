@@ -1259,12 +1259,21 @@ function adjustFontsize(delta) {
 function openColorPicker() {
   const picker = document.getElementById('themeColorPicker');
 
-  // Load current CSS variable value into the picker
-  const currentColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary').trim();
+  let currentColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary')
+    .trim();
 
-  if (currentColor) {
-    picker.value = rgbToHex(currentColor); // convert if needed
+  // If it's already hex (#rrggbb), use directly
+  if (/^#[0-9A-Fa-f]{6}$/.test(currentColor)) {
+    picker.value = currentColor;
+  }
+  // If it's rgb(...), convert
+  else if (currentColor.startsWith('rgb')) {
+    picker.value = rgbToHex(currentColor);
+  }
+  // Fallback
+  else {
+    picker.value = '#4caf50';
   }
 
   picker.click(); // open native color palette
@@ -1276,11 +1285,13 @@ function openColorPicker() {
 }
 
 function rgbToHex(rgb) {
+  function rgbToHex(rgb) {
   const result = rgb.match(/\d+/g);
-  if (!result) return "#e88b1a";
+  if (!result) return "#4caf50";
   return "#" + result.slice(0,3).map(x =>
-    ("0" + parseInt(x).toString(16)).slice(-2)
+    ("0" + Number(x).toString(16)).slice(-2)
   ).join('');
+}
 }
 
 function resetThemeColor() {
