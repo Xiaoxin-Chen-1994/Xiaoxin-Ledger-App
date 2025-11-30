@@ -3,8 +3,9 @@
   --card: rgba(255, 255, 255, 0.7);
   --text: #1f2328;
   --muted: #6b7280;
-  --primary: #e88b1a;
-  --primary-hover: #ce7405;
+  --primary-base: #e88b1a; /* user choice */
+  --primary: var(--primary-base);
+  --primary-hover: color-mix(in srgb, var(--primary-base) 80%, black);
   --border: #e5e7eb;
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
@@ -38,8 +39,8 @@
     --card: rgba(18, 19, 23, 0.7);
     --text: #eaeef3;
     --muted: #a1a7b3;
-    --primary: #e97210;
-    --primary-hover: #e17a26;
+    --primary: color-mix(in srgb, var(--primary-base) 80%, white);
+    --primary-hover: color-mix(in srgb, var(--primary-base) 80%, white);
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
@@ -151,6 +152,7 @@ body {
   color: var(--primary);
   font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
   cursor: pointer;
+  font-weight: bold;         /* make text bold */
 }
 #save-btn-headerbar:hover {
   color: var(--primary-hover);

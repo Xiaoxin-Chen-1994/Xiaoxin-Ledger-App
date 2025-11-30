@@ -389,7 +389,7 @@ auth.onAuthStateChanged(async user => {
       const chosenColor = profile.themeColor;
 
       // Update CSS variable
-      document.documentElement.style.setProperty('--primary', chosenColor);
+      document.documentElement.style.setProperty('--primary-base', chosenColor);
 
       // Update theme-color meta tag
       let metaThemeColor = document.querySelector("meta[name=theme-color]");
@@ -1260,7 +1260,7 @@ function openColorPicker() {
   const picker = document.getElementById('themeColorPicker');
 
   let currentColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--primary')
+    .getPropertyValue('--primary-base')
     .trim();
 
   // If it's already hex (#rrggbb), use directly
@@ -1302,7 +1302,7 @@ function resetThemeColor() {
 
 function applyThemeColor(color) {
   // Update CSS variable
-  document.documentElement.style.setProperty('--primary', color);
+  document.documentElement.style.setProperty('--primary-base', color);
 
   // Update meta tag
   let metaThemeColor = document.querySelector("meta[name=theme-color]");
