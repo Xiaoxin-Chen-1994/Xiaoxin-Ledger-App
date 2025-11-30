@@ -118,15 +118,24 @@ db.enablePersistence()
     console.error('Persistence error:', err);
   });
 
-navigator.serviceWorker.addEventListener('message', event => {
-  if (event.data.offline) {
-    document.getElementById('offline-banner').style.display = 'block';
-    console.log('showing banner')
-  } else {
-    document.getElementById('offline-banner').style.display = 'none';
-    console.log('hiding banner')
-  }
-});
+let isOffline = false;
+
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    const offline = !!event.data.offline;
+    if (offline !== isOffline) {
+      isOffline = offline;
+      const banner = document.getElementById('offline-banner');
+      if (offline) {
+        banner.style.display = 'block';
+        console.log('showing banner');
+      } else {
+        banner.style.display = 'none';
+        console.log('hiding banner');
+      }
+    }
+  });
+}
 
 // --- Authentication ---
 function signup() {

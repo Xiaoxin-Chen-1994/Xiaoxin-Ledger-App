@@ -14,29 +14,32 @@ self.addEventListener('install', event => {
   );
 });
 
-let offlineState = false;
-
-function notifyClients(state) {
-  if (state !== offlineState) {
-    offlineState = state;
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => client.postMessage({ offline: state }));
-    });
-  }
-}
-
 self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request).then(response => {
-      notifyClients(false); // online
+      // Network succeeded → tell page to hide banner
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => client.postMessage({ offline: false }));
+      });
       return response;
     }).catch(() => {
+      // Network failed → try cache
       return caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {
-          notifyClients(true); // offline
+          // Tell page to show banner
+          self.clients.matchAll().then(clients => {
+            clients.forEach(client => client.postMessage({ offline: true }));
+          });
           return cachedResponse;
         }
-        return new Response('Offline resource not available', { status: 404 });
+        // No cache and network failed
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({ offline: true }));
+        });
+        return new Response('Offline resource not available', {
+          status: 404,
+          statusText: 'Not Found'
+        });
       });
     })
   );
