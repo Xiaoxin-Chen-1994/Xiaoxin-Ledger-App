@@ -16,21 +16,31 @@ self.addEventListener('install', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    fetch(event.request).then(response => {
-      return response;
-    }).catch(() => {
-      // Offline: serve from cache
-      return caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) {
-          // Tell the page we’re offline
-          self.clients.matchAll().then(clients => {
-            clients.forEach(client => client.postMessage({ offline: true }));
-          });
-          return cachedResponse;
-        }
-        return new Response('Offline resource not available', { status: 404 });
+    caches.match(event.request).then(cachedResponse => {
+      if (cachedResponse) {
+        // Notify page we’re offline (served from cache)
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({ offline: true }));
+        });
+        return cachedResponse;
+      }
+
+      // Otherwise, try network
+      return fetch(event.request).then(response => {
+        // Notify page we’re online
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.postMessage({ offline: false }));
+        });
+        return response;
+      }).catch(() => {
+        // Network failed and no cache
+        return new Response('Offline resource not available', {
+          status: 404,
+          statusText: 'Not Found'
+        });
       });
     })
   );
 });
+
 
