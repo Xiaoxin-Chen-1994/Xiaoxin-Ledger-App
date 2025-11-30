@@ -79,6 +79,7 @@ let inputItems = null;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
+  showStatusMessage('Service Worker registered', 'success')
 }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
@@ -121,7 +122,6 @@ db.enablePersistence()
 let isOffline = false;
 
 if (navigator.serviceWorker) {
-  showMessage('Service Worker registered', 'success')
   navigator.serviceWorker.addEventListener('message', event => {
     const offline = !!event.data.offline;
     if (offline !== isOffline) {
