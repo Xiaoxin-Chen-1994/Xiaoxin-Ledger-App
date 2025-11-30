@@ -1282,22 +1282,6 @@ function openColorPicker() {
     const chosenColor = picker.value;
     applyThemeColor(chosenColor);
   };
-
-  // Save to Firestore
-  const currentUser = firebase.auth().currentUser;
-  if (currentUser) {
-    firebase.firestore()
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
-        ["profile.themeColor"]: picker.value
-      })
-      .then(() => {})
-      .catch(err => {
-        console.error("Error saving language:", err);
-        showStatusMessage(t.themeColorChangeFailed, "error");
-      });
-  }
 }
 
 function rgbToHex(rgb) {
@@ -1329,6 +1313,22 @@ function applyThemeColor(color) {
     metaThemeColor.name = "theme-color";
     metaThemeColor.content = color;
     document.head.appendChild(metaThemeColor);
+  }
+
+  // Save to Firestore
+  const currentUser = firebase.auth().currentUser;
+  if (currentUser) {
+    firebase.firestore()
+      .collection("users")
+      .doc(currentUser.uid)
+      .update({
+        ["profile.themeColor"]: color
+      })
+      .then(() => {})
+      .catch(err => {
+        console.error("Error saving language:", err);
+        showStatusMessage(t.themeColorChangeFailed, "error");
+      });
   }
 }
 
