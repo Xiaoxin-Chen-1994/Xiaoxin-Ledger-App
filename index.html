@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4caf50">
   <title>Ledger App</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
@@ -362,6 +363,15 @@
       <p>字体大小</p>
       <button class="settings-button" onclick="decreaseFontsize()">-</button>
       <button class="settings-button" onclick="increaseFontsize()">+</button>
+    </section>
+
+    <!-- Theme color -->
+    <section class="settings-section theme-color-change">
+      <p>主题色</p>
+      <button class="settings-button" onclick="openColorPicker()">更换主题色</button>
+      <button class="settings-button" onclick="resetThemeColor()">恢复默认</button>
+      <!-- Hidden color input -->
+      <input type="color" id="themeColorPicker" style="display:block;">
     </section>
 
     <!-- Color scheme -->

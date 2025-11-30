@@ -160,6 +160,7 @@ function signup() {
           language: currentLang,
           homeImages: [],
           fontsize: "",
+          themeColor: "",
           settings: {}
         },
         personalHouseholdId: householdId,
@@ -381,6 +382,24 @@ auth.onAuthStateChanged(async user => {
     } else {
       if (profile.fontsizeDesktop) {
         document.documentElement.style.setProperty("--font-size", profile.fontsizeDesktop);
+      }
+    }
+
+    if (profile.themeColor) {
+      const chosenColor = profile.themeColor;
+
+      // Update CSS variable
+      document.documentElement.style.setProperty('--primary', chosenColor);
+
+      // Update theme-color meta tag
+      let metaThemeColor = document.querySelector("meta[name=theme-color]");
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute("content", chosenColor);
+      } else {
+        metaThemeColor = document.createElement("meta");
+        metaThemeColor.name = "theme-color";
+        metaThemeColor.content = chosenColor;
+        document.head.appendChild(metaThemeColor);
       }
     }
 
@@ -1058,6 +1077,8 @@ const translations = {
     languageSwitchFailed: "Failed to save language",
     fontsizeChanged: "Fontsize changed",
     fontsizeChangeFailed: "Failed to save fontsize",
+    themeColorChanged: "Theme color changed",
+    themeColorChangeFailed: "Failed to save theme color",
     colorSchemeTitle: "Color Scheme",
     colorSchemeSwitched: "Color scheme is now changed",
     colorSchemeSwitchFailed: "Failed to save color scheme",
@@ -1102,6 +1123,8 @@ const translations = {
     languageSwitchFailed: "语言保存出错",
     fontsizeChanged: "字体大小已更改",
     fontsizeChangeFailed: "字体大小保存出错",
+    themeColorChanged: "主题色已更改",
+    themeColorChangeFailed: "主题色保存出错",
     colorSchemeTitle: "颜色方案",
     colorSchemeSwitched: "颜色方案已更新",
     colorSchemeSwitchFailed: "颜色方案保存出错",
@@ -1229,6 +1252,54 @@ function adjustFontsize(delta) {
       .catch(err => {
         console.error("Error saving language:", err);
         showStatusMessage(t.fontsizeChangeFailed, "error");
+      });
+  }
+}
+
+function openColorPicker() {
+  const picker = document.getElementById('themeColorPicker');
+  picker.click(); // open native color palette
+
+  picker.oninput = function() {
+    const chosenColor = picker.value;
+    applyThemeColor(chosenColor);
+  };
+}
+
+function resetThemeColor() {
+  // Define your default color (same as in CSS :root)
+  const defaultColor = "#e88b1a";
+  applyThemeColor(defaultColor);
+}
+
+function applyThemeColor(color) {
+  // Update CSS variable
+  document.documentElement.style.setProperty('--primary', color);
+
+  // Update meta tag
+  let metaThemeColor = document.querySelector("meta[name=theme-color]");
+  if (metaThemeColor) {
+    metaThemeColor.setAttribute("content", color);
+  } else {
+    metaThemeColor = document.createElement("meta");
+    metaThemeColor.name = "theme-color";
+    metaThemeColor.content = color;
+    document.head.appendChild(metaThemeColor);
+  }
+
+  // Save to Firestore
+  const currentUser = firebase.auth().currentUser;
+  if (currentUser) {
+    firebase.firestore()
+      .collection("users")
+      .doc(currentUser.uid)
+      .update({
+        ["profile.themeColor"]: color
+      })
+      .then(() => {})
+      .catch(err => {
+        console.error("Error saving language:", err);
+        showStatusMessage(t.themeColorChangeFailed, "error");
       });
   }
 }
