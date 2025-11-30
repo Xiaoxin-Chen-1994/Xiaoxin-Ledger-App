@@ -21,6 +21,7 @@ self.addEventListener('fetch', event => {
         // Notify page we’re offline (served from cache)
         self.clients.matchAll().then(clients => {
           clients.forEach(client => client.postMessage({ offline: true }));
+          console.log('tell client to show banner')
         });
         return cachedResponse;
       }
@@ -30,6 +31,7 @@ self.addEventListener('fetch', event => {
         // Notify page we’re online
         self.clients.matchAll().then(clients => {
           clients.forEach(client => client.postMessage({ offline: false }));
+          console.log('tell client to hide banner')
         });
         return response;
       }).catch(() => {
