@@ -963,7 +963,7 @@ function showPage(name, navBtn = null) {
   target.style.display = "block";
 
   // transaction page special handling
-  if (latestPage + "-page" === "transaction-page") {
+  if (latestPage.includes("transaction")) {
     document.getElementById("app-title").textContent = t.navTransaction;
     document.getElementById("save-btn-headerbar").style.display = "block";
 
