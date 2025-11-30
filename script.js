@@ -121,6 +121,8 @@ db.enablePersistence()
 navigator.serviceWorker.addEventListener('message', event => {
   if (event.data.offline) {
     document.getElementById('offline-banner').style.display = 'block';
+  } else {
+    document.getElementById('offline-banner').style.display = 'none';
   }
 });
 
