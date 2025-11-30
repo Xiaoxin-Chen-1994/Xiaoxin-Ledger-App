@@ -2,7 +2,7 @@ const CACHE_NAME = 'ledger-cache-v1';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/styles.css',
+    '/style.css',
     '/script.js',
     '/manifest.json',
     '/icons/icon-192.png'
