@@ -1052,7 +1052,7 @@ const translations = {
     category: "Category",
     items: "Items",
     addItem: "+ Add Item",
-    addTransaction: "Add Transaction",
+    saveTransaction: "Save",
     languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
     fontsizeChanged: "Fontsize changed",
@@ -1096,7 +1096,7 @@ const translations = {
     category: "类别",
     items: "项目",
     addItem: "+ 添加项目",
-    addTransaction: "添加交易",
+    saveTransaction: "保存",
     languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
     fontsizeChanged: "字体大小已更改",
@@ -1139,8 +1139,12 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("kanban-month-title").textContent = t.thisMonth;
   document.getElementById("kanban-year-title").textContent = t.thisYear;
 
-  // Ledger labels
-
+  // Transaction page
+  document.getElementById("save-btn-headerbar").textContent = t.saveTransaction;
+  document.getElementById("save-btn-expense").textContent = t.saveTransaction;
+  document.getElementById("save-btn-income").textContent = t.saveTransaction;
+  document.getElementById("save-btn-transfer").textContent = t.saveTransaction;
+  document.getElementById("save-btn-balance").textContent = t.saveTransaction;
 
   // Buttons
   // document.getElementById("add-item-btn").textContent = t.addItem;
