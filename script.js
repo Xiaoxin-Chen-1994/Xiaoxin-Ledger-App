@@ -124,6 +124,7 @@ navigator.serviceWorker.addEventListener('message', event => {
     console.log('showing banner')
   } else {
     document.getElementById('offline-banner').style.display = 'none';
+    console.log('hiding banner')
   }
 });
 
