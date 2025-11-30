@@ -1258,12 +1258,29 @@ function adjustFontsize(delta) {
 
 function openColorPicker() {
   const picker = document.getElementById('themeColorPicker');
+
+  // Load current CSS variable value into the picker
+  const currentColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary').trim();
+
+  if (currentColor) {
+    picker.value = rgbToHex(currentColor); // convert if needed
+  }
+
   picker.click(); // open native color palette
 
   picker.oninput = function() {
     const chosenColor = picker.value;
     applyThemeColor(chosenColor);
   };
+}
+
+function rgbToHex(rgb) {
+  const result = rgb.match(/\d+/g);
+  if (!result) return "#e88b1a";
+  return "#" + result.slice(0,3).map(x =>
+    ("0" + parseInt(x).toString(16)).slice(-2)
+  ).join('');
 }
 
 function resetThemeColor() {
