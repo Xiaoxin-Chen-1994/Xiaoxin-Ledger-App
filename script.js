@@ -990,6 +990,7 @@ function showPage(name, navBtn = null) {
     }
   } else {
     document.getElementById("app-title").textContent = "Xiaoxin's Ledger App";
+    document.getElementById("save-btn-headerbar").style.display = "none";
   }
 
 
