@@ -10,6 +10,10 @@
 </head>
 
 <body>
+  <div id="offline-banner" style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center;">
+    You are offline. Some features may be unavailable.
+  </div>
+
   <div class="header-bar">
     <button id="return-btn" onclick="goBack()" style="display: none;">返回</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
@@ -269,7 +273,7 @@
 
             <div class="form-row" id="transfer-notes-form">
               <label>备注</label>
-              <input type="text" id="transfer-amount">
+              <input type="text" id="transfer-notes">
             </div>
 
             <div class="actions">
@@ -303,7 +307,7 @@
 
             <div class="form-row" id="balance-notes-form">
               <label>备注</label>
-              <input type="text" id="balance-amount">
+              <input type="text" id="balance-notes">
             </div>
 
             <div class="actions">
