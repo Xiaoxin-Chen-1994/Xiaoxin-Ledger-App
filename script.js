@@ -62,6 +62,36 @@
 //       createdBy: string          // userId
 //       lastModifiedBy: string     // userId
 
+let currentUser = null;
+let currentLang = 'zh';
+let accounts = [];
+let persons = [];
+let households = [];
+let householdIds = [];
+let inputTypeIndex = 0;
+let inputTransactionTime = null;
+let inputHouseholdId = null;
+let inputPerson = null;
+let inputStore = null;
+let inputCategory = null;
+let inputItems = null;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered'));
+}
+
+if (isMobileBrowser()) { // use a smaller font for mobile
+  // Get current value of --font-size
+  let current = getComputedStyle(document.documentElement)
+    .getPropertyValue("--font-size");
+  // Trim and parse (assumes it's in rem)
+  current = parseFloat(current);
+  // Subtract 0.1
+  let newSize = current - 0.1;
+  // Set it back with unit
+  document.documentElement.style.setProperty("--font-size", newSize + "rem");
+}
 
 // --- Firebase Initialization ---
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -82,31 +112,11 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let currentUser = null;
-let currentLang = 'zh';
-let accounts = [];
-let persons = [];
-let households = [];
-let householdIds = [];
-let inputTypeIndex = 0;
-let inputTransactionTime = null;
-let inputHouseholdId = null;
-let inputPerson = null;
-let inputStore = null;
-let inputCategory = null;
-let inputItems = null;
-
-if (isMobileBrowser()) { // use a smaller font for mobile
-  // Get current value of --font-size
-  let current = getComputedStyle(document.documentElement)
-    .getPropertyValue("--font-size");
-  // Trim and parse (assumes it's in rem)
-  current = parseFloat(current);
-  // Subtract 0.1
-  let newSize = current - 0.1;
-  // Set it back with unit
-  document.documentElement.style.setProperty("--font-size", newSize + "rem");
-}
+// Enable offline persistence
+db.enablePersistence()
+  .catch(err => {
+    console.error('Persistence error:', err);
+  });
 
 // --- Authentication ---
 function signup() {
