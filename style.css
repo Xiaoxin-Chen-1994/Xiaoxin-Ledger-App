@@ -603,6 +603,10 @@ button.secondary {
   border: 0.0625rem solid var(--border);
 }
 
+button {
+  -webkit-tap-highlight-color: transparent; /* remove the tap highlight color on mobile device */
+}
+
 #ledger-list { list-style: none; padding: 0; margin-top: 0.75rem; }
 #ledger-list li {
   padding: 0.75rem;
