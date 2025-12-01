@@ -76,6 +76,25 @@ body {
   line-height: 1.6;
 }
 
+.header-bar {
+  position: relative;
+  width: 100%;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* centers the title */
+  background: var(--bg);
+  border-bottom: 0.0625rem solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+}
+
+.header-bar h1 {
+  margin: 0;
+  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
+  text-align: center;
+}
+
 .section {
   background: var(--card);
   border: 0.0625rem solid var(--border);
@@ -110,25 +129,6 @@ body {
 .page.active {
   display: block; /* only the active page is shown */
   min-height: 50rem;
-}
-
-.header-bar {
-  position: relative;
-  width: 100%;
-  height: 3.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;   /* centers the title */
-  background: var(--card);
-  border-bottom: 0.0625rem solid var(--border);
-  box-shadow: var(--shadow);
-  z-index: 1000;
-}
-
-.header-bar h1 {
-  margin: 0;
-  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
-  text-align: center;
 }
 
 #return-btn {
@@ -617,7 +617,7 @@ button.secondary {
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);   /* center horizontally */
-  width: 90%;
+  width: 80%;
   max-width: 600px;
   display: flex;
   justify-content: space-around;
