@@ -2097,7 +2097,7 @@ function ScrollToSelectItem(col, value = null) {
     const dt = Date.now() - touchStartTime;
 
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
-    const distanceSteps = Math.floor(dy / itemHeight);
+    const distanceSteps = Math.floor(dy / itemHeight / 2); //divide it by 2 to make it move less,
 
     const velocity = dy / dt; // px per ms
     const velocitySteps = Math.floor(velocity * 3); // tweak multiplier for sensitivity
