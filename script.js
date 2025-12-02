@@ -1636,11 +1636,11 @@ async function loadHouseholdMembers() {
     .doc(householdIds[0])
     .get();
 
-  const members = (householdDoc.data().members || []).slice(1);
+  const members = (householdDoc.data().members || []).slice(1); // slice(1) excludes the household owner
   console.log(members)
 
-  // ✅ If user is only in 1 household (their own)
-  if (members.length <= 1) {
+  // ✅ If no other user in the household
+  if (members.length < 1) {
     const msg = document.createElement("div");
     msg.textContent = "您的家庭中没有其他成员";
     msg.style.padding = "12px";
