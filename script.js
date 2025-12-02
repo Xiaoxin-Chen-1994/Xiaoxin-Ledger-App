@@ -2100,7 +2100,7 @@ function ScrollToSelectItem(col, value = null) {
     const distanceSteps = Math.round(dy / itemHeight); //divide it by 2 to make it move less,
 
     const velocity = dy / dt; // px per ms
-    const velocitySteps = Math.floor(velocity * 3); // tweak multiplier for sensitivity
+    const velocitySteps = Math.round(velocity * 3); // tweak multiplier for sensitivity
 
     const steps = distanceSteps + velocitySteps;
 
