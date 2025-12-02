@@ -498,13 +498,11 @@ function createItemRow() {
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
-    e.preventDefault();   // stop the browser from scrolling the page
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     row.classList.add("show-delete"); // reveal delete button
   });
 
   row.addEventListener("click", e => {
-    e.preventDefault();   // stop the browser from scrolling the page
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     // only hide if clicking outside the delete button
     if (!e.target.classList.contains("delete-btn")) {
@@ -515,12 +513,10 @@ function createItemRow() {
   // Swipe detection
   let startX = 0;
   row.addEventListener("touchstart", e => {
-    e.preventDefault();   // stop the browser from scrolling the page
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     startX = e.touches[0].clientX;
   });
   row.addEventListener("touchend", e => {
-    e.preventDefault();   // stop the browser from scrolling the page
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
@@ -555,6 +551,21 @@ document.querySelectorAll(".item-row").forEach(row => {
   const upgraded = createItemRow(name, notes);
   row.replaceWith(upgraded);
 });
+
+document.addEventListener('focusin', e => {
+  if (e.target.classList.contains('item-notes')) {
+    const nameInput = e.target.closest('.item-content').querySelector('.item-name');
+    if (nameInput) nameInput.style.flex = '2';
+  }
+});
+
+document.addEventListener('focusout', e => {
+  if (e.target.classList.contains('item-notes')) {
+    const nameInput = e.target.closest('.item-content').querySelector('.item-name');
+    if (nameInput) nameInput.style.flex = '6';
+  }
+});
+
 
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -665,12 +676,10 @@ function renderItems(parsedItems, activeTab) {
     // --- Swipe detection ---
     let startX = 0;
     row.addEventListener("touchstart", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       startX = e.touches[0].clientX;
     });
     row.addEventListener("touchend", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       const endX = e.changedTouches[0].clientX;
       const diff = startX - endX;
@@ -683,13 +692,11 @@ function renderItems(parsedItems, activeTab) {
 
     // --- Right‑click (desktop) ---
     row.addEventListener("contextmenu", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       row.classList.add("show-delete");
     });
 
     row.addEventListener("click", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       // only hide if clicking outside the delete button
       if (!e.target.classList.contains("delete-btn")) {
@@ -1679,13 +1686,11 @@ async function loadHouseholdMembers() {
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       li._startX = e.touches[0].clientX;
     });
 
     li.addEventListener("touchend", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       const dx = e.changedTouches[0].clientX - li._startX;
       if (dx < -50) showDeleteButton(li, uid); // swipe left
@@ -1794,13 +1799,11 @@ async function loadMyHouseholds() {
 
     // Swipe left (mobile)
     li.addEventListener("touchstart", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       li._startX = e.touches[0].clientX;
     });
 
     li.addEventListener("touchend", e => {
-      e.preventDefault();   // stop the browser from scrolling the page
       e.stopPropagation();  // stop the event from bubbling up to parent elements
       const dx = e.changedTouches[0].clientX - li._startX;
       if (dx < -50) showLeaveButton(li, hid); // swipe left
