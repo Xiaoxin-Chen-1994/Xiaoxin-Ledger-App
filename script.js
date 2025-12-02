@@ -2061,6 +2061,15 @@ function ScrollToSelectItem(col, value = null) {
     }
   }
 
+  // ✅ Click selection
+  col.addEventListener("click", (e) => {
+    const item = e.target.closest(".dt-item");
+    if (item && col.contains(item)) {
+      selectItem(item);
+      updateSelectorPreview();
+    }
+  });
+  
   // Wheel / trackpad scroll
   let wheelDelta = 0;
   col.addEventListener("wheel", (e) => {
