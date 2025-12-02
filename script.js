@@ -386,7 +386,7 @@ auth.onAuthStateChanged(async user => {
     }
 
     if (profile.themeColor) {
-      applyThemeColor(profile.themeColor, upload=false)
+      applyThemeColor(profile.themeColor, upload = false)
     }
 
     if (profile.colorScheme) {
@@ -745,7 +745,7 @@ wrapper.addEventListener("touchend", e => {
   let diff = startX - endX;
 
   if (Math.abs(diff) > 50) {
-    if (diff > 0 && inputTypeIndex < (tabButtons.length-1)) switchTab(inputTypeIndex + 1);
+    if (diff > 0 && inputTypeIndex < (tabButtons.length - 1)) switchTab(inputTypeIndex + 1);
     if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1);
   }
 });
@@ -980,7 +980,7 @@ function showPage(name, navBtn = null) {
       let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
       if (btn) {
         setCurrentTime(btn);
-        
+
         const { year, month, day, hour, minute } = parseButtonDate(btn);
 
         ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
@@ -1264,7 +1264,7 @@ function openColorPicker() {
 
   picker.click(); // open native color palette
 
-  picker.oninput = function() {
+  picker.oninput = function () {
     const chosenColor = picker.value;
     applyThemeColor(chosenColor);
   };
@@ -1272,12 +1272,12 @@ function openColorPicker() {
 
 function rgbToHex(rgb) {
   function rgbToHex(rgb) {
-  const result = rgb.match(/\d+/g);
-  if (!result) return "#4caf50";
-  return "#" + result.slice(0,3).map(x =>
-    ("0" + Number(x).toString(16)).slice(-2)
-  ).join('');
-}
+    const result = rgb.match(/\d+/g);
+    if (!result) return "#4caf50";
+    return "#" + result.slice(0, 3).map(x =>
+      ("0" + Number(x).toString(16)).slice(-2)
+    ).join('');
+  }
 }
 
 function resetThemeColor() {
@@ -1286,7 +1286,7 @@ function resetThemeColor() {
   applyThemeColor(defaultColor);
 }
 
-function applyThemeColor(color, upload=true) {
+function applyThemeColor(color, upload = true) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
@@ -1311,7 +1311,7 @@ function applyThemeColor(color, upload=true) {
         .update({
           ["profile.themeColor"]: color
         })
-        .then(() => {})
+        .then(() => { })
         .catch(err => {
           console.error("Error saving language:", err);
           showStatusMessage(t.themeColorChangeFailed, "error");
@@ -2014,23 +2014,33 @@ function ScrollToSelectItem(col, value = null) {
     updateSelectorPreview()
   }, { passive: false });
 
-  col.addEventListener("touchend", (e) => {
-    const dy = e.changedTouches[0].clientY - touchStartY;
+  let lastStep = 0;
+
+  col.addEventListener("touchmove", (e) => {
+    const dy = e.touches[0].clientY - touchStartY;
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
-    const steps = Math.round(dy / itemHeight);
+    const steps = Math.floor(dy / itemHeight);
 
-    const items = [...col.querySelectorAll(".dt-item")];
-    const selected = col.querySelector(".dt-item.selected");
-    if (!selected) return;
+    if (steps !== lastStep) {
+      const items = [...col.querySelectorAll(".dt-item")];
+      const selected = col.querySelector(".dt-item.selected");
+      if (!selected) return;
 
-    let index = items.indexOf(selected);
-    let newIndex = index - steps; // subtract because swipe up means dy < 0
-    newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
+      let index = items.indexOf(selected);
+      let newIndex = index - (steps - lastStep); // move only the delta
+      newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
 
-    selectItem(items[newIndex]);
+      selectItem(items[newIndex]);
+      lastStep = steps;
+    }
+    updateSelectorPreview()
+  });
+
+  col.addEventListener("touchend", () => {
     touchStartY = null;
-    updateSelectorPreview();
-  }, { passive: false });
+    lastStep = 0;
+  });
+
 
 }
 
