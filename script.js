@@ -2019,17 +2019,19 @@ function ScrollToSelectItem(col, value = null) {
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
     const steps = Math.round(dy / itemHeight);
 
+    const items = [...col.querySelectorAll(".dt-item")];
     const selected = col.querySelector(".dt-item.selected");
     if (!selected) return;
 
-    if (steps < 0) {
-      selectItem(selected.nextElementSibling);
-    } else if (steps > 0) {
-      selectItem(selected.previousElementSibling);
-    }
+    let index = items.indexOf(selected);
+    let newIndex = index - steps; // subtract because swipe up means dy < 0
+    newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
+
+    selectItem(items[newIndex]);
     touchStartY = null;
-    updateSelectorPreview()
+    updateSelectorPreview();
   }, { passive: false });
+
 }
 
 function updateSelectorPreview() {
