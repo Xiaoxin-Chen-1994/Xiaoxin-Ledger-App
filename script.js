@@ -1637,6 +1637,7 @@ async function loadHouseholdMembers() {
     .get();
 
   const members = (householdDoc.data().members || []).slice(1);
+  console.log(members)
 
   // ✅ If user is only in 1 household (their own)
   if (members.length <= 1) {
@@ -1884,6 +1885,75 @@ async function confirmLeaveHousehold(hid) {
   loadMyHouseholds();
 }
 
+async function deleteAccount() {
+  // Show confirmation dialog
+  if (!confirm("确定要删除您的账户吗？此操作不可撤销。")) return;
+
+  const user = firebase.auth().currentUser;
+  const userPassword = prompt("请输入您的密码以确认删除账户：");
+
+  if (!userPassword) return; // user cancelled
+
+  const credential = firebase.auth.EmailAuthProvider.credential(
+    user.email,
+    userPassword
+  );
+
+  await user.reauthenticateWithCredential(credential);
+
+  await confirmDeleteAccount();
+}
+
+async function confirmDeleteAccount() {
+  const uid = currentUser.uid;
+  const userRef = db.collection("users").doc(uid);
+  const myHouseholdRef = db.collection("households").doc(householdIds[0]);
+
+  try {
+    const householdSnap = await myHouseholdRef.get();
+    const householdData = householdSnap.data();
+    const members = householdData.members || [];
+    // For each member, remove this householdId from their user doc
+    for (const memberUid of members) {
+      const memberRef = db.collection("users").doc(memberUid);
+
+      await memberRef.update({
+        households: firebase.firestore.FieldValue.arrayRemove(householdIds[0])
+      });
+    }
+
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) throw new Error("User not found");
+
+    // Remove current user from each household this user was in
+    for (const hid of householdIds) {
+      const householdRef = db.collection("households").doc(hid);
+
+      await householdRef.update({
+        members: firebase.firestore.FieldValue.arrayRemove(uid)
+      });
+    }
+
+    // delete this user's own household
+    await myHouseholdRef.delete();
+
+    // Delete user document
+    await userRef.delete();
+
+    // Delete from Firebase Authentication
+    const currentUser = firebase.auth().currentUser;
+    await currentUser.delete();
+
+    alert("账户已成功删除");
+
+    // reload the whole app
+    window.location.reload();
+  } catch (err) {
+    console.error("Error deleting account:", err);
+    alert("删除失败: " + err.message);
+  }
+}
+
 function showStatusMessage(message, type = 'info', duration = 2000) {
 
   const status = document.getElementById('statusMessage');
@@ -2007,19 +2077,29 @@ function ScrollToSelectItem(col, value = null) {
 
   // Touch swipe
   let touchStartY = null;
-  col.addEventListener("touchstart", (e) => {
-    e.preventDefault();   // stop the browser from scrolling the page
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    touchStartY = e.touches[0].clientY;
-    updateSelectorPreview()
-  }, { passive: false });
-
+  let touchStartTime = null;
   let lastStep = 0;
 
+  col.addEventListener("touchstart", (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+    lastStep = 0;
+  }, { passive: false });
+
   col.addEventListener("touchmove", (e) => {
-    const dy = e.touches[0].clientY - touchStartY;
+    e.preventDefault();
+
+    const currentY = e.touches[0].clientY;
+    const dy = currentY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
-    const steps = Math.floor(dy / itemHeight);
+    const distanceSteps = Math.floor(dy / itemHeight);
+
+    const velocity = dy / dt; // px per ms
+    const velocitySteps = Math.floor(velocity * 3); // tweak multiplier for sensitivity
+
+    const steps = distanceSteps + velocitySteps;
 
     if (steps !== lastStep) {
       const items = [...col.querySelectorAll(".dt-item")];
@@ -2032,16 +2112,15 @@ function ScrollToSelectItem(col, value = null) {
 
       selectItem(items[newIndex]);
       lastStep = steps;
+      updateSelectorPreview();
     }
-    updateSelectorPreview()
-  });
+  }, { passive: false });
 
   col.addEventListener("touchend", () => {
     touchStartY = null;
+    touchStartTime = null;
     lastStep = 0;
-  });
-
-
+  }, { passive: false });
 }
 
 function updateSelectorPreview() {
