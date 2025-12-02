@@ -56,7 +56,7 @@
   }
 
   #statusMessage {
-    background-color: rgba(34, 34, 34, 0.6); /* translucent dark gray */
+    background: rgba(34, 34, 34, 0.6); /* translucent dark gray */
     color: #dddddd;
   }
 
@@ -262,7 +262,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button 
   position: absolute; /* now bottom works */
   bottom: calc(var(--font-size) * 0.7);
   color: var(--text);
-  background-color: var(--bg);
+  background: var(--bg);
   border: none;
   text-align: left;
   padding: 0;
@@ -694,7 +694,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   bottom: calc(var(--font-size)*5.5);
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(219, 219, 219, 0.6); /* dark translucent */
+  background: rgba(219, 219, 219, 0.6); /* dark translucent */
   color: #313131;
   padding: 10px 20px;
   border-radius: 6px;

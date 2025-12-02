@@ -386,21 +386,7 @@ auth.onAuthStateChanged(async user => {
     }
 
     if (profile.themeColor) {
-      const chosenColor = profile.themeColor;
-
-      // Update CSS variable
-      document.documentElement.style.setProperty('--primary-base', chosenColor);
-
-      // Update theme-color meta tag
-      let metaThemeColor = document.querySelector("meta[name=theme-color]");
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", chosenColor);
-      } else {
-        metaThemeColor = document.createElement("meta");
-        metaThemeColor.name = "theme-color";
-        metaThemeColor.content = chosenColor;
-        document.head.appendChild(metaThemeColor);
-      }
+      applyThemeColor(profile.themeColor, upload=false)
     }
 
     if (profile.colorScheme) {
@@ -941,11 +927,11 @@ function showPage(name, navBtn = null) {
   let latestNavBtn = null;
 
   // reset nav button colors
-  document.getElementById("nav-home").style.backgroundColor = "";
-  document.getElementById("nav-accounts").style.backgroundColor = "";
-  document.getElementById("nav-transaction").style.backgroundColor = "";
-  document.getElementById("nav-values").style.backgroundColor = "";
-  document.getElementById("nav-settings").style.backgroundColor = "";
+  document.getElementById("nav-home").style.background = "";
+  document.getElementById("nav-accounts").style.background = "";
+  document.getElementById("nav-transaction").style.background = "";
+  document.getElementById("nav-values").style.background = "";
+  document.getElementById("nav-settings").style.background = "";
 
   if (basePages.includes(name)) { // when clicking the base nav buttons, look for the latest stack
     currentBase = name;
@@ -957,7 +943,7 @@ function showPage(name, navBtn = null) {
     if (!target) return;
 
     if (navBtn && stack.length < 2) { // if already returned to base
-      document.getElementById(navBtn).style.backgroundColor = "var(--primary)";
+      document.getElementById(navBtn).style.background = "var(--primary)";
       document.getElementById("return-btn").style.display = "none";
     } else {
       document.getElementById("return-btn").style.display = "block";
@@ -1300,7 +1286,7 @@ function resetThemeColor() {
   applyThemeColor(defaultColor);
 }
 
-function applyThemeColor(color) {
+function applyThemeColor(color, upload=true) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
@@ -1315,20 +1301,22 @@ function applyThemeColor(color) {
     document.head.appendChild(metaThemeColor);
   }
 
-  // Save to Firestore
-  const currentUser = firebase.auth().currentUser;
-  if (currentUser) {
-    firebase.firestore()
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
-        ["profile.themeColor"]: color
-      })
-      .then(() => {})
-      .catch(err => {
-        console.error("Error saving language:", err);
-        showStatusMessage(t.themeColorChangeFailed, "error");
-      });
+  if (upload) {
+    // Save to Firestore
+    const currentUser = firebase.auth().currentUser;
+    if (currentUser) {
+      firebase.firestore()
+        .collection("users")
+        .doc(currentUser.uid)
+        .update({
+          ["profile.themeColor"]: color
+        })
+        .then(() => {})
+        .catch(err => {
+          console.error("Error saving language:", err);
+          showStatusMessage(t.themeColorChangeFailed, "error");
+        });
+    }
   }
 }
 
@@ -1904,7 +1892,7 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
   status.style.display = 'inline-block';
 
   // Reset styles
-  status.style.backgroundColor = '';
+  status.style.background = '';
   status.style.color = '';
 
   // Apply color based on type
@@ -2001,20 +1989,19 @@ function ScrollToSelectItem(col, value = null) {
   }
 
   // Wheel / trackpad scroll
+  let wheelDelta = 0;
   col.addEventListener("wheel", (e) => {
-    e.preventDefault();   // stop the browser from scrolling the page
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    const selected = col.querySelector(".dt-item.selected");
-    if (!selected) return;
+    e.preventDefault();
+    wheelDelta += e.deltaY;
 
-    if (e.deltaY > 0) {
-      // scrolling down → next item
-      selectItem(selected.nextElementSibling);
-    } else if (e.deltaY < 0) {
-      // scrolling up → previous item
-      selectItem(selected.previousElementSibling);
+    const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
+    if (wheelDelta >= itemHeight) {
+      selectItem(col.querySelector(".dt-item.selected")?.nextElementSibling);
+      wheelDelta = 0;
+    } else if (wheelDelta <= -itemHeight) {
+      selectItem(col.querySelector(".dt-item.selected")?.previousElementSibling);
+      wheelDelta = 0;
     }
-
     updateSelectorPreview()
   }, { passive: false });
 
@@ -2028,18 +2015,16 @@ function ScrollToSelectItem(col, value = null) {
   }, { passive: false });
 
   col.addEventListener("touchend", (e) => {
-    e.preventDefault();   // stop the browser from scrolling the page
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    if (touchStartY == null) return;
     const dy = e.changedTouches[0].clientY - touchStartY;
+    const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
+    const steps = Math.round(dy / itemHeight);
+
     const selected = col.querySelector(".dt-item.selected");
     if (!selected) return;
 
-    if (dy < 0) {
-      // finger moved up → content intended to scroll down → next item
+    if (steps < 0) {
       selectItem(selected.nextElementSibling);
-    } else if (dy > 0) {
-      // finger moved down → content intended to scroll up → previous item
+    } else if (steps > 0) {
       selectItem(selected.previousElementSibling);
     }
     touchStartY = null;
