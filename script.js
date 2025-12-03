@@ -2267,15 +2267,13 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-window.addEventListener('popstate', (event) => {
-  if (event.state && event.state.selector) {
-    const selName = event.state.selector;
+window.addEventListener('popstate', () => {
+  if (history.state && history.state.selector) {
+    const selName = history.state.selector;
     const sel = document.getElementById(selName + '-selector');
+    if (sel) sel.style.transform = 'translateY(120%)';
     alert("Selected: " + selName);
-    if (sel) {
-      sel.style.transform = 'translateY(120%)';
-    }
-    // Clear the dummy state so further back presses exit normally
+    // Clear it now so further back presses exit normally
     history.replaceState(null, '', location.href);
     return;
   }
