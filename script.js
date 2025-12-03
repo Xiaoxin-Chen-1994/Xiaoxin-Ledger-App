@@ -2289,14 +2289,16 @@ function showSelector(selName) {
     if (prevSel) {
       prevSel.style.transform = 'translateY(120%)';
     }
-  } else {
-    // Case 3: nothing open yet → push dummy state
+  }
+
+  // Only push if we're not already in a dummy state
+  if (!history.state || !history.state.selector) {
     history.pushState({ selector: true }, '', location.href);
   }
 
   // Open the new selector in cases 2 and 3
   openSelector = selName;
-  alert(`set openselector: ${openSelector}`);
+
   const sel = document.getElementById(selName + '-selector');
   if (sel) {
     sel.style.transform = 'translateY(0)';
@@ -2314,6 +2316,7 @@ function closeSelector() {
 
   // Clear dummy state so further back presses exit normally
   history.replaceState(null, '', location.href);
+   console.log('replace state', history)
 }
 
 window.addEventListener('popstate', () => {
