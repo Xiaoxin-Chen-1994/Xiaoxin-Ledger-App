@@ -2304,7 +2304,6 @@ function showSelector(selName) {
 }
 
 function closeSelector() {
-  alert(`openselector 2: ${openSelector}`);
   if (!openSelector) return;
 
   const sel = document.getElementById(openSelector + '-selector');
