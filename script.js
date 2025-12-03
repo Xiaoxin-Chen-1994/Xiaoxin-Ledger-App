@@ -2266,20 +2266,12 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
-function log(msg) {
-  const box = document.getElementById('debug-box') || 
-              document.body.appendChild(Object.assign(document.createElement('div'), { id: 'debug-box' }));
-  box.innerText += msg + '\n';
-}
 
 window.addEventListener('popstate', (event) => {
-  document.body.style.backgroundColor = 'lightyellow';
-  log("popstate: " + JSON.stringify(e.state));
   if (event.state && event.state.selector) {
     const selName = event.state.selector;
     const sel = document.getElementById(selName + '-selector');
-    document.body.style.backgroundColor = 'lightyellow';
-  showStatusMessage("sel: " + JSON.stringify(sel));
+    householdSelector.textContent = selName;
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
