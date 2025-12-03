@@ -2267,18 +2267,22 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-// Helper to check if datetime selector is active
-function isDatetimeSelectorActive() {
-  const sel = document.getElementById('datetime-selector');
-  return sel.style.transform === 'translateY(0)';
+// Helper: check if a selector element is active
+function isSelectorActive(el) {
+  return el.style.transform === 'translateY(0)';
 }
 
 // Listen for Android back/return (popstate)
 window.addEventListener('popstate', () => {
-  const sel = document.getElementById('datetime-selector');
-  if (isDatetimeSelectorActive()) {
-    // Hide the selector
-    sel.style.transform = 'translateY(120%)';
+  // Find all selector elements by class
+  const selectors = document.querySelectorAll('.selector');
+
+  // Check if any selector is active
+  const activeSel = Array.from(selectors).find(isSelectorActive);
+
+  if (activeSel) {
+    // Hide the active selector
+    activeSel.style.transform = 'translateY(120%)';
     // Prevent navigating away
     history.pushState(null, '', location.href);
   } else {
@@ -2288,7 +2292,6 @@ window.addEventListener('popstate', () => {
     } else {
       // At base page: let Android handle back (exit to home)
       // Do NOT pushState here
-      // Optionally: window.history.back(); but usually just no interception
     }
   }
 });
