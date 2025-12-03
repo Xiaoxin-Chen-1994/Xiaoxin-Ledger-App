@@ -2103,7 +2103,7 @@ function ScrollToSelectItem(col, value = null) {
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
     lastStep = 0;
-  }, { passive: false });
+  }, { passive: true });
 
   col.addEventListener("touchmove", (e) => {
     e.preventDefault();
@@ -2137,7 +2137,6 @@ function ScrollToSelectItem(col, value = null) {
   }, { passive: false });
 
   col.addEventListener("touchend", (e) => {
-    e.preventDefault(); // stops the click from firing
     touchStartY = null;
     touchStartTime = null;
     lastStep = 0;
