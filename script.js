@@ -2271,7 +2271,7 @@ window.addEventListener('popstate', (event) => {
   if (event.state && event.state.selector) {
     const selName = event.state.selector;
     const sel = document.getElementById(selName + '-selector');
-    householdSelector.textContent = selName;
+    alert("Selected: " + selName);
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
