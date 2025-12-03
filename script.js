@@ -2270,9 +2270,13 @@ function clickToSetNow() {
 let openSelector = null;
 
 function showSelector(selName) {
+  // If no selector is currently open, push a dummy state
+  if (!openSelector) {
+    history.pushState({ selector: true }, '', location.href);
+  }
+
   openSelector = selName;
   document.getElementById(selName + '-selector').style.transform = 'translateY(0)';
-  history.pushState({ selector: selName }, '', location.href);
 }
 
 window.addEventListener('popstate', () => {
