@@ -2117,7 +2117,7 @@ function ScrollToSelectItem(col, value = null) {
     const distanceSteps = dy / itemHeight;
 
     const velocity = dy / dt; // px per ms
-    const velocitySteps = velocity * 3; // tweak multiplier for sensitivity
+    const velocitySteps = Math.max(velocity * 3 - 2, 0); // tweak multiplier for sensitivity
 
     const steps = Math.round((distanceSteps + velocitySteps));
 
@@ -2385,3 +2385,4 @@ document.querySelectorAll(".item-group").forEach(group => {
     inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
   });
 });
+
