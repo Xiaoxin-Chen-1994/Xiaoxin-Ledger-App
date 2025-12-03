@@ -2279,11 +2279,15 @@ function showSelector(selName) {
   document.getElementById(selName + '-selector').style.transform = 'translateY(0)';
 }
 
+function closeSelector() {
+  document.getElementById(openSelector + '-selector').style.transform = 'translateY(120%)';
+  openSelector = null;
+  history.replaceState(null, '', location.href);
+}
+
 window.addEventListener('popstate', () => {
   if (openSelector) {
-    document.getElementById(openSelector + '-selector').style.transform = 'translateY(120%)';
-    openSelector = null;
-    history.replaceState(null, '', location.href);
+    closeSelector();
     return;
   }
 
