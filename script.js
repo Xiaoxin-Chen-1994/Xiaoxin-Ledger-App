@@ -2303,7 +2303,7 @@ function showSelector(selName) {
 }
 
 function closeSelector() {
-  alert(`openselector: ${openSelector}`);
+  alert(`openselector 2: ${openSelector}`);
   if (!openSelector) return;
 
   const sel = document.getElementById(openSelector + '-selector');
@@ -2317,7 +2317,7 @@ function closeSelector() {
 }
 
 window.addEventListener('popstate', () => {
-  alert(`openselector: ${openSelector}`);
+  alert(`openselector 1: ${openSelector}`);
 
   if (openSelector) {
     closeSelector();
@@ -2325,6 +2325,7 @@ window.addEventListener('popstate', () => {
   }
 
   const stack = historyStacks[currentBase];
+  alert(`stack: ${stack}`);
   if (stack.length > 1) {
     goBack();
     return;
