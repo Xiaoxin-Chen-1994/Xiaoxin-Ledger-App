@@ -1024,7 +1024,7 @@ function showPage(name, navBtn = null) {
 
 function goBack() {
   closeSelector();
-  
+
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
     stack.pop(); // remove current page
@@ -2272,18 +2272,40 @@ function clickToSetNow() {
 let openSelector = null;
 
 function showSelector(selName) {
-  // If no selector is currently open, push a dummy state
-  if (!openSelector) {
+  // Case 1: same selector already open → do nothing
+  if (openSelector === selName) {
+    return;
+  }
+
+  // Case 2: another selector is open → close it
+  if (openSelector) {
+    const prevSel = document.getElementById(openSelector + '-selector');
+    if (prevSel) {
+      prevSel.style.transform = 'translateY(120%)';
+    }
+  } else {
+    // Case 3: nothing open yet → push dummy state
     history.pushState({ selector: true }, '', location.href);
   }
 
+  // Open the new selector in cases 2 and 3
   openSelector = selName;
-  document.getElementById(selName + '-selector').style.transform = 'translateY(0)';
+  const sel = document.getElementById(selName + '-selector');
+  if (sel) {
+    sel.style.transform = 'translateY(0)';
+  }
 }
 
 function closeSelector() {
-  document.getElementById(openSelector + '-selector').style.transform = 'translateY(120%)';
+  if (!openSelector) return;
+
+  const sel = document.getElementById(openSelector + '-selector');
+  if (sel) {
+    sel.style.transform = 'translateY(120%)';
+  }
   openSelector = null;
+
+  // Clear dummy state so further back presses exit normally
   history.replaceState(null, '', location.href);
 }
 
@@ -2308,15 +2330,6 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
     e.stopPropagation();
     lastButton = btn;
 
-    // first hide all other selectors
-    selectorList.forEach(sel => {
-      if (sel !== datetimeSelector) {
-        sel.style.transform = "translateY(120%)";
-        openSelector = null;
-        history.replaceState(null, '', location.href); // clear dummy stack history
-      }
-    });
-
     // Show the desired selector
     showSelector('datetime')
   });
@@ -2327,15 +2340,6 @@ document.querySelectorAll(".selector-button[data-type='household']")
     btn.addEventListener("click", e => {
       e.stopPropagation();
       lastButton = btn;
-
-      // first hide all other selectors
-      selectorList.forEach(sel => {
-        if (sel !== householdSelector) {
-          sel.style.transform = "translateY(120%)";
-          openSelector = null;
-          history.replaceState(null, '', location.href); // clear dummy stack history
-        }
-      });
 
       showSelector('household')
 
