@@ -2267,21 +2267,15 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-function closeSelector() {
-  if (history.state && history.state.selector) {
-    const selName = history.state.selector;
+window.addEventListener('popstate', (event) => {
+  if (event.state && event.state.selector) {
+    const selName = event.state.selector;
     const sel = document.getElementById(selName + '-selector');
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
-    // Clear the dummy state without triggering another popstate
+    // Clear the dummy state so further back presses exit normally
     history.replaceState(null, '', location.href);
-  }
-}
-
-window.addEventListener('popstate', () => {
-  if (history.state && history.state.selector) {
-    closeSelector();
     return;
   }
 
@@ -2293,7 +2287,6 @@ window.addEventListener('popstate', () => {
 
   // At base page: let Android handle back (exit to home)
 });
-
 
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
