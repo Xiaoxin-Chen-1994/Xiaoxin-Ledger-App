@@ -2270,7 +2270,7 @@ function clickToSetNow() {
 function closeSelector(activeSel=null) {
   if (!activeSel) {
     const selectors = document.querySelectorAll('.selector');
-    const activeSel = Array.from(selectors).find(isSelectorActive);
+    activeSel = Array.from(selectors).find(isSelectorActive);
 
   }
   activeSel.style.transform = 'translateY(120%)';
