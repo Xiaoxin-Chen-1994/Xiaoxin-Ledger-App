@@ -2063,12 +2063,16 @@ function ScrollToSelectItem(col, value = null) {
     }
   }
 
+  let touchMoved = false;
+
   // ✅ Click selection
   col.addEventListener("click", (e) => {
-    const item = e.target.closest(".dt-item");
-    if (item && col.contains(item)) {
-      selectItem(item);
-      updateSelectorPreview();
+    if (!touchMoved) { // run only if it was a tap, not a drag
+      const item = e.target.closest(".dt-item");
+      if (item && col.contains(item)) {
+        selectItem(item);
+        updateSelectorPreview();
+      }
     }
   });
 
@@ -2095,6 +2099,7 @@ function ScrollToSelectItem(col, value = null) {
   let lastStep = 0;
 
   col.addEventListener("touchstart", (e) => {
+    touchMoved = false;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
     lastStep = 0;
@@ -2102,6 +2107,7 @@ function ScrollToSelectItem(col, value = null) {
 
   col.addEventListener("touchmove", (e) => {
     e.preventDefault();
+    touchMoved = true;
 
     const currentY = e.touches[0].clientY;
     const dy = currentY - touchStartY;
