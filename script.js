@@ -2268,21 +2268,19 @@ function clickToSetNow() {
 }
 
 function closeSelector() {
-  // Hide whichever selector is open based on history.state
   if (history.state && history.state.selector) {
     const selName = history.state.selector;
-    const sel = document.getElementById(selName + '-selector'); // e.g. datetime-selector, household-selector
+    const sel = document.getElementById(selName + '-selector');
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
-    // Clear the dummy state
-    history.back();
+    // Clear the dummy state without triggering another popstate
+    history.replaceState(null, '', location.href);
   }
 }
 
 window.addEventListener('popstate', () => {
   if (history.state && history.state.selector) {
-    // A selector is open → close it
     closeSelector();
     return;
   }
