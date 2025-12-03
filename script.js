@@ -2267,13 +2267,18 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
+let openSelector = null;
+
+function showSelector(selName) {
+  openSelector = selName;
+  document.getElementById(selName + '-selector').style.transform = 'translateY(0)';
+  history.pushState({ selector: selName }, '', location.href);
+}
+
 window.addEventListener('popstate', () => {
-  if (history.state && history.state.selector) {
-    const selName = history.state.selector;
-    const sel = document.getElementById(selName + '-selector');
-    if (sel) sel.style.transform = 'translateY(120%)';
-    alert("Selected: " + selName);
-    // Clear it now so further back presses exit normally
+  if (openSelector) {
+    document.getElementById(openSelector + '-selector').style.transform = 'translateY(120%)';
+    openSelector = null;
     history.replaceState(null, '', location.href);
     return;
   }
@@ -2303,8 +2308,7 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
     });
 
     // Show the desired selector
-    datetimeSelector.style.transform = "translateY(0)";
-    history.pushState({ selector: 'datetime' }, '', location.href); // push a dummy state to enable back with popstate
+    showSelector('datetime')
   });
 });
 
@@ -2321,8 +2325,7 @@ document.querySelectorAll(".selector-button[data-type='household']")
         }
       });
 
-      householdSelector.style.transform = "translateY(0)";
-      history.pushState({ selector: 'household' }, '', location.href); // push a dummy state to enable back with popstate
+      showSelector('household')
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
     });
