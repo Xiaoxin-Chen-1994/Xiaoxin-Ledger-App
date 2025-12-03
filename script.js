@@ -2130,7 +2130,8 @@ function ScrollToSelectItem(col, value = null) {
     }
   }, { passive: false });
 
-  col.addEventListener("touchend", () => {
+  col.addEventListener("touchend", (e) => {
+    e.preventDefault(); // stops the click from firing
     touchStartY = null;
     touchStartTime = null;
     lastStep = 0;
