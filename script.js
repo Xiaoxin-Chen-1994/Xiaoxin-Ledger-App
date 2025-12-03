@@ -2285,15 +2285,17 @@ window.addEventListener('popstate', () => {
     activeSel.style.transform = 'translateY(120%)';
     // Prevent navigating away
     history.pushState(null, '', location.href);
-  } else {
-    const stack = historyStacks[currentBase];
-    if (stack.length > 1) {
-      goBack();
-    } else {
-      // At base page: let Android handle back (exit to home)
-      // Do NOT pushState here
-    }
+    return; // ✅ stop here, don't let Android back continue
   }
+
+  const stack = historyStacks[currentBase];
+  if (stack.length > 1) {
+    goBack();
+    return; // ✅ stop here too
+  }
+
+  // At base page: let Android handle back (exit to home)
+  // Do NOT pushState here
 });
 
 /* Open selector */
