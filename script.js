@@ -2317,15 +2317,12 @@ function closeSelector() {
 }
 
 window.addEventListener('popstate', () => {
-  alert(`openselector 1: ${openSelector}`);
-
   if (openSelector) {
     closeSelector();
     return;
   }
 
   const stack = historyStacks[currentBase];
-  alert(`stack: ${stack}`);
   if (stack.length > 1) {
     goBack();
     return;
@@ -2360,15 +2357,12 @@ document.querySelectorAll(".selector-button[data-type='household']")
 
 /* Close when clicking outside */
 document.addEventListener("click", e => {
-  if (!datetimeSelector.contains(e.target)) {
-    datetimeSelector.style.transform = "translateY(120%)";
-    openSelector = null;
-    history.replaceState(null, '', location.href); // clear dummy stack history
-  }
-  if (!householdSelector.contains(e.target)) {
-    householdSelector.style.transform = "translateY(120%)";
-    openSelector = null;
-    history.replaceState(null, '', location.href); // clear dummy stack history
+  if (!openSelector) return; // nothing open → do nothing
+
+  const sel = document.getElementById(openSelector + "-selector");
+  if (sel && !sel.contains(e.target)) {
+    // Click was outside the currently open selector
+    closeSelector();
   }
 });
 
