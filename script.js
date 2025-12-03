@@ -2267,8 +2267,13 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-function closeSelector(sel) {
-  sel.style.transform = 'translateY(120%)';
+function closeSelector(activeSel=null) {
+  if !(activeSel) {
+    const selectors = document.querySelectorAll('.selector');
+    const activeSel = Array.from(selectors).find(isSelectorActive);
+
+  }
+  activeSel.style.transform = 'translateY(120%)';
   // Remove the dummy state
   if (history.state && history.state.selector) {
     history.back();
