@@ -2103,7 +2103,7 @@ function ScrollToSelectItem(col, value = null) {
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
     lastStep = 0;
-  }, { passive: true });
+  }, { passive: false });
 
   col.addEventListener("touchmove", (e) => {
     e.preventDefault();
