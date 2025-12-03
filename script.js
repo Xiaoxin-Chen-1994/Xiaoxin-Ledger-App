@@ -2313,6 +2313,7 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
 
     // Show the desired selector
     datetimeSelector.style.transform = "translateY(0)";
+    history.pushState({ selector: 'datetime' }, '', location.href); // push a dummy state to enable back with popstate
   });
 });
 
@@ -2330,6 +2331,7 @@ document.querySelectorAll(".selector-button[data-type='household']")
       });
 
       householdSelector.style.transform = "translateY(0)";
+      history.pushState({ selector: 'household' }, '', location.href); // push a dummy state to enable back with popstate
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
     });
