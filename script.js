@@ -2069,7 +2069,7 @@ function ScrollToSelectItem(col, value = null) {
       updateSelectorPreview();
     }
   });
-  
+
   // Wheel / trackpad scroll
   let wheelDelta = 0;
   col.addEventListener("wheel", (e) => {
@@ -2282,13 +2282,14 @@ window.addEventListener('popstate', () => {
     // Prevent navigating away
     history.pushState(null, '', location.href);
   } else {
-  const stack = historyStacks[currentBase];
-  if (stack.length > 1) {
-    goBack();
-  } else {
-    // At base page: let Android handle back (exit to home)
-    // Do NOT pushState here
-    // Optionally: window.history.back(); but usually just no interception
+    const stack = historyStacks[currentBase];
+    if (stack.length > 1) {
+      goBack();
+    } else {
+      // At base page: let Android handle back (exit to home)
+      // Do NOT pushState here
+      // Optionally: window.history.back(); but usually just no interception
+    }
   }
 });
 
