@@ -2267,25 +2267,26 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
+function closeSelector(sel) {
+  sel.style.transform = 'translateY(120%)';
+  // Remove the dummy state
+  if (history.state && history.state.selector) {
+    history.back();
+  }
+}
+
 // Helper: check if a selector element is active
 function isSelectorActive(el) {
   return el.style.transform === 'translateY(0)';
 }
 
-// Listen for Android back/return (popstate)
 window.addEventListener('popstate', () => {
-  // Find all selector elements by class
   const selectors = document.querySelectorAll('.selector');
-
-  // Check if any selector is active
   const activeSel = Array.from(selectors).find(isSelectorActive);
 
   if (activeSel) {
-    // Hide the active selector
-    activeSel.style.transform = 'translateY(120%)';
-    // Prevent navigating away
-    history.pushState(null, '', location.href);
-    return; // ✅ stop here, don't let Android back continue
+    closeSelector(activeSel);
+    return; // ✅ stop here, don’t also run goBack
   }
 
   const stack = historyStacks[currentBase];
@@ -2295,7 +2296,6 @@ window.addEventListener('popstate', () => {
   }
 
   // At base page: let Android handle back (exit to home)
-  // Do NOT pushState here
 });
 
 /* Open selector */
