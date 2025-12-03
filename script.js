@@ -2047,7 +2047,7 @@ function ScrollToSelectItem(col, value = null) {
   }
 
   // If a value was passed in, find the matching item
-  if (value) {
+  if (value !== null && value !== undefined) {
     const items = [...col.querySelectorAll(".dt-item")];
     // If value is a number, compare numerically
     let target;
@@ -2332,6 +2332,7 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
 
     // Show the desired selector
     showSelector('datetime')
+
   });
 });
 
