@@ -2267,6 +2267,31 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
+// Helper to check if datetime selector is active
+function isDatetimeSelectorActive() {
+  const sel = document.getElementById('datetime-selector');
+  return sel.style.transform === 'translateY(0)';
+}
+
+// Listen for Android back/return (popstate)
+window.addEventListener('popstate', () => {
+  const sel = document.getElementById('datetime-selector');
+  if (isDatetimeSelectorActive()) {
+    // Hide the selector
+    sel.style.transform = 'translateY(120%)';
+    // Prevent navigating away
+    history.pushState(null, '', location.href);
+  } else {
+  const stack = historyStacks[currentBase];
+  if (stack.length > 1) {
+    goBack();
+  } else {
+    // At base page: let Android handle back (exit to home)
+    // Do NOT pushState here
+    // Optionally: window.history.back(); but usually just no interception
+  }
+});
+
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
   btn.addEventListener("click", e => {
