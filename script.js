@@ -2266,16 +2266,23 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
+function log(msg) {
+  const box = document.getElementById('debug-box') || 
+              document.body.appendChild(Object.assign(document.createElement('div'), { id: 'debug-box' }));
+  box.innerText += msg + '\n';
+}
 
 window.addEventListener('popstate', (event) => {
+  document.body.style.backgroundColor = 'lightyellow';
+  log("popstate: " + JSON.stringify(e.state));
   if (event.state && event.state.selector) {
     const selName = event.state.selector;
     const sel = document.getElementById(selName + '-selector');
-    showStatusMessage(sel, "info")
+    document.body.style.backgroundColor = 'lightyellow';
+  showStatusMessage("sel: " + JSON.stringify(sel));
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
-    
     // Clear the dummy state so further back presses exit normally
     history.replaceState(null, '', location.href);
     return;
@@ -2289,6 +2296,8 @@ window.addEventListener('popstate', (event) => {
 
   // At base page: let Android handle back (exit to home)
 });
+
+
 
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
