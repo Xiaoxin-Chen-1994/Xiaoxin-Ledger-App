@@ -2271,9 +2271,11 @@ window.addEventListener('popstate', (event) => {
   if (event.state && event.state.selector) {
     const selName = event.state.selector;
     const sel = document.getElementById(selName + '-selector');
+    showStatusMessage(sel, "info")
     if (sel) {
       sel.style.transform = 'translateY(120%)';
     }
+    
     // Clear the dummy state so further back presses exit normally
     history.replaceState(null, '', location.href);
     return;
