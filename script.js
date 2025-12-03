@@ -2268,7 +2268,7 @@ function clickToSetNow() {
 }
 
 function closeSelector(activeSel=null) {
-  if !(activeSel) {
+  if (!activeSel) {
     const selectors = document.querySelectorAll('.selector');
     const activeSel = Array.from(selectors).find(isSelectorActive);
 
