@@ -2296,6 +2296,7 @@ function showSelector(selName) {
 
   // Open the new selector in cases 2 and 3
   openSelector = selName;
+  alert(`set openselector: ${openSelector}`);
   const sel = document.getElementById(selName + '-selector');
   if (sel) {
     sel.style.transform = 'translateY(0)';
