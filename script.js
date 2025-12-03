@@ -2276,7 +2276,7 @@ function closeSelector() {
       sel.style.transform = 'translateY(120%)';
     }
     // Clear the dummy state
-    history.replaceState(null, '', location.href);
+    history.back();
   }
 }
 
