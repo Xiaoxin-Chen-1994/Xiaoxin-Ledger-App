@@ -1023,6 +1023,8 @@ function showPage(name, navBtn = null) {
 }
 
 function goBack() {
+  closeSelector();
+  
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
     stack.pop(); // remove current page
@@ -2310,11 +2312,10 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
     selectorList.forEach(sel => {
       if (sel !== datetimeSelector) {
         sel.style.transform = "translateY(120%)";
+        openSelector = null;
+        history.replaceState(null, '', location.href); // clear dummy stack history
       }
     });
-
-    openSelector = null;
-    history.replaceState(null, '', location.href); // clear dummy stack history
 
     // Show the desired selector
     showSelector('datetime')
@@ -2331,11 +2332,10 @@ document.querySelectorAll(".selector-button[data-type='household']")
       selectorList.forEach(sel => {
         if (sel !== householdSelector) {
           sel.style.transform = "translateY(120%)";
+          openSelector = null;
+          history.replaceState(null, '', location.href); // clear dummy stack history
         }
       });
-
-      openSelector = null;
-      history.replaceState(null, '', location.href); // clear dummy stack history
 
       showSelector('household')
 
