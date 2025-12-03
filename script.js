@@ -2276,7 +2276,7 @@ function closeSelector(activeSel=null) {
   activeSel.style.transform = 'translateY(120%)';
   // Remove the dummy state
   if (history.state && history.state.selector) {
-    history.back();
+    history.replaceState(null, '', location.href); 
   }
 }
 
