@@ -2292,8 +2292,6 @@ window.addEventListener('popstate', () => {
   // At base page: let Android handle back (exit to home)
 });
 
-
-
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
   btn.addEventListener("click", e => {
@@ -2306,6 +2304,9 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
         sel.style.transform = "translateY(120%)";
       }
     });
+
+    openSelector = null;
+    history.replaceState(null, '', location.href); // clear dummy stack history
 
     // Show the desired selector
     showSelector('datetime')
@@ -2325,6 +2326,9 @@ document.querySelectorAll(".selector-button[data-type='household']")
         }
       });
 
+      openSelector = null;
+      history.replaceState(null, '', location.href); // clear dummy stack history
+
       showSelector('household')
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
@@ -2335,9 +2339,13 @@ document.querySelectorAll(".selector-button[data-type='household']")
 document.addEventListener("click", e => {
   if (!datetimeSelector.contains(e.target)) {
     datetimeSelector.style.transform = "translateY(120%)";
+    openSelector = null;
+    history.replaceState(null, '', location.href); // clear dummy stack history
   }
   if (!householdSelector.contains(e.target)) {
     householdSelector.style.transform = "translateY(120%)";
+    openSelector = null;
+    history.replaceState(null, '', location.href); // clear dummy stack history
   }
 });
 
