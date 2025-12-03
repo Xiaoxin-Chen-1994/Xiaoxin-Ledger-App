@@ -2267,18 +2267,25 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-function closeSelector(activeSel=null) {
+function closeSelector(activeSel = null) {
+  // If no element was passed in, try to find one
   if (!activeSel) {
     const selectors = document.querySelectorAll('.selector');
     activeSel = Array.from(selectors).find(isSelectorActive);
-
   }
+
+  // If still nothing found, just return safely
+  if (!activeSel) return;
+
+  // Hide the selector
   activeSel.style.transform = 'translateY(120%)';
-  // Remove the dummy state
+
+  // Clear dummy state without re-triggering popstate
   if (history.state && history.state.selector) {
-    history.replaceState(null, '', location.href); 
+    history.replaceState(null, '', location.href);
   }
 }
+
 
 // Helper: check if a selector element is active
 function isSelectorActive(el) {
