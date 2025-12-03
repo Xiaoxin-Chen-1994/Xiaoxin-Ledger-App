@@ -2267,48 +2267,35 @@ function clickToSetNow() {
   ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
 }
 
-function closeSelector(activeSel = null) {
-  // If no element was passed in, try to find one
-  if (!activeSel) {
-    const selectors = document.querySelectorAll('.selector');
-    activeSel = Array.from(selectors).find(isSelectorActive);
-  }
-
-  // If still nothing found, just return safely
-  if (!activeSel) return;
-
-  // Hide the selector
-  activeSel.style.transform = 'translateY(120%)';
-
-  // Clear dummy state without re-triggering popstate
+function closeSelector() {
+  // Hide whichever selector is open based on history.state
   if (history.state && history.state.selector) {
+    const selName = history.state.selector;
+    const sel = document.getElementById(selName + '-selector'); // e.g. datetime-selector, household-selector
+    if (sel) {
+      sel.style.transform = 'translateY(120%)';
+    }
+    // Clear the dummy state
     history.replaceState(null, '', location.href);
   }
 }
 
-
-// Helper: check if a selector element is active
-function isSelectorActive(el) {
-  return el.style.transform === 'translateY(0)';
-}
-
 window.addEventListener('popstate', () => {
-  const selectors = document.querySelectorAll('.selector');
-  const activeSel = Array.from(selectors).find(isSelectorActive);
-
-  if (activeSel) {
-    closeSelector(activeSel);
-    return; // ✅ stop here, don’t also run goBack
+  if (history.state && history.state.selector) {
+    // A selector is open → close it
+    closeSelector();
+    return;
   }
 
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
     goBack();
-    return; // ✅ stop here too
+    return;
   }
 
   // At base page: let Android handle back (exit to home)
 });
+
 
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
