@@ -46,7 +46,7 @@
       </div>
 
       <div id="login-fontsize-change" class="login-fontsize-change">
-        <p id="login-fontsize-change-text">字体大小</p>
+        <p id="login-fontsize-title">字体大小</p>
         <button class="settings-button" onclick="decreaseFontsize()">-</button>
         <button class="settings-button" onclick="increaseFontsize()">+</button>
       </div>
@@ -354,13 +354,13 @@
 
     <!-- Basic settings -->
     <section class="settings-section basic-settings">
-      <p>基础设置</p>
-      <button class="settings-button" onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+      <p id="basic-settings-title">基础设置</p>
+      <button id="open-basic-settings" class="settings-button" onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
     </section>
 
     <!-- Household -->
     <section class="settings-section household-row">
-      <p>我的家庭</p>
+      <p id="households-title">我的家庭</p>
       <div id="household-actions">
         <button id="rename-btn" class="settings-button">重命名我的家庭</button>
         <div id="rename-panel" class="panel hidden">
@@ -392,7 +392,7 @@
 
   <div class="page" id="basic-settings-page">
     <div class="settings-header">
-      <h2 id="basic-settings-title">基础设置</h2>
+      <h2 id="basic-settings-header">基础设置</h2>
     </div>
 
     <!-- Language -->
@@ -404,7 +404,7 @@
 
     <!-- Language -->
     <section class="settings-section fontsize-change">
-      <p id="settings-fontsize-change-text">字体大小</p>
+      <p id="settings-fontsize-title">字体大小</p>
       <button class="settings-button" onclick="decreaseFontsize()">-</button>
       <button class="settings-button" onclick="increaseFontsize()">+</button>
     </section>
@@ -431,13 +431,13 @@
     <section class="settings-section home-image">
       <p id="home-image-title">首页图</p>
       <div id="home-image-actions">
-        <button id="manage-home-image-btn" class="settings-button">Manage</button>
+        <button id="manage-home-image-btn" class="settings-button">管理</button>
         <div id="home-image-panel" style="display:none;">
           <p id="home-image-instruction">您可在此处添加您想要使用的在线图片链接。</p>
           <div id="home-image-list"></div>
           <div class="home-image-controls">
-            <button id="add-home-image-btn" type="button">Add</button>
-            <button id="save-home-image-btn" type="button">Save</button>
+            <button id="add-home-image-btn" type="button">增加</button>
+            <button id="save-home-image-btn" type="button">保存</button>
           </div>
         </div>
       </div>

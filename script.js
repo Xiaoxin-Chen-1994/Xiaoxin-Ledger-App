@@ -1117,10 +1117,13 @@ const translations = {
     category: "Category",
     items: "Items",
     addItem: "+ Add Item",
-    saveTransaction: "Save",
+    save: "Save",
+    basicSettingsTitle: "Basic Settings",
+    openBasicSettings: "Open Basic Settings",
+    myHouseholdsTitle: "My Households",
     languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
-    fontsizeLabel: "Fontsize",
+    fontsizeTitle: "Fontsize",
     fontsizeChanged: "Fontsize changed",
     fontsizeChangeFailed: "Failed to save fontsize",
     themeColorChanged: "Theme color changed",
@@ -1129,6 +1132,8 @@ const translations = {
     colorSchemeSwitched: "Color scheme is now changed",
     colorSchemeSwitchFailed: "Failed to save color scheme",
     homeImageTitle: "Homepage Image",
+    manage: "Manage",
+    add: "Add",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
     homeImageSaved: "Homepage images saved",
     homeImageSaveFailed: "Failed to save homepage images",
@@ -1164,10 +1169,13 @@ const translations = {
     category: "类别",
     items: "项目",
     addItem: "+ 添加项目",
-    saveTransaction: "保存",
+    save: "保存",
+    basicSettingsTitle: "基础设置",
+    openBasicSettings: "打开基础设置",
+    myHouseholdsTitle: "我的家庭",
     languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
-    fontsizeLabel: "字体大小",
+    fontsizeTitle: "字体大小",
     fontsizeChanged: "字体大小已更改",
     fontsizeChangeFailed: "字体大小保存出错",
     themeColorChanged: "主题色已更改",
@@ -1176,6 +1184,8 @@ const translations = {
     colorSchemeSwitched: "颜色方案已更新",
     colorSchemeSwitchFailed: "颜色方案保存出错",
     homeImageTitle: "首页图",
+    manage: "管理",
+    add: "增加",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
     homeImageSaveFailed: "首页图保存出错",
@@ -1211,11 +1221,11 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("kanban-year-title").textContent = t.thisYear;
 
   // Transaction page
-  document.getElementById("save-btn-headerbar").textContent = t.saveTransaction;
-  document.getElementById("save-btn-expense").textContent = t.saveTransaction;
-  document.getElementById("save-btn-income").textContent = t.saveTransaction;
-  document.getElementById("save-btn-transfer").textContent = t.saveTransaction;
-  document.getElementById("save-btn-balance").textContent = t.saveTransaction;
+  document.getElementById("save-btn-headerbar").textContent = t.save;
+  document.getElementById("save-btn-expense").textContent = t.save;
+  document.getElementById("save-btn-income").textContent = t.save;
+  document.getElementById("save-btn-transfer").textContent = t.save;
+  document.getElementById("save-btn-balance").textContent = t.save;
 
   // Buttons
   // document.getElementById("add-item-btn").textContent = t.addItem;
@@ -1223,12 +1233,21 @@ function setLanguage(lang, showMessage = false) {
   // document.getElementById("logout-btn").textContent = t.logout;
 
   // Settings
-  document.querySelectorAll('[id$="-fontsize-change-text"]').forEach(el => {
-    el.textContent = t.fontsizeLabel;
+  document.getElementById("basic-settings-title").textContent = t.basicSettingsTitle;
+  document.getElementById("open-basic-settings").textContent = t.openBasicSettings;
+  document.getElementById("households-title").textContent = t.myHouseholdsTitle;
+
+  // Basic settings
+  document.getElementById("basic-settings-header").textContent = t.basicSettingsTitle;
+  document.querySelectorAll('[id$="-fontsize-title"]').forEach(el => {
+    el.textContent = t.fontsizeTitle;
   });
   document.getElementById("color-scheme-title").textContent = t.colorSchemeTitle;
   document.getElementById("home-image-title").textContent = t.homeImageTitle;
+  document.getElementById("manage-home-image-btn").textContent = t.manage;
   document.getElementById("home-image-instruction").textContent = t.homeImageInstruction;
+  document.getElementById("add-home-image-btn").textContent = t.add;
+  document.getElementById("save-home-image-btn").textContent = t.save;
 
   // Nav
   document.getElementById("nav-home").textContent = t.navHome;
