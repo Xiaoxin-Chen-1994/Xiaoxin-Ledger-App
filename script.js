@@ -952,6 +952,7 @@ function showPage(name, navBtn = currentBase) {
     if (currentBase !== name && latestPage != null) {
       // hide the current page
       document.getElementById(latestPage + "-page").style.display = "none";
+      document.getElementById(currentBase + "-page").style.display = "none";
     }
 
     currentBase = name;
