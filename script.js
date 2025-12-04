@@ -987,6 +987,9 @@ function showPage(name, navBtn = currentBase) {
     target.zIndex = stack.length;
 
     document.getElementById("return-btn").style.display = "block";
+
+    // push a new history entry for this non-base page
+    history.pushState({ page: latestPage, base: currentBase }, "", "#" + latestPage);
   }
 
   // transaction page special handling
@@ -1045,6 +1048,9 @@ function goBack() {
     }
 
     showPage(prevPage, prevNavBtn);
+    
+    // replace state to reflect the new top of stack
+    history.replaceState({ page: prevPage, base: currentBase }, "", "#" + prevPage);
   }
 }
 
