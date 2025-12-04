@@ -1,5 +1,8 @@
 // Data structure: 
-// users/{userId}
+// profiles/{userId} // accessible to all
+//   - email: string
+
+// users/{userId} // accessible only to the current user
 //   - profile
 //       email: string
 //       language: string
@@ -25,7 +28,7 @@
 //          toAccountId: string
 //          personId: string
 
-// households/{householdId}
+// households/{householdId} // accessible to all users in the current household
 //   - name: string
 //   - members: [userId]           // array of user IDs
 
@@ -139,7 +142,7 @@ function signup() {
   firebase.auth().createUserWithEmailAndPassword(email, password)
     .then(cred => {
       const user = cred.user;
-      const householdId = user.uid; // personal household id
+      const myHouseholdId = user.uid; // personal household id
 
       // Create household
       const householdName = currentLang === "en"
@@ -147,10 +150,15 @@ function signup() {
         : `${email}的账本`;
 
       // Create household doc
-      firebase.firestore().collection("households").doc(householdId).set({
+      firebase.firestore().collection("households").doc(myHouseholdId).set({
         name: householdName,
         admin: user.uid,
         members: [user.uid]
+      });
+
+      // Create profile doc
+      firebase.firestore().collection("profiles").doc(user.uid).set({
+        email: email,
       });
 
       // Create user doc
@@ -163,8 +171,8 @@ function signup() {
           themeColor: "",
           settings: {}
         },
-        personalHouseholdId: householdId,
-        households: [householdId]
+        personalHouseholdId: myHouseholdId,
+        households: [myHouseholdId]
       });
 
       // Initialize user defaults with empty placeholders
@@ -203,7 +211,7 @@ function signup() {
       });
 
       // Initialize household subcollections with empty placeholders
-      const householdRef = firebase.firestore().collection("households").doc(householdId);
+      const householdRef = firebase.firestore().collection("households").doc(myHouseholdId);
 
       // Accounts
       householdRef.collection("accounts").doc().set({
@@ -1222,11 +1230,11 @@ function adjustFontsize(delta) {
     .getPropertyValue("--font-size")
     .trim();
 
-  // Parse numeric part (assumes rem unit)
+    // Parse numeric part (assumes rem unit)
   let value = parseFloat(current.replace("rem", ""));
   value = Math.max(0.5, value + delta); // clamp to minimum 0.5rem
 
-  const newSize = value.toFixed(1) + "rem";
+  const newSize = value.toFixed(2) + "rem";
 
   // Apply to CSS variable
   document.documentElement.style.setProperty("--font-size", newSize);
@@ -1437,8 +1445,7 @@ function saveHomeImages() {
 
 // --- Home: Kanban summaries ---
 async function updateHomeKanban() {
-  if (!currentUser) return;
-  const entriesSnap = await db.collection("ledgers").doc(currentUser.uid).collection("entries").get();
+  const entriesSnap = await db.collection("households").doc(householdIds[0]).collection("entries").get();
   const entries = entriesSnap.docs.map(d => d.data());
 
   const sumBy = (filterFn) => {
@@ -1603,25 +1610,25 @@ document.getElementById("invite-confirm").onclick = async () => {
   const email = document.getElementById("invite-email").value.trim();
   if (!email) return alert("请输入邮箱");
 
-  const myHouseholdId = householdIds[0]; // you already track this
+  const myHouseholdId = householdIds[0];
 
   // 1. Find user by email
   const userQuery = await firebase.firestore()
-    .collection("users")
-    .where("profile.email", "==", email)
+    .collection("profiles")
+    .where("email", "==", email)
     .get();
 
   if (userQuery.empty) {
     alert("未找到该用户");
     return;
   }
-
-  const invitedUserDoc = userQuery.docs[0];
-  const invitedUserId = invitedUserDoc.id;
-
+  const invitedUserProfileDoc = userQuery.docs[0]; // first matching doc
+  const invitedUserId = invitedUserProfileDoc.id; // the doc ID (your userId)
+  
   // 2. Add household to invited user
-  await invitedUserDoc.ref.update({
-    households: firebase.firestore.FieldValue.arrayUnion(myHouseholdId)
+  await db.doc(`users/${invitedUserId}`).update({
+    households: firebase.firestore.FieldValue.arrayUnion(myHouseholdId),
+    lastHouseholdChange: myHouseholdId
   });
 
   // 3. Add invited user to household members
@@ -1646,7 +1653,6 @@ async function loadHouseholdMembers() {
     .get();
 
   const members = (householdDoc.data().members || []).slice(1); // slice(1) excludes the household owner
-  console.log(members)
 
   // ✅ If no other user in the household
   if (members.length < 1) {
@@ -1661,13 +1667,11 @@ async function loadHouseholdMembers() {
   }
 
   for (const uid of members) {
-    const userDoc = await firebase.firestore()
-      .collection("users")
+    const userProfileDoc = await firebase.firestore()
+      .collection("profiles")
       .doc(uid)
       .get();
-    const profileSnap = userDoc.data().profile;
-
-    const email = profileSnap.email;
+    const email = userProfileDoc.data().email;
 
     const li = document.createElement("li");
     li.textContent = email;
@@ -1734,12 +1738,12 @@ function hideDeleteButton(li) {
 async function confirmRemoveMember(uid) {
   if (!confirm("确定要将该成员移出 household 吗？")) return;
 
-  const hid = householdIds[0];
+  const myHouseholdId = householdIds[0];
 
   // Remove from household members
   await firebase.firestore()
     .collection("households")
-    .doc(hid)
+    .doc(myHouseholdId)
     .update({
       members: firebase.firestore.FieldValue.arrayRemove(uid)
     });
@@ -1749,7 +1753,8 @@ async function confirmRemoveMember(uid) {
     .collection("users")
     .doc(uid)
     .update({
-      households: firebase.firestore.FieldValue.arrayRemove(hid)
+      households: firebase.firestore.FieldValue.arrayRemove(myHouseholdId),
+      lastHouseholdChange: myHouseholdId
     });
 
   loadHouseholdMembers();
@@ -1913,8 +1918,21 @@ async function confirmDeleteAccount() {
   const uid = currentUser.uid;
   const userRef = db.collection("users").doc(uid);
   const myHouseholdRef = db.collection("households").doc(householdIds[0]);
+  const myProfileRef = db.collection("profiles").doc(uid);
 
   try {
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) throw new Error("User not found");
+
+    // Remove current user from each household this user was in
+    for (const hid of householdIds.slice(1)) {
+      const householdRef = db.collection("households").doc(hid);
+
+      await householdRef.update({
+        members: firebase.firestore.FieldValue.arrayRemove(uid)
+      });
+    }
+
     const householdSnap = await myHouseholdRef.get();
     const householdData = householdSnap.data();
     const members = householdData.members || [];
@@ -1923,21 +1941,13 @@ async function confirmDeleteAccount() {
       const memberRef = db.collection("users").doc(memberUid);
 
       await memberRef.update({
-        households: firebase.firestore.FieldValue.arrayRemove(householdIds[0])
+        households: firebase.firestore.FieldValue.arrayRemove(householdIds[0]),
+        lastHouseholdChange: householdIds[0]
       });
     }
 
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) throw new Error("User not found");
-
-    // Remove current user from each household this user was in
-    for (const hid of householdIds) {
-      const householdRef = db.collection("households").doc(hid);
-
-      await householdRef.update({
-        members: firebase.firestore.FieldValue.arrayRemove(uid)
-      });
-    }
+    // delete this user from profiles
+    await myProfileRef.delete();
 
     // delete this user's own household
     await myHouseholdRef.delete();
@@ -2291,10 +2301,7 @@ function showSelector(selName) {
     }
   }
 
-  // Only push if we're not already in a dummy state
-  if (!history.state || !history.state.selector) {
-    history.pushState({ selector: true }, '', location.href);
-  }
+  history.pushState({ selector: true }, '', location.href);
 
   // Open the new selector in cases 2 and 3
   openSelector = selName;
