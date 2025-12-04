@@ -2176,7 +2176,7 @@ function ScrollToSelectItem(col, value = null) {
 
     let velocitySteps = 0;
     if (Math.abs(velocity) > FAST_SWIPE_THRESHOLD && Math.abs(dy) > DISTANCE_THRESHOLD) {
-      velocitySteps = velocity * 2; // apply multiplier only if both conditions met
+      velocitySteps = velocity * 3; // apply multiplier only if both conditions met
     }
 
     const steps = Math.round((distanceSteps + velocitySteps));
