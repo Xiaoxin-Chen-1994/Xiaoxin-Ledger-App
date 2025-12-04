@@ -2169,7 +2169,15 @@ function ScrollToSelectItem(col, value = null) {
     const distanceSteps = dy / itemHeight;
 
     const velocity = dy / dt; // px per ms
-    const velocitySteps = velocity * 2; // tweak multiplier for sensitivity
+
+    // Thresholds
+    const FAST_SWIPE_THRESHOLD = 0.5;   // px/ms
+    const DISTANCE_THRESHOLD   = itemHeight * 2; // at least 2 items worth of movement
+
+    let velocitySteps = 0;
+    if (Math.abs(velocity) > FAST_SWIPE_THRESHOLD && Math.abs(dy) > DISTANCE_THRESHOLD) {
+      velocitySteps = velocity * 2; // apply multiplier only if both conditions met
+    }
 
     const steps = Math.round((distanceSteps + velocitySteps));
 
