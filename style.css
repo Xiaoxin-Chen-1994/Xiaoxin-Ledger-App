@@ -116,11 +116,13 @@ body {
 .base-page, .page {
   position: absolute;
   z-index: 0;
-  left: 4%;
-  width: 92%;
+  width: 100%;
   height: 100%;
   background: var(--bg);
+  padding-left: 4%;
+  padding-right: 4%;
   padding-bottom: calc(var(--font-size) * 5 + 1rem);
+  box-sizing: border-box;   /* 👈 include padding in width */
   overflow-y: auto;
   scrollbar-width: none;       /* Firefox */
   -ms-overflow-style: none;    /* IE/Edge (legacy) */
@@ -147,6 +149,8 @@ body {
 #return-btn {
   position: absolute;        /* pin button to the left */
   left: 1rem;
+  text-align: left;
+  padding-left: 0;
   background: transparent;
   border: none;
   color: var(--primary);
@@ -161,6 +165,8 @@ body {
 #save-btn-headerbar {
   position: absolute;        /* pin button to the right */
   right: 1rem;
+  text-align: right;
+  padding-right: 0;
   background: transparent;
   border: none;
   color: var(--primary);
@@ -200,18 +206,18 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 .transaction-tabs {
   display: flex;
   justify-content: space-around;
-  margin: 0.5rem 0 0.25rem 0;
+  margin: 0.25rem 0 0.25rem 0;
+  gap: 0.25rem;
 }
 
 .transaction-tabs .tab-btn {
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.75rem 0;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
   border-radius: 0.5rem;
   cursor: pointer;
-  margin: 0 0.25rem;
 }
 
 .transaction-tabs .tab-btn.active {
@@ -224,6 +230,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 .transaction-wrapper {
   display: flex;
   width: 100%;
+  gap:5%;
   transition: transform 0.3s ease;
 }
 
@@ -235,6 +242,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 .transaction-page {
   flex: 0 0 100%;
   width: 100%;
+  box-sizing: border-box;   /* 👈 include padding in width */
   -ms-overflow-style: none;  /* IE/Edge */
   scrollbar-width: none;     /* Firefox */
   overflow-y: scroll;        /* still scrollable */

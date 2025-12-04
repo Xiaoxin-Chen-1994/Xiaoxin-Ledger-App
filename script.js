@@ -577,7 +577,7 @@ const tabButtons = document.querySelectorAll(".tab-btn");
 
 function switchTab(index) {
   inputTypeIndex = index;
-  wrapper.style.transform = `translateX(-${index * 100}%)`;
+  wrapper.style.transform = `translateX(-${index * 105}%)`; // this includes the 5% gap in class .transaction-wrapper
 
   // Update active button
   tabButtons.forEach(btn => btn.classList.remove("active"));
@@ -1059,12 +1059,14 @@ function enablePageSwipe(pageEl) {
   let startX = 0, currentX = 0, isDragging = false;
 
   pageEl.addEventListener("touchstart", e => {
+    e.stopPropagation();
     startX = e.touches[0].clientX;
     isDragging = true;
     pageEl.style.transition = "none";
   });
 
   pageEl.addEventListener("touchmove", e => {
+    e.stopPropagation();
     if (!isDragging) return;
     currentX = e.touches[0].clientX - startX;
     if (currentX > 0) {
