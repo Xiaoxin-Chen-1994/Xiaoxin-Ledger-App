@@ -29,6 +29,13 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request).then(response => {
       notifyClients(false); // online
+
+      // clone response so we can put one copy in cache
+      const responseClone = response.clone();
+      caches.open(CACHE_NAME).then(cache => {
+        cache.put(event.request, responseClone);
+      });
+
       return response;
     }).catch(() => {
       return caches.match(event.request).then(cachedResponse => {
