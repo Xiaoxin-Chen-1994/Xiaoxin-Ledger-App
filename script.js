@@ -2333,14 +2333,11 @@ function closeSelector() {
 
 window.addEventListener('popstate', () => {
   if (openSelector) {
-    alert("closing selector ${openSelector}");
     closeSelector();
     return;
   }
 
   const stack = historyStacks[currentBase];
-  alert(1)
-  alert(JSON.stringify(stack));
   if (stack.length > 1) {
     goBack();
     return;
