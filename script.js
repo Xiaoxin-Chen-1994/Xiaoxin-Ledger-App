@@ -1048,8 +1048,6 @@ function goBack() {
   }
 }
 
-window.addEventListener("popstate", goBack);
-
 // --- Language Switcher ---
 const translations = {
   en: {
