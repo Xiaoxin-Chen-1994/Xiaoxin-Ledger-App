@@ -2334,11 +2334,11 @@ window.addEventListener('popstate', () => {
   }
 
   const stack = historyStacks[currentBase];
+  alert(1)
   alert(JSON.stringify(stack));
-
   if (stack.length > 1) {
     goBack();
-   
+    return;
   }
 
   // At base page: let Android handle back (exit to home)
