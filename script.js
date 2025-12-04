@@ -475,6 +475,8 @@ function setCurrentHousehold(button) {
 }
 
 function createItemRow() {
+  const t = translations[currentLang];
+
   const row = document.createElement("div");
   row.className = "item-row";
 
@@ -497,7 +499,7 @@ function createItemRow() {
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "delete-btn";
-  deleteBtn.textContent = "删除";
+  deleteBtn.textContent = t.delete;
 
   row.appendChild(content);
   row.appendChild(deleteBtn);
@@ -638,6 +640,8 @@ function switchTab(index) {
 
 // parsedItems is now an array of { name, notes }
 function renderItems(parsedItems, activeTab) {
+  const t = translations[currentLang];
+
   const itemGroup = activeTab.querySelector(".item-group");
   if (!itemGroup) return;
 
@@ -673,7 +677,7 @@ function renderItems(parsedItems, activeTab) {
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "删除";
+    deleteBtn.textContent = t.delete;
 
     row.appendChild(content);
     row.appendChild(deleteBtn);
@@ -926,7 +930,7 @@ let historyStacks = {
 };
 
 function showPage(name, navBtn = currentBase) {
-  t = translations[currentLang];
+  const t = translations[currentLang];
 
   // hide all pages
   document.getElementById("login-section").style.display = "none";
@@ -1134,6 +1138,7 @@ const translations = {
     homeImageTitle: "Homepage Image",
     manage: "Manage",
     add: "Add",
+    delete: "Delete",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
     homeImageSaved: "Homepage images saved",
     homeImageSaveFailed: "Failed to save homepage images",
@@ -1186,6 +1191,7 @@ const translations = {
     homeImageTitle: "首页图",
     manage: "管理",
     add: "增加",
+    delete: "删除",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
     homeImageSaveFailed: "首页图保存出错",
@@ -1446,8 +1452,9 @@ async function toggleHomeImageEditor() {
   }
 }
 
-
 function renderHomeImageList(urls = []) {
+  const t = translations[currentLang];
+
   const list = document.getElementById("home-image-list");
   list.innerHTML = "";
 
@@ -1462,7 +1469,7 @@ function renderHomeImageList(urls = []) {
 
     const del = document.createElement("button");
     del.type = "button";
-    del.textContent = "Delete";
+    del.textContent = t.delete;
     del.addEventListener("click", () => {
       homeImages.splice(index, 1);
       renderHomeImageList(homeImages);
@@ -1565,7 +1572,7 @@ async function updateHomeKanban() {
 
 // --- Color Scheme ---
 function setColorScheme(scheme, showMessage = false) {
-  t = translations[currentLang];
+  const t = translations[currentLang];
 
   if (scheme === "alt") {
     document.documentElement.classList.add("alt-scheme");
@@ -1774,6 +1781,8 @@ async function loadHouseholdMembers() {
 }
 
 function showDeleteButton(li, uid) {
+  const t = translations[currentLang];
+
   let btn = li.querySelector(".delete-btn");
   if (btn) {
     btn.style.display = "block"; // display again
@@ -1781,7 +1790,7 @@ function showDeleteButton(li, uid) {
   }
 
   btn = document.createElement("button");
-  btn.textContent = "删除";
+  btn.textContent = t.delete;
   btn.className = "delete-btn";
   btn.style.width = "4rem";
   btn.style.transform = "translateX(-1rem)"; // display
@@ -2066,7 +2075,7 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
 }
 
 function getDatePrefix(targetDate) {
-  t = translations[currentLang];
+  const t = translations[currentLang];
 
   const today = new Date();
 
@@ -2273,7 +2282,7 @@ function updateSelectorPreview() {
 
 // Remove known prefixes
 function removeDatePrefix(text) {
-  t = translations[currentLang];
+  const t = translations[currentLang];
 
   const prefixes = t.datePrefixes || [];
 
