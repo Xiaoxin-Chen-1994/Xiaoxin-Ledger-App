@@ -849,7 +849,7 @@ function addEntry() {
   });
 
   // 🔑 Store transaction under selected household
-  db.collection("households").doc(householdId).collection("transactions").add({
+  db.collection("households").doc(householdId).collection("entries").add({
     type,
     account,
     datetime,
@@ -890,7 +890,7 @@ function loadLedger(userId) {
   if (!list) return; // safety check
 
   list.innerHTML = "";
-  db.collection("ledgers").doc(userId).collection("entries")
+  db.collection("households").doc(householdIds[0]).collection("entries")
     .orderBy("timestamp")
     .onSnapshot(snapshot => {
       list.innerHTML = "";
@@ -908,7 +908,6 @@ function loadLedger(userId) {
       updateHomeKanban();
     });
 }
-
 
 function formatLatest(data) {
   const typeLabel = data.type === "incoming" ? "收入"
