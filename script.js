@@ -2328,7 +2328,7 @@ function closeSelector() {
   openSelector = null;
 
   // Clear dummy state so further back presses exit normally
-  history.replaceState(null, '', location.href);
+  history.back();
 }
 
 window.addEventListener('popstate', () => {
