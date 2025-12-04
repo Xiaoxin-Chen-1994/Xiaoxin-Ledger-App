@@ -79,6 +79,10 @@ let inputStore = null;
 let inputCategory = null;
 let inputItems = null;
 
+let currentBase = "home";
+let latestPage = null;
+let latestNavBtn = null;
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
@@ -299,7 +303,9 @@ function resetPassword() {
 }
 
 function logout() {
-  auth.signOut();
+  auth.signOut().then(() => {
+    window.location.reload(); // force refresh after logout
+  });
 }
 
 // --- Persistent login state ---
@@ -406,15 +412,6 @@ auth.onAuthStateChanged(async user => {
     showPage("home", "nav-home");
     loadLedger(currentUser.uid);
     updateHomeKanban();
-  } else {
-    currentUser = null;
-    document.getElementById("login-section").style.display = "block";
-    document.getElementById("home-page").style.display = "none";
-    document.getElementById("return-btn").style.display = "none";
-    document.getElementById("transaction-page").style.display = "none";
-    document.getElementById("settings-page").style.display = "none";
-    document.querySelector(".bottom-nav").style.display = "none";
-    document.getElementById("settings-welcome").textContent = "";
   }
 });
 
@@ -928,17 +925,21 @@ let historyStacks = {
   settings: [["settings", "nav-settings"]]
 };
 
-// track which base we’re currently in
-let currentBase = "home";
-
-function showPage(name, navBtn = null) {
+function showPage(name, navBtn = currentBase) {
   t = translations[currentLang];
+
+  // hide all pages
+  document.getElementById("login-section").style.display = "none";
+  document.querySelectorAll('.base-page').forEach(p => {
+    if (p.id !== currentBase + "-page") {
+      p.style.display = "none";
+      p.classList.remove("active");
+    }
+  });
 
   let stack = null;
   let target = null;
   let latest = null;
-  let latestPage = null;
-  let latestNavBtn = null;
 
   // reset nav button colors
   document.getElementById("nav-home").style.background = "";
@@ -947,7 +948,12 @@ function showPage(name, navBtn = null) {
   document.getElementById("nav-values").style.background = "";
   document.getElementById("nav-settings").style.background = "";
 
-  if (basePages.includes(name)) { // when clicking the base nav buttons, look for the latest stack
+  if (basePages.includes(name)) { // when switching base nav, look for the latest stack
+    if (currentBase !== name && latestPage != null) {
+      // hide the current page
+      document.getElementById(latestPage + "-page").style.display = "none";
+    }
+
     currentBase = name;
     stack = historyStacks[name];
     latest = stack ? stack[stack.length - 1] : [name, navBtn];
@@ -956,30 +962,32 @@ function showPage(name, navBtn = null) {
 
     if (!target) return;
 
-    if (navBtn && stack.length < 2) { // if already returned to base
+    target.style.display = "block";
+    if (basePages.includes(latestPage)) { 
+      target.classList.add('active');
+    } 
+
+    if (stack.length < 2) { // if already returned to base
       document.getElementById(navBtn).style.background = "var(--primary)";
       document.getElementById("return-btn").style.display = "none";
     } else {
       document.getElementById("return-btn").style.display = "block";
     };
 
-  } else {
+  } else { // if switching pages at the same base nav
+    stack = historyStacks[currentBase];
+
     latestPage = name;
     target = document.getElementById(latestPage + "-page");
 
     if (!target) return;
 
+    target.style.transform = "translateX(0%)";
+    target.style.display = "block";
+    target.zIndex = stack.length;
+
     document.getElementById("return-btn").style.display = "block";
   }
-
-  // hide all pages
-  document.getElementById("login-section").style.display = "none";
-  document.getElementById("home-page").style.display = "none";
-  document.getElementById("transaction-page").style.display = "none";
-  document.getElementById("settings-page").style.display = "none";
-
-  // show the latest page
-  target.style.display = "block";
 
   // transaction page special handling
   if (latestPage.includes("transaction")) {
@@ -1012,21 +1020,13 @@ function showPage(name, navBtn = null) {
     document.getElementById("save-btn-headerbar").style.display = "none";
   }
 
-
   stack = historyStacks[currentBase];
   // If reaching base page or the page is already active, do nothing
   const isBaseAndFresh = basePages.includes(latestPage) && stack.length < 2;
   const isAlreadyActive = stack?.[stack.length - 1]?.[0] === latestPage;
   if (!isBaseAndFresh && !isAlreadyActive) {
     historyStacks[currentBase].push([latestPage, navBtn]); // add to the history stacks
-  }
-
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  if (target) {
-    target.classList.add('active');
-  } else {
-    console.error("Page not found:", name);
-  }
+  }  
 }
 
 function goBack() {
@@ -1034,7 +1034,10 @@ function goBack() {
 
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
+    target = document.getElementById(latestPage + "-page");
+    target.style.transform = "translateX(110%)";
     stack.pop(); // remove current page
+
     const [prevPage, prevNavBtn] = stack[stack.length - 1]; // get the previous entry
 
     if (stack.length > 1) {

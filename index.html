@@ -17,7 +17,7 @@
   </div>
 
   <div class="header-bar">
-    <button id="return-btn" onclick="goBack()" style="display: none;">返回</button>
+    <button id="return-btn" onclick="goBack()" style="display: none;">&lt; 返回</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
     <button id="save-btn-headerbar" onclick="addEntry()" style="display: none;">保存</button>
   </div>
@@ -56,7 +56,7 @@
 
   <div class="pages-wrapper" id="pages-wrapper">
     <!-- Home Section -->
-    <div class="page" id="home-page">
+    <div class="base-page" id="home-page">
       <div class="home-hero">
         <div class="home-image-wrapper">
           <img id="home-image" src="" alt="Custom picture">
@@ -104,7 +104,7 @@
     </div>
 
     <!-- Ledger Section -->
-    <div class="page" id="transaction-page">
+    <div class="base-page" id="transaction-page">
 
       <!-- Tabs -->
       <div class="transaction-tabs">
@@ -343,13 +343,56 @@
       <div class="dt-col hour-col"></div>
       <div class="dt-col minute-col"></div>
     </div>
-  </div>
+
 
   <!-- Settings Section -->
-  <div class="page" id="settings-page">
+  <div class="base-page" id="settings-page">
     <div class="settings-header">
       <h2 id="settings-title">设置</h2>
       <span id="settings-welcome"></span>
+    </div>
+
+    <!-- Basic settings -->
+    <section class="settings-section basic-settings">
+      <p>基础设置</p>
+      <button class="settings-button" onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+    </section>
+
+    <!-- Household -->
+    <section class="settings-section household-row">
+      <p>我的家庭</p>
+      <div id="household-actions">
+        <button id="rename-btn" class="settings-button">重命名我的家庭</button>
+        <div id="rename-panel" class="panel hidden">
+          <input id="rename-household">
+          <button id="rename-confirm" class="settings-button primary">确认修改</button>
+        </div>
+
+        <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
+        <div id="invite-panel" class="panel hidden">
+          <p>注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
+          <input id="invite-email" type="email" placeholder="输入对方的邮箱">
+          <button id="invite-confirm" class="settings-button primary">确认邀请</button>
+        </div>
+
+        <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
+        <div id="manage-panel" class="panel hidden">
+          <h4>成员管理</h4>
+          <ul id="member-list" class="household-list"></ul>
+        </div>
+
+        <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
+        <div id="leave-household-panel" class="panel hidden">
+          <h4>他人的家庭</h4>
+          <ul id="leave-household-list" class="household-list"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="page" id="basic-settings-page">
+    <div class="settings-header">
+      <h2 id="basic-settings-title">基础设置</h2>
     </div>
 
     <!-- Language -->
@@ -400,44 +443,12 @@
       </div>
     </section>
 
-
-    <!-- Household -->
-    <section class="settings-section household-row">
-      <p>我的家庭</p>
-      <div id="household-actions">
-        <button id="rename-btn" class="settings-button">重命名我的家庭</button>
-        <div id="rename-panel" class="panel hidden">
-          <input id="rename-household">
-          <button id="rename-confirm" class="settings-button primary">确认修改</button>
-        </div>
-
-        <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
-        <div id="invite-panel" class="panel hidden">
-          <p>注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
-          <input id="invite-email" type="email" placeholder="输入对方的邮箱">
-          <button id="invite-confirm" class="settings-button primary">确认邀请</button>
-        </div>
-
-        <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
-        <div id="manage-panel" class="panel hidden">
-          <h4>成员管理</h4>
-          <ul id="member-list" class="household-list"></ul>
-        </div>
-
-        <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
-        <div id="leave-household-panel" class="panel hidden">
-          <h4>他人的家庭</h4>
-          <ul id="leave-household-list" class="household-list"></ul>
-        </div>
-      </div>
-    </section>
-
     <div class="actions">
       <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
       <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount()">删除账户</button>
     </div>
   </div>
-
+  </div>
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
     <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
