@@ -40,7 +40,7 @@
 
     <div id="login-settings" class="login-settings">
       <div id="login-lang-switch" class="login-lang-switch">
-        <p>语言 / Language</p>
+        <p id="login-language-title">语言</p>
         <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
         <button class="settings-button" onclick="setLanguage('en', true)">English</button>
       </div>
@@ -397,7 +397,7 @@
 
     <!-- Language -->
     <section class="settings-section lang-switch">
-      <p>语言 / Language</p>
+      <p id="settings-language-title">语言</p>
       <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
       <button class="settings-button" onclick="setLanguage('en', true)">English</button>
     </section>
@@ -411,9 +411,9 @@
 
     <!-- Theme color -->
     <section class="settings-section theme-color-change">
-      <p>主题色</p>
-      <button class="settings-button" onclick="openColorPicker()">更换主题色</button>
-      <button class="settings-button" onclick="resetThemeColor()">恢复默认</button>
+      <p id="theme-color-title">主题色</p>
+      <button id="change-theme-color-btn" class="settings-button" onclick="openColorPicker()">更换主题色</button>
+      <button id="restore-theme-color-btn" class="settings-button" onclick="resetThemeColor()">恢复默认</button>
       <!-- Hidden color input -->
       <input type="color" id="themeColorPicker" style="display:none;">
     </section>

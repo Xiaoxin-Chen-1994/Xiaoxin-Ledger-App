@@ -14,12 +14,12 @@
 
   /* Default scheme: income red, expense green */
   --income-color: rgb(223, 34, 34);
-  --expense-color: green;
+  --expense-color: rgb(30, 144, 255);
 }
 
 /* Alternate scheme: income green, expense red */
 :root.alt-scheme {
-  --income-color: green;
+  --income-color: rgb(30, 144, 255);
   --expense-color: rgb(223, 34, 34);
 }
 
@@ -982,12 +982,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   background: #27ae60;
 }
 
-#hide-home-image-btn {
-  background: #bdc3c7;
-  color: #333;
+#save-home-image-btn {
+  background: var(--primary);
 }
-#hide-home-image-btn:hover {
-  background: #95a5a6;
+#save-home-image-btn:hover {
+  background: var(--primary-hover);
 }
 
 #home-image-panel,

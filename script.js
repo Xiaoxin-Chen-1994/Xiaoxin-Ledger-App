@@ -83,6 +83,125 @@ let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
 
+const translations = {
+  en: {
+    loginTitle: "Login or Signup",
+    email: "Email",
+    password: "Password",
+    signup: "Sign Up",
+    login: "Login",
+    forgotBtn: "Reset password",
+    resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
+    welcome: "Welcome",
+    homeTitle: "Home",
+    monthBalance: "Nov · Balance",
+    incomeMinusExpense: "Income - Expense",
+    monthlySummary: "Income this month 0 | Expense this month 0",
+    today: "Today",
+    thisMonth: "This Month",
+    thisYear: "This Year",
+    type: "Type",
+    account: "Account",
+    datetime: "Time",
+    datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
+    person: "Person",
+    store: "Store Name",
+    category: "Category",
+    items: "Items",
+    addItem: "+ Add Item",
+    save: "Save",
+    basicSettingsTitle: "Basic Settings",
+    openBasicSettings: "Open Basic Settings",
+    myHouseholdsTitle: "My Households",
+    language: "Language",
+    languageSwitched: "Language switched to English",
+    languageSwitchFailed: "Failed to save language",
+    fontsizeTitle: "Fontsize",
+    fontsizeChanged: "Fontsize changed",
+    fontsizeChangeFailed: "Failed to save fontsize",
+    themeColorTitle: "Theme Color",
+    themeColorChange: "Change theme color",
+    restoreDefault: "Restore default",
+    themeColorChanged: "Theme color changed",
+    themeColorChangeFailed: "Failed to save theme color",
+    colorSchemeTitle: "Color Scheme",
+    colorSchemeOptions: ["Income Red / Expense Blue", "Income Blue / Expense Red"],
+    colorSchemeSwitched: "Color scheme is now changed",
+    colorSchemeSwitchFailed: "Failed to save color scheme",
+    homeImageTitle: "Homepage Image",
+    manage: "Manage",
+    add: "Add",
+    delete: "Delete",
+    homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
+    homeImageSaved: "Homepage images saved",
+    homeImageSaveFailed: "Failed to save homepage images",
+    logout: "Logout",
+    navHome: "Home",
+    navAccounts: "Accounts",
+    navTransaction: "Create",
+    navValues: "Values",
+    settings: "Settings"
+  },
+  zh: {
+    loginTitle: "登录或注册",
+    email: "邮箱",
+    password: "密码",
+    signup: "注册",
+    login: "登录",
+    forgotBtn: "重置密码",
+    resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
+    welcome: "欢迎",
+    homeTitle: "首页",
+    monthBalance: "11月·结余",
+    incomeMinusExpense: "收入 - 支出",
+    monthlySummary: "本月收入 0 | 本月支出 0",
+    today: "今天",
+    thisMonth: "本月",
+    thisYear: "本年",
+    type: "类型",
+    account: "账户",
+    datetime: "时间",
+    datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
+    person: "相关人",
+    store: "商店名称",
+    category: "类别",
+    items: "项目",
+    addItem: "+ 添加项目",
+    save: "保存",
+    basicSettingsTitle: "基础设置",
+    openBasicSettings: "打开基础设置",
+    myHouseholdsTitle: "我的家庭",
+    language: "语言",
+    languageSwitched: "语言已切换为 中文",
+    languageSwitchFailed: "语言保存出错",
+    fontsizeTitle: "字体大小",
+    fontsizeChanged: "字体大小已更改",
+    fontsizeChangeFailed: "字体大小保存出错",
+    themeColorTitle: "主题色",
+    themeColorChange: "更换主题色",
+    restoreDefault: "恢复默认",
+    themeColorChanged: "主题色已更改",
+    themeColorChangeFailed: "主题色保存出错",
+    colorSchemeTitle: "颜色方案",
+    colorSchemeOptions: ["收入红 / 支出蓝", "收入蓝 / 支出红"],
+    colorSchemeSwitched: "颜色方案已更新",
+    colorSchemeSwitchFailed: "颜色方案保存出错",
+    homeImageTitle: "首页图",
+    manage: "管理",
+    add: "增加",
+    delete: "删除",
+    homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
+    homeImageSaved: "首页图链接已保存",
+    homeImageSaveFailed: "首页图保存出错",
+    logout: "退出",
+    navHome: "首页",
+    navAccounts: "账户",
+    navTransaction: "记一笔",
+    navValues: "价值",
+    settings: "设置"
+  }
+};
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
@@ -1095,115 +1214,6 @@ function enablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-const translations = {
-  en: {
-    loginTitle: "Login or Signup",
-    email: "Email",
-    password: "Password",
-    signup: "Sign Up",
-    login: "Login",
-    forgotBtn: "Reset password",
-    resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
-    welcome: "Welcome",
-    homeTitle: "Home",
-    monthBalance: "Nov · Balance",
-    incomeMinusExpense: "Income - Expense",
-    monthlySummary: "Income this month 0 | Expense this month 0",
-    today: "Today",
-    thisMonth: "This Month",
-    thisYear: "This Year",
-    type: "Type",
-    account: "Account",
-    datetime: "Time",
-    datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
-    person: "Person",
-    store: "Store Name",
-    category: "Category",
-    items: "Items",
-    addItem: "+ Add Item",
-    save: "Save",
-    basicSettingsTitle: "Basic Settings",
-    openBasicSettings: "Open Basic Settings",
-    myHouseholdsTitle: "My Households",
-    languageSwitched: "Language switched to English",
-    languageSwitchFailed: "Failed to save language",
-    fontsizeTitle: "Fontsize",
-    fontsizeChanged: "Fontsize changed",
-    fontsizeChangeFailed: "Failed to save fontsize",
-    themeColorChanged: "Theme color changed",
-    themeColorChangeFailed: "Failed to save theme color",
-    colorSchemeTitle: "Color Scheme",
-    colorSchemeSwitched: "Color scheme is now changed",
-    colorSchemeSwitchFailed: "Failed to save color scheme",
-    homeImageTitle: "Homepage Image",
-    manage: "Manage",
-    add: "Add",
-    delete: "Delete",
-    homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
-    homeImageSaved: "Homepage images saved",
-    homeImageSaveFailed: "Failed to save homepage images",
-    logout: "Logout",
-    navHome: "Home",
-    navAccounts: "Accounts",
-    navTransaction: "Create",
-    navValues: "Values",
-    navSettings: "Settings"
-  },
-  zh: {
-    loginTitle: "登录或注册",
-    email: "邮箱",
-    password: "密码",
-    signup: "注册",
-    login: "登录",
-    forgotBtn: "重置密码",
-    resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
-    welcome: "欢迎",
-    homeTitle: "首页",
-    monthBalance: "11月·结余",
-    incomeMinusExpense: "收入 - 支出",
-    monthlySummary: "本月收入 0 | 本月支出 0",
-    today: "今天",
-    thisMonth: "本月",
-    thisYear: "本年",
-    type: "类型",
-    account: "账户",
-    datetime: "时间",
-    datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
-    person: "相关人",
-    store: "商店名称",
-    category: "类别",
-    items: "项目",
-    addItem: "+ 添加项目",
-    save: "保存",
-    basicSettingsTitle: "基础设置",
-    openBasicSettings: "打开基础设置",
-    myHouseholdsTitle: "我的家庭",
-    languageSwitched: "语言已切换为 中文",
-    languageSwitchFailed: "语言保存出错",
-    fontsizeTitle: "字体大小",
-    fontsizeChanged: "字体大小已更改",
-    fontsizeChangeFailed: "字体大小保存出错",
-    themeColorChanged: "主题色已更改",
-    themeColorChangeFailed: "主题色保存出错",
-    colorSchemeTitle: "颜色方案",
-    colorSchemeSwitched: "颜色方案已更新",
-    colorSchemeSwitchFailed: "颜色方案保存出错",
-    homeImageTitle: "首页图",
-    manage: "管理",
-    add: "增加",
-    delete: "删除",
-    homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
-    homeImageSaved: "首页图链接已保存",
-    homeImageSaveFailed: "首页图保存出错",
-    logout: "退出",
-    navHome: "首页",
-    navAccounts: "账户",
-    navTransaction: "记一笔",
-    navValues: "价值",
-    navSettings: "设置"
-  }
-};
-
 function setLanguage(lang, showMessage = false) {
   currentLang = lang;
   const t = translations[lang];
@@ -1232,26 +1242,37 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("save-btn-income").textContent = t.save;
   document.getElementById("save-btn-transfer").textContent = t.save;
   document.getElementById("save-btn-balance").textContent = t.save;
-
-  // Buttons
-  // document.getElementById("add-item-btn").textContent = t.addItem;
-  // document.getElementById("add-transaction-btn").textContent = t.addTransaction;
-  // document.getElementById("logout-btn").textContent = t.logout;
+  document.querySelectorAll('.delete-btn').forEach(el => {
+    el.textContent = t.delete;
+  });
 
   // Settings
+  document.getElementById("settings-title").textContent = t.settings;
   document.getElementById("basic-settings-title").textContent = t.basicSettingsTitle;
   document.getElementById("open-basic-settings").textContent = t.openBasicSettings;
   document.getElementById("households-title").textContent = t.myHouseholdsTitle;
 
   // Basic settings
   document.getElementById("basic-settings-header").textContent = t.basicSettingsTitle;
+  document.querySelectorAll('[id$="-language-title"]').forEach(el => {
+    el.textContent = t.language;
+  });
   document.querySelectorAll('[id$="-fontsize-title"]').forEach(el => {
     el.textContent = t.fontsizeTitle;
   });
+  document.getElementById("theme-color-title").textContent = t.themeColorTitle;
+  document.getElementById("change-theme-color-btn").textContent = t.themeColorChange;
+  document.getElementById("restore-theme-color-btn").textContent = t.restoreDefault;
   document.getElementById("color-scheme-title").textContent = t.colorSchemeTitle;
+  document.getElementById("color-scheme-select").querySelectorAll("option").forEach((opt, i) => {
+    opt.textContent = t.colorSchemeOptions[i];
+  });
   document.getElementById("home-image-title").textContent = t.homeImageTitle;
   document.getElementById("manage-home-image-btn").textContent = t.manage;
   document.getElementById("home-image-instruction").textContent = t.homeImageInstruction;
+  document.querySelectorAll('.home-image-row button').forEach(btn => {
+    btn.textContent = t.delete;
+  });
   document.getElementById("add-home-image-btn").textContent = t.add;
   document.getElementById("save-home-image-btn").textContent = t.save;
 
@@ -1260,7 +1281,7 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("nav-accounts").textContent = t.navAccounts;
   document.getElementById("nav-transaction").textContent = t.navTransaction;
   document.getElementById("nav-values").textContent = t.navValues;
-  document.getElementById("nav-settings").textContent = t.navSettings;
+  document.getElementById("nav-settings").textContent = t.settings;
 
   if (currentUser) {
     firebase.firestore()
