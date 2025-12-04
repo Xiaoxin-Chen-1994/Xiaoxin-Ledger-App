@@ -1120,6 +1120,7 @@ const translations = {
     saveTransaction: "Save",
     languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
+    fontsizeLabel: "Fontsize",
     fontsizeChanged: "Fontsize changed",
     fontsizeChangeFailed: "Failed to save fontsize",
     themeColorChanged: "Theme color changed",
@@ -1166,6 +1167,7 @@ const translations = {
     saveTransaction: "保存",
     languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
+    fontsizeLabel: "字体大小",
     fontsizeChanged: "字体大小已更改",
     fontsizeChangeFailed: "字体大小保存出错",
     themeColorChanged: "主题色已更改",
@@ -1221,6 +1223,9 @@ function setLanguage(lang, showMessage = false) {
   // document.getElementById("logout-btn").textContent = t.logout;
 
   // Settings
+  document.querySelectorAll('[id$="-fontsize-change-text"]').forEach(el => {
+    el.textContent = t.fontsizeLabel;
+  });
   document.getElementById("color-scheme-title").textContent = t.colorSchemeTitle;
   document.getElementById("home-image-title").textContent = t.homeImageTitle;
   document.getElementById("home-image-instruction").textContent = t.homeImageInstruction;
