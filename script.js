@@ -2326,6 +2326,7 @@ function closeSelector() {
 }
 
 window.addEventListener('popstate', () => {
+   return;
   alert(`popstate ${openSelector}`);
 
   if (openSelector) {
@@ -2337,7 +2338,7 @@ window.addEventListener('popstate', () => {
   alert(`stack ${stack}`);
   if (stack.length > 1) {
     goBack();
-    return;
+   
   }
 
   // At base page: let Android handle back (exit to home)
