@@ -2334,7 +2334,8 @@ window.addEventListener('popstate', () => {
   }
 
   const stack = historyStacks[currentBase];
-  alert(`stack ${stack}`);
+  alert(JSON.stringify(stack));
+
   if (stack.length > 1) {
     goBack();
    
