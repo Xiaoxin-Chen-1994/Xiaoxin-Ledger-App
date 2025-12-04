@@ -2326,7 +2326,6 @@ function closeSelector() {
 }
 
 window.addEventListener('popstate', () => {
-   return;
   alert(`popstate ${openSelector}`);
 
   if (openSelector) {
