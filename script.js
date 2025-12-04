@@ -989,7 +989,7 @@ function showPage(name, navBtn = currentBase) {
     document.getElementById("return-btn").style.display = "block";
 
     // push a new history entry for this non-base page
-    history.pushState({ page: latestPage, base: currentBase }, "", "#" + latestPage);
+    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
   }
 
   // transaction page special handling
@@ -1050,7 +1050,7 @@ function goBack() {
     showPage(prevPage, prevNavBtn);
     
     // replace state to reflect the new top of stack
-    history.replaceState({ page: prevPage, base: currentBase }, "", "#" + prevPage);
+    history.back();
   }
 }
 
