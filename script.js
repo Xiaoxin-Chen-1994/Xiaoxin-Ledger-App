@@ -985,6 +985,7 @@ function showPage(name, navBtn = currentBase) {
     target.style.transform = "translateX(0%)";
     target.style.display = "block";
     target.zIndex = stack.length;
+    enablePageSwipe(target);
 
     document.getElementById("return-btn").style.display = "block";
 
@@ -1052,6 +1053,38 @@ function goBack() {
     // replace state to reflect the new top of stack
     history.back();
   }
+}
+
+function enablePageSwipe(pageEl) {
+  let startX = 0, currentX = 0, isDragging = false;
+
+  pageEl.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    pageEl.style.transition = "none";
+  });
+
+  pageEl.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    currentX = e.touches[0].clientX - startX;
+    if (currentX > 0) {
+      pageEl.style.transform = `translateX(${currentX}px)`;
+    }
+  });
+
+  pageEl.addEventListener("touchend", () => {
+    if (!isDragging) return;
+    isDragging = false;
+    const threshold = 100;
+    pageEl.style.transition = "transform 0.3s ease";
+
+    if (currentX > threshold) {
+      pageEl.style.transform = "translateX(110%)";
+      setTimeout(() => goBack(), 300);
+    } else {
+      pageEl.style.transform = "translateX(0)";
+    }
+  });
 }
 
 // --- Language Switcher ---
