@@ -252,8 +252,8 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
   display: none;             /* Chrome/Safari */
 }
 
-input[type="search"], input[list], 
-input[type="text"], input[type="password"], input[type="url"], .selector-button,
+input[list], input[type="text"], 
+input[type="password"], input[type="url"], .selector-button,
 #rename-household, #invite-email {
   width: 98%;
   margin: 1%;
@@ -428,13 +428,25 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button,
 }
 
 .form-row {
-  display: flex;          /* label + item-group side by side */
-  align-items: flex-start;
+  display: flex;          /* put children in a row */
+  align-items: center;    /* vertical centering */
+  gap: 0.5rem;            /* space between label and input/button */
 }
 
 .form-row label {
-  flex: 0 0 15%;         /* fixed width for label */
+  width: 15%;        /* fixed width for label */
   font-weight: 600;
+}
+
+.form-row label,
+.form-row .selector-button {
+  white-space: normal;   /* allow wrapping */
+  word-break: break-word; /* break long words if needed */
+}
+
+.form-row input,
+.form-row .selector-button {
+  flex: 1;                /* take up remaining space */
 }
 
 .item-group {
@@ -756,6 +768,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 }
 
 .settings-section {
+  display: flex;
+  align-items: stretch;   /* force equal height */
+  gap: 0.5rem;
   margin-block: 1rem;   /* top & bottom */
   margin-inline: 0;     /* left & right */
 }
@@ -770,14 +785,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   gap: 0.5rem;
 }
 
-.settings-section.basic-settings p,
-.lang-switch p,
-.settings-section.fontsize-change p,
-.settings-section.theme-color-change p,
-.settings-section.color-switch p {
+.settings-section p,
+.lang-switch p {
   margin: 0;
   width: 20%; /* width */
-  text-align: left;
   white-space: normal;     /* allow wrapping */
   word-break: break-word;  /* break long words if needed */
   text-align: center;
@@ -810,7 +821,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 .settings-section select {
   display: flex;
   align-items: center;     /* vertical centering */
-  justify-content: flex-start; /* horizontal alignment to the left */
+  justify-content: center;   /* horizontal centering */
+  white-space: normal;     /* allow wrapping */
+  word-break: break-word;  /* break long words if needed */
+  text-align: center;
 
   width: 100%;
   margin-top: 0.1rem;
@@ -873,17 +887,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 .login-lang-switch p,
 .login-fontsize-change p {
   width: 20%; 
-}
-
-.settings-button {
-  height: calc(var(--font-size) * 2);
-  display: flex;                /* flex container */
-  align-items: center;          /* vertical centering */
-  justify-content: center;      /* horizontal centering */
-  width: auto;
-  margin: 0;
-  padding: 0 1rem;              /* optional: add horizontal padding */
-  box-sizing: border-box;       /* ensures padding doesn’t break height */
 }
 
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
