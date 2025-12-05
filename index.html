@@ -126,37 +126,37 @@
             </div>
 
             <div id="expense-household-form-row" class="form-row">
-              <label>家庭</label>
+              <label class="transaction-household-title">家庭</label>
               <button type="button" id="expense-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
-              <label>账户</label>
+              <label class="transaction-account-title">账户</label>
               <button type="button" id="expense-account" class="selector-button" data-type="account"></button>
             </div>
 
             <div class="form-row">
-              <label>时间</label>
+              <label class="transaction-time-title">时间</label>
               <button type="button" id="expense-datetime" class="selector-button" data-type="datetime"></button>
             </div>
 
             <div class="form-row">
-              <label>成员</label>
+              <label class="transaction-member-title">成员</label>
               <input list="person-list" id="expense-person">
             </div>
 
             <div class="form-row">
-              <label>类别</label>
+              <label class="transaction-category-title">类别</label>
               <input type="search" id="expense-category">
             </div>
 
             <div class="form-row">
-              <label>商家</label>
+              <label class="transaction-merchant-title">商家</label>
               <input type="search" id="expense-store">
             </div>
 
             <div class="form-row" id="expense-items-form">
-              <label>条目</label>
+              <label class="transaction-item-title">条目</label>
               <div class="item-group">
                 <div class="item-row">
                   <input type="text" class="item-name" placeholder="条目">
@@ -182,37 +182,37 @@
             </div>
 
             <div id="income-household-form-row" class="form-row">
-              <label>家庭</label>
+              <label class="transaction-household-title">家庭</label>
               <button type="button" id="income-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
-              <label>账户</label>
+              <label class="transaction-account-title">账户</label>
               <button type="button" id="income-account" class="selector-button" data-type="account"></button>
             </div>
 
             <div class="form-row">
-              <label>时间</label>
+              <label class="transaction-time-title">时间</label>
               <button type="button" id="income-datetime" class="selector-button" data-type="datetime"></button>
             </div>
 
             <div class="form-row">
-              <label>成员</label>
+              <label class="transaction-member-title">成员</label>
               <input list="person-list" id="income-person">
             </div>
 
             <div class="form-row">
-              <label>类别</label>
+              <label class="transaction-category-title">类别</label>
               <input type="search" id="income-category">
             </div>
 
             <div class="form-row">
-              <label>商家</label>
+              <label class="transaction-merchant-title">商家</label>
               <input type="search" id="income-store">
             </div>
 
             <div class="form-row" id="income-items-form">
-              <label>条目</label>
+              <label class="transaction-item-title">条目</label>
               <div class="item-group">
                 <div class="item-row">
                   <div class="item-content">
@@ -244,38 +244,38 @@
                 <label id="transfer-from-currency" class="currency">CAD</label>
                 <button type="button" id="transfer-from-amount" class="amount-button">0.00</button>
                 <label id="transfer-from-calculation" class="calculation">2+2</label>
-                <label id="exchange-rate-from-label">⇂ 汇率：5.10</label>
+                <label id="exchange-rate-from-label"></label>
               </div>
               <div id="exchange-transfer-to-amount-row" class="amount-row">
                 <label id="transfer-to-currency" class="currency">USD</label>
                 <button type="button" id="transfer-to-amount" class="amount-button">0.00</button>
                 <label id="transfer-to-calculation" class="calculation">1+1</label>
-                <label id="exchange-rate-to-label">↿ 汇率：0.20</label>
+                <label id="exchange-rate-to-label"></label>
               </div>
             </div>
 
             <div id="transfer-household-form-row" class="form-row">
-              <label>家庭</label>
+              <label class="transaction-household-title">家庭</label>
               <button type="button" id="transfer-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
-              <label>账户</label>
+              <label class="transaction-account-title">账户</label>
               <div class="transfer-accounts">
                 <div class="transfer-account">
-                  <label class="transfer-label">转出</label>
+                  <p id="transfer-from-title" class="transfer-label">转出</p>
                   <button type="button" id="transfer-from-account" class="selector-button" data-type="account">
                 </div>
                 <label id="tranfer-between-indicator">⇌</label>
                 <div class="transfer-account">
-                  <label class="transfer-label">转入</label>
+                  <p id="transfer-to-title" class="transfer-label">转入</p>
                   <button type="button" id="transfer-to-account" class="selector-button" data-type="account">
                 </div>
               </div>
             </div>
 
             <div class="form-row" id="transfer-notes-form">
-              <label>备注</label>
+              <label class="transaction-notes-title">备注</label>
               <input type="text" id="transfer-notes">
             </div>
 
@@ -294,22 +294,22 @@
             </div>
 
             <div id="balance-household-form-row" class="form-row">
-              <label>家庭</label>
+              <label class="transaction-household-title">家庭</label>
               <button type="button" id="balance-household" class="selector-button" data-type="household"></button>
             </div>
 
             <div class="form-row">
-              <label>账户</label>
+              <label class="transaction-account-title">账户</label>
               <button type="button" id="balance-account" class="selector-button" data-type="account">
             </div>
 
             <div class="form-row">
-              <label>时间</label>
+              <label class="transaction-time-title">时间</label>
               <button type="button" id="balance-datetime" class="selector-button" data-type="datetime"></button>
             </div>
 
             <div class="form-row" id="balance-notes-form">
-              <label>备注</label>
+              <label class="transaction-notes-title">备注</label>
               <input type="text" id="balance-notes">
             </div>
 
@@ -370,7 +370,7 @@
 
         <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
         <div id="invite-panel" class="panel hidden">
-          <p>注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
+          <p id="invite-panel-notes">注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
           <input id="invite-email" type="email" placeholder="输入对方的邮箱">
           <button id="invite-confirm" class="settings-button primary">确认邀请</button>
         </div>

@@ -358,6 +358,10 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button,
   position: relative;
   padding-top: calc(var(--font-size) * 1.5); /* space for absolute label */
 }
+.transfer-label, #transfer-from-account, #transfer-to-account {
+ padding-left: 0.75rem; 
+ padding-right: 0.75rem; 
+}
 /* Centered ⇌ indicator between blocks */
 #tranfer-between-indicator {
   display: flex;
@@ -404,6 +408,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button,
 #exchange-rate-from-label {
   position: absolute;
   right: 0;
+  top: 0;
   font-size: calc(var(--font-size) * 0.8);
   color: grey;
   text-align: right;
@@ -413,6 +418,7 @@ input[type="text"], input[type="password"], input[type="url"], .selector-button,
 #exchange-rate-to-label {
   position: absolute;
   right: 0;
+  top: 0;
   font-size: calc(var(--font-size) * 0.8);
   line-height: calc(var(--font-size) * 0.3);
   color: grey;

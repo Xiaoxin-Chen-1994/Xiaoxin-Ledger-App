@@ -100,19 +100,40 @@ const translations = {
     today: "Today",
     thisMonth: "This Month",
     thisYear: "This Year",
+    expense: "Expense",
+    income: "Income",
+    transfer: "Transfer",
+    balance: "Balance",
     type: "Type",
+    household: "Household",
     account: "Account",
-    datetime: "Time",
+    time: "Time",
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
-    person: "Person",
-    store: "Store Name",
+    member: "Member",
     category: "Category",
-    items: "Items",
-    addItem: "+ Add Item",
+    merchant: "Merchant",
+    item: "Item",
+    price: "Price",
+    addItem: "Add an Item",
+    exchangeRate: "Ex. Rate",
+    transferFrom: "From",
+    transferTo: "To",
+    notes: "Notes",
     save: "Save",
     basicSettingsTitle: "Basic Settings",
     openBasicSettings: "Open Basic Settings",
     myHouseholdsTitle: "My Households",
+    renameHousehold: "Rename My household",
+    confirmRename: "Confirm",
+    inviteHousehold: "Invite users to my household",
+    inviteNote: "Note: Invited users can only join households that you created, not the ones that you were invited to.",
+    inviteEmailPlaceholder: "Enter invitee email",
+    confirmInvite: "Confirm invitation",
+    manageHousehold: "Remove users from my household",
+    memberManagement: "Manage members",
+    leaveHousehold: "Remove myself from other users' households",
+    othersHousehold: "Other users' households",
+    leave: "Leave",
     language: "Language",
     languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
@@ -136,6 +157,7 @@ const translations = {
     homeImageSaved: "Homepage images saved",
     homeImageSaveFailed: "Failed to save homepage images",
     logout: "Logout",
+    deleteAccount: "Delete my account",
     navHome: "Home",
     navAccounts: "Accounts",
     navTransaction: "Create",
@@ -158,19 +180,39 @@ const translations = {
     today: "今天",
     thisMonth: "本月",
     thisYear: "本年",
-    type: "类型",
+    expense: "支出",
+    income: "收入",
+    transfer: "转账",
+    balance: "余额",
+    household: "家庭",
     account: "账户",
-    datetime: "时间",
+    time: "时间",
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
-    person: "相关人",
-    store: "商店名称",
+    member: "成员",
     category: "类别",
-    items: "项目",
-    addItem: "+ 添加项目",
+    merchant: "商家",
+    item: "条目",
+    price: "价格",
+    addItem: "新增条目",
+    exchangeRate: "汇率",
+    transferFrom: "转出",
+    transferFrom: "转入",
+    notes: "备注",
     save: "保存",
     basicSettingsTitle: "基础设置",
     openBasicSettings: "打开基础设置",
     myHouseholdsTitle: "我的家庭",
+    renameHousehold: "重命名我的家庭",
+    confirmRename: "确认修改",
+    inviteHousehold: "邀请加入我的家庭",
+    inviteNote: "注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。",
+    inviteEmailPlaceholder: "输入对方的邮箱",
+    confirmInvite: "确认邀请",
+    manageHousehold: "从我的家庭中移除用户",
+    memberManagement: "成员管理",
+    leaveHousehold: "将我从他人的家庭中移除",
+    othersHousehold: "他人的家庭",
+    leave: "离开",
     language: "语言",
     languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
@@ -193,7 +235,8 @@ const translations = {
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
     homeImageSaveFailed: "首页图保存出错",
-    logout: "退出",
+    logout: "退出登录",
+    deleteAccount: "删除账户",
     navHome: "首页",
     navAccounts: "账户",
     navTransaction: "记一笔",
@@ -605,12 +648,12 @@ function createItemRow() {
   const nameInput = document.createElement("input");
   nameInput.type = "text";
   nameInput.className = "item-name";
-  nameInput.placeholder = "条目";
+  nameInput.placeholder = t.item;
 
   const notesInput = document.createElement("input");
   notesInput.type = "text";
   notesInput.className = "item-notes";
-  notesInput.placeholder = "价格";
+  notesInput.placeholder = t.price;
 
   content.appendChild(nameInput);
   content.appendChild(notesInput);
@@ -781,13 +824,13 @@ function renderItems(parsedItems, activeTab) {
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.className = "item-name";
-    nameInput.placeholder = "条目";
+    nameInput.placeholder = t.item;
     nameInput.value = item.name;
 
     const notesInput = document.createElement("input");
     notesInput.type = "text";
     notesInput.className = "item-notes";
-    notesInput.placeholder = "价格";
+    notesInput.placeholder = t.price;
     notesInput.value = item.notes;
 
     content.appendChild(nameInput);
@@ -1242,6 +1285,38 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("save-btn-income").textContent = t.save;
   document.getElementById("save-btn-transfer").textContent = t.save;
   document.getElementById("save-btn-balance").textContent = t.save;
+  const tabs = document.querySelectorAll('.transaction-tabs .tab-btn');
+    tabs[0].textContent = t.expense;
+    tabs[1].textContent = t.income;
+    tabs[2].textContent = t.transfer;
+    tabs[3].textContent = t.balance;
+  document.querySelectorAll('.transaction-household-title')
+    .forEach(el => el.textContent = t.household);
+  document.querySelectorAll('.transaction-account-title')
+    .forEach(el => el.textContent = t.account);
+  document.querySelectorAll('.transaction-time-title')
+    .forEach(el => el.textContent = t.time);
+  document.querySelectorAll('.transaction-member-title')
+    .forEach(el => el.textContent = t.member);
+  document.querySelectorAll('.transaction-category-title')
+    .forEach(el => el.textContent = t.category);
+  document.querySelectorAll('.transaction-merchant-title')
+    .forEach(el => el.textContent = t.merchant);
+  document.querySelectorAll('.transaction-item-title')
+    .forEach(el => el.textContent = t.item);
+  document.querySelectorAll('.item-name')
+    .forEach(el => el.setAttribute('placeholder', t.item));
+  document.querySelectorAll('.item-notes')
+    .forEach(el => el.setAttribute('placeholder', t.price));
+  document.querySelectorAll('[id$="-add-item-btn"]').forEach(el => {
+    el.textContent = t.addItem;
+  });
+  document.getElementById("exchange-rate-from-label").textContent = `⇂ ${t.exchangeRate}: ${5.10}`;
+  document.getElementById("exchange-rate-to-label").textContent = `↿ ${t.exchangeRate}: ${0.20}`;
+  document.getElementById("transfer-from-title").textContent = t.transferFrom;
+  document.getElementById("transfer-to-title").textContent = t.transferTo;
+  document.querySelectorAll('.transaction-notes-title')
+    .forEach(el => el.textContent = t.notes);
   document.querySelectorAll('.delete-btn').forEach(el => {
     el.textContent = t.delete;
   });
@@ -1251,6 +1326,17 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("basic-settings-title").textContent = t.basicSettingsTitle;
   document.getElementById("open-basic-settings").textContent = t.openBasicSettings;
   document.getElementById("households-title").textContent = t.myHouseholdsTitle;
+  document.getElementById("rename-btn").textContent = t.renameHousehold;
+  document.getElementById("rename-confirm").textContent = t.confirmRename;
+  document.getElementById("invite-btn").textContent = t.inviteHousehold;
+  document.getElementById("invite-panel-notes").textContent = t.inviteNote;
+  document.getElementById("invite-email").setAttribute("placeholder", t.inviteEmailPlaceholder);
+  document.getElementById("invite-confirm").textContent = t.confirmInvite;
+  document.getElementById("manage-btn").textContent = t.manageHousehold;
+  document.querySelector("#manage-panel h4").textContent = t.memberManagement;
+  document.getElementById("leave-btn").textContent = t.leaveHousehold;
+  document.querySelector("#leave-household-panel h4").textContent = t.othersHousehold;
+  document.querySelectorAll('.leave-btn').forEach(el => el.textContent = t.leave);
 
   // Basic settings
   document.getElementById("basic-settings-header").textContent = t.basicSettingsTitle;
@@ -1275,6 +1361,8 @@ function setLanguage(lang, showMessage = false) {
   });
   document.getElementById("add-home-image-btn").textContent = t.add;
   document.getElementById("save-home-image-btn").textContent = t.save;
+  document.getElementById("logout-btn").textContent = t.logout;
+  document.getElementById("delete-account-btn").textContent = t.deleteAccount;
 
   // Nav
   document.getElementById("nav-home").textContent = t.navHome;
@@ -1918,6 +2006,7 @@ async function loadMyHouseholds() {
 }
 
 function showLeaveButton(li, uid) {
+  const t = translations[currentLang];
   let btn = li.querySelector(".delete-btn");
   if (btn) {
     btn.style.display = "block"; // display again
@@ -1925,8 +2014,8 @@ function showLeaveButton(li, uid) {
   }
 
   btn = document.createElement("button");
-  btn.textContent = "离开";
-  btn.className = "delete-btn";
+  btn.textContent = t.leave;
+  btn.className = "delete-btn leave-btn";
   btn.style.width = "4rem";
   btn.style.transform = "translateX(-1rem)"; // display
   btn.style.alignItems = "center";      /* vertical centering */
