@@ -126,7 +126,7 @@ const translations = {
     renameHousehold: "Rename My household",
     confirmRename: "Confirm",
     inviteHousehold: "Invite users to my household",
-    inviteNote: "Note: Invited users can only join households that you created, not the ones that you were invited to.",
+    inviteNote: "Note: Invitees may only join the household that you created, not the ones that you were invited to.",
     inviteEmailPlaceholder: "Enter invitee email",
     confirmInvite: "Confirm invitation",
     manageHousehold: "Remove users from my household",
@@ -2585,5 +2585,6 @@ document.querySelectorAll(".item-group").forEach(group => {
     inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
   });
 });
+
 
 
