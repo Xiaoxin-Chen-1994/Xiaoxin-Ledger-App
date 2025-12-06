@@ -12,8 +12,9 @@
 </head>
 
 <body>
-  <div id="offline-banner" style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center;">
-    You are in offline mode. Data will be uploaded when internet becomes available. 
+  <div id="offline-banner"
+    style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center;">
+    You are in offline mode. Data will be uploaded when internet becomes available.
   </div>
 
   <div class="header-bar">
@@ -55,7 +56,7 @@
   </div>
 
   <div class="pages-wrapper" id="pages-wrapper">
-    <!-- Home Section -->
+    <!-- Home Page -->
     <div class="base-page" id="home-page">
       <div class="home-hero">
         <div class="home-image-wrapper">
@@ -103,7 +104,11 @@
       </div>
     </div>
 
-    <!-- Ledger Section -->
+    <!-- Accounts Page -->
+    <div class="base-page" id="accounts-page">
+    </div>
+
+    <!-- Create Entry Page -->
     <div class="base-page" id="transaction-page">
 
       <!-- Tabs -->
@@ -343,128 +348,132 @@
       <div class="dt-col minute-col"></div>
     </div>
 
-
-  <!-- Settings Section -->
-  <div class="base-page" id="settings-page">
-    <div class="settings-header">
-      <h2 id="settings-title">设置</h2>
-      <span id="settings-welcome"></span>
+    <!-- Utilities Page -->
+    <div class="base-page" id="utilities-page">
     </div>
 
-    <!-- Basic settings -->
-    <section class="settings-section basic-settings">
-      <p id="basic-settings-title">基础设置</p>
-      <button id="open-basic-settings" class="settings-button" onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
-    </section>
-
-    <!-- Labels -->
-    <section class="settings-section labels">
-      <p id="labels-title">标签</p>
-      <div id="labels-actions">
-        <button id="manage-expense-categories-btn" class="settings-button">管理支出分类</button>
-        <button id="manage-income-categories-btn" class="settings-button">管理收入分类</button>
-        <button id="manage-collections-btn" class="settings-button">管理项目</button>
-        <button id="manage-members-btn" class="settings-button">管理成员</button>
+    <!-- Settings Section -->
+    <div class="base-page" id="settings-page">
+      <div class="settings-header">
+        <h2 id="settings-title">设置</h2>
+        <span id="settings-welcome"></span>
       </div>
-    </section>
 
-    <!-- Household -->
-    <section class="settings-section household-row">
-      <p id="households-title">我的家庭</p>
-      <div id="household-actions">
-        <button id="rename-btn" class="settings-button">重命名我的家庭</button>
-        <div id="rename-panel" class="panel hidden">
-          <input id="rename-household">
-          <button id="rename-confirm" class="settings-button primary">确认修改</button>
+      <!-- Basic settings -->
+      <section class="settings-section basic-settings">
+        <p id="basic-settings-title">基础设置</p>
+        <button id="open-basic-settings" class="settings-button"
+          onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+      </section>
+
+      <!-- Labels -->
+      <section class="settings-section labels">
+        <p id="labels-title">标签</p>
+        <div id="labels-actions">
+          <button id="manage-expense-categories-btn" class="settings-button">管理支出分类</button>
+          <button id="manage-income-categories-btn" class="settings-button">管理收入分类</button>
+          <button id="manage-collections-btn" class="settings-button">管理项目</button>
+          <button id="manage-members-btn" class="settings-button">管理成员</button>
         </div>
+      </section>
 
-        <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
-        <div id="invite-panel" class="panel hidden">
-          <p id="invite-panel-notes">注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
-          <input id="invite-email" type="email" placeholder="输入对方的邮箱">
-          <button id="invite-confirm" class="settings-button primary">确认邀请</button>
-        </div>
+      <!-- Household -->
+      <section class="settings-section household-row">
+        <p id="households-title">我的家庭</p>
+        <div id="household-actions">
+          <button id="rename-btn" class="settings-button">重命名我的家庭</button>
+          <div id="rename-panel" class="panel hidden">
+            <input id="rename-household">
+            <button id="rename-confirm" class="settings-button primary">确认修改</button>
+          </div>
 
-        <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
-        <div id="manage-panel" class="panel hidden">
-          <h4>成员管理</h4>
-          <ul id="member-list" class="household-list"></ul>
-        </div>
+          <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
+          <div id="invite-panel" class="panel hidden">
+            <p id="invite-panel-notes">注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
+            <input id="invite-email" type="email" placeholder="输入对方的邮箱">
+            <button id="invite-confirm" class="settings-button primary">确认邀请</button>
+          </div>
 
-        <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
-        <div id="leave-household-panel" class="panel hidden">
-          <h4>他人的家庭</h4>
-          <ul id="leave-household-list" class="household-list"></ul>
-        </div>
-      </div>
-    </section>
-  </div>
+          <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
+          <div id="manage-panel" class="panel hidden">
+            <h4>成员管理</h4>
+            <ul id="member-list" class="household-list"></ul>
+          </div>
 
-  <div class="page" id="basic-settings-page">
-    <div class="settings-header">
-      <h2 id="basic-settings-header">基础设置</h2>
-    </div>
-
-    <!-- Language -->
-    <section class="settings-section lang-switch">
-      <p id="settings-language-title">语言</p>
-      <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
-      <button class="settings-button" onclick="setLanguage('en', true)">English</button>
-    </section>
-
-    <!-- Fontsize -->
-    <section class="settings-section fontsize-change">
-      <p id="settings-fontsize-title">字体大小</p>
-      <button class="settings-button" onclick="decreaseFontsize()">-</button>
-      <button class="settings-button" onclick="increaseFontsize()">+</button>
-    </section>
-
-    <!-- Theme color -->
-    <section class="settings-section theme-color-change">
-      <p id="theme-color-title">主题色</p>
-      <button id="change-theme-color-btn" class="settings-button" onclick="openColorPicker()">更换主题色</button>
-      <button id="restore-theme-color-btn" class="settings-button" onclick="resetThemeColor()">恢复默认</button>
-      <!-- Hidden color input -->
-      <input type="color" id="themeColorPicker" style="display:none;">
-    </section>
-
-    <!-- Color scheme -->
-    <section class="settings-section color-switch">
-      <p id="color-scheme-title">颜色方案</p>
-      <select id="color-scheme-select" onchange="setColorScheme(this.value, true)">
-        <option value="default">收入红 / 支出绿</option>
-        <option value="alt">收入绿 / 支出红</option>
-      </select>
-    </section>
-
-    <!-- Homepage images -->
-    <section class="settings-section home-image">
-      <p id="home-image-title">首页图</p>
-      <div id="home-image-actions">
-        <button id="manage-home-image-btn" class="settings-button">管理</button>
-        <div id="home-image-panel" style="display:none;">
-          <p id="home-image-instruction">您可在此处添加您想要使用的在线图片链接。</p>
-          <div id="home-image-list"></div>
-          <div class="home-image-controls">
-            <button id="add-home-image-btn" type="button">增加</button>
-            <button id="save-home-image-btn" type="button">保存</button>
+          <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
+          <div id="leave-household-panel" class="panel hidden">
+            <h4>他人的家庭</h4>
+            <ul id="leave-household-list" class="household-list"></ul>
           </div>
         </div>
-      </div>
-    </section>
-
-    <div class="actions">
-      <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
-      <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount()">删除账户</button>
+      </section>
     </div>
-  </div>
+
+    <div class="page" id="basic-settings-page">
+      <div class="settings-header">
+        <h2 id="basic-settings-header">基础设置</h2>
+      </div>
+
+      <!-- Language -->
+      <section class="settings-section lang-switch">
+        <p id="settings-language-title">语言</p>
+        <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
+        <button class="settings-button" onclick="setLanguage('en', true)">English</button>
+      </section>
+
+      <!-- Fontsize -->
+      <section class="settings-section fontsize-change">
+        <p id="settings-fontsize-title">字体大小</p>
+        <button class="settings-button" onclick="decreaseFontsize()">-</button>
+        <button class="settings-button" onclick="increaseFontsize()">+</button>
+      </section>
+
+      <!-- Theme color -->
+      <section class="settings-section theme-color-change">
+        <p id="theme-color-title">主题色</p>
+        <button id="change-theme-color-btn" class="settings-button" onclick="openColorPicker()">更换主题色</button>
+        <button id="restore-theme-color-btn" class="settings-button" onclick="resetThemeColor()">恢复默认</button>
+        <!-- Hidden color input -->
+        <input type="color" id="themeColorPicker" style="display:none;">
+      </section>
+
+      <!-- Color scheme -->
+      <section class="settings-section color-switch">
+        <p id="color-scheme-title">颜色方案</p>
+        <select id="color-scheme-select" onchange="setColorScheme(this.value, true)">
+          <option value="default">收入红 / 支出绿</option>
+          <option value="alt">收入绿 / 支出红</option>
+        </select>
+      </section>
+
+      <!-- Homepage images -->
+      <section class="settings-section home-image">
+        <p id="home-image-title">首页图</p>
+        <div id="home-image-actions">
+          <button id="manage-home-image-btn" class="settings-button">管理</button>
+          <div id="home-image-panel" style="display:none;">
+            <p id="home-image-instruction">您可在此处添加您想要使用的在线图片链接。</p>
+            <div id="home-image-list"></div>
+            <div class="home-image-controls">
+              <button id="add-home-image-btn" type="button">增加</button>
+              <button id="save-home-image-btn" type="button">保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
+        <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount()">删除账户</button>
+      </div>
+    </div>
   </div>
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
     <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
     <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts')">账户</button>
     <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction')">记一笔</button>
-    <button id="nav-values" onclick="showPage('values', 'nav-values')">价值</button>
+    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities')">工具</button>
     <button id="nav-settings" onclick="showPage('settings', 'nav-settings')">设置</button>
   </nav>
 

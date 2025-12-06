@@ -168,7 +168,7 @@ const translations = {
     navHome: "Home",
     navAccounts: "Accounts",
     navTransaction: "Create",
-    navValues: "Values",
+    navUtilities: "Utilities",
     settings: "Settings"
   },
   zh: {
@@ -254,7 +254,7 @@ const translations = {
     navHome: "首页",
     navAccounts: "账户",
     navTransaction: "记一笔",
-    navValues: "价值",
+    navUtilities: "工具",
     settings: "设置"
   }
 };
@@ -749,7 +749,6 @@ document.addEventListener('focusout', e => {
   }
 });
 
-
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
 
@@ -1096,14 +1095,14 @@ function formatLatest(data) {
 }
 
 // define base pages
-const basePages = ["home", "accounts", "transaction", "values", "settings"];
+const basePages = ["home", "accounts", "transaction", "utilities", "settings"];
 
 // history stacks for each base page
 let historyStacks = {
   home: [["home", "nav-home"]],
   accounts: [["accounts", "nav-accounts"]],
   transaction: [["transaction", "nav-transaction"]],
-  values: [["values", "nav-values"]],
+  utilities: [["utilities", "nav-utilities"]],
   settings: [["settings", "nav-settings"]]
 };
 
@@ -1124,11 +1123,11 @@ function showPage(name, navBtn = currentBase) {
   let latest = null;
 
   // reset nav button colors
-  document.getElementById("nav-home").style.background = "";
-  document.getElementById("nav-accounts").style.background = "";
-  document.getElementById("nav-transaction").style.background = "";
-  document.getElementById("nav-values").style.background = "";
-  document.getElementById("nav-settings").style.background = "";
+  basePages.forEach(page => {
+    document.getElementById(`nav-${page}`).style.background = "";
+    document.getElementById(`nav-${page}`).classList.remove("active");
+  });
+
 
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
@@ -1154,6 +1153,7 @@ function showPage(name, navBtn = currentBase) {
 
     if (stack.length < 2) { // if already returned to base
       document.getElementById(navBtn).style.background = "var(--primary)";
+      document.getElementById(navBtn).classList.add("active");
       document.getElementById("return-btn").style.display = "none";
     } else {
       document.getElementById("return-btn").style.display = "block";
@@ -1398,7 +1398,7 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("nav-home").textContent = t.navHome;
   document.getElementById("nav-accounts").textContent = t.navAccounts;
   document.getElementById("nav-transaction").textContent = t.navTransaction;
-  document.getElementById("nav-values").textContent = t.navValues;
+  document.getElementById("nav-utilities").textContent = t.navUtilities;
   document.getElementById("nav-settings").textContent = t.settings;
 
   if (currentUser) {
