@@ -694,8 +694,8 @@ button {
   white-space: normal;     /* allow wrapping */
   word-break: break-word;  /* break long words if needed */
   text-align: center;
-  padding-left: 0.4em;
-  padding-right: 0.4em;
+  padding-left: 0.2em;
+  padding-right: 0.2em;
 }
 
 .bottom-nav button:hover { background: none; }
