@@ -963,6 +963,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   width: calc(var(--font-size) * 4);
   margin-left: 0.5rem;
   background: #e74c3c;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   color: #fff;
   border: none;
   border-radius: 4px;

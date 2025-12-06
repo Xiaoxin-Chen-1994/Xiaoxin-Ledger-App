@@ -370,10 +370,25 @@
       <section class="settings-section labels">
         <p id="labels-title">标签</p>
         <div id="labels-actions">
-          <button id="manage-expense-categories-btn" class="settings-button">管理支出分类</button>
-          <button id="manage-income-categories-btn" class="settings-button">管理收入分类</button>
-          <button id="manage-collections-btn" class="settings-button">管理项目</button>
-          <button id="manage-members-btn" class="settings-button">管理成员</button>
+            <button id="manage-expense-categories-btn" class="settings-button"
+                    onclick="loadLabels('expense-categories', translations[currentLang].manageExpenseCategories)">
+              管理支出分类
+            </button>
+
+            <button id="manage-income-categories-btn" class="settings-button"
+                    onclick="loadLabels('income-categories', translations[currentLang].manageIncomeCategories)">
+              管理收入分类
+            </button>
+
+            <button id="manage-collections-btn" class="settings-button"
+                    onclick="loadLabels('collections', translations[currentLang].manageCollections)">
+              管理项目
+            </button>
+
+            <button id="manage-members-btn" class="settings-button"
+                    onclick="loadLabels('members', translations[currentLang].manageMembers)">
+              管理成员
+            </button>
         </div>
       </section>
 
@@ -468,13 +483,20 @@
       </div>
     </div>
   </div>
+
+  <div class="page" id="manage-labels-page" style="display:none;">
+    <h2 id="labels-title"></h2>
+    <div id="labels-container"></div>
+  </div>
+
+
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts')">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction')">记一笔</button>
-    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities')">工具</button>
-    <button id="nav-settings" onclick="showPage('settings', 'nav-settings')">设置</button>
+    <button id="nav-home" onclick="showPage('home', 'nav-home', 'Xiaoxin\'s Ledger App')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts', translations[currentLang].navAccounts)">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction', translations[currentLang].navTransaction)">记一笔</button>
+    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities', translations[currentLang].navUtilities)">工具</button>
+    <button id="nav-settings" onclick="showPage('settings', 'nav-settings', 'Xiaoxin\'s Ledger App')">设置</button>
   </nav>
 
 

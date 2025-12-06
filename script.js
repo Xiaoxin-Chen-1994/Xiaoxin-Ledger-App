@@ -37,7 +37,12 @@
 //       name: string
 //       type: string ("cash" | "bank" | "credit")
 
-//   categories (subcollection)
+//   expense-categories (subcollection)
+//     categories/{categoryId}
+//       primary: string
+//       secondary: [string]
+
+//   income-categories (subcollection)
 //     categories/{categoryId}
 //       primary: string
 //       secondary: [string]
@@ -47,8 +52,8 @@
 //       primary: string
 //       secondary: [string]
 // 
-//   persons (subcollection)
-//     persons/{personId}
+//   members (subcollection)
+//     members/{personId}
 //       name: string
 
 //   entries (subcollection)
@@ -66,6 +71,7 @@
 //       lastModifiedBy: string     // userId
 
 let currentUser = null;
+let userEmail = null;
 let currentLang = 'zh';
 let accounts = [];
 let persons = [];
@@ -82,6 +88,7 @@ let inputItems = null;
 let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
+let latestTitle = null;
 
 const translations = {
   en: {
@@ -92,7 +99,8 @@ const translations = {
     login: "Login",
     forgotBtn: "Reset password",
     resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
-    welcome: "Welcome",
+    back: "< Back",
+    welcome: "Welcome, ",
     homeTitle: "Home",
     monthBalance: "Nov · Balance",
     incomeMinusExpense: "Income - Expense",
@@ -100,6 +108,7 @@ const translations = {
     today: "Today",
     thisMonth: "This Month",
     thisYear: "This Year",
+    transaction: "Transaction",
     expense: "Expense",
     income: "Income",
     transfer: "Transfer",
@@ -179,7 +188,8 @@ const translations = {
     login: "登录",
     forgotBtn: "重置密码",
     resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
-    welcome: "欢迎",
+    back: "< 返回",
+    welcome: "欢迎，",
     homeTitle: "首页",
     monthBalance: "11月·结余",
     incomeMinusExpense: "收入 - 支出",
@@ -187,6 +197,7 @@ const translations = {
     today: "今天",
     thisMonth: "本月",
     thisYear: "本年",
+    transaction: "交易",
     expense: "支出",
     income: "收入",
     transfer: "转账",
@@ -522,13 +533,11 @@ auth.onAuthStateChanged(async user => {
     initHouseholdSelector(households);
     toggleHouseholdFormRows(householdIds);
 
+    userEmail = profile.email || currentUser.email;
+
     // ✅ UI updates
     document.getElementById("login-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
-
-    // ✅ Welcome text
-    document.getElementById("settings-welcome").textContent =
-      `${translations[currentLang].welcome}, ${profile.email || currentUser.email}`;
 
     // ✅ Apply profile settings
     if (profile.homeImages && Array.isArray(profile.homeImages) && profile.homeImages.length > 0) {
@@ -585,7 +594,7 @@ auth.onAuthStateChanged(async user => {
     }
 
     // ✅ Load main app
-    showPage("home", "nav-home");
+    showPage("home", "nav-home", "Xiaoxin's Ledger App");
     loadLedger(currentUser.uid);
     updateHomeKanban();
   }
@@ -1110,8 +1119,11 @@ let historyStacks = {
   settings: [["settings", "nav-settings"]]
 };
 
-function showPage(name, navBtn = currentBase) {
+function showPage(name, navBtn = currentBase, title = latestTitle) {
   const t = translations[currentLang];
+
+  latestTitle = title;
+  document.getElementById("app-title").textContent = title;
 
   // hide all pages
   document.getElementById("login-section").style.display = "none";
@@ -1184,7 +1196,11 @@ function showPage(name, navBtn = currentBase) {
 
   // transaction page special handling
   if (latestPage.includes("transaction")) {
-    document.getElementById("app-title").textContent = t.navTransaction;
+    if (latestNavBtn === "nav-transaction") {
+      document.getElementById("app-title").textContent = t.navTransaction;
+    } else {
+      document.getElementById("app-title").textContent = t.transaction;
+    }
     document.getElementById("save-btn-headerbar").style.display = "block";
 
     const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
@@ -1213,8 +1229,11 @@ function showPage(name, navBtn = currentBase) {
       if (btn) setCurrentHousehold(btn);
     }
   } else {
-    document.getElementById("app-title").textContent = "Xiaoxin's Ledger App";
     document.getElementById("save-btn-headerbar").style.display = "none";
+  }
+
+  if (latestPage === "settings") {
+    document.getElementById("settings-welcome").textContent = `${t.welcome}${userEmail}`;
   }
 
   stack = historyStacks[currentBase];
@@ -1246,6 +1265,62 @@ function goBack() {
     // replace state to reflect the new top of stack
     history.back();
   }
+}
+
+async function loadLabels(type, title) {
+  const container = document.getElementById("labels-container");
+  container.innerHTML = "";
+
+  const householdsSnap = await firebase.firestore().collection("households").get();
+
+  if (householdsSnap.empty) {
+    container.textContent = "No households found.";
+    showPage("manage-labels-page", latestNavBtn, title);
+    return;
+  }
+
+  householdsSnap.forEach(async (householdDoc) => {
+    const householdName = householdDoc.data().name || "(Unnamed household)";
+    const block = document.createElement("div");
+    block.classList.add("household-block");
+
+    const header = document.createElement("h3");
+    header.textContent = householdName;
+    block.appendChild(header);
+
+    const subcollection = householdDoc.ref.collection(type);
+    const itemsSnap = await subcollection.get();
+
+    if (itemsSnap.empty) {
+      const emptyMsg = document.createElement("p");
+      emptyMsg.textContent = "No entries yet.";
+      block.appendChild(emptyMsg);
+    } else {
+      itemsSnap.forEach((itemDoc) => {
+        const data = itemDoc.data();
+        let primaryLabel = type === "members" ? data.name : data.primary;
+
+        const btn = document.createElement("button");
+        btn.textContent = primaryLabel;
+        btn.classList.add("label-btn");
+
+        // click → show secondary page
+        if (data.secondary && data.secondary.length > 0) {
+          btn.addEventListener("click", () => showSecondary(data.secondary, primaryLabel));
+        }
+
+        // swipe left → edit/delete
+        addSwipeActions(btn, itemDoc.ref);
+
+        block.appendChild(btn);
+      });
+    }
+
+    container.appendChild(block);
+    container.appendChild(document.createElement("hr"));
+  });
+
+  showPage("manage-labels-page", latestNavBtn, title); // show the new page
 }
 
 // Attach swipe detection to the whole nav
@@ -1331,6 +1406,8 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("login-btn").textContent = t.login;
   document.getElementById("forgot-btn").textContent = t.forgotBtn;
   document.getElementById("reset-hint").textContent = t.resetHint;
+  document.getElementById("return-btn").textContent = t.back;
+  document.getElementById("save-btn-headerbar").textContent = t.save;
 
   // Home text
   document.getElementById("home-month").textContent = t.monthBalance;
@@ -1342,7 +1419,6 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("kanban-year-title").textContent = t.thisYear;
 
   // Transaction page
-  document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("save-btn-expense").textContent = t.save;
   document.getElementById("save-btn-income").textContent = t.save;
   document.getElementById("save-btn-transfer").textContent = t.save;
