@@ -1149,11 +1149,12 @@ function showPage(name, navBtn = currentBase) {
       target.classList.add('active');
     } 
 
+    document.getElementById(navBtn).style.background = "var(--primary)";
+    document.getElementById(navBtn).classList.add("active");
+    
     navigator.vibrate(30); // milliseconds
 
     if (stack.length < 2) { // if already returned to base
-      document.getElementById(navBtn).style.background = "var(--primary)";
-      document.getElementById(navBtn).classList.add("active");
       document.getElementById("return-btn").style.display = "none";
     } else {
       document.getElementById("return-btn").style.display = "block";
