@@ -761,7 +761,7 @@ function switchTab(index) {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
-  navigator.vibrate(30);
+  navigator.vibrate(30); // milliseconds
 
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
@@ -1149,6 +1149,8 @@ function showPage(name, navBtn = currentBase) {
     if (basePages.includes(latestPage)) { 
       target.classList.add('active');
     } 
+
+    navigator.vibrate(30); // milliseconds
 
     if (stack.length < 2) { // if already returned to base
       document.getElementById(navBtn).style.background = "var(--primary)";
