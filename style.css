@@ -12,12 +12,12 @@
   --radius: 0.75rem;
   --font-size: 1.1rem;
 
-  /* Default scheme: income red, expense green */
+  /* Default scheme */
   --income-color: rgb(223, 34, 34);
   --expense-color: rgb(30, 144, 255);
 }
 
-/* Alternate scheme: income green, expense red */
+/* Alternate scheme */
 :root.alt-scheme {
   --income-color: rgb(30, 144, 255);
   --expense-color: rgb(223, 34, 34);
@@ -46,12 +46,12 @@
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
     
     --income-color: rgb(248, 70, 70);
-    --expense-color: rgb(10, 190, 10);
+    --expense-color: rgb(30, 144, 255);
   }
 
-  /* Alternate scheme: income green, expense red */
+  /* Alternate scheme */
   :root.alt-scheme {
-    --income-color: rgb(10, 190, 10);
+    --income-color: rgb(30, 144, 255);
     --expense-color: rgb(248, 70, 70);
   }
 
