@@ -924,6 +924,7 @@ tabButtons.forEach(btn => {
 
 // Swipe support
 let startX = 0;
+let endX = 0;
 
 wrapper.addEventListener("touchstart", e => {
   // do not add preventDefault otherwise the selectors won't show!
@@ -934,13 +935,16 @@ wrapper.addEventListener("touchstart", e => {
 wrapper.addEventListener("touchend", e => {
   // do not add preventDefault otherwise the selectors won't show!
   // e.preventDefault();   // stop the browser from scrolling the page
-  let endX = e.changedTouches[0].clientX;
+  endX = e.changedTouches[0].clientX;
   let diff = startX - endX;
 
   if (Math.abs(diff) > 50) {
     if (diff > 0 && inputTypeIndex < (tabButtons.length - 1)) switchTab(inputTypeIndex + 1);
     if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1);
   }
+
+  startX = 0;
+  endX = 0;
 });
 
 const fieldMap = {
@@ -1129,7 +1133,7 @@ function showPage(name, navBtn = currentBase) {
   });
 
   navigator.vibrate(30); // milliseconds
-  
+
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
       // hide the current page
@@ -1241,6 +1245,41 @@ function goBack() {
     
     // replace state to reflect the new top of stack
     history.back();
+  }
+}
+
+// Attach swipe detection to the whole nav
+const nav = document.querySelector('.bottom-nav');
+const buttons = Array.from(nav.querySelectorAll('button'));
+
+nav.addEventListener('touchstart', (e) => {
+  startX = e.touches[0].clientX;
+});
+
+nav.addEventListener('touchend', (e) => {
+  endX = e.changedTouches[0].clientX;
+  handleSwipe();
+
+  startX = 0;
+  endX = 0;
+});
+
+function handleSwipe() {
+  const activeIndex = buttons.findIndex(btn => btn.classList.contains('active'));
+  const threshold = 50; // minimum px swipe distance
+
+  if (endX - startX > threshold) {
+    // swipe right → go to previous tab
+    if (activeIndex > 0) {
+      const prevBtn = buttons[activeIndex - 1];
+      prevBtn.click(); // triggers showPage()
+    }
+  } else if (startX - endX > threshold) {
+    // swipe left → go to next tab
+    if (activeIndex < buttons.length - 1) {
+      const nextBtn = buttons[activeIndex + 1];
+      nextBtn.click(); // triggers showPage()
+    }
   }
 }
 
