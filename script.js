@@ -761,6 +761,8 @@ function switchTab(index) {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
+  navigator.vibrate(200);
+
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
 
