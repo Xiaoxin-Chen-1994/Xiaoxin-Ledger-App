@@ -120,6 +120,7 @@ body {
   z-index: 0;
   flex: 0 0 100%;             /* each page takes full viewport width */
   height: 100%;
+  width: 100%;
   background: var(--bg);
   padding-left: 4%;
   padding-right: 4%;
@@ -144,7 +145,7 @@ body {
 
 .page {
   display: block;
-  transform: translateX(110%); /* start off-screen */
+  transform: translateX(150%); /* start off-screen */
   transition: transform 0.3s ease;
 }
 
