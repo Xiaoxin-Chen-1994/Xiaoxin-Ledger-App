@@ -108,6 +108,8 @@ const translations = {
     household: "Household",
     account: "Account",
     time: "Time",
+    now: "Now",
+    dismiss: "Dismiss ▼",
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
     member: "Member",
     category: "Category",
@@ -122,6 +124,11 @@ const translations = {
     save: "Save",
     basicSettingsTitle: "Basic Settings",
     openBasicSettings: "Open Basic Settings",
+    labels: "Labels",
+    manageExpenseCategories: "Manage expense categories",
+    manageIncomeCategories: "Manage income categories",
+    manageCollections: "Manage collections",
+    manageMembers: "Manage members",
     myHouseholdsTitle: "My Households",
     renameHousehold: "Rename My household",
     confirmRename: "Confirm",
@@ -187,6 +194,8 @@ const translations = {
     household: "家庭",
     account: "账户",
     time: "时间",
+    now: "现在",
+    dismiss: "收起 ▼",
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
     member: "成员",
     category: "类别",
@@ -201,6 +210,11 @@ const translations = {
     save: "保存",
     basicSettingsTitle: "基础设置",
     openBasicSettings: "打开基础设置",
+    labels: "标签",
+    manageExpenseCategories: "管理支出分类",
+    manageIncomeCategories: "管理收入分类",
+    manageCollections: "管理项目",
+    manageMembers: "管理成员",
     myHouseholdsTitle: "我的家庭",
     renameHousehold: "重命名我的家庭",
     confirmRename: "确认修改",
@@ -580,11 +594,11 @@ auth.onAuthStateChanged(async user => {
 function toggleHouseholdFormRows(householdIds) {
   // Hide the form row if only one household
   if (householdIds.length === 1) {
-    document.querySelectorAll(".household-form-row").forEach(row => {
+    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
       row.style.display = "none";
     });
   } else {
-    document.querySelectorAll(".household-form-row").forEach(row => {
+    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
       row.style.display = "flex";
     });
   }
@@ -1169,6 +1183,10 @@ function showPage(name, navBtn = currentBase) {
     const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
     const formId = formIds[activeIndex];
 
+    document.querySelectorAll('.form-row label').forEach(label => {
+      label.style.width = (currentLang === 'zh') ? '15%' : '20%';
+    });
+
     if (isTransactionFormEmpty(formId)) {
       let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
       if (btn) {
@@ -1253,6 +1271,7 @@ function enablePageSwipe(pageEl) {
     } else {
       pageEl.style.transform = "translateX(0)";
     }
+    currentX = 0; // reset here
   });
 }
 
@@ -1296,6 +1315,8 @@ function setLanguage(lang, showMessage = false) {
     .forEach(el => el.textContent = t.account);
   document.querySelectorAll('.transaction-time-title')
     .forEach(el => el.textContent = t.time);
+  document.getElementById("now-btn").textContent = t.now;
+  document.getElementById("dismiss-btn").textContent = t.dismiss;
   document.querySelectorAll('.transaction-member-title')
     .forEach(el => el.textContent = t.member);
   document.querySelectorAll('.transaction-category-title')
@@ -1325,6 +1346,11 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("settings-title").textContent = t.settings;
   document.getElementById("basic-settings-title").textContent = t.basicSettingsTitle;
   document.getElementById("open-basic-settings").textContent = t.openBasicSettings;
+  document.getElementById("labels-title").textContent = t.labels;
+  document.getElementById("manage-expense-categories-btn").textContent = t.manageExpenseCategories;
+  document.getElementById("manage-income-categories-btn").textContent = t.manageIncomeCategories;
+  document.getElementById("manage-collections-btn").textContent = t.manageCollections;
+  document.getElementById("manage-members-btn").textContent = t.manageMembers;
   document.getElementById("households-title").textContent = t.myHouseholdsTitle;
   document.getElementById("rename-btn").textContent = t.renameHousehold;
   document.getElementById("rename-confirm").textContent = t.confirmRename;

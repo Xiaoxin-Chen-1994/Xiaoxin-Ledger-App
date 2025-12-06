@@ -333,9 +333,8 @@
     </div>
 
     <div id="datetime-selector" class="selector">
-      <button type="button" class="datetime-now" onclick=clickToSetNow()>现在</button>
-      <button type="button" class="datetime-close"
-        onclick="closeSelector()">收起 ▼</button>
+      <button id="now-btn" type="button" class="datetime-now" onclick=clickToSetNow()>现在</button>
+      <button id="dismiss-btn" type="button" class="datetime-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col year-col"></div>
       <div class="dt-col month-col"></div>
@@ -356,6 +355,17 @@
     <section class="settings-section basic-settings">
       <p id="basic-settings-title">基础设置</p>
       <button id="open-basic-settings" class="settings-button" onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+    </section>
+
+    <!-- Labels -->
+    <section class="settings-section labels">
+      <p id="labels-title">标签</p>
+      <div id="labels-actions">
+        <button id="manage-expense-categories-btn" class="settings-button">管理支出分类</button>
+        <button id="manage-income-categories-btn" class="settings-button">管理收入分类</button>
+        <button id="manage-collections-btn" class="settings-button">管理项目</button>
+        <button id="manage-members-btn" class="settings-button">管理成员</button>
+      </div>
     </section>
 
     <!-- Household -->
@@ -402,7 +412,7 @@
       <button class="settings-button" onclick="setLanguage('en', true)">English</button>
     </section>
 
-    <!-- Language -->
+    <!-- Fontsize -->
     <section class="settings-section fontsize-change">
       <p id="settings-fontsize-title">字体大小</p>
       <button class="settings-button" onclick="decreaseFontsize()">-</button>

@@ -564,6 +564,7 @@ input[type="password"], input[type="url"], .selector-button,
 
 .datetime-close {
   right: 10px;
+  margin-right: 10px;
 }
 
 .dt-col {
