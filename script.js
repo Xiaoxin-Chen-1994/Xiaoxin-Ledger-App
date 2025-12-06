@@ -1128,7 +1128,8 @@ function showPage(name, navBtn = currentBase) {
     document.getElementById(`nav-${page}`).classList.remove("active");
   });
 
-
+  navigator.vibrate(30); // milliseconds
+  
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
       // hide the current page
@@ -1151,8 +1152,6 @@ function showPage(name, navBtn = currentBase) {
 
     document.getElementById(navBtn).style.background = "var(--primary)";
     document.getElementById(navBtn).classList.add("active");
-    
-    navigator.vibrate(30); // milliseconds
 
     if (stack.length < 2) { // if already returned to base
       document.getElementById("return-btn").style.display = "none";
