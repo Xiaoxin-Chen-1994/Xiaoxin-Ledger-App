@@ -1211,6 +1211,213 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   }
 }
 
+.labels-household-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.labels-add-cancel-wrapper {
+  --cancel-w: 100px;
+  --gap: 8px;
+
+  position: relative;
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  transition: padding-right 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Add stays full width; no JS width changes needed */
+.labels-add-row-btn {
+  text-align: left;
+  color: var(--text);
+  background: none;
+  flex: 1;
+  padding: 0.5rem;
+  min-width: 0; /* avoid unexpected overflow */
+}
+
+.labels-add-row-btn:hover {
+  color: var(--text);
+  background: none;
+}
+
+/* Cancel lives off-screen, slides in */
+.labels-cancel-btn {
+  padding: 0.5rem;
+  position: absolute;
+  right: calc(-1 * (var(--cancel-w) + var(--gap)));
+  width: var(--cancel-w);
+  opacity: 0;
+  pointer-events: none;
+  transition: right 0.3s ease, opacity 0.3s ease;
+}
+
+/* When showing Cancel, reserve space with wrapper padding */
+.labels-add-cancel-wrapper.has-cancel {
+  padding-right: calc(var(--cancel-w) + var(--gap));
+}
+
+.labels-cancel-btn.show {
+  right: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.labels-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;   /* stretch children to equal height */
+}
+
+.labels-emoji-btn {
+  flex: 0 0 auto;   /* do not grow, do not shrink, size to content */
+  background: var(--primary);
+  padding: 0 0.2rem;   /* keep it tight */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.emoji-picker-wrapper {
+  display: block;
+  margin-top: 0.1rem; /* spacing below button */
+  opacity: 0;
+  transform: translateY(-5px); /* slight slide up */
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.emoji-picker-wrapper.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+emoji-picker {
+  width: 100%;        /* fill parent */
+  max-width: 100%;    /* prevent overflow */
+  box-sizing: border-box;
+  margin-bottom: 0.5rem;
+}
+
+.labels-tick-btn {
+  flex: 0 0 auto;   /* do not grow, do not shrink, size to content */
+  padding: 0 1rem;   /* keep it tight */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.labels-primary-input {
+  flex: 1 1 auto;   /* grow to fill remaining space */
+  min-width: 0;     /* allow shrinking if needed */
+  width: 100%;      /* ensures max width inside flex */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.labels-input-row,
+.labels-add-cancel-wrapper {
+  padding: 0.25rem 0;     /* same vertical padding */
+}
+
+.category-wrapper {
+  --action-w: 60px;   /* width of each action button */
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: padding-right 0.3s ease;
+  overflow-x: hidden;
+}
+
+.secondary-wrapper {
+  display: flex;
+  flex-direction: column;   /* stack secondaries row by row */
+  overflow-x: hidden;
+
+  margin-left: 2rem;        /* indent secondaries */
+  width: calc(100% - 2rem); /* make them shorter than primaries */
+  box-sizing: border-box;
+}
+
+.category-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start; /* button on left */
+  gap: 0.5rem;                 /* space between button and actions */
+}
+
+.primary-category, .primary-category:hover {
+  text-align: left;
+  color: var(--text);
+  background: #888888;
+  flex: 1;             /* take most width */
+  padding: 0.5rem;
+  min-width: 0;
+  transition: flex 0.3s ease;
+}
+
+.secondary-category, .secondary-category:hover {
+  text-align: left;
+  color: var(--text);
+  background: none;
+  flex: 1;             /* take most width */
+  padding: 0.5rem;
+  min-width: 0;
+  transition: flex 0.3s ease;
+}
+
+.indented { margin-left: 2rem; }
+
+/* Action buttons off-screen initially */
+.label-edit-btn,
+.label-delete-btn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--action-w);
+  display: flex;              /* enable flexbox */
+  align-items: center;        /* vertical center */
+  justify-content: center;    /* horizontal center */
+  opacity: 0;
+  pointer-events: none;
+  transition: right 0.3s ease, opacity 0.3s ease;
+}
+
+/* Place them side by side */
+.label-edit-btn {
+  right: calc(-1 * (var(--action-w)*2));
+  background: var(--primary);
+}
+.label-delete-btn {
+  right: calc(-1 * (var(--action-w)));
+  background: #f44336;
+}
+
+/* When showing actions, reserve space */
+.category-wrapper.has-actions {
+  padding-right: calc(var(--action-w)*2);
+}
+
+/* Slide them in */
+.label-edit-btn.show {
+  right: var(--action-w); /* sits left of delete */
+  opacity: 1;
+  pointer-events: auto;
+}
+.label-delete-btn.show {
+  right: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .type-selector {
   display: flex;
   justify-content: space-around;

@@ -482,23 +482,21 @@
         <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount()">删除账户</button>
       </div>
     </div>
-  </div>
-
-  <div class="page" id="manage-labels-page" style="display:none;">
-    <h2 id="labels-title"></h2>
-    <div id="labels-container"></div>
-  </div>
-
+  
+    <div class="page" id="manage-labels-page">
+      <h2 id="labels-title"></h2>
+      <div id="labels-container"></div>
+    </div>
+  </div> <!-- Put all pages above this line -->
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home', 'nav-home', 'Xiaoxin\'s Ledger App')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts', translations[currentLang].navAccounts)">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction', translations[currentLang].navTransaction)">记一笔</button>
-    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities', translations[currentLang].navUtilities)">工具</button>
-    <button id="nav-settings" onclick="showPage('settings', 'nav-settings', 'Xiaoxin\'s Ledger App')">设置</button>
+    <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts')">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction')">记一笔</button>
+    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities')">工具</button>
+    <button id="nav-settings" onclick="showPage('settings', 'nav-settings')">设置</button>
   </nav>
-
 
   <div id="statusMessage"></div>
 
@@ -507,9 +505,11 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
-
+  
   <!-- App Logic -->
   <script src="script.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/index.js"></script>
+
 </body>
 
 </html>
