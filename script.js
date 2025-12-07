@@ -1238,7 +1238,6 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   if (!isBaseAndFresh && !isAlreadyActive) {
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle]); // add to the history stacks
   }
-  console.log(historyStacks)
 }
 
 function goBack() {
@@ -1255,7 +1254,7 @@ function goBack() {
     if (stack.length > 1) {
       stack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
     }
-    console.log(prevPage)
+
     showPage(prevPage, prevNavBtn, prevTitle);
 
     // replace state to reflect the new top of stack
@@ -1340,7 +1339,7 @@ async function loadLabels(type, title) {
             }
           }
 
-          enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id);
+          enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id, "secondary");
 
           row.appendChild(secondaryWrapper);
         }
@@ -1351,7 +1350,7 @@ async function loadLabels(type, title) {
         });
       }
     }
-    enableDrop(block, householdRef, type, null); // For primaries
+    enableDrop(block, householdRef, type, null, "primary"); // For primaries
     container.appendChild(block);
     container.appendChild(document.createElement("hr"));
   }
@@ -1624,26 +1623,35 @@ function createCategoryRow(docSnap, block, householdRef, type, title, isSecondar
   btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
   btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
 
-  // metadata
-  rowContent.dataset.id = docSnap.id;
-  rowContent.dataset.isSecondary = isSecondary ? "1" : "0";
-  rowContent.dataset.parentId = parentId || "";
+  // === Dragging ===
+  if (!isSecondary) {
+    // Primaries: drag the wrapper
+    categoryWrapper.setAttribute("draggable", true);
 
-  // make the row draggable
-  rowContent.setAttribute("draggable", true);
+    categoryWrapper.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("categoryId", docSnap.id);
+      e.dataTransfer.setData("isSecondary", "0");
+      categoryWrapper.classList.add("dragging");
+    });
 
-  // drag events
-  rowContent.addEventListener("dragstart", e => {
-    e.dataTransfer.setData("categoryId", docSnap.id);
-    e.dataTransfer.setData("isSecondary", isSecondary ? "1" : "0");
-    e.dataTransfer.setData("parentId", parentId || "");
-    e.dataTransfer.effectAllowed = "move";
-    rowContent.classList.add("dragging");
-  });
+    categoryWrapper.addEventListener("dragend", () => {
+      categoryWrapper.classList.remove("dragging");
+    });
+  } else {
+    // Secondaries: drag the row itself
+    rowContent.setAttribute("draggable", true);
 
-  rowContent.addEventListener("dragend", () => {
-    rowContent.classList.remove("dragging");
-  });
+    rowContent.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("categoryId", docSnap.id);
+      e.dataTransfer.setData("isSecondary", "1");
+      e.dataTransfer.setData("parentId", parentId);
+      rowContent.classList.add("dragging");
+    });
+
+    rowContent.addEventListener("dragend", () => {
+      rowContent.classList.remove("dragging");
+    });
+  }
 
   return categoryWrapper;
 }
@@ -1660,30 +1668,50 @@ function hideActions(wrapper, editBtn, deleteBtn) {
   deleteBtn.classList.remove("show");
 }
 
-function enableDrop(container) {
+function enableDrop(container, householdRef, type, parentId, mode) {
   container.addEventListener("dragover", e => {
-    e.preventDefault(); // allow drop
+    e.preventDefault();
     const dragging = document.querySelector(".dragging");
     if (!dragging) return;
 
-    const afterElement = getDragAfterElement(container, e.clientY);
-    if (!afterElement) {
-      container.appendChild(dragging.parentElement);
+    const afterElement = getDragAfterElement(container, e.clientY, mode);
+    if (afterElement) {
+      container.insertBefore(dragging, afterElement);
     } else {
-      container.insertBefore(dragging.parentElement, afterElement.parentElement);
+      container.appendChild(dragging);
     }
   });
 
-  container.addEventListener("drop", e => {
+  container.addEventListener("drop", async e => {
     e.preventDefault();
-    // recompute order here
-    const newOrder = Array.from(container.querySelectorAll(".category-row"))
-                          .map(row => row.dataset.id);
-    console.log("New order:", newOrder);
-    // TODO: call Firestore update with newOrder
+    const draggedId = e.dataTransfer.getData("categoryId");
+    const isSecondary = e.dataTransfer.getData("isSecondary") === "1";
+    const fromParentId = e.dataTransfer.getData("parentId");
+
+    if (mode === "primary" && !isSecondary) {
+      // Reorder primaries
+      const newOrder = Array.from(container.querySelectorAll(".category-wrapper"))
+                            .map(w => w.querySelector(".category-row").dataset.id);
+      await reorderPrimaries(householdRef, type, newOrder);
+    }
+
+    if (mode === "secondary" && isSecondary) {
+      const toParentId = parentId;
+      if (fromParentId === toParentId) {
+        // Reorder within same parent
+        const newOrder = Array.from(container.querySelectorAll(".category-row.secondary-row"))
+                              .map(r => r.dataset.id);
+        await reorderSecondaries(householdRef, type, toParentId, newOrder);
+      } else {
+        // Move secondary to new parent
+        await moveSecondary(householdRef, type, fromParentId, toParentId, draggedId);
+        const newOrder = Array.from(container.querySelectorAll(".category-row.secondary-row"))
+                              .map(r => r.dataset.id);
+        await reorderSecondaries(householdRef, type, toParentId, newOrder);
+      }
+    }
   });
 }
-
 
 function getDragAfterElement(container, y) {
   const elements = [...container.querySelectorAll(".category-row:not(.dragging)")];
@@ -1698,16 +1726,41 @@ function getDragAfterElement(container, y) {
   }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-async function reorderWithinParent(householdRef, type, parentId, orderedIds) {
+async function reorderPrimaries(householdRef, type, orderedIds) {
   const batch = householdRef.firestore.batch();
   orderedIds.forEach((docId, index) => {
-    const ref = householdRef.collection(type)
-                            .doc(parentId)
-                            .collection("secondaries")
-                            .doc(docId);
+    const ref = householdRef.collection(type).doc(docId);
     batch.update(ref, { orderIndex: index });
   });
   await batch.commit();
+}
+
+async function reorderSecondaries(householdRef, type, parentId, orderedIds) {
+  const batch = householdRef.firestore.batch();
+  orderedIds.forEach((docId, index) => {
+    const ref = householdRef.collection(type).doc(parentId)
+                            .collection("secondaries").doc(docId);
+    batch.update(ref, { orderIndex: index });
+  });
+  await batch.commit();
+}
+
+async function moveSecondary(householdRef, type, fromParentId, toParentId, secondaryId) {
+  const fromRef = householdRef.collection(type).doc(fromParentId)
+                              .collection("secondaries").doc(secondaryId);
+  const toRef = householdRef.collection(type).doc(toParentId)
+                            .collection("secondaries").doc(secondaryId);
+
+  const snap = await fromRef.get();
+  if (!snap.exists) return;
+  const data = snap.data();
+
+  await fromRef.delete();
+
+  const toListSnap = await householdRef.collection(type).doc(toParentId)
+                                       .collection("secondaries").orderBy("orderIndex").get();
+  const nextIndex = toListSnap.size;
+  await toRef.set({ ...data, orderIndex: nextIndex });
 }
 
 // Attach swipe detection to the whole nav
