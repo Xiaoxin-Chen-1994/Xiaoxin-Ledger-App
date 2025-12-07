@@ -1613,23 +1613,24 @@ function createCategoryRow(docSnap, block, householdRef, type, title, isSecondar
     showActions(categoryWrapper, editBtn, deleteBtn);
   });
 
-  // metadata on the row
+  let pressTimer;
+  btn.addEventListener("mousedown", () => {
+    pressTimer = setTimeout(() => {
+      showActions(categoryWrapper, editBtn, deleteBtn);
+    }, 600);
+  });
+  btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
+  btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+
+  // metadata
   rowContent.dataset.id = docSnap.id;
   rowContent.dataset.isSecondary = isSecondary ? "1" : "0";
   rowContent.dataset.parentId = parentId || "";
 
-  // make the whole row draggable, not the button
+  // make the row draggable
   rowContent.setAttribute("draggable", true);
 
-  // Optional: enable drag only after long-press
-  let dragEnableTimer;
-  rowContent.addEventListener("mousedown", () => {
-    dragEnableTimer = setTimeout(() => rowContent.setAttribute("draggable", true), 400);
-  });
-  rowContent.addEventListener("mouseup", () => clearTimeout(dragEnableTimer));
-  rowContent.addEventListener("mouseleave", () => clearTimeout(dragEnableTimer));
-
-  // drag events on the row
+  // drag events
   rowContent.addEventListener("dragstart", e => {
     e.dataTransfer.setData("categoryId", docSnap.id);
     e.dataTransfer.setData("isSecondary", isSecondary ? "1" : "0");
@@ -1655,6 +1656,51 @@ function hideActions(wrapper, editBtn, deleteBtn) {
   wrapper.classList.remove("has-actions");
   editBtn.classList.remove("show");
   deleteBtn.classList.remove("show");
+}
+
+function enableDrop(container, householdRef, type, parentId) {
+  container.addEventListener("dragover", e => {
+    e.preventDefault();
+    const dragging = document.querySelector(".dragging");
+    const afterElement = getDragAfterElement(container, e.clientY);
+    if (!afterElement) {
+      container.appendChild(dragging.parentElement);
+    } else {
+      container.insertBefore(dragging.parentElement, afterElement.parentElement);
+    }
+  });
+
+  container.addEventListener("drop", async e => {
+    e.preventDefault();
+    const newOrder = Array.from(container.querySelectorAll(".category-row"))
+                          .map(row => row.dataset.id);
+    await reorderWithinParent(householdRef, type, parentId, newOrder);
+  });
+}
+
+function getDragAfterElement(container, y) {
+  const elements = [...container.querySelectorAll(".category-row:not(.dragging)")];
+  return elements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+async function reorderWithinParent(householdRef, type, parentId, orderedIds) {
+  const batch = householdRef.firestore.batch();
+  orderedIds.forEach((docId, index) => {
+    const ref = householdRef.collection(type)
+                            .doc(parentId)
+                            .collection("secondaries")
+                            .doc(docId);
+    batch.update(ref, { orderIndex: index });
+  });
+  await batch.commit();
 }
 
 // Attach swipe detection to the whole nav
