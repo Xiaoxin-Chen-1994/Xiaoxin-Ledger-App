@@ -1340,6 +1340,8 @@ async function loadLabels(type, title) {
             }
           }
 
+          enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id);
+
           row.appendChild(secondaryWrapper);
         }
       } else if (type === "members") {
@@ -1349,7 +1351,7 @@ async function loadLabels(type, title) {
         });
       }
     }
-
+    enableDrop(block, householdRef, type, null); // For primaries
     container.appendChild(block);
     container.appendChild(document.createElement("hr"));
   }
@@ -1658,10 +1660,12 @@ function hideActions(wrapper, editBtn, deleteBtn) {
   deleteBtn.classList.remove("show");
 }
 
-function enableDrop(container, householdRef, type, parentId) {
+function enableDrop(container) {
   container.addEventListener("dragover", e => {
-    e.preventDefault();
+    e.preventDefault(); // allow drop
     const dragging = document.querySelector(".dragging");
+    if (!dragging) return;
+
     const afterElement = getDragAfterElement(container, e.clientY);
     if (!afterElement) {
       container.appendChild(dragging.parentElement);
@@ -1670,13 +1674,16 @@ function enableDrop(container, householdRef, type, parentId) {
     }
   });
 
-  container.addEventListener("drop", async e => {
+  container.addEventListener("drop", e => {
     e.preventDefault();
+    // recompute order here
     const newOrder = Array.from(container.querySelectorAll(".category-row"))
                           .map(row => row.dataset.id);
-    await reorderWithinParent(householdRef, type, parentId, newOrder);
+    console.log("New order:", newOrder);
+    // TODO: call Firestore update with newOrder
   });
 }
+
 
 function getDragAfterElement(container, y) {
   const elements = [...container.querySelectorAll(".category-row:not(.dragging)")];
