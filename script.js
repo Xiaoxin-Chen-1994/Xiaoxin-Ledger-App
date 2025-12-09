@@ -192,9 +192,10 @@ const translations = {
       <h2>Acknowledgements</h2>
       <p>This web app would not have been possible without the following services:</p>
       <ul>
-        <li><strong>GitHub</strong> — for hosting the webpage code repository</li>
-        <li><strong>Firebase</strong> — for hosting and managing user data</li>
-        <li><strong>Vercel</strong> — for deploying and hosting the live web app</li>
+        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> — for hosting the webpage code repository</li>
+        <li><strong><a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer">Firebase</a></strong> — for hosting and managing user data</li>
+        <li><strong><a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Vercel</a></strong> — for deploying and hosting the live web app</li>
+        <li><strong><a href="https://copilot.microsoft.com" target="_blank" rel="noopener noreferrer">Copilot</a></strong> — for assisting with coding and development</li>
       </ul>
     `,
     privacy: "Privacy Statement",
@@ -207,7 +208,7 @@ const translations = {
       </ul>
       <p>
         The project owner (Xiaoxin Chen) can access all data through the Firebase Console. 
-        By Firebase’s design and policy, the project owner <strong>must have full administrative access</strong> to all hosted data. 
+        By <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase’s design and policy</a>, the project owner <strong>must have full administrative access</strong> to all hosted data. 
         However, he is committed to strictly following his personal ethical code and <strong>will not view or disclose any user or household data</strong>.
       </p>
       <p>
@@ -320,9 +321,10 @@ const translations = {
       <h2>致谢</h2>
       <p>本网页应用的实现离不开以下服务：</p>
       <ul>
-        <li><strong>GitHub</strong> —— 用于托管网页代码仓库</li>
-        <li><strong>Firebase</strong> —— 用于托管和管理用户数据</li>
-        <li><strong>Vercel</strong> —— 用于部署和托管线上网页应用</li>
+        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> —— 用于托管网页代码仓库</li>
+        <li><strong><a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer">Firebase</a></strong> —— 用于托管和管理用户数据</li>
+        <li><strong><a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Vercel</a></strong> —— 用于部署和托管线上网页应用</li>
+        <li><strong><a href="https://copilot.microsoft.com" target="_blank" rel="noopener noreferrer">Copilot</a></strong> —— 用于协助编码与开发</li>
       </ul>
     `,
     privacy: "隐私",
@@ -334,7 +336,7 @@ const translations = {
         <li><strong>家庭数据</strong> —— 同一家庭的用户以及项目所有者（Xiaoxin Chen）可见。</li>
       </ul>
       <p>
-        项目所有者（Xiaoxin Chen）可通过 Firebase 控制台访问所有数据。根据 Firebase 的设计和政策，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。
+        项目所有者（Xiaoxin Chen）可通过 Firebase 控制台访问所有数据。根据 <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase 的设计和政策</a>，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。
         然而，他承诺严格遵守个人的道德准则，<strong>不会查看或泄露任何用户或家庭数据</strong>。
       </p>
       <p>
