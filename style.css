@@ -1346,7 +1346,7 @@ emoji-picker {
   box-sizing: border-box;
 }
 
-.category-row {
+.primary-category-row, .secondary-category-row {
   display: flex;
   flex-direction: row;
   align-items: center;

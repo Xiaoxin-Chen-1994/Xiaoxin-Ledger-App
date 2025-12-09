@@ -422,6 +422,16 @@
           </div>
         </div>
       </section>
+
+      <section class="settings-section about">
+        <p id="about-title">关于</p>
+        <div id="about-actions">
+          <button id="open-acknowledgements" class="settings-button"
+            onclick="showPage('acknowledgements', 'nav-settings', translations[currentLang].acknowledgements)">致谢</button>
+          <button id="open-privacy" class="privacy-button"
+            onclick="showPage('privacy', 'nav-settings', translations[currentLang].privacy)">隐私声明</button>
+        </div>
+      </section>
     </div>
 
     <div class="page" id="basic-settings-page">
@@ -486,6 +496,14 @@
     <div class="page" id="manage-labels-page">
       <h2 id="labels-title"></h2>
       <div id="labels-container"></div>
+    </div>
+
+    <div class="page" id="acknowledgements-page">
+      <div id="acknowledgements-content"></div>
+    </div>
+
+    <div class="page" id="privacy-page">
+      <div id="privacy-content"></div>
     </div>
   </div> <!-- Put all pages above this line -->
 

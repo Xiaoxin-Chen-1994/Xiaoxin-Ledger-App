@@ -185,7 +185,40 @@ const translations = {
     navAccounts: "Accounts",
     navTransaction: "Create",
     navUtilities: "Utilities",
-    settings: "Settings"
+    settings: "Settings",
+    about: "About",
+    acknowledgements: "Acknowledgements", 
+    acknowledgementsContent: `
+      <h2>Acknowledgements</h2>
+      <p>This web app would not have been possible without the following services:</p>
+      <ul>
+        <li><strong>GitHub</strong> — for hosting the webpage code repository</li>
+        <li><strong>Firebase</strong> — for hosting and managing user data</li>
+        <li><strong>Vercel</strong> — for deploying and hosting the live web app</li>
+      </ul>
+    `,
+    privacy: "Privacy Statement",
+    privacyContent: `
+      <h2>Privacy Statement</h2>
+      <p>User data are <strong>securely stored in Firebase</strong>. Access permissions are as follows:</p>
+      <ul>
+        <li><strong>Personal preferences</strong> — visible only to the individual user and the project owner (Xiaoxin Chen).</li>
+        <li><strong>Household data</strong> — visible to users within the same household and the project owner (Xiaoxin Chen).</li>
+      </ul>
+      <p>
+        The project owner (Xiaoxin Chen) can access all data through the Firebase Console. 
+        By Firebase’s design and policy, the project owner <strong>must have full administrative access</strong> to all hosted data. 
+        However, he is committed to strictly following his personal ethical code and <strong>will not view or disclose any user or household data</strong>.
+      </p>
+      <p>
+        To protect against unauthorized access, the project owner’s Firebase account is secured through Google login with 
+        <strong>two‑step verification enabled</strong>. This means that even if hackers attempt to break in, they cannot gain access without the second verification step.
+      </p>
+      <p>
+        For any concerns or questions, please contact the project owner at: 
+        <a href="mailto:jerryc1994@hotmail.com">jerryc1994@hotmail.com</a>.
+      </p>
+    `
   },
   zh: {
     loginTitle: "登录或注册",
@@ -280,7 +313,38 @@ const translations = {
     navAccounts: "账户",
     navTransaction: "记一笔",
     navUtilities: "工具",
-    settings: "设置"
+    settings: "设置",
+    about: "关于",
+    acknowledgements: "致谢", 
+    acknowledgementsContent: `
+      <h2>致谢</h2>
+      <p>本网页应用的实现离不开以下服务：</p>
+      <ul>
+        <li><strong>GitHub</strong> —— 用于托管网页代码仓库</li>
+        <li><strong>Firebase</strong> —— 用于托管和管理用户数据</li>
+        <li><strong>Vercel</strong> —— 用于部署和托管线上网页应用</li>
+      </ul>
+    `,
+    privacy: "隐私",
+    privacyContent: `
+      <h2>隐私声明</h2>
+      <p>用户数据<strong>安全地存储在 Firebase</strong>。访问权限如下：</p>
+      <ul>
+        <li><strong>个人偏好</strong> —— 仅用户本人和项目所有者（Xiaoxin Chen）可见。</li>
+        <li><strong>家庭数据</strong> —— 同一家庭的用户以及项目所有者（Xiaoxin Chen）可见。</li>
+      </ul>
+      <p>
+        项目所有者（Xiaoxin Chen）可通过 Firebase 控制台访问所有数据。根据 Firebase 的设计和政策，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。
+        然而，他承诺严格遵守个人的道德准则，<strong>不会查看或泄露任何用户或家庭数据</strong>。
+      </p>
+      <p>
+        为防止未经授权的访问，项目所有者的 Firebase 帐号通过 Google 登录并启用了<strong>双重验证</strong>。
+        这意味着即使黑客尝试入侵，没有第二步验证也无法获得帐号访问权限。
+      </p>
+      <p>
+        如有任何疑问或问题，请联系项目所有者：<a href="mailto:jerryc1994@hotmail.com">jerryc1994@hotmail.com</a>。
+      </p>
+    `
   }
 };
 
@@ -1529,7 +1593,7 @@ function createCategoryRow(docSnap, block, householdRef, type, title, isSecondar
 
   // inner row container
   const rowContent = document.createElement("div");
-  rowContent.classList.add("category-row");
+  rowContent.classList.add(isSecondary ? "secondary-category-row" : "primary-category-row");
 
   // main button
   const btn = document.createElement("button");
@@ -1671,11 +1735,14 @@ function hideActions(wrapper, editBtn, deleteBtn) {
 function enableDrop(container, householdRef, type, parentId, mode) {
   container.addEventListener("dragover", e => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
     const dragging = document.querySelector(".dragging");
     if (!dragging) return;
 
     const afterElement = getDragAfterElement(container, e.clientY, mode);
-    if (afterElement) {
+console.log(afterElement)
+    if (afterElement && afterElement.parentNode === container) {
       container.insertBefore(dragging, afterElement);
     } else {
       container.appendChild(dragging);
@@ -1684,46 +1751,62 @@ function enableDrop(container, householdRef, type, parentId, mode) {
 
   container.addEventListener("drop", async e => {
     e.preventDefault();
+
     const draggedId = e.dataTransfer.getData("categoryId");
     const isSecondary = e.dataTransfer.getData("isSecondary") === "1";
-    const fromParentId = e.dataTransfer.getData("parentId");
+    const fromParentId = e.dataTransfer.getData("parentId") || "";
 
     if (mode === "primary" && !isSecondary) {
-      // Reorder primaries
-      const newOrder = Array.from(container.querySelectorAll(".category-wrapper"))
-                            .map(w => w.querySelector(".category-row").dataset.id);
-      await reorderPrimaries(householdRef, type, newOrder);
+      // Reorder primaries using the order of direct children
+      const orderedIds = Array.from(container.children)
+        .filter(el => el.classList.contains("primary-category-row"))
+        .map(el => el.querySelector(".category-row").dataset.id || el.dataset.id || el.getAttribute("data-id") || "");
+      await reorderPrimaries(householdRef, type, orderedIds);
+      return;
     }
 
     if (mode === "secondary" && isSecondary) {
       const toParentId = parentId;
+      if (!draggedId) return;
+
       if (fromParentId === toParentId) {
         // Reorder within same parent
-        const newOrder = Array.from(container.querySelectorAll(".category-row.secondary-row"))
-                              .map(r => r.dataset.id);
-        await reorderSecondaries(householdRef, type, toParentId, newOrder);
+        const orderedIds = Array.from(container.children)
+          .filter(el => el.classList.contains("secondary-category-row"))
+          .map(el => el.dataset.id || el.getAttribute("data-id") || el.querySelector(".category-row")?.dataset.id || "");
+        await reorderSecondaries(householdRef, type, toParentId, orderedIds);
       } else {
-        // Move secondary to new parent
+        // Move secondary to a new parent, then reorder in the destination
         await moveSecondary(householdRef, type, fromParentId, toParentId, draggedId);
-        const newOrder = Array.from(container.querySelectorAll(".category-row.secondary-row"))
-                              .map(r => r.dataset.id);
-        await reorderSecondaries(householdRef, type, toParentId, newOrder);
+
+        const orderedIds = Array.from(container.children)
+          .filter(el => el.classList.contains("secondary-category-row"))
+          .map(el => el.dataset.id || el.getAttribute("data-id") || el.querySelector(".category-row")?.dataset.id || "");
+        await reorderSecondaries(householdRef, type, toParentId, orderedIds);
       }
     }
   });
 }
 
-function getDragAfterElement(container, y) {
-  const elements = [...container.querySelectorAll(".category-row:not(.dragging)")];
-  return elements.reduce((closest, child) => {
+function getDragAfterElement(container, y, mode) {
+  const targetClass = mode === "primary" ? "primary-category-row" : "secondary-category-row";
+console.log("container", container)
+  console.log("children", container.children)
+  // Only consider direct children that match the target class and are not being dragged
+  const children = Array.from(container.children).filter(
+    el => el.classList.contains(targetClass) && !el.classList.contains("dragging")
+  );
+  if (children.length === 0) return null;
+
+  let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+  for (const child of children) {
     const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
+    const offset = y - (box.top + box.height / 2);
     if (offset < 0 && offset > closest.offset) {
-      return { offset, element: child };
-    } else {
-      return closest;
+      closest = { offset, element: child };
     }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+  return closest.element;
 }
 
 async function reorderPrimaries(householdRef, type, orderedIds) {
@@ -1922,6 +2005,11 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("leave-btn").textContent = t.leaveHousehold;
   document.querySelector("#leave-household-panel h4").textContent = t.othersHousehold;
   document.querySelectorAll('.leave-btn').forEach(el => el.textContent = t.leave);
+  document.getElementById("about-title").textContent = t.about;
+  document.getElementById("open-acknowledgements").textContent = t.acknowledgements;
+  document.getElementById("acknowledgements-content").innerHTML = t.acknowledgementsContent;
+  document.getElementById("open-privacy").textContent = t.privacy;
+  document.getElementById("privacy-content").innerHTML = t.privacyContent;
 
   // Basic settings
   document.getElementById("basic-settings-header").textContent = t.basicSettingsTitle;
