@@ -67,10 +67,10 @@
   }
 
   a {
-    color: #66b2ff; /* lighter blue for dark backgrounds */
+    color: #80c1ff; /* slightly lighter blue for dark backgrounds */
   }
   a:hover {
-    color: #99ccff; /* hover effect for dark mode */
+    color: #b3d9ff; /* lighter hover effect */
   }
 }
 
