@@ -207,8 +207,9 @@ const translations = {
         <li><strong>Household data</strong> — visible to users within the same household and the project owner (Xiaoxin Chen).</li>
       </ul>
       <p>
-        The project owner (Xiaoxin Chen) can access all data through the Firebase Console. 
+        Xiaoxin Chen is currently the sole administrator of this app and therefore the only person with access to data through the Firebase Console. 
         By <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase’s design and policy</a>, the project owner <strong>must have full administrative access</strong> to all hosted data. 
+        Therefore, Xiaoxin Chen can access all data through the console. 
         However, he is committed to strictly following his personal ethical code and <strong>will not view or disclose any user or household data</strong>.
       </p>
       <p>
@@ -217,7 +218,7 @@ const translations = {
       </p>
       <p>
         For any concerns or questions, please contact the project owner at: 
-        <a href="mailto:jerryc1994@hotmail.com">jerryc1994@hotmail.com</a>.
+        <a href="mailto:jerryc1994@hotmail.com" target="_blank" rel="noopener noreferrer">jerryc1994@hotmail.com</a>.
       </p>
     `
   },
@@ -336,15 +337,18 @@ const translations = {
         <li><strong>家庭数据</strong> —— 同一家庭的用户以及项目所有者（Xiaoxin Chen）可见。</li>
       </ul>
       <p>
-        项目所有者（Xiaoxin Chen）可通过 Firebase 控制台访问所有数据。根据 <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase 的设计和政策</a>，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。
+        Xiaoxin Chen 目前是本应用的唯一管理员，因此也是唯一能够通过 Firebase 控制台访问数据的人。 
+        根据 <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase 的设计和政策</a>，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。 
+        因此，Xiaoxin Chen 可以通过控制台访问所有数据。 
         然而，他承诺严格遵守个人的道德准则，<strong>不会查看或泄露任何用户或家庭数据</strong>。
       </p>
       <p>
-        为防止未经授权的访问，项目所有者的 Firebase 帐号通过 Google 登录并启用了<strong>双重验证</strong>。
+        为防止未经授权的访问，项目所有者的 Firebase 帐号通过 Google 登录并启用了<strong>双重验证</strong>。 
         这意味着即使黑客尝试入侵，没有第二步验证也无法获得帐号访问权限。
       </p>
       <p>
-        如有任何疑问或问题，请联系项目所有者：<a href="mailto:jerryc1994@hotmail.com">jerryc1994@hotmail.com</a>。
+        如有任何疑问或问题，请联系项目所有者： 
+        <a href="mailto:jerryc1994@hotmail.com" target="_blank" rel="noopener noreferrer">jerryc1994@hotmail.com</a>。
       </p>
     `
   }
