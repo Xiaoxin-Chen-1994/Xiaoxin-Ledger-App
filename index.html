@@ -426,6 +426,8 @@
       <section class="settings-section about">
         <p id="about-title">关于</p>
         <div id="about-actions">
+          <button id="open-help" class="help-button"
+            onclick="showPage('help', 'nav-settings', translations[currentLang].help)">使用帮助</button>
           <button id="open-acknowledgements" class="settings-button"
             onclick="showPage('acknowledgements', 'nav-settings', translations[currentLang].acknowledgements)">致谢</button>
           <button id="open-privacy" class="privacy-button"
@@ -496,6 +498,10 @@
     <div class="page" id="manage-labels-page">
       <h2 id="labels-title"></h2>
       <div id="labels-container"></div>
+    </div>
+
+    <div class="page" id="help-page">
+      <div id="help-content"></div>
     </div>
 
     <div class="page" id="acknowledgements-page">

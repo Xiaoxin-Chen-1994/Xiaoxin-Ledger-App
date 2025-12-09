@@ -187,6 +187,13 @@ const translations = {
     navUtilities: "Utilities",
     settings: "Settings",
     about: "About",
+    help: "Help",
+    helpContent: `
+      <h2>Help</h2>
+      <p><strong>Tags</strong> let you organize ledger entries into meaningful groups. 
+      When you search for a keyword, any tags containing that keyword will appear in the results, 
+      making it easier to find related entries.</p>
+    `,
     acknowledgements: "Acknowledgements", 
     acknowledgementsContent: `
       <h2>Acknowledgements</h2>
@@ -317,6 +324,11 @@ const translations = {
     navUtilities: "工具",
     settings: "设置",
     about: "关于",
+    help: "使用帮助",
+    helpContent: `
+      <h2>使用帮助</h2>
+      <p><strong>标签</strong>可用于将账本条目分组。搜索关键词时，如果该关键词包含在标签中，相关标签也会显示在搜索结果中，方便查找相关条目。</p>
+    `,
     acknowledgements: "致谢", 
     acknowledgementsContent: `
       <h2>致谢</h2>
@@ -2012,6 +2024,8 @@ function setLanguage(lang, showMessage = false) {
   document.querySelector("#leave-household-panel h4").textContent = t.othersHousehold;
   document.querySelectorAll('.leave-btn').forEach(el => el.textContent = t.leave);
   document.getElementById("about-title").textContent = t.about;
+  document.getElementById("open-help").textContent = t.help;
+  document.getElementById("help-content").innerHTML = t.helpContent;
   document.getElementById("open-acknowledgements").textContent = t.acknowledgements;
   document.getElementById("acknowledgements-content").innerHTML = t.acknowledgementsContent;
   document.getElementById("open-privacy").textContent = t.privacy;
