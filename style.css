@@ -11,6 +11,7 @@
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
   --radius: 0.75rem;
   --font-size: 1.1rem;
+  --bottom-nav: rgba(255, 255, 255, 0.7);
 
   /* Default scheme */
   --income-color: rgb(223, 34, 34);
@@ -44,6 +45,7 @@
     --border: #262a32;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
+    --bottom-nav: rgba(75, 75, 75, 0.7);
     
     --income-color: rgb(248, 70, 70);
     --expense-color: rgb(30, 144, 255);
@@ -121,44 +123,44 @@ a {
   position: absolute;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  display: flex;              /* 👈 lay out children in a row */
-  transition: transform 0.3s ease; /* animate sliding */
+  overflow: hidden;         /* only hides horizontal overflow */
 }
 
 .base-page, .page {
   position: absolute;
-  z-index: 0;
-  flex: 0 0 100%;             /* each page takes full viewport width */
-  height: 100%;
+  top: 0; left: 0; right: 0;
+  height: 100%;             /* fill the wrapper’s 50% height */
   width: 100%;
   background: var(--bg);
-  padding-left: 4%;
-  padding-right: 4%;
-  padding-bottom: calc(var(--font-size) * 5 + 1rem);
-  box-sizing: border-box;   /* 👈 include padding in width */
-  overflow-y: auto;
-  scrollbar-width: none;       /* Firefox */
-  -ms-overflow-style: none;    /* IE/Edge (legacy) */
-}
-.base-page, .page::-webkit-scrollbar {
-  display: none;               /* Chrome, Safari, Opera */
+  display: none;            /* hidden by default */
 }
 
-.base-page {
-  display: none; /* hide all pages by default */
+.base-page.active,
+.page {
+  display: block;
 }
 
-.base-page.active {
-  display: block; /* only the active page is shown */
-  min-height: 50rem;
+/* inner scroll container */
+.base-page .scroll,
+.page .scroll {
+  height: 100%;             /* fill the half-height box */
+  padding: 0 4% calc(var(--font-size) * 5 + 1rem);
+  box-sizing: border-box;
+  overflow-y: auto;         /* ✅ vertical scroll works */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.base-page .scroll::-webkit-scrollbar,
+.page .scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .page {
-  display: block;
-  transform: translateX(150%); /* start off-screen */
+  transform: translateX(150%); /* off-screen start */
   transition: transform 0.3s ease;
 }
+
 
 #return-btn {
   position: absolute;        /* pin button to the left */
@@ -688,7 +690,7 @@ button {
   max-width: 600px;
   display: flex;
   justify-content: space-around;
-  background: var(--card);
+  background: var(--bottom-nav);
   border-radius: 1.5rem;          /* rounded edges */
   border-top: 0.00625rem solid var(--border);
   padding: 0.75rem 1rem;
@@ -1144,7 +1146,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   .settings-section select,
   .settings-section select,
   .actions button {
-    background: var(--btnBg);
+    background: var(--card);
     color: var(--text);
     border-color: #ccc;
     outline: none;
