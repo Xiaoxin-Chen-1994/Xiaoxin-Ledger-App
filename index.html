@@ -160,20 +160,9 @@
                 <button type="button" id="expense-category" class="selector-button" data-type="category"></button>
               </div>
 
-              <div class="form-row">
-                <label class="transaction-merchant-title">商家</label>
-                <input type="text" id="expense-store">
-              </div>
-
-              <div class="form-row" id="expense-items-form">
-                <label class="transaction-item-title">条目</label>
-                <div class="item-group">
-                  <div class="item-row">
-                    <input type="text" class="item-name" placeholder="条目">
-                    <input type="text" class="item-notes" placeholder="价格">
-                  </div>
-                  <button type="button" id="expense-add-item-btn">新增条目</button>
-                </div>
+              <div class="form-row" id="expense-notes-form">
+                <label class="transaction-notes-title">备注</label>
+                <textarea id="expense-notes" rows="5" class="transaction-notes"></textarea>
               </div>
 
 
@@ -216,23 +205,9 @@
                 <button type="button" id="income-category" class="selector-button" data-type="category"></button>
               </div>
 
-              <div class="form-row">
-                <label class="transaction-merchant-title">商家</label>
-                <input type="text" id="income-store">
-              </div>
-
-              <div class="form-row" id="income-items-form">
-                <label class="transaction-item-title">条目</label>
-                <div class="item-group">
-                  <div class="item-row">
-                    <div class="item-content">
-                      <input type="text" class="item-name" placeholder="条目">
-                      <input type="text" class="item-notes" placeholder="价格">
-                    </div>
-                    <button type="button" class="delete-btn">删除</button>
-                  </div>
-                  <button type="button" id="income-add-item-btn">新增条目</button>
-                </div>
+              <div class="form-row" id="income-notes-form">
+                <label class="transaction-notes-title">备注</label>
+                <textarea id="income-notes" rows="5" class="transaction-notes"></textarea>
               </div>
 
               <div class="actions">
@@ -286,7 +261,7 @@
 
               <div class="form-row" id="transfer-notes-form">
                 <label class="transaction-notes-title">备注</label>
-                <input type="text" id="transfer-notes">
+                <textarea id="transfer-notes" rows="5" class="transaction-notes"></textarea>
               </div>
 
               <div class="actions">
@@ -320,7 +295,7 @@
 
               <div class="form-row" id="balance-notes-form">
                 <label class="transaction-notes-title">备注</label>
-                <input type="text" id="balance-notes">
+                <textarea id="balance-notes" rows="5" class="transaction-notes"></textarea>
               </div>
 
               <div class="actions">

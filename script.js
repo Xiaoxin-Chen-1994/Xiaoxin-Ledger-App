@@ -77,18 +77,21 @@ let accounts = [];
 let persons = [];
 let households = [];
 let householdIds = [];
+const transactionTypes = ["expense", "income", "transfer", "balance"];
 let inputTypeIndex = 0;
 let inputTransactionTime = null;
 let inputHouseholdId = null;
 let inputPerson = null;
 let inputStore = null;
 let inputCategory = null;
-let inputItems = null;
+let inputNotes = null;
 
 let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
 let latestTitle = null;
+
+let editingTransaction = false;
 
 const translations = {
   en: {
@@ -122,10 +125,6 @@ const translations = {
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
     member: "Member",
     category: "Category",
-    merchant: "Merchant",
-    item: "Item",
-    price: "Price",
-    addItem: "Add an Item",
     exchangeRate: "Ex. Rate",
     transferFrom: "From",
     transferTo: "To",
@@ -190,9 +189,14 @@ const translations = {
     help: "Help",
     helpContent: `
       <h2>Help</h2>
-      <p><strong>Tags</strong> let you organize ledger entries into meaningful groups. 
-      When you search for a keyword, any tags containing that keyword will appear in the results, 
-      making it easier to find related entries.</p>
+      <p>A <strong>collection</strong> groups <strong>entries</strong> of the same nature across different <strong>types</strong> togother. You can view <strong>entries</strong> organized by <strong>collections</strong> in <strong>dashboards</strong>.</p>
+      <p><strong>Tags</strong> are flexible labels you can assign to <strong>entries</strong>. When you search for a keyword, any <strong>tags</strong> containing that keyword will appear in the results.</p>
+      <p>While <strong>collections</strong> and <strong>tags</strong> may look similar, they serve different purposes:
+      <ul>
+        <li>The <strong>collection</strong> of an <strong>entry</strong> is usually fixed and used for categorization. Each <strong>entry</strong> belongs to only one <strong>collection</strong>.</li>
+        <li><strong>Tags</strong> are flexible and used for temporary and miscellaneous grouping. You may attach any <strong>tag</strong> to an <strong>entry</strong>. Each <strong>entry</strong> can carry multiple <strong>tags</strong>.</li>
+      </ul>
+      </p>
     `,
     acknowledgements: "Acknowledgements", 
     acknowledgementsContent: `
@@ -259,10 +263,6 @@ const translations = {
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
     member: "成员",
     category: "类别",
-    merchant: "商家",
-    item: "条目",
-    price: "价格",
-    addItem: "新增条目",
     exchangeRate: "汇率",
     transferFrom: "转出",
     transferFrom: "转入",
@@ -327,7 +327,14 @@ const translations = {
     help: "使用帮助",
     helpContent: `
       <h2>使用帮助</h2>
-      <p><strong>标签</strong>可用于将账本条目分组。搜索关键词时，如果该关键词包含在标签中，相关标签也会显示在搜索结果中，方便查找相关条目。</p>
+      <p><strong>项目</strong>可将性质相同的<strong>条目</strong>组合在一起，不论<strong>类型</strong>。你可以在<strong>看板</strong>中按<strong>项目</strong>类别查看<strong>条目</strong>。</p>
+      <p><strong>标签</strong>可用于灵活地标记<strong>条目</strong>。当你搜索某个关键词时，任何包含该关键词的<strong>标签</strong>都会出现在结果中。</p>
+      <p><strong>项目</strong>和<strong>标签</strong>乍一看很相似，但它们并不一样：
+      <ul>
+        <li><strong>项目</strong>通常是固定的，作分类用途。每个<strong>条目</strong>只属于一个<strong>项目</strong>。</li>
+        <li><strong>标签</strong>较为灵活，可用于暂时的、各种各样的分组。你可以通过<strong>标签</strong>来随意标记每个<strong>条目</strong>。一个<strong>条目</strong>可同时拥有多个<strong>标签</strong>。</li>
+      </ul>
+      </p>
     `,
     acknowledgements: "致谢", 
     acknowledgementsContent: `
@@ -691,29 +698,6 @@ function toggleHouseholdFormRows(householdIds) {
   }
 }
 
-function isTransactionFormEmpty(formId) {
-  const form = document.querySelector(`#${formId} .transaction-form`);
-  if (!form) return true;
-
-  // All text-like inputs
-  const inputs = form.querySelectorAll("input[type='text'], input[type='search'], input[list]");
-
-  for (let input of inputs) {
-    if (input.value.trim() !== "") return false;
-  }
-
-  // Check item rows
-  const itemNames = form.querySelectorAll(".item-name");
-  const itemNotes = form.querySelectorAll(".item-notes");
-
-  for (let i = 0; i < itemNames.length; i++) {
-    if (itemNames[i].value.trim() !== "") return false;
-    if (itemNotes[i].value.trim() !== "") return false;
-  }
-
-  return true;
-}
-
 function setCurrentTime(button) {
   const now = new Date();
 
@@ -736,105 +720,6 @@ function setCurrentHousehold(button) {
   button.textContent = households[0].name;
   button.dataset.value = households[0].id;
 }
-
-function createItemRow() {
-  const t = translations[currentLang];
-
-  const row = document.createElement("div");
-  row.className = "item-row";
-
-  const content = document.createElement("div");
-  content.className = "item-content";
-
-  const nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.className = "item-name";
-  nameInput.placeholder = t.item;
-
-  const notesInput = document.createElement("input");
-  notesInput.type = "text";
-  notesInput.className = "item-notes";
-  notesInput.placeholder = t.price;
-
-  content.appendChild(nameInput);
-  content.appendChild(notesInput);
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.type = "button";
-  deleteBtn.className = "delete-btn";
-  deleteBtn.textContent = t.delete;
-
-  row.appendChild(content);
-  row.appendChild(deleteBtn);
-
-  row.addEventListener("contextmenu", e => {
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    row.classList.add("show-delete"); // reveal delete button
-  });
-
-  row.addEventListener("click", e => {
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    // only hide if clicking outside the delete button
-    if (!e.target.classList.contains("delete-btn")) {
-      row.classList.remove("show-delete");
-    }
-  });
-
-  // Swipe detection
-  let startX = 0;
-  row.addEventListener("touchstart", e => {
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    startX = e.touches[0].clientX;
-  });
-  row.addEventListener("touchend", e => {
-    e.stopPropagation();  // stop the event from bubbling up to parent elements
-    const endX = e.changedTouches[0].clientX;
-    const diff = startX - endX;
-    if (diff > 50) {
-      row.classList.add("show-delete");   // swipe left
-    } else if (diff < -50) {
-      row.classList.remove("show-delete"); // swipe right
-    }
-  });
-
-  // Delete button
-  deleteBtn.addEventListener("click", () => {
-    row.remove();
-  });
-
-  return row;
-}
-
-// Attach to all add-item buttons
-document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
-  addBtn.addEventListener("click", () => {
-    const group = addBtn.closest(".item-group");
-    const newRow = createItemRow();
-    group.insertBefore(newRow, addBtn);
-  });
-});
-
-// Upgrade any existing rows in HTML
-document.querySelectorAll(".item-row").forEach(row => {
-  const name = row.querySelector(".item-name")?.value || "";
-  const notes = row.querySelector(".item-notes")?.value || "";
-  const upgraded = createItemRow(name, notes);
-  row.replaceWith(upgraded);
-});
-
-document.addEventListener('focusin', e => {
-  if (e.target.classList.contains('item-notes')) {
-    const nameInput = e.target.closest('.item-content').querySelector('.item-name');
-    if (nameInput) nameInput.style.flex = '2';
-  }
-});
-
-document.addEventListener('focusout', e => {
-  if (e.target.classList.contains('item-notes')) {
-    const nameInput = e.target.closest('.item-content').querySelector('.item-name');
-    if (nameInput) nameInput.style.flex = '6';
-  }
-});
 
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -886,120 +771,11 @@ function switchTab(index) {
     storeEl.value = inputStore;
   }
 
-  // Parse the string into an array of {name, notes}
-  let parsedItems = (inputItems || "")
-    .split("|")
-    .filter(pair => pair) // remove empty strings
-    .map(pair => {
-      const [name, notes] = pair.split(":");
-      return { name: name || "", notes: notes || "" };
-    });
-  // Keep at least one empty row
-  if (parsedItems.length === 0) {
-    parsedItems = [{ name: "", notes: "" }];
+  // notes
+  const notesEl = activeTab.querySelector("textarea[id$='notes']");
+  if (notesEl && inputNotes) {
+    notesEl.value = inputNotes;
   }
-  // Render all items into that tab
-  renderItems(parsedItems, activeTab);
-}
-
-// parsedItems is now an array of { name, notes }
-function renderItems(parsedItems, activeTab) {
-  const t = translations[currentLang];
-
-  const itemGroup = activeTab.querySelector(".item-group");
-  if (!itemGroup) return;
-
-  // Find the "Add another item" button so we can keep it at the bottom
-  const addBtn = itemGroup.querySelector("button[id$='add-item-btn']");
-
-  // Clear everything
-  itemGroup.innerHTML = "";
-
-  // Rebuild rows from parsedItems
-  parsedItems.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "item-row";
-
-    const content = document.createElement("div");
-    content.className = "item-content";
-
-    const nameInput = document.createElement("input");
-    nameInput.type = "text";
-    nameInput.className = "item-name";
-    nameInput.placeholder = t.item;
-    nameInput.value = item.name;
-
-    const notesInput = document.createElement("input");
-    notesInput.type = "text";
-    notesInput.className = "item-notes";
-    notesInput.placeholder = t.price;
-    notesInput.value = item.notes;
-
-    content.appendChild(nameInput);
-    content.appendChild(notesInput);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = t.delete;
-
-    row.appendChild(content);
-    row.appendChild(deleteBtn);
-
-    // --- Swipe detection ---
-    let startX = 0;
-    row.addEventListener("touchstart", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      startX = e.touches[0].clientX;
-    });
-    row.addEventListener("touchend", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      const endX = e.changedTouches[0].clientX;
-      const diff = startX - endX;
-      if (diff > 50) {
-        row.classList.add("show-delete");   // swipe left
-      } else if (diff < -50) {
-        row.classList.remove("show-delete"); // swipe right
-      }
-    });
-
-    // --- Right‑click (desktop) ---
-    row.addEventListener("contextmenu", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      row.classList.add("show-delete");
-    });
-
-    row.addEventListener("click", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      // only hide if clicking outside the delete button
-      if (!e.target.classList.contains("delete-btn")) {
-        row.classList.remove("show-delete");
-      }
-    });
-
-    // --- Delete button ---
-    deleteBtn.addEventListener("click", () => {
-      row.remove();
-      document.querySelectorAll(".item-group").forEach(group => {
-        // Collect all rows in this group
-        const rows = group.querySelectorAll(".item-row");
-
-        // Build array of {name, notes}
-        const itemsArray = Array.from(rows).map(row => ({
-          name: row.querySelector(".item-name").value.trim(),
-          notes: row.querySelector(".item-notes").value.trim()
-        }));
-
-        // Merge into string
-        inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
-      });
-    });
-
-    itemGroup.appendChild(row);
-  });
-
-  // Re‑append the add button at the end
-  if (addBtn) itemGroup.appendChild(addBtn);
 }
 
 // Button click
@@ -1041,7 +817,8 @@ const fieldMap = {
     datetime: "expense-datetime",
     person: "expense-person",
     store: "expense-store",
-    category: "expense-category"
+    category: "expense-category",
+    notes: "expense-notes"
   },
   income: {
     amount: "income-amount",
@@ -1049,7 +826,8 @@ const fieldMap = {
     datetime: "income-datetime",
     person: "income-person",
     store: "income-source",
-    category: "income-category"
+    category: "income-category",
+    notes: "income-notes"
   },
   transfer: {
     amountSimple: "transfer-amount",
@@ -1057,19 +835,30 @@ const fieldMap = {
     amountTo: "transfer-to-amount",
     datetime: "transfer-datetime",
     fromAccount: "transfer-from",
-    toAccount: "transfer-to"
+    toAccount: "transfer-to",
+    notes: "transfer-notes"
   },
   balance: {
     amount: "balance-amount",
+    notes: "balance-notes"
   }
 };
+
+document.querySelectorAll('textarea').forEach(textarea => {
+  textarea.addEventListener('input', function () {
+    this.style.height = 'auto';              // reset height
+    this.style.height = this.scrollHeight + 'px'; // set to content height
+
+    inputNotes = this.value; // copy content into inputNotes
+  });
+});
 
 // --- Ledger add entry ---
 function addEntry() {
   if (!currentUser) return;
 
   const householdId = inputHouseholdId; // regardless of household name
-  const type = inputTypeIndex; // regardless of language
+  const type = transactionTypes[inputTypeIndex];
 
   // Read fields depending on type
   let account, person, store, category, fromAccount, toAccount;
@@ -1082,15 +871,18 @@ function addEntry() {
     person = document.getElementById(map.person).value.trim();
     store = document.getElementById(map.store).value.trim();
     category = document.getElementById(map.category).value.trim();
+    notes = document.getElementById(map.notes).value.trim();
   } else if (type === "transfer") {
     const map = fieldMap.transfer;
 
     datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
     fromAccount = document.getElementById(map.fromAccount).value.trim();
     toAccount = document.getElementById(map.toAccount).value.trim();
+    notes = document.getElementById(map.notes).value.trim();
   } else if (type === "balance") {
     const map = fieldMap.balance;
 
+    notes = document.getElementById(map.notes).value.trim();
   }
 
   // Update datalists
@@ -1103,20 +895,6 @@ function addEntry() {
     updateDatalist("person-list", persons);
   }
 
-  // Collect items
-  const itemRows = document.querySelectorAll("#items-container .item-row");
-  const items = [];
-  itemRows.forEach(row => {
-    const name = row.querySelector(".item-name").value.trim();
-    const notes = row.querySelector(".item-notes").value;
-    if (name) {
-      items.push({
-        name,
-        notes: notes || null
-      });
-    }
-  });
-
   // 🔑 Store transaction under selected household
   db.collection("households").doc(householdId).collection("entries").add({
     type,
@@ -1125,18 +903,12 @@ function addEntry() {
     person,
     store,
     category,
-    items,
+    notes,
     createdBy: currentUser.uid,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => {
     // Reset form
     document.getElementById("transaction-form").reset();
-    document.getElementById("items-container").innerHTML = `
-      <div class="item-row">
-        <input type="text" class="item-name" placeholder="项目名称">
-        <input type="text" class="item-notes" placeholder="价格">
-      </div>
-    `;
     updateHomeKanban(householdId); // pass householdId so kanban updates for that household
   }).catch(err => {
     console.error("Error adding transaction:", err);
@@ -1288,7 +1060,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       label.style.width = (currentLang === 'zh') ? '15%' : '20%';
     });
 
-    if (isTransactionFormEmpty(formId)) {
+    if (editingTransaction === false) {
       let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
       if (btn) {
         setCurrentTime(btn);
@@ -1304,6 +1076,8 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       };
       btn = document.querySelector(`#${formId} .selector-button[data-type='household']`);
       if (btn) setCurrentHousehold(btn);
+
+      editingTransaction = true;
     }
   } else {
     document.getElementById("save-btn-headerbar").style.display = "none";
@@ -1981,26 +1755,12 @@ function setLanguage(lang, showMessage = false) {
     .forEach(el => el.textContent = t.member);
   document.querySelectorAll('.transaction-category-title')
     .forEach(el => el.textContent = t.category);
-  document.querySelectorAll('.transaction-merchant-title')
-    .forEach(el => el.textContent = t.merchant);
-  document.querySelectorAll('.transaction-item-title')
-    .forEach(el => el.textContent = t.item);
-  document.querySelectorAll('.item-name')
-    .forEach(el => el.setAttribute('placeholder', t.item));
-  document.querySelectorAll('.item-notes')
-    .forEach(el => el.setAttribute('placeholder', t.price));
-  document.querySelectorAll('[id$="-add-item-btn"]').forEach(el => {
-    el.textContent = t.addItem;
-  });
   document.getElementById("exchange-rate-from-label").textContent = `⇂ ${t.exchangeRate}: ${5.10}`;
   document.getElementById("exchange-rate-to-label").textContent = `↿ ${t.exchangeRate}: ${0.20}`;
   document.getElementById("transfer-from-title").textContent = t.transferFrom;
   document.getElementById("transfer-to-title").textContent = t.transferTo;
   document.querySelectorAll('.transaction-notes-title')
     .forEach(el => el.textContent = t.notes);
-  document.querySelectorAll('.delete-btn').forEach(el => {
-    el.textContent = t.delete;
-  });
 
   // Settings
   document.getElementById("settings-title").textContent = t.settings;
@@ -3259,24 +3019,6 @@ document.addEventListener("click", e => {
     // Click was outside the currently open selector
     closeSelector();
   }
-});
-
-const itemGroup = document.querySelector(".item-group");
-
-document.querySelectorAll(".item-group").forEach(group => {
-  group.addEventListener("input", () => {
-    // Collect all rows in this group
-    const rows = group.querySelectorAll(".item-row");
-
-    // Build array of {name, notes}
-    const itemsArray = Array.from(rows).map(row => ({
-      name: row.querySelector(".item-name").value.trim(),
-      notes: row.querySelector(".item-notes").value.trim()
-    }));
-
-    // Merge into string
-    inputItems = itemsArray.map(item => `${item.name}:${item.notes}`).join("|");
-  });
 });
 
 

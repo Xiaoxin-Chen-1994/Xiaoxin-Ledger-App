@@ -12,6 +12,7 @@
   --radius: 0.75rem;
   --font-size: 1.1rem;
   --bottom-nav: rgba(255, 255, 255, 0.7);
+  --primary-category-bg: #e6e6e6;
 
   /* Default scheme */
   --income-color: rgb(223, 34, 34);
@@ -46,7 +47,8 @@
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
     --bottom-nav: rgba(75, 75, 75, 0.7);
-    
+    --primary-category-bg: #1e1e1e;
+
     --income-color: rgb(248, 70, 70);
     --expense-color: rgb(30, 144, 255);
   }
@@ -83,6 +85,14 @@ body {
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.6;
+}
+
+button,
+select,
+label,
+input,
+textarea {
+  font-family: inherit;
 }
 
 a {
@@ -453,52 +463,39 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 .form-row label {
-  width: 15%;        /* fixed width for label */
+  width: 15%;             /* fixed width for label */
   font-weight: 600;
 }
 
 .form-row label,
 .form-row .selector-button {
-  white-space: normal;   /* allow wrapping */
+  white-space: normal;    /* allow wrapping */
   word-break: break-word; /* break long words if needed */
 }
 
-.form-row input,
+.form-row textarea,
 .form-row .selector-button {
   flex: 1;                /* take up remaining space */
+  width: 100%;          /* force equal width */
+  margin: 0;
+  box-sizing: border-box;
 }
 
-.item-group {
-  display: flex;
-  flex-direction: column; /* stack item-rows and button vertically */
-  flex: 1;
-}
+.form-row textarea {
+  resize: vertical;       /* allow vertical resizing */
+  line-height: 1.4;
+  padding: 0.75rem;
 
-.item-row {
-  display: flex;          /* inputs side by side */
-  margin-right: 0px;
-  position: relative;
-  align-items: center;
-  overflow: hidden;
-}
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--card);   /* background color variable */
+  color: var(--text);        /* text color variable */
+  font-size: calc(var(--font-size) * 1);
+  font-weight: 600;
+  box-sizing: border-box;
 
-.item-row .item-name {
-  flex: 6;        /* allow item-name to be wider */
-  transition: flex 0.2s ease; /* animate flex changes */
-  min-width: 0;
-}
-
-.item-row .item-notes {
-  flex: 1;
-  min-width: 0;
-}
-
-.item-content {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  gap: 0rem;
-  transition: transform 0.3s ease;
+  cursor: text;              /* typing cursor */
+  transition: background 0.2s ease;
 }
 
 .delete-btn {
@@ -516,21 +513,6 @@ input[type="password"], input[type="url"], .selector-button,
   display: flex;            /* flexbox for centering */
   align-items: center;      /* vertical centering */
   justify-content: center;  /* horizontal centering */
-}
-
-/* When show-delete is active */
-.item-row.show-delete .item-content {
-  transform: translateX(-3.7rem); /* slide inputs left */
-}
-
-.item-row.show-delete .delete-btn {
-  transform: translateX(0); /* reveal delete button */
-}
-
-#expense-add-item-btn, #income-add-item-btn {
-  align-self: flex-start; /* keep button aligned with inputs */
-  padding: 6px 12px;
-  margin-top: 0.25rem;
 }
 
 .selector-button:hover { background: var(--card); }
@@ -1370,7 +1352,7 @@ emoji-picker {
 .primary-category, .primary-category:hover {
   text-align: left;
   color: var(--text);
-  background: #888888;
+  background: var(--primary-category-bg);
   flex: 1;             /* take most width */
   padding: 0.5rem;
   min-width: 0;
