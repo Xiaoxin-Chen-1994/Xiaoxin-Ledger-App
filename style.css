@@ -191,7 +191,7 @@ a {
   color: var(--primary-hover);
 }
 
-#save-btn-headerbar {
+.header-right-button {
   position: absolute;        /* pin button to the right */
   right: 1rem;
   text-align: right;
@@ -203,7 +203,7 @@ a {
   cursor: pointer;
   font-weight: bold;         /* make text bold */
 }
-#save-btn-headerbar:hover {
+.header-right-button:hover {
   color: var(--primary-hover);
 }
 
