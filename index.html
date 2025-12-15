@@ -13,7 +13,7 @@
 
 <body>
   <div id="offline-banner"
-    style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center;">
+    style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center; z-index: 1001">
     You are in offline mode. Data will be uploaded when internet becomes available.
   </div>
 
@@ -21,6 +21,7 @@
     <button id="return-btn" onclick="goBack()" style="display: none;">&lt; 返回</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
     <button id="save-btn-headerbar" onclick="addEntry()" style="display: none;">保存</button>
+    <button id="search-btn-headerbar" onclick="searchEntry()" style="display: none;">🔍搜索</button>
   </div>
 
   <!-- Login / Signup Section -->
