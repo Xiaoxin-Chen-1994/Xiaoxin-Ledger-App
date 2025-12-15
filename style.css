@@ -139,8 +139,10 @@ a {
 
 .base-page, .page {
   position: absolute;
-  top: 3.5rem; left: 0; right: 0;
-  height: calc(100% - 3.5rem);;             /* fill the wrapper’s 50% height */
+  top: 3.5rem; /* header bar height */
+  left: 0; 
+  right: 0;
+  height: calc(100% - 3.5rem); /* subtract header bar height */
   width: 100%;
   background: var(--bg);
   display: none;            /* hidden by default */
@@ -154,7 +156,7 @@ a {
 /* inner scroll container */
 .base-page .scroll,
 .page .scroll {
-  height: 100%; /* subtract header bar height */
+  height: 100%; 
   padding: 0 4% calc(var(--font-size) * 5 + 1rem);
   box-sizing: border-box;
   overflow-y: auto;         /* ✅ vertical scroll works */
