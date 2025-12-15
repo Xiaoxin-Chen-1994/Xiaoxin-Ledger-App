@@ -1287,7 +1287,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     
     document.getElementById("save-btn-headerbar").style.display = "block";
     document.querySelectorAll('.form-row label').forEach(label => {
-      label.style.width = (currentLang === 'zh') ? '15%' : '20%';
+      label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
 
   } else { // for all other pages

@@ -468,7 +468,7 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 .form-row label {
-  width: 15%;             /* fixed width for label */
+  width: 20%;             /* fixed width for label */
   font-weight: 600;
 }
 
