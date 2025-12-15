@@ -474,6 +474,7 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 .form-row textarea,
+.form-row div,
 .form-row .selector-button {
   flex: 1;                /* take up remaining space */
   width: 100%;          /* force equal width */
@@ -496,6 +497,62 @@ input[type="password"], input[type="url"], .selector-button,
 
   cursor: text;              /* typing cursor */
   transition: background 0.2s ease;
+}
+
+#expense-category,
+#income-category {
+  display: flex;              /* enable flexbox */
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cat-part {
+  flex: 1;                    /* each part takes equal width */
+  text-align: center;         /* center text inside its half */
+}
+
+.cat-separator {
+  color: gray;
+  margin: 0 4px;
+  display: flex;             /* make separator itself a flex container */
+  align-items: center;       /* vertical centering inside */
+  justify-content: center;   /* horizontal centering inside */
+}
+
+.tag-input-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag-input {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #ccc;
+}
+
+.add-tag-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.tag-suggestions {
+  margin-left: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag-suggestions span {
+  background: var(--card);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
 }
 
 .delete-btn {
@@ -538,7 +595,7 @@ input[type="password"], input[type="url"], .selector-button,
   transition: transform 0.3s ease;
 }
 
-.datetime-now, .datetime-close {
+.datetime-now, .selector-close {
   position: absolute;
   top: calc(var(--font-size) * -1.85); /* move above selector */
   background: var(--bg);
@@ -559,11 +616,11 @@ input[type="password"], input[type="url"], .selector-button,
   left: 10px;
 }
 
-.datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
+.datetime-now:hover, .datetime-now:focus, .selector-close:hover, .selector-close:focus {
   background: var(--bg);
 }
 
-.datetime-close {
+.selector-close {
   right: 10px;
   margin-right: 10px;
 }
@@ -586,6 +643,10 @@ input[type="password"], input[type="url"], .selector-button,
 
 .dt-col:last-child {
   border-right: none;
+}
+
+#category-selector .dt-col {
+  border-right: none; /* Override: inside category-selector, remove it */
 }
 
 /* Items */
@@ -619,13 +680,13 @@ input[type="password"], input[type="url"], .selector-button,
     color: var(--text);
   }
 
-  .datetime-now, .datetime-close {
+  .datetime-now, .selector-close {
     background: var(--bg);
     color:var(--text);
     box-shadow: 0 -0.3rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
 
-  .datetime-now:hover, .datetime-now:focus, .datetime-close:hover, .datetime-close:focus {
+  .datetime-now:hover, .datetime-now:focus, .selector-close:hover, .selector-close:focus {
     background: var(--bg);
   }
   #exchange-transfer-from-amount-row {

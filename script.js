@@ -37,33 +37,32 @@
 //       name: string
 //       type: string ("cash" | "bank" | "credit")
 
-//   expense-categories (subcollection)
-//     categories/{categoryId}
+//   expense-categories (subcollection) /{categoryId}
 //       primary: string
 //       secondary: [string]
 
-//   income-categories (subcollection)
-//     categories/{categoryId}
+//   income-categories (subcollection) /{categoryId}
 //       primary: string
 //       secondary: [string]
 
-//   collections (subcollection)
-//     collections/{collectionId}
+//   collections (subcollection) /{collectionId}
 //       primary: string
 //       secondary: [string]
 // 
-//   members (subcollection)
-//     members/{personId}
+//   members (subcollection) /{personId}
 //       name: string
+
+//   tags (subcollection)/{tagId}
+//     name: string
+//     entryIds: list of entryIds
 
 //   entries (subcollection)
 //     entries/{entryId}
 //       type: string ("income" | "expense" | "transfer")
-//       categoryId: string         // reference to categories/{categoryId}
-//       collectionId: string       // reference to collections/{collectionId}
+//       category: string         // reference to categories/{categoryId}
 //       accountId: string          // reference to accounts/{accountId}
 //       personId: string           // reference to predefined persons
-//       store: string
+//       collection: string       // reference to collections/{collectionId}
 //       datetime: timestamp
 //       items: [ { name: string, notes: string, amount: number } ]
 //       amount: number
@@ -74,16 +73,22 @@ let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
 let accounts = [];
-let persons = [];
+let members = [];
 let households = [];
 let householdIds = [];
+const categoriesByHousehold = {};
 const transactionTypes = ["expense", "income", "transfer", "balance"];
 let inputTypeIndex = 0;
 let inputTransactionTime = null;
 let inputHouseholdId = null;
 let inputPerson = null;
 let inputStore = null;
-let inputCategory = null;
+let expenseInputPrimaryCategory = "";
+let expenseInputSecondaryCategory = "";
+let expenseInputCategoryInnerHTML= "";
+let incomeInputPrimaryCategory = "";
+let incomeInputSecondaryCategory = "";
+let incomeInputCategoryInnerHTML= "";
 let inputNotes = null;
 
 let currentBase = "home";
@@ -91,7 +96,7 @@ let latestPage = null;
 let latestNavBtn = null;
 let latestTitle = null;
 
-let editingTransaction = false;
+let creatingTransaction = false;
 
 const translations = {
   en: {
@@ -118,13 +123,16 @@ const translations = {
     balance: "Balance",
     type: "Type",
     household: "Household",
+    category: "Category",
     account: "Account",
     time: "Time",
     now: "Now",
     dismiss: "Dismiss ▼",
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
     member: "Member",
-    category: "Category",
+    collection: "Collection",
+    tags: "Tags",
+    enterTagName: "Enter tag name",
     exchangeRate: "Ex. Rate",
     transferFrom: "From",
     transferTo: "To",
@@ -256,13 +264,16 @@ const translations = {
     transfer: "转账",
     balance: "余额",
     household: "家庭",
+    category: "分类",
     account: "账户",
     time: "时间",
     now: "现在",
     dismiss: "收起 ▼",
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
     member: "成员",
-    category: "类别",
+    collection: "项目",
+    tags: "标签",
+    enterTagName: "输入标签名称",
     exchangeRate: "汇率",
     transferFrom: "转出",
     transferFrom: "转入",
@@ -270,7 +281,7 @@ const translations = {
     save: "保存",
     basicSettingsTitle: "基础设置",
     openBasicSettings: "打开基础设置",
-    labels: "标签",
+    labels: "类别",
     manageExpenseCategories: "管理支出分类",
     manageIncomeCategories: "管理收入分类",
     manageCollections: "管理项目",
@@ -520,7 +531,6 @@ function signup() {
         collectionId: "",
         accountId: "",
         personId: "",
-        store: "",
         datetime: null,
         items: [],
         amount: 0,
@@ -678,9 +688,97 @@ auth.onAuthStateChanged(async user => {
       document.getElementById("color-scheme-select").value = profile.colorScheme;
     }
 
+    for (const hid of householdIds) {
+      // Expense categories
+      const expenseSnapshot = await firebase.firestore()
+        .collection("households")
+        .doc(hid)
+        .collection("expense-categories")
+        .get();
+
+      const expenseCategories = [];
+
+      for (const doc of expenseSnapshot.docs) {
+        const primaryData = doc.data(); // { emoji, orderIndex, primary }
+        const primaryCategory = {
+          id: doc.id,
+          emoji: primaryData.emoji,
+          orderIndex: primaryData.orderIndex,
+          primary: primaryData.primary,
+          secondaries: []
+        };
+
+        // Load secondaries subcollection
+        const secondariesSnapshot = await firebase.firestore()
+          .collection("households")
+          .doc(hid)
+          .collection("expense-categories")
+          .doc(doc.id)
+          .collection("secondaries")
+          .get();
+
+        secondariesSnapshot.forEach(secDoc => {
+          const secData = secDoc.data();
+          primaryCategory.secondaries.push({
+            id: secDoc.id,
+            emoji: secData.emoji,
+            orderIndex: secData.orderIndex,
+            name: secData.name
+          });
+        });
+
+        expenseCategories.push(primaryCategory);
+      }
+
+      // Income categories
+      const incomeSnapshot = await firebase.firestore()
+        .collection("households")
+        .doc(hid)
+        .collection("income-categories")
+        .get();
+
+      const incomeCategories = [];
+
+      for (const doc of incomeSnapshot.docs) {
+        const primaryData = doc.data();
+        const primaryCategory = {
+          id: doc.id,
+          emoji: primaryData.emoji,
+          orderIndex: primaryData.orderIndex,
+          primary: primaryData.primary,
+          secondaries: []
+        };
+
+        const secondariesSnapshot = await firebase.firestore()
+          .collection("households")
+          .doc(hid)
+          .collection("income-categories")
+          .doc(doc.id)
+          .collection("secondaries")
+          .get();
+
+        secondariesSnapshot.forEach(secDoc => {
+          const secData = secDoc.data();
+          primaryCategory.secondaries.push({
+            id: secDoc.id,
+            emoji: secData.emoji,
+            orderIndex: secData.orderIndex,
+            name: secData.name
+          });
+        });
+
+        incomeCategories.push(primaryCategory);
+      }
+
+      // ✅ Store both under the household ID
+      categoriesByHousehold[hid] = {
+        expense: expenseCategories,
+        income: incomeCategories
+      };
+    }
+
     // ✅ Load main app
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
-    loadLedger(currentUser.uid);
     updateHomeKanban();
   }
 });
@@ -715,10 +813,91 @@ function setCurrentTime(button) {
   button.dataset.value = now.toISOString();
 }
 
-function setCurrentHousehold(button) {
-  inputHouseholdId = households[0].id;
-  button.textContent = households[0].name;
-  button.dataset.value = households[0].id;
+function setDefaultHousehold(button) {
+  // Only set default if the button has no content
+  if (button && button.textContent.trim() === "") {
+    inputHouseholdId = households[0].id;
+    button.textContent = households[0].name;
+    button.dataset.value = households[0].id;
+  } else {
+    const type = transactionTypes[inputTypeIndex];
+    const activeForm = type + "-form";
+    let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
+    const household = households.find(
+      h => h.name.toLowerCase() === householdBtn.textContent.toLowerCase()
+    );
+
+    if (household) {
+      inputHouseholdId = household.id;           // use the id directly
+    }
+  }
+  console.log(inputHouseholdId)
+}
+
+function setDefaultCategory(button, type) {
+  const cats = categoriesByHousehold[inputHouseholdId][type];
+
+  let primaryCat = null;
+  let secondaryCat = null;
+
+  if (cats && cats.length > 0) {
+    primaryCat = cats[0]; // first primary category
+
+    if (primaryCat.secondaries && primaryCat.secondaries.length > 0) {
+      secondaryCat = primaryCat.secondaries[0]; // first secondary category
+    } else {
+      secondaryCat = { emoji: "", name: "" };
+    }
+  } else {
+    // no categories at all
+    primaryCat = { emoji: "", primary: "" };
+    secondaryCat = { emoji: "", name: "" };
+  }
+
+  // Safely extract values, defaulting to ""
+  const primaryEmoji = primaryCat.emoji ? primaryCat.emoji : "";
+  const secondaryEmoji = secondaryCat.emoji ? secondaryCat.emoji : "";
+
+  // prepare the category columns
+  const primaryCol   = categorySelector.querySelector(".primary-col");
+  const secondaryCol = categorySelector.querySelector(".secondary-col");
+
+  const primaryList = cats.map(cat => ({
+    emoji: cat.emoji || "",
+    name:  cat.primary || ""
+  }));
+
+  createList(primaryCol, primaryList);
+
+  // Only set default if the button has no innerHTML (or only whitespace)
+  if (button && button.innerHTML.trim() === "") {
+    if (type === "expense") {
+      expenseInputPrimaryCategory   = primaryCat.primary;
+      expenseInputSecondaryCategory = secondaryCat.name;
+
+      expenseInputCategoryInnerHTML = `
+        <span class="cat-part">${primaryEmoji} ${expenseInputPrimaryCategory}</span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">${secondaryEmoji} ${expenseInputSecondaryCategory}</span>
+      `;
+
+      button.innerHTML = expenseInputCategoryInnerHTML;
+
+    } else if (type === "income") {
+      incomeInputPrimaryCategory   = primaryCat.primary;
+      incomeInputSecondaryCategory = secondaryCat.name;
+
+      incomeInputCategoryInnerHTML = `
+        <span class="cat-part">${primaryEmoji} ${incomeInputPrimaryCategory}</span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">${secondaryEmoji} ${incomeInputSecondaryCategory}</span>
+      `;
+
+      button.innerHTML = incomeInputCategoryInnerHTML;
+    }
+  }
+
+  updateSecondaryColumn(button, secondaryCol)
 }
 
 const wrapper = document.getElementById("transaction-wrapper");
@@ -737,6 +916,19 @@ function switchTab(index) {
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
 
+  // household
+  const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
+
+  setDefaultHousehold(householdEl);
+
+  // initialize category columns and button text
+  const type = transactionTypes[inputTypeIndex];
+  const activeForm = type + "-form";
+  if (type === "income" || type === "expense") {
+    let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+    setDefaultCategory(categoryBtn, type);
+  }
+
   // datetime
   const datetimeEl = activeTab.querySelector(".selector-button[data-type='datetime']");
   if (datetimeEl && inputTransactionTime) {
@@ -747,28 +939,6 @@ function switchTab(index) {
   const personEl = activeTab.querySelector("input[list='person-list']");
   if (personEl && inputPerson) {
     personEl.value = inputPerson;
-  }
-
-  // household
-  const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
-
-  const household = households.find(h => h.id === inputHouseholdId);
-
-  if (household) {
-    householdEl.textContent = household.name;   // show the name on the button
-    householdEl.dataset.value = household.id;   // keep the id in data-value
-  }
-
-  // category
-  const categoryEl = activeTab.querySelector("input[type='search'][id$='category']");
-  if (categoryEl && inputCategory) {
-    categoryEl.value = inputCategory;
-  }
-
-  // store
-  const storeEl = activeTab.querySelector("input[type='search'][id$='store']");
-  if (storeEl && inputStore) {
-    storeEl.value = inputStore;
   }
 
   // notes
@@ -812,24 +982,23 @@ wrapper.addEventListener("touchend", e => {
 
 const fieldMap = {
   expense: {
+    household: "expense-household",
     amount: "expense-amount",
     account: "expense-account",
     datetime: "expense-datetime",
     person: "expense-person",
-    store: "expense-store",
-    category: "expense-category",
     notes: "expense-notes"
   },
   income: {
+    household: "income-household",
     amount: "income-amount",
     account: "income-account",
     datetime: "income-datetime",
     person: "income-person",
-    store: "income-source",
-    category: "income-category",
     notes: "income-notes"
   },
   transfer: {
+    household: "transfer-household",
     amountSimple: "transfer-amount",
     amountFrom: "transfer-from-amount",
     amountTo: "transfer-to-amount",
@@ -839,10 +1008,54 @@ const fieldMap = {
     notes: "transfer-notes"
   },
   balance: {
+    household: "balance-household",
     amount: "balance-amount",
     notes: "balance-notes"
   }
 };
+
+// Loop through each tag input container
+document.querySelectorAll(".tag-input-container").forEach(container => {
+  const input = container.querySelector("input");
+  const button = container.querySelector("button");
+  const suggestionsDiv = container.querySelector("div");
+
+  // Listen for typing
+  input.addEventListener("input", async (e) => {
+    const text = e.target.value.trim();
+    suggestionsDiv.innerHTML = "";
+
+    if (text.length === 0) return;
+
+    // v8 style: households/{householdId}/tags
+    const tagsRef = db
+      .collection("households")
+      .doc(inputHouseholdId)
+      .collection("tags");
+
+    const snapshot = await tagsRef.get();
+
+    snapshot.forEach(doc => {
+      const tag = doc.data(); // { name, entryIds }
+      if (tag.name && tag.name.includes(text)) {
+        const span = document.createElement("span");
+        span.textContent = tag.name;
+        span.addEventListener("click", () => {
+          input.value = tag.name;
+        });
+        suggestionsDiv.appendChild(span);
+      }
+    });
+  });
+
+  // Add button handler
+  button.addEventListener("click", () => {
+    const newTag = input.value.trim();
+    if (!newTag) return;
+    console.log("Add tag:", newTag, "for", container.className);
+    // TODO: update Firestore entryIds here
+  });
+});
 
 document.querySelectorAll('textarea').forEach(textarea => {
   textarea.addEventListener('input', function () {
@@ -861,20 +1074,31 @@ function addEntry() {
   const type = transactionTypes[inputTypeIndex];
 
   // Read fields depending on type
-  let account, person, store, category, fromAccount, toAccount;
+  let inputPrimaryCategory, inputSecondaryCategory, account, person, fromAccount, toAccount;
 
-  if (type === "income" || type === "expense") {
+  if (type === "expense") {
     const map = fieldMap[type];
 
+    inputPrimaryCategory = expenseInputPrimaryCategory;
+    inputSecondaryCategory = expenseInputSecondaryCategory;
     datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
     account = document.getElementById(map.account).value.trim();
     person = document.getElementById(map.person).value.trim();
-    store = document.getElementById(map.store).value.trim();
-    category = document.getElementById(map.category).value.trim();
+    notes = document.getElementById(map.notes).value.trim();
+  } else if (type === "income") {
+    const map = fieldMap[type];
+
+    inputPrimaryCategory = incomeInputPrimaryCategory;
+    inputSecondaryCategory = incomeInputSecondaryCategory;
+    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
+    account = document.getElementById(map.account).value.trim();
+    person = document.getElementById(map.person).value.trim();
     notes = document.getElementById(map.notes).value.trim();
   } else if (type === "transfer") {
     const map = fieldMap.transfer;
 
+    inputPrimaryCategory = "";
+    inputSecondaryCategory = "";
     datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
     fromAccount = document.getElementById(map.fromAccount).value.trim();
     toAccount = document.getElementById(map.toAccount).value.trim();
@@ -882,6 +1106,8 @@ function addEntry() {
   } else if (type === "balance") {
     const map = fieldMap.balance;
 
+    inputPrimaryCategory = "";
+    inputSecondaryCategory = "";
     notes = document.getElementById(map.notes).value.trim();
   }
 
@@ -898,11 +1124,11 @@ function addEntry() {
   // 🔑 Store transaction under selected household
   db.collection("households").doc(householdId).collection("entries").add({
     type,
+    inputPrimaryCategory,
+    inputSecondaryCategory,
     account,
     datetime,
     person,
-    store,
-    category,
     notes,
     createdBy: currentUser.uid,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -924,37 +1150,6 @@ function updateDatalist(id, values) {
     option.value = v;
     datalist.appendChild(option);
   });
-}
-
-function loadLedger(userId) {
-  const list = document.getElementById("ledger-list"); // or new ID
-  if (!list) return; // safety check
-
-  list.innerHTML = "";
-  db.collection("households").doc(householdIds[0]).collection("entries")
-    .orderBy("timestamp")
-    .onSnapshot(snapshot => {
-      list.innerHTML = "";
-      let latest = null;
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const li = document.createElement("li");
-        li.textContent = `${data.type} | ${data.account} | ${data.person || ""} | ${data.store || ""} | ${data.category || ""} | ${data.datetime}`;
-        list.appendChild(li);
-        latest = data;
-      });
-      document.getElementById("today-sub").textContent = latest
-        ? formatLatest(latest)
-        : "暂无交易";
-      updateHomeKanban();
-    });
-}
-
-function formatLatest(data) {
-  const typeLabel = data.type === "incoming" ? "收入"
-    : data.type === "outgoing" ? "支出"
-      : "转账";
-  return `${typeLabel} | ${data.account} | ${data.store || ""} | ${data.datetime || ""}`.trim();
 }
 
 // define base pages
@@ -1043,43 +1238,52 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   document.getElementById(navBtn).style.background = "var(--primary)";
   document.getElementById(navBtn).classList.add("active");
 
+  let dateTimeBtn = null;
+
   // transaction page special handling
-  if (latestPage.includes("transaction")) {
-    if (latestNavBtn === "nav-transaction") {
+  if (latestPage.includes("transaction")) {        
+    if (latestNavBtn === "nav-transaction") { // when creating an entry
       document.getElementById("app-title").textContent = t.navTransaction;
-    } else {
+
+      const type = transactionTypes[0]; // start with expense
+      const activeForm = type + "-form";
+      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+      let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
+      let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+
+      if (creatingTransaction === false) { // reset button texts when creating a new entry
+        if (dateTimeBtn) {setCurrentTime(dateTimeBtn);};
+        if (householdBtn) setDefaultHousehold(householdBtn);
+        if (categoryBtn) setDefaultCategory(categoryBtn, type);
+        creatingTransaction = true;
+      }
+
+    } else { // when loading an existing entry
       document.getElementById("app-title").textContent = t.transaction;
+
+      // here there should be a line that reads inputType from record
+
+      const type = transactionTypes[inputTypeIndex];
+      const activeForm = type + "-form";
+      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+      switchTab(inputTypeIndex);
     }
+
+    // prepare date time selector columns in advance
+    const { year, month, day, hour, minute } = parseButtonDate(dateTimeBtn);
+    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
+    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
+    updateDayColumn();
+    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
+    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
+    
     document.getElementById("save-btn-headerbar").style.display = "block";
-
-    const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
-    const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
-    const formId = formIds[activeIndex];
-
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '15%' : '20%';
     });
 
-    if (editingTransaction === false) {
-      let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
-      if (btn) {
-        setCurrentTime(btn);
-
-        const { year, month, day, hour, minute } = parseButtonDate(btn);
-
-        ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
-        ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
-        updateDayColumn();
-        ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
-        ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
-        ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
-      };
-      btn = document.querySelector(`#${formId} .selector-button[data-type='household']`);
-      if (btn) setCurrentHousehold(btn);
-
-      editingTransaction = true;
-    }
-  } else {
+  } else { // for all other pages
     document.getElementById("save-btn-headerbar").style.display = "none";
   }
 
@@ -1745,20 +1949,29 @@ function setLanguage(lang, showMessage = false) {
   tabs[3].textContent = t.balance;
   document.querySelectorAll('.transaction-household-title')
     .forEach(el => el.textContent = t.household);
+  document.querySelectorAll('.transaction-category-title')
+    .forEach(el => el.textContent = t.category);
   document.querySelectorAll('.transaction-account-title')
     .forEach(el => el.textContent = t.account);
   document.querySelectorAll('.transaction-time-title')
     .forEach(el => el.textContent = t.time);
   document.getElementById("now-btn").textContent = t.now;
-  document.getElementById("dismiss-btn").textContent = t.dismiss;
+  document.querySelectorAll('.selector-close')
+    .forEach(el => el.textContent = t.dismiss);
   document.querySelectorAll('.transaction-member-title')
     .forEach(el => el.textContent = t.member);
-  document.querySelectorAll('.transaction-category-title')
-    .forEach(el => el.textContent = t.category);
+  document.querySelectorAll('.transaction-collection-title')
+    .forEach(el => el.textContent = t.collection);
   document.getElementById("exchange-rate-from-label").textContent = `⇂ ${t.exchangeRate}: ${5.10}`;
   document.getElementById("exchange-rate-to-label").textContent = `↿ ${t.exchangeRate}: ${0.20}`;
   document.getElementById("transfer-from-title").textContent = t.transferFrom;
   document.getElementById("transfer-to-title").textContent = t.transferTo;
+  document.querySelectorAll('.transaction-tags-title')
+    .forEach(el => el.textContent = t.tags);
+  document.getElementById("expense-tag-input").placeholder = t.enterTagName;
+  document.getElementById("income-tag-input").placeholder = t.enterTagName;
+  document.getElementById("transfer-tag-input").placeholder = t.enterTagName;
+  document.getElementById("balance-tag-input").placeholder = t.enterTagName;
   document.querySelectorAll('.transaction-notes-title')
     .forEach(el => el.textContent = t.notes);
 
@@ -2665,10 +2878,12 @@ function getDatePrefix(targetDate) {
 
 const datetimeSelector = document.getElementById("datetime-selector");
 const householdSelector = document.getElementById("household-selector");
+const categorySelector = document.getElementById("category-selector");
 
 const selectorList = [
   datetimeSelector,
   householdSelector,
+  categorySelector
 ];
 
 let lastButton = null;
@@ -2679,7 +2894,25 @@ function createList(col, values) {
   values.forEach(v => {
     const div = document.createElement("div");
     div.className = "dt-item";
-    div.textContent = v;
+
+    if (typeof v === "string" || typeof v === "number") {
+      // Simple case: just one value
+      div.textContent = v;
+    } else if (v && typeof v === "object") {
+      // Object case: emoji + name
+      if (v.emoji) {
+        const emojiSpan = document.createElement("span");
+        emojiSpan.className = "emoji";
+        emojiSpan.textContent = v.emoji;
+        div.appendChild(emojiSpan);
+      }
+
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "label";
+      labelSpan.textContent = v.name || "";
+      div.appendChild(labelSpan);
+    }
+
     col.appendChild(div);
   });
 }
@@ -2695,20 +2928,37 @@ function ScrollToSelectItem(col, value = null) {
   }
 
   // If a value was passed in, find the matching item
-  if (value !== null && value !== undefined) {
-    const items = [...col.querySelectorAll(".dt-item")];
-    // If value is a number, compare numerically
-    let target;
-    if (typeof value === "number") {
-      target = items.find(i => parseInt(i.textContent, 10) === value);
-    } else {
-      // Otherwise compare as string (trim to avoid whitespace issues)
-      target = items.find(i => i.textContent.trim() === String(value));
-    }
+  const items = [...col.querySelectorAll(".dt-item")];
+  let target;
 
-    if (target) {
-      selectItem(target);
+  if (typeof value === "number") {
+    // Try to find numeric match
+    target = items.find(i => {
+      const labelEl = i.querySelector(".label");
+      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
+      return parseInt(text, 10) === value;
+    });
+
+    // If no match, take the last item
+    if (!target) {
+      target = items[items.length - 1];
     }
+  } else {
+    // Try to find string match
+    target = items.find(i => {
+      const labelEl = i.querySelector(".label");
+      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
+      return text === String(value).trim();
+    });
+
+    // If no match OR value is null/undefined, take the first item
+    if (!target) {
+      target = items[0];
+    }
+  }
+
+  if (target) {
+    selectItem(target);
   }
 
   let touchMoved = false;
@@ -2719,7 +2969,7 @@ function ScrollToSelectItem(col, value = null) {
       const item = e.target.closest(".dt-item");
       if (item && col.contains(item)) {
         selectItem(item);
-        updateSelectorPreview();
+        updateSelectorPreview(col);
       }
     }
   });
@@ -2738,7 +2988,7 @@ function ScrollToSelectItem(col, value = null) {
       selectItem(col.querySelector(".dt-item.selected")?.previousElementSibling);
       wheelDelta = 0;
     }
-    updateSelectorPreview()
+    updateSelectorPreview(col)
   }, { passive: false });
 
   // Touch swipe
@@ -2788,7 +3038,7 @@ function ScrollToSelectItem(col, value = null) {
 
       selectItem(items[newIndex]);
       lastStep = steps;
-      updateSelectorPreview();
+      updateSelectorPreview(col);
     }
   }, { passive: false });
 
@@ -2799,9 +3049,23 @@ function ScrollToSelectItem(col, value = null) {
   }, { passive: false });
 }
 
-function updateSelectorPreview() {
+function updateSelectorPreview(updatedCol) {
   if (!lastButton) return;
+
+  const type = transactionTypes[inputTypeIndex];
+  const activeForm = type + "-form";
+
   if (lastButton.dataset.type === "datetime") {
+
+    // update day column when year and month are changed
+    if (
+      updatedCol.classList.contains("year-col") ||
+      updatedCol.classList.contains("month-col")
+    ) {
+      day = getSelectedValue(datetimeSelector, ".day-col");
+      updateDayColumn();
+      ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+    }
 
     const yEl = datetimeSelector.querySelector(".year-col .selected");
     const mEl = datetimeSelector.querySelector(".month-col .selected");
@@ -2818,7 +3082,7 @@ function updateSelectorPreview() {
     const min = Number(minEl.textContent);
 
     const dateObj = new Date(y, m - 1, d, h, min);
-    const prefix = getDatePrefix(dateObj); // assumes you already have this
+    const prefix = getDatePrefix(dateObj);
 
     inputTransactionTime = `${prefix}${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ` +
       `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
@@ -2839,7 +3103,55 @@ function updateSelectorPreview() {
     if (household) {
       inputHouseholdId = household.id;           // use the id directly
       lastButton.textContent = household.name;
+
+      // update other buttons when household change
+      let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+      if (categoryBtn) {setDefaultCategory(categoryBtn, type)};
     }
+    
+  } else { // assuming all other selectors are categorySelectors
+    const primaryCol = categorySelector.querySelector(".primary-col");
+    const secondaryCol = categorySelector.querySelector(".secondary-col");
+
+    // update secondary column if primary is changed
+    if (updatedCol.classList.contains("primary-col")) {
+      updateSecondaryColumn(lastButton, secondaryCol);
+      ScrollToSelectItem(secondaryCol);
+    }
+
+    const { emoji: pEmoji, name: pName } =
+      getSelectedValue(categorySelector, ".primary-col", true);
+    const { emoji: sEmoji, name: sName } =
+      getSelectedValue(categorySelector, ".secondary-col", true);
+
+    const primaryEmoji = pEmoji;
+    const secondaryEmoji = sEmoji;
+
+    if (type === "expense") {
+      expenseInputPrimaryCategory   = pName;
+      expenseInputSecondaryCategory = sName;
+
+      expenseInputCategoryInnerHTML = `
+        <span class="cat-part">${primaryEmoji} ${expenseInputPrimaryCategory}</span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">${secondaryEmoji} ${expenseInputSecondaryCategory}</span>
+      `;
+
+      lastButton.innerHTML = expenseInputCategoryInnerHTML;
+
+    } else if (type === "income") {
+      incomeInputPrimaryCategory   = pName;
+      incomeInputSecondaryCategory = sName;
+
+      incomeInputCategoryInnerHTML = `
+        <span class="cat-part">${primaryEmoji} ${incomeInputPrimaryCategory}</span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">${secondaryEmoji} ${incomeInputSecondaryCategory}</span>
+      `;
+
+      lastButton.innerHTML = incomeInputCategoryInnerHTML;
+    }
+
   }
 }
 
@@ -2895,19 +3207,72 @@ function initHouseholdSelector(households) {
 }
 
 function updateDayColumn() {
-  const year = getSelectedValue(".year-col");
-  const month = getSelectedValue(".month-col");
+  const year = getSelectedValue(datetimeSelector, ".year-col");
+  const month = getSelectedValue(datetimeSelector, ".month-col");
 
   const days = daysInMonth(year, month);
-
   const dayCol = datetimeSelector.querySelector(".day-col");
   createList(dayCol, Array.from({ length: days }, (_, i) => i + 1));
 }
 
-function getSelectedValue(selector) {
-  const col = datetimeSelector.querySelector(selector);
-  const selected = col.querySelector(".selected");
-  return selected ? Number(selected.textContent) : null;
+function updateSecondaryColumn(lastButton, secondaryCol) {
+  let cats = null;
+  let inputPrimary = null;
+  const type = transactionTypes[inputTypeIndex];
+
+  if (lastButton.dataset.type === "category") {
+    cats = categoriesByHousehold[inputHouseholdId][type];
+    if (type === "expense") {
+      inputPrimary = expenseInputPrimaryCategory;
+
+    } else if (type === "income") {
+      inputPrimary = incomeInputPrimaryCategory;
+    }
+  }
+
+  // Find the primary category object that matches the selected primary name
+  const primaryCat = cats.find(cat => cat.primary === inputPrimary);
+
+  // If found, use its secondaries; otherwise fallback to empty list
+  const secondaries = primaryCat ? primaryCat.secondaries : [];
+
+  // Build the list of secondary items as objects
+  const secondaryList = secondaries.map(sec => ({
+    emoji: sec.emoji || "",
+    name:  sec.name || ""
+  }));
+
+  // Populate the secondary column
+  createList(secondaryCol, secondaryList);
+}
+
+function getSelectedValue(selector, colName, strip = false) {
+  const col = selector.querySelector(colName);
+  if (!col) return "";
+
+  // Prefer a .selected item; fall back to the column root if needed
+  const selectedItem = col.querySelector(".selected") || col;
+
+  // If strip=true, return structured parts from separate elements
+  if (strip) {
+    const emojiEl = selectedItem.querySelector(".emoji");
+    const iconEl  = selectedItem.querySelector(".icon"); // <img class="icon">
+
+    const labelEl = selectedItem.querySelector(".label") || selectedItem;
+
+    const emoji = emojiEl ? emojiEl.textContent.trim() : "";
+    const icon  = iconEl && iconEl.getAttribute("src") ? iconEl.getAttribute("src") : "";
+    const name  = labelEl.textContent.trim();
+
+    return { emoji, icon, name };
+  }
+
+  // Otherwise, return the full text (legacy behavior)
+  const labelEl = selectedItem.querySelector(".label") || selectedItem;
+  const text = labelEl.textContent.trim();
+
+  // Return number if purely numeric, else string
+  return (/^-?\d+(\.\d+)?$/.test(text)) ? Number(text) : text;
 }
 
 function daysInMonth(year, month) {
@@ -2915,11 +3280,10 @@ function daysInMonth(year, month) {
 }
 
 function clickToSetNow() {
-  const activeIndex = inputTypeIndex; // income=0, expense=1, transfer=2, balance=3
-  const formIds = ["expense-form", "income-form", "transfer-form", "balance-form"];
-  const formId = formIds[activeIndex];
+  const type = transactionTypes[inputTypeIndex];
+  const activeForm = type + "-form";
 
-  let btn = document.querySelector(`#${formId} .selector-button[data-type='datetime']`);
+  let btn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
   if (btn) setCurrentTime(btn);
 
   const { year, month, day, hour, minute } = parseButtonDate(btn);
@@ -3010,6 +3374,26 @@ document.querySelectorAll(".selector-button[data-type='household']")
     });
   });
 
+document.querySelectorAll(".selector-button[data-type='category']")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      lastButton = btn;
+
+      showSelector('category')
+
+      const type = transactionTypes[inputTypeIndex];
+
+      if (type === "expense") {
+        ScrollToSelectItem(categorySelector.querySelector(".primary-col"), expenseInputPrimaryCategory);
+        ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), expenseInputSecondaryCategory);
+      } else {
+        ScrollToSelectItem(categorySelector.querySelector(".primary-col"), incomeInputPrimaryCategory);
+        ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), incomeInputSecondaryCategory);
+      }
+    });
+  });
+  
 /* Close when clicking outside */
 document.addEventListener("click", e => {
   if (!openSelector) return; // nothing open → do nothing

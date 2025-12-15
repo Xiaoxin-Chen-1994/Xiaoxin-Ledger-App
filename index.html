@@ -141,6 +141,11 @@
               </div>
 
               <div class="form-row">
+                <label class="transaction-category-title">分类</label>
+                <button type="button" id="expense-category" class="selector-button" data-type="category"></button>
+              </div>
+
+              <div class="form-row">
                 <label class="transaction-account-title">账户</label>
                 <button type="button" id="expense-account" class="selector-button" data-type="account"></button>
               </div>
@@ -156,15 +161,23 @@
               </div>
 
               <div class="form-row">
-                <label class="transaction-category-title">类别</label>
-                <button type="button" id="expense-category" class="selector-button" data-type="category"></button>
+                <label class="transaction-collection-title">项目</label>
+                <button type="button" id="expense-collection" class="selector-button" data-type="collection"></button>
+              </div>
+
+              <div class="form-row">
+                <label class="transaction-tags-title">标签</label>
+                <div class="tag-input-container expense-tags">
+                  <input type="text" id="expense-tag-input"/>
+                  <button type="button" id="add-expense-tag-btn">添加</button>
+                  <div id="expense-tag-suggestions"></div>
+                </div>
               </div>
 
               <div class="form-row" id="expense-notes-form">
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="expense-notes" rows="5" class="transaction-notes"></textarea>
               </div>
-
 
               <div class="actions">
                 <button id="save-btn-expense" type="button" onclick="addEntry()">保存</button>
@@ -186,6 +199,11 @@
               </div>
 
               <div class="form-row">
+                <label class="transaction-category-title">分类</label>
+                <button type="button" id="income-category" class="selector-button" data-type="category"></button>
+              </div>
+
+              <div class="form-row">
                 <label class="transaction-account-title">账户</label>
                 <button type="button" id="income-account" class="selector-button" data-type="account"></button>
               </div>
@@ -201,8 +219,17 @@
               </div>
 
               <div class="form-row">
-                <label class="transaction-category-title">类别</label>
-                <button type="button" id="income-category" class="selector-button" data-type="category"></button>
+                <label class="transaction-collection-title">项目</label>
+                <button type="button" id="income-collection" class="selector-button" data-type="collection"></button>
+              </div>
+
+              <div class="form-row">
+                <label class="transaction-tags-title">标签</label>
+                <div class="tag-input-container income-tags">
+                  <input type="text" id="income-tag-input"/>
+                  <button type="button" id="add-income-tag-btn">添加</button>
+                  <div id="income-tag-suggestions"></div>
+                </div>
               </div>
 
               <div class="form-row" id="income-notes-form">
@@ -259,6 +286,20 @@
                 </div>
               </div>
 
+              <div class="form-row">
+                <label class="transaction-time-title">时间</label>
+                <button type="button" id="transfer-datetime" class="selector-button" data-type="datetime"></button>
+              </div>
+
+              <div class="form-row">
+                <label class="transaction-tags-title">标签</label>
+                <div class="tag-input-container transfer-tags">
+                  <input type="text" id="transfer-tag-input"/>
+                  <button type="button" id="add-transfer-tag-btn">添加</button>
+                  <div id="transfer-tag-suggestions"></div>
+                </div>
+              </div>
+
               <div class="form-row" id="transfer-notes-form">
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="transfer-notes" rows="5" class="transaction-notes"></textarea>
@@ -293,6 +334,15 @@
                 <button type="button" id="balance-datetime" class="selector-button" data-type="datetime"></button>
               </div>
 
+              <div class="form-row">
+                <label class="transaction-tags-title">标签</label>
+                <div class="tag-input-container balance-tags">
+                  <input type="text" id="balance-tag-input"/>
+                  <button type="button" id="add-balance-tag-btn">添加</button>
+                  <div id="balance-tag-suggestions"></div>
+                </div>
+              </div>
+
               <div class="form-row" id="balance-notes-form">
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="balance-notes" rows="5" class="transaction-notes"></textarea>
@@ -311,15 +361,31 @@
 
     <!-- Selector panels -->
     <div id="household-selector" class="selector">
-      <button type="button" class="datetime-close"
-        onclick="document.getElementById('household-selector').style.transform = 'translateY(120%)'">收起 ▼</button>
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col household-col"></div>
     </div>
 
+    <div id="category-selector" class="selector">
+      <button id="selector-manage-catogery-btn" type="button" class="datetime-now" onclick="showPage('manage-labels', 'nav-settings', translations[currentLang].manageExpenseCategories)">管理</button>
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
+
+      <div class="dt-col primary-col">
+        <span class="emoji"></span>
+        <img class="icon" src="" alt="" />
+        <span class="label"></span>
+      </div>
+      <span class="cat-separator">&gt;</span>
+      <div class="dt-col secondary-col">
+        <span class="emoji"></span>
+        <img class="icon" src="" alt="" />
+        <span class="label"></span>
+      </div>
+    </div>
+
     <div id="datetime-selector" class="selector">
       <button id="now-btn" type="button" class="datetime-now" onclick=clickToSetNow()>现在</button>
-      <button id="dismiss-btn" type="button" class="datetime-close" onclick="closeSelector()">收起 ▼</button>
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col year-col"></div>
       <div class="dt-col month-col"></div>
