@@ -188,6 +188,7 @@ a {
   font-weight: bold;         /* make text bold */
 }
 #return-btn:hover {
+  background: transparent;
   color: var(--primary);
 }
 
@@ -204,6 +205,7 @@ a {
   font-weight: bold;         /* make text bold */
 }
 .header-right-button:hover {
+  background: transparent;
   color: var(--primary);
 }
 
