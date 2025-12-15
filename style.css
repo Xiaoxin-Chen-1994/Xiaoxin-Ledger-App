@@ -188,7 +188,7 @@ a {
   font-weight: bold;         /* make text bold */
 }
 #return-btn:hover {
-  color: var(--primary-hover);
+  color: var(--primary);
 }
 
 .header-right-button {
@@ -204,7 +204,7 @@ a {
   font-weight: bold;         /* make text bold */
 }
 .header-right-button:hover {
-  color: var(--primary-hover);
+  color: var(--primary);
 }
 
 h2 { font-size: calc(var(--font-size) * 1.1); margin: 0.5rem 0; }
