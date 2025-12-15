@@ -1177,6 +1177,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       p.classList.remove("active");
     }
   });
+  document.getElementById("search-btn-headerbar").style.display = "none";
 
   let stack = null;
   let target = null;
@@ -1214,6 +1215,10 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       document.getElementById("return-btn").style.display = "none";
     } else {
       document.getElementById("return-btn").style.display = "block";
+    };
+
+    if (stack.length < 3 && name === "home") { // at home page
+      document.getElementById("search-btn-headerbar").style.display = "block";
     };
 
   } else { // if switching pages at the same base nav
