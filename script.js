@@ -870,6 +870,7 @@ function setDefaultCategory(button, type) {
   }));
 
   createList(primaryCol, primaryList);
+  updateSecondaryColumn(button, secondaryCol);
 
   // Only set default if the button has no innerHTML (or only whitespace)
   if (button && button.innerHTML.trim() === "") {
@@ -898,8 +899,6 @@ function setDefaultCategory(button, type) {
       button.innerHTML = incomeInputCategoryInnerHTML;
     }
   }
-
-  updateSecondaryColumn(button, secondaryCol)
 }
 
 const wrapper = document.getElementById("transaction-wrapper");
@@ -3192,7 +3191,7 @@ function parseButtonDate(btn) {
 }
 
 /* Initialize selector */
-(function initSelector() {
+(function initDatetimeSelector() {
   const yearCol = datetimeSelector.querySelector(".year-col");
   const monthCol = datetimeSelector.querySelector(".month-col");
   const hourCol = datetimeSelector.querySelector(".hour-col");
