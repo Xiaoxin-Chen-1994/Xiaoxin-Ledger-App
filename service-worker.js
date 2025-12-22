@@ -8,43 +8,31 @@ const urlsToCache = [
   '/icons/icon-192.png'
 ];
 
+// ✅ Cache app shell on install
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
+// ✅ Notify UI helper
+function notifyClients(data) {
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => client.postMessage(data));
+  });
+}
+
+// ✅ Network-first for everything, fallback to cache for app shell
 self.addEventListener('fetch', event => {
-  let offlineState = null;
-
-  function notifyClients(state) {
-    if (state !== offlineState) {
-      offlineState = state;
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => client.postMessage({ offline: state }));
-      });
-    }
-  }
-
   event.respondWith(
-    fetch(event.request).then(response => {
-      notifyClients(false); // online
-
-      // clone response so we can put one copy in cache
-      const responseClone = response.clone();
-      caches.open(CACHE_NAME).then(cache => {
-        cache.put(event.request, responseClone);
-      });
-
-      return response;
-    }).catch(() => {
-      return caches.match(event.request).then(cachedResponse => {
-        notifyClients(true); // offline
-        return cachedResponse || new Response('Offline resource not available', { status: 404 });
-      });
-    })
+    fetch(event.request)
+      .then(response => {
+        notifyClients({ offline: false, syncedAt: Date.now() });
+        return response;
+      })
+      .catch(() => {
+        notifyClients({ offline: true });
+        return caches.match(event.request);
+      })
   );
 });
-
-
-

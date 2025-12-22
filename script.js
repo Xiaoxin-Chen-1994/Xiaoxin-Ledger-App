@@ -69,25 +69,39 @@
 //       createdBy: string          // userId
 //       lastModifiedBy: string     // userId
 
+let lastSyncedAt = null;
 let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
-let accounts = [];
-let members = [];
-let households = [];
-let householdIds = [];
-const categoriesByHousehold = {};
+let userDoc = null; // this variable will contain all data under this userId in the Users collection
+let householdDocs = {}; // this variable will contain all data of each household to which this userId has access
+
+let workspace = {} // use this variable to store temporary transaction data before being saved
+//workspace = [
+//   {
+//     create: {
+//       expense: {
+//          typeIndex, 
+//          type, 
+//          householdId, 
+//          datetime, 
+//          primaryCategory, 
+//          secondaryCategory, 
+//          primaryAccount, 
+//          secondaryAccount, 
+//          member, 
+//          collection, 
+//          tags, 
+//          notes
+//       },
+//       income: {},
+//       transfer: {},
+//       balance: {},
+//     }
+//   }
+// ];
 const transactionTypes = ["expense", "income", "transfer", "balance"];
-let inputTypeIndex = 0;
-let inputTransactionTime = null;
-let inputHouseholdId = null;
-let inputPerson = null;
-let inputStore = null;
-let expenseInputPrimaryCategory = "";
-let expenseInputSecondaryCategory = "";
 let expenseInputCategoryInnerHTML= "";
-let incomeInputPrimaryCategory = "";
-let incomeInputSecondaryCategory = "";
 let incomeInputCategoryInnerHTML= "";
 let inputNotes = null;
 
@@ -95,8 +109,6 @@ let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
 let latestTitle = null;
-
-let creatingTransaction = false;
 
 const translations = {
   en: {
@@ -386,6 +398,9 @@ const translations = {
   }
 };
 
+window.translations = translations;
+window.currentLang = currentLang;
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
@@ -406,72 +421,139 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 // --- Firebase Initialization ---
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyB4FZpY8sSdAzOkwju1D9K0zVVEEOIChJg",
-  authDomain: "xiaoxin-s-ledger-app.firebaseapp.com",
-  projectId: "xiaoxin-s-ledger-app",
-  storageBucket: "xiaoxin-s-ledger-app.firebasestorage.app",
-  messagingSenderId: "492104644894",
-  appId: "1:492104644894:web:985a1fb62f56c92bf0310f",
-  measurementId: "G-92YC1R2E84"
+  apiKey: "AIzaSyChPQagMV5rQ9CmHA2vJZ8BUw8sojAbFDo",
+  authDomain: "xiaoxin-s-ledger-app-ed5ea.firebaseapp.com",
+  projectId: "xiaoxin-s-ledger-app-ed5ea",
+  storageBucket: "xiaoxin-s-ledger-app-ed5ea.firebasestorage.app",
+  messagingSenderId: "571079523490",
+  appId: "1:571079523490:web:039d2d334230a764f2abfb",
+  measurementId: "G-RXX64YWRZX"
 };
 
+// import functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signOut, 
+  onAuthStateChanged,
+  EmailAuthProvider, 
+  reauthenticateWithCredential
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  arrayUnion,
+  arrayRemove,
+  enableIndexedDbPersistence 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 // Get references to services
-const auth = firebase.auth();
-const db = firebase.firestore();
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // Enable offline persistence
-db.enablePersistence()
+enableIndexedDbPersistence(db)
   .catch(err => {
-    console.error('Persistence error:', err);
+    console.error("Persistence error:", err);
   });
-
-let isOffline = false;
 
 navigator.serviceWorker.ready.then(() => {
   navigator.serviceWorker.addEventListener('message', event => {
     const banner = document.getElementById('offline-banner');
-    if (event.data.offline) {
+    const data = event.data;
+
+    if (data.offline) {
+      // ✅ We are offline — try to show last known sync time
+      const lastSync = localStorage.getItem("ledgerLastSync");
+
       banner.style.display = 'block';
+
+      if (lastSync) {
+        const formatted = new Date(Number(lastSync)).toLocaleString(undefined, {
+          weekday: 'long',   // Monday
+          month: 'short',    // Dec
+          day: '2-digit',    // 22
+          year: 'numeric',   // 2025
+          hour: '2-digit',   // 00–23
+          minute: '2-digit', // 00–59
+          hour12: false      // 24-hour format
+        });
+        banner.textContent = `You are in offline mode. Data were last synced at ${formatted}. Data will be uploaded when internet becomes available.`;
+      } else {
+        banner.textContent = 'You are in offline mode. Data will be uploaded when internet becomes available.';
+      }
+
     } else {
+      // ✅ Online — hide banner or show SW sync time
       banner.style.display = 'none';
+
+      if (data.syncedAt) {
+        const formatted = new Date(data.syncedAt).toLocaleString();
+        banner.textContent = `Last synced: ${formatted}`;
+      }
     }
   });
 });
 
 // --- Authentication ---
-function signup() {
+async function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
 
-  firebase.auth().createUserWithEmailAndPassword(email, password)
-    .then(cred => {
-      const user = cred.user;
-      const myHouseholdId = user.uid; // personal household id
+  try {
+    // ✅ Create user
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
+    const myHouseholdId = user.uid;
 
-      // Create household
-      const householdName = currentLang === "en"
-        ? `${email}'s Ledger`
-        : `${email}的账本`;
+    // Localized household name
+    const householdName = currentLang === "en"
+      ? `${email}'s Ledger`
+      : `${email}的账本`;
 
-      // Create household doc
-      firebase.firestore().collection("households").doc(myHouseholdId).set({
+    // Document references
+    const householdRef = doc(db, "households", myHouseholdId);
+    const userRef = doc(db, "users", user.uid);
+    const profileRef = doc(db, "profiles", user.uid);
+
+    // Create all documents in parallel
+    await Promise.all([
+      // Household doc
+      setDoc(householdRef, {
         name: householdName,
         admin: user.uid,
-        members: [user.uid]
-      });
+        members: [user.uid],
 
-      // Create profile doc
-      firebase.firestore().collection("profiles").doc(user.uid).set({
-        email: email,
-      });
+        accounts: {},
+        "expense-categories": {},
+        "income-categories": {},
+        collections: {},
+        tags: {},
+        entries: {}
+      }),
 
-      // Create user doc
-      firebase.firestore().collection("users").doc(user.uid).set({
+      // Profile doc
+      setDoc(profileRef, { email }),
+
+      // User doc
+      setDoc(userRef, {
         profile: {
-          email: email,
+          email,
           language: currentLang,
           homeImages: [],
           fontsize: "",
@@ -479,76 +561,31 @@ function signup() {
           settings: {}
         },
         personalHouseholdId: myHouseholdId,
-        households: [myHouseholdId]
-      });
+        households: [myHouseholdId],
 
-      // Initialize user defaults with empty placeholders
-      const defaultsRef = firebase.firestore()
-        .collection("users")
-        .doc(user.uid)
-        .collection("defaults");
+        defaults: {
+          expense: {},
+          income: {},
+          transfer: {},
+          balance: {}
+        }
+      })
+    ]);
 
-      defaultsRef.doc("expense").set({
-        householdId: "",
-        categoryId: "",
-        collectionId: "",
-        accountId: "",
-        personId: ""
-      });
-
-      defaultsRef.doc("income").set({
-        householdId: "",
-        categoryId: "",
-        collectionId: "",
-        accountId: "",
-        personId: ""
-      });
-
-      defaultsRef.doc("transfer").set({
-        householdId: "",
-        fromAccountId: "",
-        toAccountId: "",
-        personId: ""
-      });
-
-      defaultsRef.doc("balance").set({
-        householdId: "",
-        accountId: "",
-        personId: ""
-      });
-
-      // Initialize household subcollections with empty placeholders
-      const householdRef = firebase.firestore().collection("households").doc(myHouseholdId);
-
-      // Accounts
-      householdRef.collection("accounts").doc().set({
-        name: "",
-        type: ""
-      });
-
-      // Entries
-      householdRef.collection("entries").doc().set({
-        type: "",
-        categoryId: "",
-        collectionId: "",
-        accountId: "",
-        personId: "",
-        datetime: null,
-        items: [],
-        amount: 0,
-        createdBy: "",
-        lastModifiedBy: ""
-      });
-    })
-    .catch(error => showStatusMessage(error.message, 'error'));
+  } catch (error) {
+    showStatusMessage(error.message, "error");
+  }
 }
+window.signup = signup;
 
 function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
-  auth.signInWithEmailAndPassword(email, password)
+
+  signInWithEmailAndPassword(auth, email, password)
     .catch(error => {
       let message;
+
       switch (error.code) {
         case 'auth/user-not-found':
           message = 'No account exists with this email.';
@@ -564,84 +601,151 @@ function login() {
           break;
         default:
           message = error.message;
-          console.log(error)
+          console.log(error);
       }
+
       showStatusMessage(message, 'error');
     });
-
 }
+window.login = login;
 
 function resetPassword() {
   const email = document.getElementById("username").value;
 
-  auth.sendPasswordResetEmail(email)
+  sendPasswordResetEmail(auth, email)
     .then(() => {
-      // Success: email sent
       alert("Password reset email sent!");
     })
     .catch((error) => {
-      // Handle Errors here.
       console.error(error.code, error.message);
       alert("Error: " + error.message);
     });
 }
+window.resetPassword = resetPassword;
 
 function logout() {
-  auth.signOut().then(() => {
-    window.location.reload(); // force refresh after logout
+  signOut(auth).then(() => {
+    window.location.reload();
   });
+}
+window.logout = logout;
+
+async function syncData(userId) {
+  console.time("Retrieve data from Firebase");
+
+  // Load previous last sync time
+  lastSyncedAt = Number(localStorage.getItem("ledgerLastSync")) || 0;
+
+  // --- Fetch user doc ---
+  const userRef = doc(db, "users", userId);
+  const userSnap = await getDoc(userRef);
+  const userDoc = userSnap.data();
+
+  // Track whether ANY document came from server
+  let freshFromServer = userSnap.metadata.fromCache === false;
+
+  const householdIds = userDoc.households
+
+  // --- Fetch household docs ---
+  const householdDocs = {};
+  await Promise.all(
+    householdIds.map(async (hid) => {
+      const hRef = doc(db, "households", hid);
+      const hSnap = await getDoc(hRef);
+
+      householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
+
+      // If ANY household doc came from server, mark sync as fresh
+      if (hSnap.metadata.fromCache === false) {
+        freshFromServer = true;
+      }
+    })
+  );
+
+  console.timeEnd("Retrieve data from Firebase");
+
+  // --- Update lastSyncedAt ONLY if fresh server data was received ---
+  if (freshFromServer) {
+    lastSyncedAt = Date.now();
+    localStorage.setItem("ledgerLastSync", lastSyncedAt);
+  }
+
+  return { userDoc, householdDocs, lastSyncedAt };
 }
 
 // --- Persistent login state ---
-auth.onAuthStateChanged(async user => {
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
 
-    console.time("Load userDoc");
-    const userDoc = await firebase.firestore()
-      .collection("users")
-      .doc(user.uid)
-      .get();
-    console.timeEnd("Load userDoc");
-    // ✅ Load profile subdocument
-    const profile = userDoc.data().profile
+    ({ userDoc, householdDocs, lastSyncedAt } = await syncData(user.uid));
 
-    // ✅ Load household membership array
-    householdIds = userDoc.exists ? (userDoc.data().households || []) : [];
+    // Initialize household selector
+    initHouseholdSelector();
+    toggleHouseholdFormRows();
 
-    // ✅ Load household documents
-    console.time("Load household documents");
-    const householdDocs = await Promise.all(
-      householdIds.map(hid =>
-        firebase.firestore().collection("households").doc(hid).get()
-      )
-    );
-    console.timeEnd("Load household documents");
+    userEmail = userDoc.profile.email;
 
-    // ✅ Convert to array of { id, name }
-    households = householdDocs
-      .filter(doc => doc.exists)
-      .map(doc => ({
-        id: doc.id,
-        name: doc.data().name
-      }));
-
-    // ✅ Initialize household selector
-    initHouseholdSelector(households);
-    toggleHouseholdFormRows(householdIds);
-
-    userEmail = profile.email || currentUser.email;
-
-    // ✅ UI updates
+    // UI updates
     document.getElementById("login-section").style.display = "none";
     document.querySelector(".bottom-nav").style.display = "flex";
 
-    // ✅ Apply profile settings
-    if (profile.homeImages && Array.isArray(profile.homeImages) && profile.homeImages.length > 0) {
+    // Apply profile settings
+    displayHomeImage()
+
+    if (userDoc.profile.language) {
+      currentLang = userDoc.profile.language;
+      setLanguage(currentLang);
+    }
+
+    if (isMobileBrowser()) {
+      if (userDoc.profile.fontsizeMobile) {
+        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeMobile);
+      }
+    } else {
+      if (userDoc.profile.fontsizeDesktop) {
+        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeDesktop);
+      }
+    }
+
+    if (userDoc.profile.themeColor) {
+      applyThemeColor(userDoc.profile.themeColor, false)
+    }
+
+    if (userDoc.profile.colorScheme) {
+      setColorScheme(userDoc.profile.colorScheme);
+      document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
+    }
+
+    // ✅ Load main app
+    showPage("home", "nav-home", "Xiaoxin's Ledger App");
+    updateHomeKanban();
+  } else {
+    localStorage.removeItem("ledgerLastSync");
+    window.scrollTo(0, 0);
+  }
+});
+
+function toggleHouseholdFormRows() {
+  // Hide the form row if only one household
+  const householdCount = Object.keys(householdDocs).length;
+  if (householdCount === 1) {
+    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
+      row.style.display = "none";
+    });
+  } else {
+    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
+      row.style.display = "flex";
+    });
+  }
+}
+
+function displayHomeImage() {
+  if (Array.isArray(userDoc.profile.homeImages) && userDoc.profile.homeImages.length > 0) {
       const img = document.getElementById("home-image");
 
-      const randomIndex = Math.floor(Math.random() * profile.homeImages.length);
-      const randomUrl = profile.homeImages[randomIndex].trim();
+      const randomIndex = Math.floor(Math.random() * userDoc.profile.homeImages.length);
+      const randomUrl = userDoc.profile.homeImages[randomIndex].trim();
 
       if (randomUrl !== "") {
         // Create a new Image object to preload
@@ -665,137 +769,6 @@ auth.onAuthStateChanged(async user => {
       const img = document.getElementById("home-image");
       img.style.display = "none";
     }
-
-    if (profile.language) {
-      currentLang = profile.language;
-      setLanguage(currentLang);
-    }
-
-    if (isMobileBrowser()) {
-      if (profile.fontsizeMobile) {
-        document.documentElement.style.setProperty("--font-size", profile.fontsizeMobile);
-      }
-    } else {
-      if (profile.fontsizeDesktop) {
-        document.documentElement.style.setProperty("--font-size", profile.fontsizeDesktop);
-      }
-    }
-
-    if (profile.themeColor) {
-      applyThemeColor(profile.themeColor, upload = false)
-    }
-
-    if (profile.colorScheme) {
-      setColorScheme(profile.colorScheme);
-      document.getElementById("color-scheme-select").value = profile.colorScheme;
-    }
-
-    for (const hid of householdIds) {
-      // Expense categories
-      const expenseSnapshot = await firebase.firestore()
-        .collection("households")
-        .doc(hid)
-        .collection("expense-categories")
-        .get();
-
-      const expenseCategories = [];
-
-      for (const doc of expenseSnapshot.docs) {
-        const primaryData = doc.data(); // { emoji, orderIndex, primary }
-        const primaryCategory = {
-          id: doc.id,
-          emoji: primaryData.emoji,
-          orderIndex: primaryData.orderIndex,
-          primary: primaryData.primary,
-          secondaries: []
-        };
-
-        // Load secondaries subcollection
-        const secondariesSnapshot = await firebase.firestore()
-          .collection("households")
-          .doc(hid)
-          .collection("expense-categories")
-          .doc(doc.id)
-          .collection("secondaries")
-          .get();
-
-        secondariesSnapshot.forEach(secDoc => {
-          const secData = secDoc.data();
-          primaryCategory.secondaries.push({
-            id: secDoc.id,
-            emoji: secData.emoji,
-            orderIndex: secData.orderIndex,
-            name: secData.name
-          });
-        });
-
-        expenseCategories.push(primaryCategory);
-      }
-
-      // Income categories
-      const incomeSnapshot = await firebase.firestore()
-        .collection("households")
-        .doc(hid)
-        .collection("income-categories")
-        .get();
-
-      const incomeCategories = [];
-
-      for (const doc of incomeSnapshot.docs) {
-        const primaryData = doc.data();
-        const primaryCategory = {
-          id: doc.id,
-          emoji: primaryData.emoji,
-          orderIndex: primaryData.orderIndex,
-          primary: primaryData.primary,
-          secondaries: []
-        };
-
-        const secondariesSnapshot = await firebase.firestore()
-          .collection("households")
-          .doc(hid)
-          .collection("income-categories")
-          .doc(doc.id)
-          .collection("secondaries")
-          .get();
-
-        secondariesSnapshot.forEach(secDoc => {
-          const secData = secDoc.data();
-          primaryCategory.secondaries.push({
-            id: secDoc.id,
-            emoji: secData.emoji,
-            orderIndex: secData.orderIndex,
-            name: secData.name
-          });
-        });
-
-        incomeCategories.push(primaryCategory);
-      }
-
-      // ✅ Store both under the household ID
-      categoriesByHousehold[hid] = {
-        expense: expenseCategories,
-        income: incomeCategories
-      };
-    }
-
-    // ✅ Load main app
-    showPage("home", "nav-home", "Xiaoxin's Ledger App");
-    updateHomeKanban();
-  }
-});
-
-function toggleHouseholdFormRows(householdIds) {
-  // Hide the form row if only one household
-  if (householdIds.length === 1) {
-    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
-      row.style.display = "none";
-    });
-  } else {
-    document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
-      row.style.display = "flex";
-    });
-  }
 }
 
 function setCurrentTime(button) {
@@ -1142,6 +1115,7 @@ function addEntry() {
     showStatus("添加交易失败");
   });
 }
+window.addEntry = addEntry;
 
 function updateDatalist(id, values) {
   const datalist = document.getElementById(id);
@@ -1305,13 +1279,14 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle]); // add to the history stacks
   }
 }
+window.showPage = showPage;
 
 function goBack() {
   closeSelector();
 
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
-    target = document.getElementById(latestPage + "-page");
+    const target = document.getElementById(latestPage + "-page");
     target.style.transform = "translateX(110%)";
     stack.pop(); // remove current page
 
@@ -1327,6 +1302,7 @@ function goBack() {
     history.back();
   }
 }
+window.goBack = goBack;
 
 async function loadLabels(type, title) {
   const t = translations[currentLang];
@@ -1334,12 +1310,8 @@ async function loadLabels(type, title) {
   const container = document.getElementById("labels-container");
   container.innerHTML = "";
 
-  for (const householdId of householdIds) {
-    const householdRef = firebase.firestore().collection("households").doc(householdId);
-
-    // get household name
-    const docSnap = await householdRef.get();
-    const householdData = docSnap.data();
+  for (const householdId of userDoc.households) {
+    const householdData = householdDocs[householdId];
 
     const block = document.createElement("div");
     block.classList.add("household-block");
@@ -1354,7 +1326,7 @@ async function loadLabels(type, title) {
       t,
       t.createPrimaryCategory,
       (wrapper, cancelBtn) => {
-        const inputRow = createCategoryInputRow(householdRef, type, title);
+        const inputRow = createCategoryInputRow(householdId, type, title);
         block.insertBefore(inputRow, wrapper.nextSibling);
       }
     );
@@ -1423,6 +1395,7 @@ async function loadLabels(type, title) {
 
   showPage("manage-labels", latestNavBtn, title);
 }
+window.loadLabels = loadLabels;
 
 function createAddCancelWrapper(t, addLabelText, onAdd) {
   const wrapper = document.createElement("div");
@@ -1457,7 +1430,7 @@ function createAddCancelWrapper(t, addLabelText, onAdd) {
   return wrapper;
 }
 
-function createCategoryInputRow(householdRef, type, title, options = {}) {
+function createCategoryInputRow(householdId, type, title, options = {}) {
   // options: { primaryDocId, isSecondary, parentId, label, emoji, onSave }
   const t = translations[currentLang];
 
@@ -1527,39 +1500,47 @@ function createCategoryInputRow(householdRef, type, title, options = {}) {
     const primary = primaryInput.value.trim();
     if (!primary) return;
 
+    const householdRef = doc(db, "households", householdId)
+    const householdData = householdRef.data();
+
     try {
       if (options.primaryDocId) {
         // Editing existing primary: only update label/emoji
-        await householdRef.collection(type).doc(options.primaryDocId).update({
-          primary,
-          emoji
-        });
+        await Promise.all([
+          updateDoc(householdRef, {
+            [`expense-categories.${options.primaryDocId}`]: {
+              name: primary,
+              emoji: emoji,
+            }
+          }),
+        ]);
       } else if (options.isSecondary && options.parentId) {
         // Adding secondary under a primary: assign orderIndex
-        const countSnap = await householdRef.collection(type)
-          .doc(options.parentId)
-          .collection("secondaries")
-          .get();
-        const orderIndex = countSnap.size;
-
-        await householdRef.collection(type)
-          .doc(options.parentId)
-          .collection("secondaries")
-          .add({
-            name: primary,
-            emoji,
-            orderIndex
-          });
+        const secondaries = householdData["expense-categories"]?.[options.parentId]?.secondaries || {};
+        const orderIndex = Object.keys(secondaries).length;
+        await Promise.all([
+          updateDoc(householdRef, {
+            [`expense-categories.${options.parentId}.secondaries`]: {
+              name: primary,
+              emoji: emoji,
+              orderIndex: orderIndex
+            }
+          }),
+        ]);
       } else {
         // New primary: assign orderIndex
-        const countSnap = await householdRef.collection(type).get();
-        const orderIndex = countSnap.size;
+        const primaries = householdData["expense-categories"];
+        const orderIndex = Object.keys(primaries).length;
 
-        await householdRef.collection(type).add({
-          primary,
-          emoji,
-          orderIndex
-        });
+        await Promise.all([
+          updateDoc(householdRef, {
+            [`expense-categories.${options.primaryDocId}`]: {
+              name: primary,
+              emoji: emoji,
+              orderIndex: orderIndex
+            }
+          }),
+        ]);
       }
 
       if (options.onSave) {
@@ -1919,7 +1900,7 @@ function enablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-function setLanguage(lang, showMessage = false) {
+async function setLanguage(lang, showMessage = false) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -2044,24 +2025,27 @@ function setLanguage(lang, showMessage = false) {
   document.getElementById("nav-settings").textContent = t.settings;
 
   if (currentUser) {
-    firebase.firestore()
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
-        "profile.language": lang   // update only this nested field
-      })
-      .then(() => {
-        if (showMessage) {
-          showStatusMessage(t.languageSwitched, "success");
-        }
-      })
-      .catch(err => {
-        console.error("Error saving language:", err);
-        showStatusMessage(t.languageSwitchFailed, "error");
-      });
-  }
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
 
+      // Update nested field
+      await updateDoc(userRef, {
+        "profile.language": lang
+      });
+
+      // Refresh local cache
+      if (showMessage) {
+        await syncData(currentUser.uid);
+        showStatusMessage(t.languageSwitched, "success");
+      }
+
+    } catch (err) {
+      console.error("Error saving language:", err);
+      showStatusMessage(t.languageSwitchFailed, "error");
+    }
+  }
 }
+window.setLanguage = setLanguage;
 
 function isMobileBrowser() {
   return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -2070,12 +2054,14 @@ function isMobileBrowser() {
 function increaseFontsize() {
   adjustFontsize(0.05); // increase fontsize
 }
+window.increaseFontsize = increaseFontsize;
 
 function decreaseFontsize() {
   adjustFontsize(-0.05); // decrease fontsize
 }
+window.decreaseFontsize = decreaseFontsize;
 
-function adjustFontsize(delta) {
+async function adjustFontsize(delta) {
   const t = translations[currentLang];
 
   // Get current value from CSS variable
@@ -2093,22 +2079,23 @@ function adjustFontsize(delta) {
   document.documentElement.style.setProperty("--font-size", newSize);
 
   // Save to Firestore
-  const currentUser = firebase.auth().currentUser;
   if (currentUser) {
     const field = isMobileBrowser() ? "profile.fontsizeMobile" : "profile.fontsizeDesktop";
-    firebase.firestore()
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+
+      // Update nested field
+      await updateDoc(userRef, {
         [field]: newSize
-      })
-      .then(() => {
-        showStatusMessage(t.fontsizeChanged, "success");
-      })
-      .catch(err => {
-        console.error("Error saving language:", err);
-        showStatusMessage(t.fontsizeChangeFailed, "error");
       });
+
+      await syncData(currentUser.uid);
+      showStatusMessage(t.fontsizeChanged, "success");
+
+    } catch (err) {
+      console.error("Error saving font size:", err);
+      showStatusMessage(t.fontsizeChangeFailed, "error");
+    }
   }
 }
 
@@ -2139,15 +2126,14 @@ function openColorPicker() {
     applyThemeColor(chosenColor);
   };
 }
+window.openColorPicker = openColorPicker;
 
 function rgbToHex(rgb) {
-  function rgbToHex(rgb) {
-    const result = rgb.match(/\d+/g);
-    if (!result) return "#4caf50";
-    return "#" + result.slice(0, 3).map(x =>
-      ("0" + Number(x).toString(16)).slice(-2)
-    ).join('');
-  }
+  const result = rgb.match(/\d+/g);
+  if (!result) return "#4caf50";
+  return "#" + result.slice(0, 3).map(x =>
+    ("0" + Number(x).toString(16)).slice(-2)
+  ).join('');
 }
 
 function resetThemeColor() {
@@ -2155,8 +2141,9 @@ function resetThemeColor() {
   const defaultColor = "#e88b1a";
   applyThemeColor(defaultColor);
 }
+window.resetThemeColor = resetThemeColor;
 
-function applyThemeColor(color, upload = true) {
+async function applyThemeColor(color, upload = true) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
@@ -2172,20 +2159,22 @@ function applyThemeColor(color, upload = true) {
   }
 
   if (upload) {
-    // Save to Firestore
-    const currentUser = firebase.auth().currentUser;
     if (currentUser) {
-      firebase.firestore()
-        .collection("users")
-        .doc(currentUser.uid)
-        .update({
-          ["profile.themeColor"]: color
-        })
-        .then(() => { })
-        .catch(err => {
-          console.error("Error saving language:", err);
-          showStatusMessage(t.themeColorChangeFailed, "error");
+      try { // Save to Firestore
+        const userRef = doc(db, "users", currentUser.uid);
+
+        // Update nested field
+        await updateDoc(userRef, {
+          "profile.themeColor": color
         });
+
+        // Refresh local cache
+        await syncData(currentUser.uid);
+
+      } catch (err) {
+        console.error("Error changing theme color:", err);
+        showStatusMessage(t.themeColorChangeFailed, "error");
+      }
     }
   }
 }
@@ -2213,15 +2202,8 @@ async function toggleHomeImageEditor() {
   if (editor.style.display === "none" || editor.style.display === "") {
     editor.style.display = "block";
 
-    // 🔑 Load latest data from Firestore before rendering
     if (currentUser) {
-      const userDoc = await firebase.firestore()
-        .collection("users")
-        .doc(currentUser.uid)
-        .get();
-
-      const profile = userDoc.data()?.profile || {};
-      homeImages = Array.isArray(profile.homeImages) ? profile.homeImages : [];
+      homeImages = Array.isArray(userDoc.profile.homeImages) ? userDoc.profile.homeImages : [];
 
       renderHomeImageList(homeImages);
     } else {
@@ -2267,7 +2249,7 @@ function addHomeImageRow() {
   renderHomeImageList(homeImages);
 }
 
-function saveHomeImages() {
+async function saveHomeImages() {
   const t = translations[currentLang];
 
   const inputs = document.querySelectorAll("#home-image-list input[type='url']");
@@ -2277,41 +2259,53 @@ function saveHomeImages() {
 
   homeImages = urls;
 
-  firebase.firestore()
-    .collection("users")
-    .doc(currentUser.uid)
-    .update({
-      "profile.homeImages": homeImages   // update just this nested field
-    })
-    .then(() => {
-      showStatusMessage(t.homeImageSaved, "success");
+  if (!currentUser) return;
 
-      const img = document.getElementById("home-image");
-      const randomIndex = Math.floor(Math.random() * homeImages.length);
-      const randomUrl = homeImages[randomIndex].trim();
-      img.src = randomUrl;
-      img.style.display = "block";
-    })
-    .catch(err => {
-      showStatusMessage(t.homeImageSaveFailed, "error");
+  try {
+    const userRef = doc(db, "users", currentUser.uid);
+
+    // Update nested field
+    await updateDoc(userRef, {
+      "profile.homeImages": homeImages
     });
+
+    // Refresh local cache
+    await syncData(currentUser.uid);
+
+    showStatusMessage(t.homeImageSaved, "success");
+
+    // Pick a random image to display
+    const img = document.getElementById("home-image");
+    const randomIndex = Math.floor(Math.random() * homeImages.length);
+    const randomUrl = homeImages[randomIndex].trim();
+
+    img.src = randomUrl;
+    img.style.display = "block";
+
+  } catch (err) {
+    console.error("Error saving home images:", err);
+    showStatusMessage(t.homeImageSaveFailed, "error");
+  }
 }
 
 // --- Home: Kanban summaries ---
 async function updateHomeKanban() {
-  const entriesSnap = await db.collection("households").doc(householdIds[0]).collection("entries").get();
-  const entries = entriesSnap.docs.map(d => d.data());
+  const entries = Object.values(householdDocs)
+  .flatMap(h => Object.values(h.entries || {}));
 
   const sumBy = (filterFn) => {
     let income = 0, expense = 0;
+
     entries.filter(filterFn).forEach(e => {
       const total = (e.items || [])
         .map(i => parseFloat(i.totalPrice))
         .filter(v => !isNaN(v))
         .reduce((a, b) => a + b, 0);
+
       if (e.type === "incoming") income += total;
       if (e.type === "outgoing") expense += total;
     });
+    
     return { income, expense };
   };
 
@@ -2352,7 +2346,7 @@ async function updateHomeKanban() {
 }
 
 // --- Color Scheme ---
-function setColorScheme(scheme, showMessage = false) {
+async function setColorScheme(scheme, showMessage = false) {
   const t = translations[currentLang];
 
   if (scheme === "alt") {
@@ -2362,23 +2356,27 @@ function setColorScheme(scheme, showMessage = false) {
   }
 
   if (currentUser) {
-    firebase.firestore()
-      .collection("users")
-      .doc(currentUser.uid)
-      .update({
-        "profile.colorScheme": scheme   // update only this nested field
-      })
-      .then(() => {
-        if (showMessage) {
-          showStatusMessage(t.colorSchemeSwitched, "success");
-        }
-      })
-      .catch(err => {
-        console.error("Error saving color scheme:", err);
-        showStatusMessage(t.colorSchemeSwitchFailed, "error");
+    try { // Save to Firestore
+      const userRef = doc(db, "users", currentUser.uid);
+
+      // Update nested field
+      await updateDoc(userRef, {
+        "profile.colorScheme": scheme
       });
+
+      // Refresh local cache
+      await syncData(currentUser.uid);
+      if (showMessage) {
+        showStatusMessage(t.colorSchemeSwitched, "success");
+      }
+
+    } catch (err) {
+      console.error("Error changing color scheme:", err);
+      showStatusMessage(t.colorSchemeSwitchFailed, "error");
+    }
   }
 }
+window.setColorScheme = setColorScheme;
 
 document.getElementById("rename-btn").onclick = () => {
   const panel = document.getElementById("rename-panel");
@@ -2393,7 +2391,7 @@ document.getElementById("rename-btn").onclick = () => {
     panel.style.display = "none"; // toggle off
   } else {
     panel.style.display = "block"; // toggle on
-    document.getElementById("rename-household").value = households[0].name;
+    document.getElementById("rename-household").value = householdDocs[userDoc.personalHouseholdId].name;
   }
 };
 
@@ -2451,7 +2449,7 @@ document.getElementById("rename-confirm").addEventListener("click", async () => 
 
   try {
     // Reference to the household document
-    const householdRef = db.collection("households").doc(households[0].id);
+    const householdRef = db.collection("households").doc(userDoc.personalHouseholdId);
     householdRef.update({ name: newName });
 
     console.log("Household renamed successfully!");
@@ -2462,51 +2460,66 @@ document.getElementById("rename-confirm").addEventListener("click", async () => 
 
 document.getElementById("invite-confirm").onclick = async () => {
   const email = document.getElementById("invite-email").value.trim();
-  if (!email) return alert("请输入邮箱");
-
-  const myHouseholdId = householdIds[0];
-
-  // 1. Find user by email
-  const userQuery = await firebase.firestore()
-    .collection("profiles")
-    .where("email", "==", email)
-    .get();
-
-  if (userQuery.empty) {
-    alert("未找到该用户");
+  if (!email) {
+    alert("请输入邮箱");
     return;
   }
-  const invitedUserProfileDoc = userQuery.docs[0]; // first matching doc
-  const invitedUserId = invitedUserProfileDoc.id; // the doc ID (your userId)
 
-  // 2. Add household to invited user
-  await db.doc(`users/${invitedUserId}`).update({
-    households: firebase.firestore.FieldValue.arrayUnion(myHouseholdId),
-    lastHouseholdChange: myHouseholdId
-  });
+  if (email === userDoc.profile.email) {
+    alert("您已在自己的家庭中，无需邀请");
+    return;
+  }
 
-  // 3. Add invited user to household members
-  await firebase.firestore()
-    .collection("households")
-    .doc(myHouseholdId)
-    .update({
-      members: firebase.firestore.FieldValue.arrayUnion(invitedUserId)
+  const myHouseholdId = userDoc.personalHouseholdId;
+
+  try {
+    // 1. Find user by email
+    const profilesRef = collection(db, "profiles");
+    const q = query(profilesRef, where("email", "==", email));
+    const userQuery = await getDocs(q);
+
+    if (userQuery.empty) {
+      alert("未找到该用户");
+      return;
+    }
+
+    const invitedUserProfileDoc = userQuery.docs[0];
+    const invitedUserId = invitedUserProfileDoc.id;
+
+    if (householdDocs[myHouseholdId].members.includes(invitedUserId)) {
+      alert("对方已在您的家庭中，无需再次邀请");
+      return;
+    }
+
+    // 2. Add household to invited user
+    const invitedUserRef = doc(db, "users", invitedUserId);
+    await updateDoc(invitedUserRef, {
+      households: arrayUnion(myHouseholdId),
+      lastHouseholdChange: myHouseholdId
     });
 
-  alert("邀请成功，对方已加入您的 household");
-  document.getElementById("invite-email").value = "";
+    // 3. Add invited user to household members
+    const householdRef = doc(db, "households", myHouseholdId);
+    await updateDoc(householdRef, {
+      members: arrayUnion(invitedUserId)
+    });
+
+    alert("邀请成功，对方已加入您的 household");
+    await syncData(currentUser.uid);
+    document.getElementById("invite-email").value = "";
+
+  } catch (err) {
+    console.error("Error inviting user:", err);
+    alert("邀请失败，请稍后再试");
+  }
 };
 
 async function loadHouseholdMembers() {
   const list = document.getElementById("member-list");
   list.innerHTML = "";
 
-  const householdDoc = await firebase.firestore()
-    .collection("households")
-    .doc(householdIds[0])
-    .get();
-
-  const members = (householdDoc.data().members || []).slice(1); // slice(1) excludes the household owner
+  const myHouseholdId = userDoc.personalHouseholdId;
+  const members = householdDocs[myHouseholdId].members.slice(1); // slice(1) excludes the household owner
 
   // ✅ If no other user in the household
   if (members.length < 1) {
@@ -2521,10 +2534,14 @@ async function loadHouseholdMembers() {
   }
 
   for (const uid of members) {
-    const userProfileDoc = await firebase.firestore()
-      .collection("profiles")
-      .doc(uid)
-      .get();
+    const profileRef = doc(db, "profiles", uid);
+    const userProfileDoc = await getDoc(profileRef);
+
+    if (!userProfileDoc.exists()) {
+      console.warn(`Profile missing for uid: ${uid}`);
+      continue; // skip this one
+    }
+
     const email = userProfileDoc.data().email;
 
     const li = document.createElement("li");
@@ -2594,25 +2611,26 @@ function hideDeleteButton(li) {
 async function confirmRemoveMember(uid) {
   if (!confirm("确定要将该成员移出 household 吗？")) return;
 
-  const myHouseholdId = householdIds[0];
+  const myHouseholdId = userDoc.personalHouseholdId;
 
-  // Remove from household members
-  await firebase.firestore()
-    .collection("households")
-    .doc(myHouseholdId)
-    .update({
-      members: firebase.firestore.FieldValue.arrayRemove(uid)
-    });
+  // 1. Remove user from household members
+  await updateDoc(
+    doc(db, "households", myHouseholdId),
+    {
+      members: arrayRemove(uid)
+    }
+  );
 
-  // Remove household from user
-  await firebase.firestore()
-    .collection("users")
-    .doc(uid)
-    .update({
-      households: firebase.firestore.FieldValue.arrayRemove(myHouseholdId),
+  // 2. Remove household from user
+  await updateDoc(
+    doc(db, "users", uid),
+    {
+      households: arrayRemove(myHouseholdId),
       lastHouseholdChange: myHouseholdId
-    });
+    }
+  );
 
+  await syncData(currentUser.uid);
   loadHouseholdMembers();
 }
 
@@ -2621,7 +2639,7 @@ async function loadMyHouseholds() {
   list.innerHTML = "";
 
   // ✅ If user is only in 1 household (their own)
-  if (householdIds.length <= 1) {
+  if (userDoc.households.length <= 1) {
     const msg = document.createElement("div");
     msg.textContent = "您没有加入其他人的家庭";
     msg.style.padding = "12px";
@@ -2633,7 +2651,7 @@ async function loadMyHouseholds() {
   }
 
   // ✅ Skip the first household (primary)
-  const leaveable = householdIds.slice(1);
+  const leaveable = userDoc.households.slice(1);
 
   for (const hid of leaveable) {
     const householdDoc = await firebase.firestore()
@@ -2641,10 +2659,10 @@ async function loadMyHouseholds() {
       .doc(hid)
       .get();
 
-    const name = householdDoc.data().name;
+    const hname = householdDoc.data().name;
 
     const li = document.createElement("li");
-    li.textContent = name;
+    li.textContent = hname;
     li.style.padding = "10px";
     li.style.borderBottom = "1px solid #eee";
     li.style.position = "relative";
@@ -2677,7 +2695,7 @@ async function loadMyHouseholds() {
   }
 }
 
-function showLeaveButton(li, uid) {
+function showLeaveButton(li, hid) {
   const t = translations[currentLang];
   let btn = li.querySelector(".delete-btn");
   if (btn) {
@@ -2693,7 +2711,7 @@ function showLeaveButton(li, uid) {
   btn.style.alignItems = "center";      /* vertical centering */
   btn.style.justifyContent = "center";  /* horizontal centering */
 
-  btn.onclick = () => confirmLeaveHousehold(uid);
+  btn.onclick = () => confirmLeaveHousehold(hid);
 
   li.appendChild(btn);
 }
@@ -2706,120 +2724,130 @@ function hideLeaveButton(li) {
 }
 
 async function confirmLeaveHousehold(hid) {
-  if (!confirm("确定要退出该 household 吗？")) return;
+  if (!confirm("您确定要退出该家庭吗？退出后页面将自动刷新，请确保已保存所有数据")) return;
 
   const uid = currentUser.uid;
 
   // Remove myself from household members
-  await firebase.firestore()
-    .collection("households")
-    .doc(hid)
-    .update({
-      members: firebase.firestore.FieldValue.arrayRemove(uid)
-    });
+  await updateDoc(
+    doc(db, "households", hid),
+    {
+      members: arrayRemove(uid)
+    }
+  );
 
   // Remove household from my user doc
-  await firebase.firestore()
-    .collection("users")
-    .doc(uid)
-    .update({
-      households: firebase.firestore.FieldValue.arrayRemove(hid)
-    });
-
-  const updatedUserDoc = await firebase.firestore()
-    .collection("users")
-    .doc(uid)
-    .get();
-
-  householdIds = updatedUserDoc.data().households || [];
-  if (!householdIds.includes(inputHouseholdId)) {
-    const household = households.find(
-      h => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
-    );
-
-    if (household) {
-      inputHouseholdId = household.id;           // use the id directly
-      const householdName = household.name;
-      ScrollToSelectItem(householdSelector.querySelector(".household-col"), householdName);
+  await updateDoc(
+    doc(db, "users", uid),
+    {
+      households: arrayRemove(hid)
     }
-  }
+  );
 
-  toggleHouseholdFormRows(householdIds);
+  toggleHouseholdFormRows();
 
-  alert("已退出该 household");
+  alert("已退出该家庭");
 
-  // Refresh list
-  loadMyHouseholds();
+  window.location.reload();
 }
 
 async function deleteAccount() {
-  // Show confirmation dialog
+  // Confirmation dialog
   if (!confirm("确定要删除您的账户吗？此操作不可撤销。")) return;
 
-  const user = firebase.auth().currentUser;
-  const userPassword = prompt("请输入您的密码以确认删除账户：");
+  const user = auth.currentUser;
 
+  if (!user) {
+    alert("用户未登录");
+    return;
+  }
+
+  // Ask for password
+  const userPassword = prompt("请输入您的密码以确认删除账户：");
   if (!userPassword) return; // user cancelled
 
-  const credential = firebase.auth.EmailAuthProvider.credential(
-    user.email,
-    userPassword
-  );
+  try {
+    // Create credential
+    const credential = EmailAuthProvider.credential(user.email, userPassword);
 
-  await user.reauthenticateWithCredential(credential);
+    // Reauthenticate
+    await reauthenticateWithCredential(user, credential);
 
-  await confirmDeleteAccount();
+    // Continue with deletion logic
+    await confirmDeleteAccount();
+
+  } catch (err) {
+    console.error("Reauthentication failed:", err);
+    alert("密码错误或验证失败，请重试");
+  }
 }
+window.deleteAccount = deleteAccount;
 
 async function confirmDeleteAccount() {
   const uid = currentUser.uid;
-  const userRef = db.collection("users").doc(uid);
-  const myHouseholdRef = db.collection("households").doc(householdIds[0]);
-  const myProfileRef = db.collection("profiles").doc(uid);
+
+  // Identify households from the global variable householdDocs
+  const allHouseholds = Object.entries(householdDocs);
+
+  const myHousehold = allHouseholds.find(([hid, data]) => data.admin === uid);
+  const myHouseholdId = myHousehold?.[0];
+
+  const otherHouseholds = allHouseholds
+    .filter(([hid, data]) => data.members?.includes(uid) && data.admin !== uid)
+    .map(([hid]) => hid);
+
+  const userRef = doc(db, "users", uid);
+  const myProfileRef = doc(db, "profiles", uid);
+  const myHouseholdRef = myHouseholdId
+    ? doc(db, "households", myHouseholdId)
+    : null;
 
   try {
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) throw new Error("User not found");
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("User not found");
 
-    // Remove current user from each household this user was in
-    for (const hid of householdIds.slice(1)) {
-      const householdRef = db.collection("households").doc(hid);
-
-      await householdRef.update({
-        members: firebase.firestore.FieldValue.arrayRemove(uid)
+    // 1. Remove user from all other households
+    for (const hid of otherHouseholds) {
+      const householdRef = doc(db, "households", hid);
+      await updateDoc(householdRef, {
+        members: arrayRemove(uid)
       });
     }
 
-    const householdSnap = await myHouseholdRef.get();
-    const householdData = householdSnap.data();
-    const members = householdData.members || [];
-    // For each member, remove this householdId from their user doc
-    for (const memberUid of members) {
-      const memberRef = db.collection("users").doc(memberUid);
+    // 2. For each member of the user's own household, remove this household from their user doc
+    if (myHouseholdRef) {
+      const householdSnap = await getDoc(myHouseholdRef);
+      const householdData = householdSnap.data();
+      const members = householdData?.members || [];
 
-      await memberRef.update({
-        households: firebase.firestore.FieldValue.arrayRemove(householdIds[0]),
-        lastHouseholdChange: householdIds[0]
-      });
+      for (const memberUid of members) {
+        const memberRef = doc(db, "users", memberUid);
+        await updateDoc(memberRef, {
+          households: arrayRemove(myHouseholdId),
+          lastHouseholdChange: myHouseholdId
+        });
+      }
     }
 
-    // delete this user from profiles
-    await myProfileRef.delete();
+    // 3. Delete profile
+    await deleteDoc(myProfileRef);
 
-    // delete this user's own household
-    await myHouseholdRef.delete();
+    // 4. Delete user's own household
+    if (myHouseholdRef) {
+      await deleteDoc(myHouseholdRef);
+    }
 
-    // Delete user document
-    await userRef.delete();
+    // 5. Delete user document
+    await deleteDoc(userRef);
 
-    // Delete from Firebase Authentication
-    const currentUser = firebase.auth().currentUser;
-    await currentUser.delete();
+    // 6. Delete from Firebase Authentication
+    const auth = getAuth();
+    const authUser = auth.currentUser;
+    await authUser.delete();
 
     alert("账户已成功删除");
-
-    // reload the whole app
     window.location.reload();
+
   } catch (err) {
     console.error("Error deleting account:", err);
     alert("删除失败: " + err.message);
@@ -3203,13 +3231,16 @@ function parseButtonDate(btn) {
   createList(minuteCol, Array.from({ length: 60 }, (_, i) => i));
 })();
 
-function initHouseholdSelector(households) {
+function initHouseholdSelector() {
   const col = document.querySelector("#household-selector .household-col");
 
   // Use names for display
-  const names = households.map(h => h.name);
+  const householdNames = Object.values(householdDocs)
+    .filter(data => data)   // remove nulls
+    .map(data => data.name);
 
-  createList(col, names);
+
+  createList(col, householdNames);
 }
 
 function updateDayColumn() {
