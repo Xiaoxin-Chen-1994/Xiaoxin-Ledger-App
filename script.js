@@ -404,10 +404,25 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-// if ('serviceWorker' in navigator) {
-//   navigator.serviceWorker.register('/service-worker.js')
-//     .then(() => console.log('Service Worker registered'));
-// }
+window.onerror = function (msg, url, line, col, error) {
+  const el = document.createElement('div');
+  el.style.position = 'fixed';
+  el.style.bottom = '0';
+  el.style.left = '0';
+  el.style.right = '0';
+  el.style.background = 'red';
+  el.style.color = 'white';
+  el.style.padding = '0.5rem';
+  el.style.zIndex = '9999';
+  el.textContent = `Error: ${msg}`;
+  document.body.appendChild(el);
+};
+
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered'));
+}
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
