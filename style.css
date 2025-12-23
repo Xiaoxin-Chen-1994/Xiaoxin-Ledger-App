@@ -47,6 +47,7 @@
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
     --bottom-nav: rgba(75, 75, 75, 0.7);
+    --banner-height: 0px; /* default when banner is hidden */
     --primary-category-bg: #1e1e1e;
 
     --income-color: rgb(248, 70, 70);
@@ -99,9 +100,21 @@ a {
   color: #0066cc; /* blue for light backgrounds */
 }
 
+#offline-banner {
+  position: fixed; 
+  top: 0; 
+  width: 100%; 
+  display: none; 
+  background: #f44336; 
+  color: white; 
+  padding: 0.5rem; 
+  text-align: center; 
+  z-index: 1001
+}
+
 .header-bar {
   position: fixed;
-  top: 0;
+  top: var(--banner-height);
   width: 100%;
   height: 3.5rem;
   display: flex;
@@ -112,6 +125,9 @@ a {
   box-shadow: var(--shadow);
   z-index: 1000;
 }
+
+/* When banner is visible, push header down */ 
+body.offline .header-bar { top: 2.5rem; /* equal to banner height */ }
 
 .header-bar h1 {
   margin: 0;
@@ -139,10 +155,10 @@ a {
 
 .base-page, .page {
   position: absolute;
-  top: 3.5rem; /* header bar height */
+  top: calc(3.5rem + var(--banner-height)); /* header bar height */
   left: 0; 
   right: 0;
-  height: calc(100% - 3.5rem); /* subtract header bar height */
+  height: calc(100% - 3.5rem - var(--banner-height)); /* subtract header bar height */
   width: 100%;
   background: var(--bg);
   display: none;            /* hidden by default */
@@ -815,7 +831,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 #statusMessage {
   position: fixed;
-  bottom: calc(var(--font-size)*5.5);
+  bottom: 0; /* note that the bottom of statusMessage is dynamically set in the showStatusMessage function */
   left: 50%;
   transform: translateX(-50%);
   background: rgba(219, 219, 219, 0.6); /* dark translucent */

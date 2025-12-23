@@ -12,8 +12,7 @@
 </head>
 
 <body>
-  <div id="offline-banner"
-    style="display: none; background: #f44336; color: white; padding: 0.5rem; text-align: center; z-index: 1001">
+  <div id="offline-banner">
     You are in offline mode. Data will be uploaded when internet becomes available.
   </div>
 
@@ -414,6 +413,14 @@
           <p id="basic-settings-title">基础设置</p>
           <button id="open-basic-settings" class="settings-button"
             onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+        </section>
+
+        <section class="settings-section last-synced">
+          <p id="basic-settings-title">数据版本</p>
+          <div>
+            <button id="display-last-synced" class="settings-button">查看家庭数据时间戳</button>
+            <div id="last-synced-text"></div>
+          </div>
         </section>
 
         <!-- Labels -->

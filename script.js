@@ -69,7 +69,6 @@
 //       createdBy: string          // userId
 //       lastModifiedBy: string     // userId
 
-let lastSyncedAt = null;
 let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
@@ -168,6 +167,8 @@ const translations = {
     myHouseholdsTitle: "My Households",
     renameHousehold: "Rename My household",
     confirmRename: "Confirm",
+    householdRenamed: "Your household has been renamed",
+    householdRenameFailed: "Failed to rename household",
     inviteHousehold: "Invite users to my household",
     inviteNote: "Note: Invitees may only join the household that you created, not the ones that you were invited to.",
     inviteEmailPlaceholder: "Enter invitee email",
@@ -310,6 +311,8 @@ const translations = {
     myHouseholdsTitle: "我的家庭",
     renameHousehold: "重命名我的家庭",
     confirmRename: "确认修改",
+    householdRenamed: "家庭名称已修改",
+    householdRenameFailed: "家庭名称保存出错",
     inviteHousehold: "邀请加入我的家庭",
     inviteNote: "注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。",
     inviteEmailPlaceholder: "输入对方的邮箱",
@@ -478,35 +481,16 @@ navigator.serviceWorker.ready.then(() => {
     const data = event.data;
 
     if (data.offline) {
-      // ✅ We are offline — try to show last known sync time
-      const lastSync = localStorage.getItem("ledgerLastSync");
+      banner.textContent = `You are in offline mode. Check the data version you are using in Settings. New data will be uploaded when the internet becomes available.`;
 
       banner.style.display = 'block';
-
-      if (lastSync) {
-        const formatted = new Date(Number(lastSync)).toLocaleString(undefined, {
-          weekday: 'long',   // Monday
-          month: 'short',    // Dec
-          day: '2-digit',    // 22
-          year: 'numeric',   // 2025
-          hour: '2-digit',   // 00–23
-          minute: '2-digit', // 00–59
-          hour12: false      // 24-hour format
-        });
-        banner.textContent = `You are in offline mode. Data were last synced at ${formatted}. Data will be uploaded when internet becomes available.`;
-      } else {
-        banner.textContent = 'You are in offline mode. Data will be uploaded when internet becomes available.';
-      }
-
+      const h = banner.offsetHeight; 
+      document.documentElement.style.setProperty("--banner-height", h + "px")
     } else {
-      // ✅ Online — hide banner or show SW sync time
+      banner.textContent = "";
       banner.style.display = 'none';
-
-      if (data.syncedAt) {
-        const formatted = new Date(data.syncedAt).toLocaleString();
-        banner.textContent = `Last synced: ${formatted}`;
+      document.documentElement.style.setProperty("--banner-height", "0px")
       }
-    }
   });
 });
 
@@ -538,6 +522,7 @@ async function signup() {
         name: householdName,
         admin: user.uid,
         members: [user.uid],
+        lastSynced: "",
 
         accounts: {},
         "expense-categories": {},
@@ -633,9 +618,6 @@ window.logout = logout;
 async function syncData(userId) {
   console.time("Retrieve data from Firebase");
 
-  // Load previous last sync time
-  lastSyncedAt = Number(localStorage.getItem("ledgerLastSync")) || 0;
-
   // --- Fetch user doc ---
   const userRef = doc(db, "users", userId);
   const userSnap = await getDoc(userRef);
@@ -664,13 +646,7 @@ async function syncData(userId) {
 
   console.timeEnd("Retrieve data from Firebase");
 
-  // --- Update lastSyncedAt ONLY if fresh server data was received ---
-  if (freshFromServer) {
-    lastSyncedAt = Date.now();
-    localStorage.setItem("ledgerLastSync", lastSyncedAt);
-  }
-
-  return { userDoc, householdDocs, lastSyncedAt };
+  return { userDoc, householdDocs };
 }
 
 // --- Persistent login state ---
@@ -678,7 +654,7 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
 
-    ({ userDoc, householdDocs, lastSyncedAt } = await syncData(user.uid));
+    ({ userDoc, householdDocs } = await syncData(user.uid));
 
     // Initialize household selector
     initHouseholdSelector();
@@ -695,7 +671,7 @@ onAuthStateChanged(auth, async (user) => {
 
     if (userDoc.profile.language) {
       currentLang = userDoc.profile.language;
-      setLanguage(currentLang);
+      setLanguage(currentLang, false, false);
     }
 
     if (isMobileBrowser()) {
@@ -713,7 +689,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     if (userDoc.profile.colorScheme) {
-      setColorScheme(userDoc.profile.colorScheme);
+      setColorScheme(userDoc.profile.colorScheme, false, false);
       document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
     }
 
@@ -721,7 +697,6 @@ onAuthStateChanged(auth, async (user) => {
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
     updateHomeKanban();
   } else {
-    localStorage.removeItem("ledgerLastSync");
     window.scrollTo(0, 0);
   }
 });
@@ -769,6 +744,69 @@ function displayHomeImage() {
       const img = document.getElementById("home-image");
       img.style.display = "none";
     }
+}
+
+document.getElementById("display-last-synced").addEventListener("click", () => {
+  const container = document.getElementById("last-synced-text");
+  
+  // If already visible → hide it 
+  if (container.innerHTML.trim() !== "") { 
+    container.innerHTML = ""; 
+    return; 
+  }
+  
+  // Otherwise → show all households
+  for (const householdId in householdDocs) {
+    const syncInfo = householdDocs[householdId].lastSynced;
+    if (!syncInfo) continue;
+
+    const utc = syncInfo.formattedTime;        // already formatted UTC
+    const local = formatRawToLocal(syncInfo.rawTime); // convert raw → local
+
+    const block = document.createElement("div");
+    block.className = "last-synced-entry";
+
+    block.innerHTML = `
+      <div><strong>${householdDocs[householdId].name}</strong></div>
+      <div style="margin-left: 1.2em;">本地时间：${local}</div>
+      <div style="margin-left: 1.2em;">UTC 时间：${utc}</div>
+    `;
+
+    container.appendChild(block);
+  }
+});
+
+function getFormattedUTC() {
+  const now = new Date();
+
+  const utcTime = now.toLocaleString(undefined, {
+    timeZone: 'UTC',
+    weekday: 'long',
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }) + " UTC";
+
+  return {
+    rawTime: now.getTime(),
+    formattedTime: utcTime
+  };
+}
+
+function formatRawToLocal(rawTime) {
+  return new Date(rawTime).toLocaleString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZoneName: "short"
+  });
 }
 
 function setCurrentTime(button) {
@@ -1510,8 +1548,9 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
           updateDoc(householdRef, {
             [`expense-categories.${options.primaryDocId}`]: {
               name: primary,
-              emoji: emoji,
-            }
+              emoji: emoji
+            },
+            lastSynced: getFormattedUTC()
           }),
         ]);
       } else if (options.isSecondary && options.parentId) {
@@ -1524,7 +1563,8 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
               name: primary,
               emoji: emoji,
               orderIndex: orderIndex
-            }
+            },
+            lastSynced: getFormattedUTC()
           }),
         ]);
       } else {
@@ -1538,10 +1578,12 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
               name: primary,
               emoji: emoji,
               orderIndex: orderIndex
-            }
+            },
+            lastSynced: getFormattedUTC()
           }),
         ]);
       }
+      ({ userDoc, householdDocs } = await syncData(user.uid));
 
       if (options.onSave) {
         options.onSave({ emoji, label: primary });
@@ -1900,7 +1942,7 @@ function enablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-async function setLanguage(lang, showMessage = false) {
+async function setLanguage(lang, showMessage = false, upload = true) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -2024,24 +2066,27 @@ async function setLanguage(lang, showMessage = false) {
   document.getElementById("nav-utilities").textContent = t.navUtilities;
   document.getElementById("nav-settings").textContent = t.settings;
 
-  if (currentUser) {
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
+  if (upload) {
+    if (currentUser) {
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
 
-      // Update nested field
-      await updateDoc(userRef, {
-        "profile.language": lang
-      });
+        // Update nested field
+        await updateDoc(userRef, {
+          "profile.language": lang, 
+          "profile.lastSynced": getFormattedUTC()
+        });
 
-      // Refresh local cache
-      if (showMessage) {
-        await syncData(currentUser.uid);
-        showStatusMessage(t.languageSwitched, "success");
+        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+        if (showMessage) {
+          showStatusMessage(t.languageSwitched, "success");
+        }
+
+      } catch (err) {
+        console.error("Error saving language:", err);
+        showStatusMessage(t.languageSwitchFailed, "error");
       }
-
-    } catch (err) {
-      console.error("Error saving language:", err);
-      showStatusMessage(t.languageSwitchFailed, "error");
     }
   }
 }
@@ -2086,10 +2131,11 @@ async function adjustFontsize(delta) {
 
       // Update nested field
       await updateDoc(userRef, {
-        [field]: newSize
+        [field]: newSize, 
+        "profile.lastSynced": getFormattedUTC()
       });
 
-      await syncData(currentUser.uid);
+      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
       showStatusMessage(t.fontsizeChanged, "success");
 
     } catch (err) {
@@ -2165,11 +2211,12 @@ async function applyThemeColor(color, upload = true) {
 
         // Update nested field
         await updateDoc(userRef, {
-          "profile.themeColor": color
+          "profile.themeColor": color, 
+          "profile.lastSynced": getFormattedUTC()
         });
 
         // Refresh local cache
-        await syncData(currentUser.uid);
+        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
       } catch (err) {
         console.error("Error changing theme color:", err);
@@ -2266,11 +2313,12 @@ async function saveHomeImages() {
 
     // Update nested field
     await updateDoc(userRef, {
-      "profile.homeImages": homeImages
+      "profile.homeImages": homeImages, 
+      "profile.lastSynced": getFormattedUTC()
     });
 
     // Refresh local cache
-    await syncData(currentUser.uid);
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
     showStatusMessage(t.homeImageSaved, "success");
 
@@ -2346,7 +2394,7 @@ async function updateHomeKanban() {
 }
 
 // --- Color Scheme ---
-async function setColorScheme(scheme, showMessage = false) {
+async function setColorScheme(scheme, showMessage = false, upload = true) {
   const t = translations[currentLang];
 
   if (scheme === "alt") {
@@ -2355,24 +2403,27 @@ async function setColorScheme(scheme, showMessage = false) {
     document.documentElement.classList.remove("alt-scheme");
   }
 
-  if (currentUser) {
-    try { // Save to Firestore
-      const userRef = doc(db, "users", currentUser.uid);
+  if (upload) {
+    if (currentUser) {
+      try { // Save to Firestore
+        const userRef = doc(db, "users", currentUser.uid);
 
-      // Update nested field
-      await updateDoc(userRef, {
-        "profile.colorScheme": scheme
-      });
+        // Update nested field
+        await updateDoc(userRef, {
+          "profile.colorScheme": scheme, 
+          "profile.lastSynced": getFormattedUTC()
+        });
 
-      // Refresh local cache
-      await syncData(currentUser.uid);
-      if (showMessage) {
-        showStatusMessage(t.colorSchemeSwitched, "success");
+        // Refresh local cache
+        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+        if (showMessage) {
+          showStatusMessage(t.colorSchemeSwitched, "success");
+        }
+
+      } catch (err) {
+        console.error("Error changing color scheme:", err);
+        showStatusMessage(t.colorSchemeSwitchFailed, "error");
       }
-
-    } catch (err) {
-      console.error("Error changing color scheme:", err);
-      showStatusMessage(t.colorSchemeSwitchFailed, "error");
     }
   }
 }
@@ -2440,6 +2491,8 @@ document.getElementById("leave-btn").onclick = () => {
 
 
 document.getElementById("rename-confirm").addEventListener("click", async () => {
+  const t = translations[currentLang];
+
   const newName = document.getElementById("rename-household").value.trim();
 
   if (!newName) {
@@ -2449,11 +2502,17 @@ document.getElementById("rename-confirm").addEventListener("click", async () => 
 
   try {
     // Reference to the household document
-    const householdRef = db.collection("households").doc(userDoc.personalHouseholdId);
-    householdRef.update({ name: newName });
+    const householdRef = doc(db, "households", userDoc.personalHouseholdId);
+    await updateDoc(householdRef, {
+      name: newName,
+      lastSynced: getFormattedUTC()
+    });
 
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
     console.log("Household renamed successfully!");
+    showStatusMessage(t.householdRenamed, "success");
   } catch (err) {
+    showStatusMessage(t.householdRenameFailed, "error");
     console.error("Error renaming household:", err);
   }
 });
@@ -2490,7 +2549,9 @@ document.getElementById("invite-confirm").onclick = async () => {
       alert("对方已在您的家庭中，无需再次邀请");
       return;
     }
-
+    
+    const userRef = doc(db, "users", currentUser.uid);
+    
     // 2. Add household to invited user
     const invitedUserRef = doc(db, "users", invitedUserId);
     await updateDoc(invitedUserRef, {
@@ -2501,11 +2562,12 @@ document.getElementById("invite-confirm").onclick = async () => {
     // 3. Add invited user to household members
     const householdRef = doc(db, "households", myHouseholdId);
     await updateDoc(householdRef, {
-      members: arrayUnion(invitedUserId)
+      members: arrayUnion(invitedUserId),
+      lastSynced: getFormattedUTC()
     });
 
     alert("邀请成功，对方已加入您的 household");
-    await syncData(currentUser.uid);
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
     document.getElementById("invite-email").value = "";
 
   } catch (err) {
@@ -2612,25 +2674,21 @@ async function confirmRemoveMember(uid) {
   if (!confirm("确定要将该成员移出 household 吗？")) return;
 
   const myHouseholdId = userDoc.personalHouseholdId;
+  const householdRef = doc(db, "households", myHouseholdId);
 
   // 1. Remove user from household members
-  await updateDoc(
-    doc(db, "households", myHouseholdId),
-    {
-      members: arrayRemove(uid)
-    }
-  );
+  await updateDoc(householdRef,{
+    members: arrayRemove(uid),
+    lastSynced: getFormattedUTC()
+  });
 
   // 2. Remove household from user
-  await updateDoc(
-    doc(db, "users", uid),
-    {
-      households: arrayRemove(myHouseholdId),
-      lastHouseholdChange: myHouseholdId
-    }
-  );
+  await updateDoc(doc(db, "users", uid), {
+    households: arrayRemove(myHouseholdId),
+    lastHouseholdChange: myHouseholdId
+  });
 
-  await syncData(currentUser.uid);
+  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
   loadHouseholdMembers();
 }
 
@@ -2726,27 +2784,24 @@ function hideLeaveButton(li) {
 async function confirmLeaveHousehold(hid) {
   if (!confirm("您确定要退出该家庭吗？退出后页面将自动刷新，请确保已保存所有数据")) return;
 
-  const uid = currentUser.uid;
+  const userRef = doc(db, "users", currentUser.uid);
 
   // Remove myself from household members
-  await updateDoc(
-    doc(db, "households", hid),
-    {
-      members: arrayRemove(uid)
-    }
-  );
+  await updateDoc(doc(db, "households", hid), {
+    members: arrayRemove(uid), 
+    lastSynced: getFormattedUTC()
+  });
 
   // Remove household from my user doc
-  await updateDoc(
-    doc(db, "users", uid),
-    {
-      households: arrayRemove(hid)
-    }
-  );
+  await updateDoc(userRef, {
+    households: arrayRemove(hid),
+    "profile.lastSynced": getFormattedUTC()
+  });
 
   toggleHouseholdFormRows();
 
   alert("已退出该家庭");
+  ({ userDoc, householdDocs } = await syncData(user.uid));
 
   window.location.reload();
 }
@@ -2810,7 +2865,8 @@ async function confirmDeleteAccount() {
     for (const hid of otherHouseholds) {
       const householdRef = doc(db, "households", hid);
       await updateDoc(householdRef, {
-        members: arrayRemove(uid)
+        members: arrayRemove(uid),
+        lastSynced: getFormattedUTC()
       });
     }
 
@@ -2857,6 +2913,13 @@ async function confirmDeleteAccount() {
 function showStatusMessage(message, type = 'info', duration = 2000) {
 
   const status = document.getElementById('statusMessage');
+  const bottomNav = document.querySelector('.bottom-nav');
+
+  const navHeight = bottomNav.offsetHeight; // px value 
+  const navStyles = getComputedStyle(bottomNav); 
+  const navBottom = navStyles.bottom;
+  const offset = `calc(${navHeight}px + ${navBottom} + 0.2rem)`; 
+  status.style.bottom = offset;
 
   status.textContent = message;
   status.style.display = 'inline-block';
@@ -3033,7 +3096,7 @@ function ScrollToSelectItem(col, value = null) {
   col.addEventListener("touchstart", (e) => {
     touchMoved = false;
     touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
+    touchStartTime = getFormattedUTC();
     lastStep = 0;
   }, { passive: false });
 
@@ -3043,7 +3106,7 @@ function ScrollToSelectItem(col, value = null) {
 
     const currentY = e.touches[0].clientY;
     const dy = currentY - touchStartY;
-    const dt = Date.now() - touchStartTime;
+    const dt = getFormattedUTC() - touchStartTime;
 
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
     const distanceSteps = dy / itemHeight;
