@@ -616,6 +616,8 @@ function logout() {
 window.logout = logout;
 
 async function syncData(userId) {
+  let lastSyncStatus = {};
+
   console.time("Retrieve data from Firebase");
 
   // --- Fetch user doc ---
@@ -623,8 +625,11 @@ async function syncData(userId) {
   const userSnap = await getDoc(userRef);
   const userDoc = userSnap.data();
 
-  // Track whether ANY document came from server
+  // Track whether the user document came from server
   let freshFromServer = userSnap.metadata.fromCache === false;
+  if (freshFromServer) {
+    lastSyncStatus["个人偏好"] = userDoc.profile.lastSynced
+  }
 
   const householdIds = userDoc.households
 
@@ -632,19 +637,29 @@ async function syncData(userId) {
   const householdDocs = {};
   await Promise.all(
     householdIds.map(async (hid) => {
+      freshFromServer = false; // initialize this variable for every household
+
       const hRef = doc(db, "households", hid);
       const hSnap = await getDoc(hRef);
 
       householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
 
-      // If ANY household doc came from server, mark sync as fresh
+      // If a household doc came from server, mark it as fresh
       if (hSnap.metadata.fromCache === false) {
         freshFromServer = true;
+        if (freshFromServer) {
+          lastSyncStatus[householdDocs[hid].name] = householdDocs[hid].lastSynced
+        }
       }
     })
   );
 
   console.timeEnd("Retrieve data from Firebase");
+
+  // assuming userDoc and householdDocs will always face the same online/offline connection
+  if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
+    localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
+  }
 
   return { userDoc, householdDocs };
 }
@@ -755,25 +770,32 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
     return; 
   }
   
-  // Otherwise → show all households
-  for (const householdId in householdDocs) {
-    const syncInfo = householdDocs[householdId].lastSynced;
-    if (!syncInfo) continue;
+  const lastSyncStatus = JSON.parse(localStorage.getItem("lastSyncStatus"));
 
-    const utc = syncInfo.formattedTime;        // already formatted UTC
-    const local = formatRawToLocal(syncInfo.rawTime); // convert raw → local
+  if (lastSyncStatus !== null) { // it exists 
 
-    const block = document.createElement("div");
-    block.className = "last-synced-entry";
+    for (const label in lastSyncStatus) { 
+      const syncInfo = lastSyncStatus[label];
+      if (!syncInfo) continue;
 
-    block.innerHTML = `
-      <div><strong>${householdDocs[householdId].name}</strong></div>
-      <div style="margin-left: 1.2em;">本地时间：${local}</div>
-      <div style="margin-left: 1.2em;">UTC 时间：${utc}</div>
-    `;
+      const utc = syncInfo.formattedTime;        // already formatted UTC
+      const local = formatRawToLocal(syncInfo.rawTime); // convert raw → local
 
-    container.appendChild(block);
-  }
+      const block = document.createElement("div");
+      block.className = "last-synced-entry";
+
+      block.innerHTML = `
+        <div><strong>${label}</strong></div>
+        <div style="margin-left: 1.2em;">本地时间：${local}</div>
+        <div style="margin-left: 1.2em;">UTC 时间：${utc}</div>
+      `;
+
+      container.appendChild(block);
+    }
+  } else { // it does not exist 
+    console.log("lastSyncStatus is not found in localStorage"); 
+    container.innerHTML = "Last sync status is not found in the browser's localStorage."
+  }  
 });
 
 function getFormattedUTC() {
