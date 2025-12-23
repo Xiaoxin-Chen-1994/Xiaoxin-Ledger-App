@@ -24,6 +24,13 @@ function notifyClients(data) {
 
 // ✅ Network-first for everything, fallback to cache for app shell
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url); 
+  
+  // Don't intercept Firebase Auth 
+  if (url.origin.includes('googleapis.com') || url.origin.includes('gstatic.com')) { 
+    return; 
+  }
+
   event.respondWith(
     fetch(event.request)
       .then(response => {
