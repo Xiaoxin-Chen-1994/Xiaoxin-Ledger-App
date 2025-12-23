@@ -746,7 +746,7 @@ function displayHomeImage() {
     }
 }
 
-document.getElementById("display-last-synced").addEventListener("click", async () => {
+document.getElementById("display-last-synced").addEventListener("click", () => {
   const container = document.getElementById("last-synced-text");
   
   // If already visible → hide it 
@@ -757,10 +757,7 @@ document.getElementById("display-last-synced").addEventListener("click", async (
   
   // Otherwise → show all households
   for (const householdId in householdDocs) {
-    const householdRef = doc(db, "households", householdId)
-    const hSnap = await getDoc(householdRef);
-    const syncInfo = hSnap.data().lastSynced;
-    // const syncInfo = householdDocs[householdId].lastSynced;
+    const syncInfo = householdDocs[householdId].lastSynced;
     if (!syncInfo) continue;
 
     const utc = syncInfo.formattedTime;        // already formatted UTC
