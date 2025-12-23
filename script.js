@@ -404,10 +404,10 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js')
-    .then(() => console.log('Service Worker registered'));
-}
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('/service-worker.js')
+//     .then(() => console.log('Service Worker registered'));
+// }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
