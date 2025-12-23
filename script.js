@@ -746,7 +746,7 @@ function displayHomeImage() {
     }
 }
 
-document.getElementById("display-last-synced").addEventListener("click", () => {
+document.getElementById("display-last-synced").addEventListener("click", async () => {
   const container = document.getElementById("last-synced-text");
   
   // If already visible → hide it 
