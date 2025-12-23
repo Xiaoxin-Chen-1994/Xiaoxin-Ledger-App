@@ -27,7 +27,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        notifyClients({ offline: false, syncedAt: Date.now() });
+        notifyClients({ offline: false });
         return response;
       })
       .catch(() => {

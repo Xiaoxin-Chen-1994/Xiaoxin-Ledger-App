@@ -2712,12 +2712,7 @@ async function loadMyHouseholds() {
   const leaveable = userDoc.households.slice(1);
 
   for (const hid of leaveable) {
-    const householdDoc = await firebase.firestore()
-      .collection("households")
-      .doc(hid)
-      .get();
-
-    const hname = householdDoc.data().name;
+    const hname = householdDocs[[hid]].name;
 
     const li = document.createElement("li");
     li.textContent = hname;
