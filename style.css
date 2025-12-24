@@ -1195,7 +1195,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   border: none;
   font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   cursor: pointer;
-  transition: right 0.2s ease;
+  transition: right 0.3s ease;
 }
 
 #member-list .delete-btn:hover,

@@ -49,7 +49,7 @@
 //       primary: string
 //       secondary: [string]
 // 
-//   members (subcollection) /{personId}
+//   subjects (subcollection) /{personId}
 //       name: string
 
 //   tags (subcollection)/{tagId}
@@ -88,7 +88,7 @@ let workspace = {} // use this variable to store temporary transaction data befo
 //          secondaryCategory, 
 //          primaryAccount, 
 //          secondaryAccount, 
-//          member, 
+//          subject, 
 //          collection, 
 //          tags, 
 //          notes
@@ -141,7 +141,7 @@ const translations = {
     now: "Now",
     dismiss: "Dismiss ▼",
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
-    member: "👤Member",
+    subject: "👤subject",
     collection: "🗂Collection",
     tags: "🏷Tags",
     enterTagName: "Enter tag name",
@@ -157,7 +157,7 @@ const translations = {
     manageExpenseCategories: "Manage expense categories",
     manageIncomeCategories: "Manage income categories",
     manageCollections: "Manage collections",
-    manageMembers: "Manage members",
+    manageSubjects: "Manage subjects",
     primaryCategoryName: "Name for a primary category",
     secondaryCategoryName: "Name for a secondary category",
     createPrimaryCategory: "➕ Create a new primary category",
@@ -286,7 +286,7 @@ const translations = {
     now: "现在",
     dismiss: "收起 ▼",
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
-    member: "👤成员",
+    subject: "👤主体",
     collection: "🗂项目",
     tags: "🏷标签",
     enterTagName: "输入标签名称",
@@ -302,7 +302,7 @@ const translations = {
     manageExpenseCategories: "管理支出分类",
     manageIncomeCategories: "管理收入分类",
     manageCollections: "管理项目",
-    manageMembers: "管理成员",
+    manageSubjects: "管理交易对象（交易主体）",
     primaryCategoryName: "一级分类名称",
     secondaryCategoryName: "二级分类名称",
     createPrimaryCategory: "➕ 新建一级分类",
@@ -526,12 +526,130 @@ async function signup() {
         members: [user.uid],
         lastSynced: "",
 
-        accounts: {},
-        "expense-categories": {},
-        "income-categories": {},
-        collections: {},
-        tags: {},
-        entries: {}
+        accounts: {
+          'Cash Accounts': [
+            {name: 'Cash', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
+          ], 
+          'Credit Cards': [
+            {name: 'Credit Card', icon: "", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": []}
+          ],
+          'Depository Accounts': [
+            {name: 'Bank Acount', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
+          ],
+          'Stored-Value Cards': [
+            {name: 'Stored Value Card', icon: "", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": []}
+          ],
+          'Investment Accounts': [
+            {name: 'Investment Acount', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
+          ]
+        },
+        "expense-categories": [
+          {primary: "Shopping", icon: "🛍️", secondaries: [
+            {name: "Offline Expenditure", icon: "🛒"},
+            {name: "Online Shopping", icon: "🛒"},
+          ]},
+          {primary: "Travel", icon: "🚗", secondaries: [
+            {name: "Public Transit", icon: "🚇"},
+            {name: "Ride Services", icon: "🚕"},
+            {name: "Fuel Costs", icon: "⛽"},
+            {name: "Parking Costs", icon: "🅿️"},
+            {name: "Auto Insurance", icon: "🚗"},
+            {name: "Vechicle Purchase", icon: "🚗"},
+            {name: "Vechicle Repair", icon: "🔧"},
+            {name: "Flight & Train Tickets", icon: "✈️"},
+            {name: "Lodging", icon: "🏨"},
+          ]},
+          {primary: "Entertainment", icon: "🎭", secondaries: [
+            {name: "Music & Films", icon: "🎬"},
+            {name: "Sightseeing", icon: "🗺️"},
+          ]},
+          {primary: "Subscriptions", icon: "🔄", secondaries: [
+            {name: "Phone Bills", icon: "📱"},
+            {name: "Streaming", icon: "📺"},
+          ]},
+          {primary: "Home", icon: "🏡", secondaries: [
+            {name: "Housing", icon: "🏠"},
+            {name: "Utilities", icon: "💡"},
+            {name: "Home Insurance", icon: "🏠"},
+            {name: "Decoration", icon: "🖼️"},
+          ]},
+          {primary: "Health", icon: "🏥", secondaries: [
+            {name: "Hospitals & Clinics", icon: "🏥"},
+            {name: "Medication", icon: "💊"},
+            {name: "Health Insurance Premiums", icon: "🛡️"},
+          ]},
+          {primary: "Public Fees", icon: "🏛️", secondaries: [
+            {name: "Tuition & Exams", icon: "🎓"},
+            {name: "Tax Payment", icon: "🧾"},
+            {name: "Pension Contribution", icon: "🪙"},
+            {name: "Professional Expenses", icon: "🏛️"},
+          ]},
+          {primary: "Personal Spending", icon: "💇", secondaries: [
+            {name: "Haircut", icon: "💇"},
+            {name: "Laundry", icon: "🧺"},
+          ]},
+          {primary: "Gifts & Investments", icon: "💸", secondaries: [
+            {name: "Outgoing Transfer", icon: "💸"},
+            {name: "Gifts", icon: "🎁"},
+            {name: "Donations", icon: "🎁"},
+            {name: "Insurance Payments", icon: "💵"},
+            {name: "Investment Loss", icon: "📉"},
+          ]},
+        ],
+        "income-categories": [
+          {primary: "Professional Income", icon: "💼", secondaries: [
+            {name: "Pay", icon: "💵"},
+            {name: "Scholarships & Awards", icon: "🏅"},
+          ]},
+          {primary: "Floating Income", icon: "🎉", secondaries: [
+            {name: "Investment Earnings", icon: "📈"},
+            {name: "Giveaways", icon: "🎉"},
+            {name: "Red Packet Receipts", icon: "🧧"},
+          ]},
+          {primary: "Refunds", icon: "💰", secondaries: [
+            {name: "Tax Credits", icon: "💰"},
+            {name: "Reimbursement", icon: "↩️"},
+            {name: "Insurance Payout", icon: "💰"},
+          ]},
+          {primary: "Pocket Money", icon: "🪙", secondaries: [
+            {name: "Incoming Transfer", icon: "💰"},
+          ]},
+        ],
+        collections: [
+          {name: "Food & Drinks", icon: "🍽️"},
+          {name: "Life Expenditure", icon: "🧩"},
+          {name: "Housing", icon: "🏡"},
+          {name: "Pay", icon: "💵"},
+          {name: "Scholarships & Awards", icon: "🏅"},
+          {name: "Tax-Free Investments", icon: "📈"},
+          {name: "Taxable Investments", icon: "📈"},
+          {name: "Gifts", icon: "🎁"},
+          {name: "Medical Expenses", icon: "🏥"},
+          {name: "Transportation", icon: "🚗"},
+          {name: "Travel Expenses", icon: "✈️"},
+          {name: "Entertainment", icon: "🎭"},
+          {name: "Phone Bills", icon: "📱"},
+          {name: "Electronic Devices", icon: "💻"},
+          {name: "Subscriptions", icon: "🔄"},
+          {name: "Pension", icon: "💰"},
+          {name: "Tax & Credits", icon: "🧾"},
+          {name: "Public Fees", icon: "🏛️"},
+          {name: "Incoming Transfer", icon: "💰"},
+          {name: "Outgoing Transfer", icon: "💸"},
+          {name: "Refunds", icon: "🔄"},
+          {name: "Work Expenses", icon: "💼"},
+        ],
+        subjects: [
+          {name: "Myself", icon: "🙂"},
+          {name: "Partner", icon: "❤️"},
+          {name: "Children", icon: "🧒"},
+          {name: "Parents", icon: "👨‍👩‍👦"},
+          {name: "Family", icon: "👪"},
+          {name: "Friends", icon: "🧑‍🤝‍🧑"},
+          {name: "Neighbourhood", icon: "🏘️"},
+        ],
+        tags: [],
+        entries: [],
       }),
 
       // Profile doc
@@ -1437,19 +1555,18 @@ async function loadLabels(type, title) {
     );
     block.appendChild(addCancelWrapper);
 
-    // get primary category docs (ordered)
-    const primarySnap = await householdRef.collection(type).orderBy("orderIndex").get();
+    let primaryCategories = householdDocs[householdId][type];
 
-    if (primarySnap.empty) {
+    if (!primaryCategories || primaryCategories.length === 0) {
       const emptyMsg = document.createElement("button");
       emptyMsg.classList.add("primary-category");
       emptyMsg.textContent = t.noPrimaryCategories;
       emptyMsg.style.background = "none";
       block.appendChild(emptyMsg);
     } else {
-      if (["expense-categories", "income-categories", "collections"].includes(type)) {
-        for (const primaryDoc of primarySnap.docs) {
-          const row = createCategoryRow(primaryDoc, block, householdRef, type, title, false);
+      if (["expense-categories", "income-categories"].includes(type)) {
+        for (const category of householdDocs[householdId][type]) {
+          const row = createCategoryRow(category.primary, category.icon, block, householdId, type, title, false);
 
           // === Secondary wrapper nested inside primary row ===
           const secondaryWrapper = document.createElement("div");
@@ -1460,40 +1577,38 @@ async function loadLabels(type, title) {
             t,
             t.createSecondaryCategory,
             (wrapper, cancelBtn) => {
-              const inputRow = createCategoryInputRow(householdRef, type, title, {
+              const inputRow = createCategoryInputRow(householdId, type, title, {
                 isSecondary: true,
-                parentId: primaryDoc.id
+                parent: category.primary
               });
               secondaryWrapper.insertBefore(inputRow, wrapper.nextSibling);
             }
           );
           secondaryWrapper.appendChild(secAddCancelWrapper);
 
-          // Load existing secondary docs (ordered)
-          const secondarySnap = await primaryDoc.ref.collection("secondaries").orderBy("orderIndex").get();
-          if (secondarySnap.empty) {
+          let secondaryCategories = category.secondaries;
+          if (!secondaryCategories || secondaryCategories.length === 0) {
             const emptyMsg = document.createElement("button");
             emptyMsg.classList.add("secondary-category");
             emptyMsg.textContent = t.noSecondaryCategories;
             secondaryWrapper.appendChild(emptyMsg);
           } else {
-            for (const secondaryDoc of secondarySnap.docs) {
-              const secRow = createCategoryRow(secondaryDoc, secondaryWrapper, householdRef, type, title, true, primaryDoc.id);
+            for (const secondaryCategory of category.secondaries) {
+              const secRow = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, row, householdId, type, title, true, category.primary);
             }
           }
 
-          enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id, "secondary");
+          // enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id, "secondary");
 
           row.appendChild(secondaryWrapper);
         }
-      } else if (type === "members") {
-        primarySnap.forEach(entryDoc => {
-          const memberData = entryDoc.data();
-          console.log("Member:", memberData.name);
-        });
+      } else {
+        for (const label of householdDocs[householdId][type]) {
+          console.log(type, label.name);
+        };
       }
     }
-    enableDrop(block, householdRef, type, null, "primary"); // For primaries
+    // enableDrop(block, householdRef, type, null, "primary"); // For primaries
     container.appendChild(block);
     container.appendChild(document.createElement("hr"));
   }
@@ -1536,18 +1651,18 @@ function createAddCancelWrapper(t, addLabelText, onAdd) {
 }
 
 function createCategoryInputRow(householdId, type, title, options = {}) {
-  // options: { primaryDocId, isSecondary, parentId, label, emoji, onSave }
+  // options: { primaryDocId, isSecondary, parentId, label, icon, onSave }
   const t = translations[currentLang];
 
   const inputRow = document.createElement("div");
   inputRow.classList.add("labels-input-row");
 
-  // Emoji button
-  const emojiBtn = document.createElement("button");
-  emojiBtn.textContent = options.emoji || "Emoji";
-  emojiBtn.classList.add("labels-emoji-btn");
+  // icon button
+  const iconBtn = document.createElement("button");
+  iconBtn.textContent = options.icon || "Emoji";
+  iconBtn.classList.add("labels-emoji-btn");
 
-  emojiBtn.addEventListener("click", (e) => {
+  iconBtn.addEventListener("click", (e) => {
     e.stopPropagation();
 
     // Always remove any existing wrapper before creating a new one
@@ -1559,7 +1674,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
 
     const picker = document.createElement("emoji-picker");
     picker.addEventListener("emoji-click", event => {
-      emojiBtn.textContent = event.detail.unicode;
+      iconBtn.textContent = event.detail.unicode;
       hideWrapper(wrapper);
     });
 
@@ -1601,12 +1716,13 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   tickBtn.classList.add("labels-tick-btn");
 
   tickBtn.addEventListener("click", async () => {
-    const emoji = emojiBtn.textContent !== "Emoji" ? emojiBtn.textContent : null;
+    // 不可与其他类别重名
+
+    const icon = iconBtn.textContent !== "Icon" ? iconBtn.textContent : null;
     const primary = primaryInput.value.trim();
     if (!primary) return;
 
     const householdRef = doc(db, "households", householdId)
-    const householdData = householdRef.data();
 
     try {
       if (options.primaryDocId) {
@@ -1615,27 +1731,27 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
           updateDoc(householdRef, {
             [`expense-categories.${options.primaryDocId}`]: {
               name: primary,
-              emoji: emoji
+              icon: icon
             },
             lastSynced: getFormattedTime()
           }),
         ]);
       } else if (options.isSecondary && options.parentId) {
-        // Adding secondary under a primary: assign orderIndex
+        // Adding secondary under a primary
         const secondaries = householdData["expense-categories"]?.[options.parentId]?.secondaries || {};
         const orderIndex = Object.keys(secondaries).length;
         await Promise.all([
           updateDoc(householdRef, {
             [`expense-categories.${options.parentId}.secondaries`]: {
               name: primary,
-              emoji: emoji,
+              icon: icon,
               orderIndex: orderIndex
             },
             lastSynced: getFormattedTime()
           }),
         ]);
       } else {
-        // New primary: assign orderIndex
+        // New primary
         const primaries = householdData["expense-categories"];
         const orderIndex = Object.keys(primaries).length;
 
@@ -1662,7 +1778,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
     }
   });
 
-  inputRow.appendChild(emojiBtn);
+  inputRow.appendChild(iconBtn);
   inputRow.appendChild(primaryInput);
   inputRow.appendChild(tickBtn);
 
@@ -1674,11 +1790,7 @@ function hideWrapper(wrapper) {
   wrapper.addEventListener("transitionend", () => wrapper.remove(), { once: true });
 }
 
-function createCategoryRow(docSnap, block, householdRef, type, title, isSecondary = false, parentId = null) {
-  const data = docSnap.data();
-  const label = data.primary || data.name; // primary vs secondary
-  const emoji = data.emoji || "";
-
+function createCategoryRow(name, icon, block, householdId, type, title, isSecondary = false, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
   categoryWrapper.classList.add("category-wrapper");
@@ -1689,7 +1801,7 @@ function createCategoryRow(docSnap, block, householdRef, type, title, isSecondar
 
   // main button
   const btn = document.createElement("button");
-  btn.textContent = `${emoji} ${label}`.trim();
+  btn.textContent = `${icon} ${name}`.trim();
   btn.classList.add(isSecondary ? "secondary-category" : "primary-category");
 
   // edit + delete buttons
@@ -1717,14 +1829,13 @@ function createCategoryRow(docSnap, block, householdRef, type, title, isSecondar
     if (existingRow) existingRow.remove();
 
     // create a new input row with current values
-    const inputRow = createCategoryInputRow(householdRef, type, title, {
-      primaryDocId: docSnap.id,
-      label: label,
-      emoji: emoji,
+    const inputRow = createCategoryInputRow(householdId, type, title, {
+      label: name,
+      icon: icon,
       isSecondary,
-      parentId,
+      parentName,
       onSave: updated => {
-        btn.textContent = `${updated.emoji || ""} ${updated.label}`.trim();
+        btn.textContent = `${updated.icon || ""} ${updated.label}`.trim();
         hideActions(categoryWrapper, editBtn, deleteBtn);
       }
     });
@@ -2054,8 +2165,8 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("now-btn").textContent = t.now;
   document.querySelectorAll('.selector-close')
     .forEach(el => el.textContent = t.dismiss);
-  document.querySelectorAll('.transaction-member-title')
-    .forEach(el => el.textContent = t.member);
+  document.querySelectorAll('.transaction-subject-title')
+    .forEach(el => el.textContent = t.subject);
   document.querySelectorAll('.transaction-collection-title')
     .forEach(el => el.textContent = t.collection);
   document.getElementById("exchange-rate-from-label").textContent = `⇂ ${t.exchangeRate}: ${5.10}`;
@@ -2079,7 +2190,7 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("manage-expense-categories-btn").textContent = t.manageExpenseCategories;
   document.getElementById("manage-income-categories-btn").textContent = t.manageIncomeCategories;
   document.getElementById("manage-collections-btn").textContent = t.manageCollections;
-  document.getElementById("manage-members-btn").textContent = t.manageMembers;
+  document.getElementById("manage-subjects-btn").textContent = t.manageSubjects;
   document.getElementById("households-title").textContent = t.myHouseholdsTitle;
   document.getElementById("rename-btn").textContent = t.renameHousehold;
   document.getElementById("rename-confirm").textContent = t.confirmRename;
@@ -2850,7 +2961,7 @@ async function confirmLeaveHousehold(hid) {
 
   // Remove myself from household members
   await updateDoc(doc(db, "households", hid), {
-    members: arrayRemove(uid), 
+    members: arrayRemove(currentUser.uid), 
     lastSynced: getFormattedTime()
   });
 
@@ -2863,7 +2974,7 @@ async function confirmLeaveHousehold(hid) {
   toggleHouseholdFormRows();
 
   alert("已退出该家庭");
-  ({ userDoc, householdDocs } = await syncData(user.uid));
+  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
   window.location.reload();
 }
