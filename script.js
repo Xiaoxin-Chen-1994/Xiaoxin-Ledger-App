@@ -404,9 +404,7 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-function isIOS() { 
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document); 
-}
+document.body.style.touchAction = "manipulation"; // fix the issue where the web app won't run in Edge iOS
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
