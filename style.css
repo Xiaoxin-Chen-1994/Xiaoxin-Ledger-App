@@ -11,6 +11,7 @@
   --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.06);
   --radius: 0.75rem;
   --font-size: 1.1rem;
+  --banner-height: 0px; /* default when banner is hidden */
   --bottom-nav: rgba(255, 255, 255, 0.7);
   --primary-category-bg: #e6e6e6;
 
@@ -47,7 +48,6 @@
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0,0,0,0.35);
     --bottom-nav: rgba(75, 75, 75, 0.7);
-    --banner-height: 0px; /* default when banner is hidden */
     --primary-category-bg: #1e1e1e;
 
     --income-color: rgb(248, 70, 70);
@@ -126,9 +126,6 @@ a {
   z-index: 1000;
 }
 
-/* When banner is visible, push header down */ 
-body.offline .header-bar { top: 2.5rem; /* equal to banner height */ }
-
 .header-bar h1 {
   margin: 0;
   font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
@@ -140,9 +137,10 @@ body.offline .header-bar { top: 2.5rem; /* equal to banner height */ }
   border: 0.0625rem solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  top: calc(3.5rem + var(--banner-height));
   padding: 1rem;
   margin: 0; /* remove margin so pages align edge to edge */
-  height: 100vh; /* fill page height */
+  height: calc(100vh - 3.5rem - var(--banner-height)); /* fill page height */
   position: relative;
 }
 
