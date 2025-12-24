@@ -403,7 +403,7 @@ const translations = {
 
 window.translations = translations;
 window.currentLang = currentLang;
-
+showStatusMessage("success1", "success"); 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
@@ -498,7 +498,7 @@ navigator.serviceWorker.ready.then(() => {
 async function signup() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
-showStatusMessage("success1", "success"); 
+
   try {
     // ✅ Create user
     const cred = await createUserWithEmailAndPassword(auth, email, password);
