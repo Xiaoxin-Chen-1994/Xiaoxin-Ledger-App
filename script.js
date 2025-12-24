@@ -404,8 +404,6 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-document.body.style.touchAction = "manipulation"; // fix the issue where the web app won't run in Edge iOS
-
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
