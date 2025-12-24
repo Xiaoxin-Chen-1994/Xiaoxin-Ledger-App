@@ -152,7 +152,7 @@ const translations = {
     save: "✔️Save",
     basicSettingsTitle: "Basic Settings",
     openBasicSettings: "Open Basic Settings",
-    timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. If you are offline, please note that these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
+    timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. Please note that, if you are offline, these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
     labels: "Labels",
     manageExpenseCategories: "Manage expense categories",
     manageIncomeCategories: "Manage income categories",
@@ -160,8 +160,8 @@ const translations = {
     manageSubjects: "Manage subjects",
     primaryCategoryName: "Name for a primary category",
     secondaryCategoryName: "Name for a secondary category",
-    createPrimaryCategory: "➕ Create a new primary category",
-    createSecondaryCategory: "➕ Create a new secondary category",
+    createPrimaryCategory: "Create a new primary category",
+    createSecondaryCategory: "Create a new secondary category",
     noPrimaryCategories: "No primary categories yet.",
     noSecondaryCategories: "No secondary categories yet.",
     cancel: "Cancel",
@@ -297,7 +297,7 @@ const translations = {
     save: "✔️保存",
     basicSettingsTitle: "基础设置",
     openBasicSettings: "打开基础设置",
-    timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。如果您正处于离线状态，请注意这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
+    timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。请注意，如果您正处于离线状态，这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
     labels: "类别",
     manageExpenseCategories: "管理支出分类",
     manageIncomeCategories: "管理收入分类",
@@ -305,8 +305,8 @@ const translations = {
     manageSubjects: "管理交易对象（交易主体）",
     primaryCategoryName: "一级分类名称",
     secondaryCategoryName: "二级分类名称",
-    createPrimaryCategory: "➕ 新建一级分类",
-    createSecondaryCategory: "➕ 新建二级分类",
+    createPrimaryCategory: "新建一级分类",
+    createSecondaryCategory: "新建二级分类",
     noPrimaryCategories: "暂无一级分类",
     noSecondaryCategories: "暂无二级分类",
     cancel: "取消",
@@ -1373,7 +1373,9 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       p.classList.remove("active");
     }
   });
+  document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
+  document.getElementById("add-btn-headerbar").style.display = "none";
 
   let stack = null;
   let target = null;
@@ -1486,8 +1488,10 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
 
+  } else if (latestPage === "manage-labels") {
+    document.getElementById("add-btn-headerbar").style.display = "block";
   } else { // for all other pages
-    document.getElementById("save-btn-headerbar").style.display = "none";
+
   }
 
   if (latestPage === "settings") {
@@ -1544,17 +1548,6 @@ async function loadLabels(type, title) {
     header.textContent = householdData.name;
     block.appendChild(header);
 
-    // === Primary add/cancel wrapper ===
-    const addCancelWrapper = createAddCancelWrapper(
-      t,
-      t.createPrimaryCategory,
-      (wrapper, cancelBtn) => {
-        const inputRow = createCategoryInputRow(householdId, type, title);
-        block.insertBefore(inputRow, wrapper.nextSibling);
-      }
-    );
-    block.appendChild(addCancelWrapper);
-
     let primaryCategories = householdDocs[householdId][type];
 
     if (!primaryCategories || primaryCategories.length === 0) {
@@ -1566,41 +1559,28 @@ async function loadLabels(type, title) {
     } else {
       if (["expense-categories", "income-categories"].includes(type)) {
         for (const category of householdDocs[householdId][type]) {
-          const row = createCategoryRow(category.primary, category.icon, block, householdId, type, title, false);
-
-          // === Secondary wrapper nested inside primary row ===
-          const secondaryWrapper = document.createElement("div");
-          secondaryWrapper.classList.add("secondary-wrapper", "indented");
-
-          // Secondary add/cancel controls
-          const secAddCancelWrapper = createAddCancelWrapper(
-            t,
-            t.createSecondaryCategory,
-            (wrapper, cancelBtn) => {
-              const inputRow = createCategoryInputRow(householdId, type, title, {
-                isSecondary: true,
-                parent: category.primary
-              });
-              secondaryWrapper.insertBefore(inputRow, wrapper.nextSibling);
-            }
-          );
-          secondaryWrapper.appendChild(secAddCancelWrapper);
+          const [row, primaryWrapper] = createCategoryRow(category.primary, category.icon, block, block, householdId, type, title, false);
 
           let secondaryCategories = category.secondaries;
           if (!secondaryCategories || secondaryCategories.length === 0) {
             const emptyMsg = document.createElement("button");
             emptyMsg.classList.add("secondary-category");
             emptyMsg.textContent = t.noSecondaryCategories;
-            secondaryWrapper.appendChild(emptyMsg);
+
+            const categoryWrapper = document.createElement("div");
+            categoryWrapper.classList.add("secondary-wrapper");
+            categoryWrapper.appendChild(emptyMsg);
+            primaryWrapper.appendChild(categoryWrapper);
+
           } else {
             for (const secondaryCategory of category.secondaries) {
-              const secRow = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, row, householdId, type, title, true, category.primary);
+              const [secRow, secondaryWrapper] = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, primaryWrapper, block, householdId, type, title, true, category.primary);
             }
           }
 
-          // enableDrop(secondaryWrapper, householdRef, type, primaryDoc.id, "secondary");
-
-          row.appendChild(secondaryWrapper);
+          // Allow adding a secondary
+          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, "➕", primaryWrapper, block, householdId, type, title, true, category.primary);
+          primaryWrapper.appendChild(secAddWrapper);
         }
       } else {
         for (const label of householdDocs[householdId][type]) {
@@ -1608,7 +1588,11 @@ async function loadLabels(type, title) {
         };
       }
     }
-    // enableDrop(block, householdRef, type, null, "primary"); // For primaries
+    
+    // Allow adding a primary
+    const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, householdId, type, title, false);
+    block.appendChild(addWrapper);
+    
     container.appendChild(block);
     container.appendChild(document.createElement("hr"));
   }
@@ -1617,37 +1601,44 @@ async function loadLabels(type, title) {
 }
 window.loadLabels = loadLabels;
 
-function createAddCancelWrapper(t, addLabelText, onAdd) {
-  const wrapper = document.createElement("div");
-  wrapper.classList.add("labels-add-cancel-wrapper");
+function createAddCategoryRow(name, icon, parentWrapper, block, householdId, type, title, isSecondary = false, parentName = null) {
+  // wrapper for one row
+  const categoryWrapper = document.createElement("div");
+  categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
 
+  // inner row container
+  const rowContent = document.createElement("div");
+  rowContent.classList.add(isSecondary ? "secondary-category-row" : "primary-category-row");
+
+  // main button
   const addBtn = document.createElement("button");
-  addBtn.textContent = addLabelText;
-  addBtn.classList.add("labels-add-row-btn");
+  addBtn.textContent = `${icon} ${name}`.trim();
+  addBtn.classList.add(isSecondary ? "secondary-category" : "primary-category");
+  
+  // assemble row
+  rowContent.appendChild(addBtn);
 
-  const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = t.cancel;
-  cancelBtn.classList.add("labels-cancel-btn");
-
-  wrapper.appendChild(addBtn);
-  wrapper.appendChild(cancelBtn);
+  // attach to wrapper
+  categoryWrapper.appendChild(rowContent);
+  parentWrapper.appendChild(categoryWrapper);
 
   addBtn.addEventListener("click", () => {
-    const existingRow = wrapper.parentNode.querySelector(".labels-input-row");
-    if (existingRow) return;
-    onAdd(wrapper, cancelBtn);
-    wrapper.classList.add("has-cancel");
-    cancelBtn.classList.add("show");
+    // remove any existing input row
+    const existingRow = block.querySelector(".labels-input-row");
+    if (existingRow) existingRow.remove();
+
+    // create a new empty input row
+    const inputRow = createCategoryInputRow(householdId, type, title, {
+      label: "",
+      icon: "",
+      isSecondary,
+      parentName
+    });
+
+    rowContent.after(inputRow);
   });
 
-  cancelBtn.addEventListener("click", () => {
-    const inputRow = wrapper.parentNode.querySelector(".labels-input-row");
-    if (inputRow) inputRow.remove();
-    cancelBtn.classList.remove("show");
-    wrapper.classList.remove("has-cancel");
-  });
-
-  return wrapper;
+  return [rowContent, categoryWrapper];
 }
 
 function createCategoryInputRow(householdId, type, title, options = {}) {
@@ -1659,7 +1650,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
 
   // icon button
   const iconBtn = document.createElement("button");
-  iconBtn.textContent = options.icon || "Emoji";
+  iconBtn.textContent = options.icon || "Icon";
   iconBtn.classList.add("labels-emoji-btn");
 
   iconBtn.addEventListener("click", (e) => {
@@ -1698,16 +1689,16 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   });
 
   // Text input
-  const primaryInput = document.createElement("input");
-  primaryInput.type = "text";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
   if (options.isSecondary) {
-    primaryInput.placeholder = t.secondaryCategoryName;
+    nameInput.placeholder = t.secondaryCategoryName;
   } else {
-    primaryInput.placeholder = t.primaryCategoryName;
+    nameInput.placeholder = t.primaryCategoryName;
   }
-  primaryInput.classList.add("labels-primary-input");
+  nameInput.classList.add("labels-primary-input");
   if (options.label) {
-    primaryInput.value = options.label;
+    nameInput.value = options.label;
   }
 
   // Tick button
@@ -1715,62 +1706,131 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   tickBtn.textContent = "✔︎";
   tickBtn.classList.add("labels-tick-btn");
 
+  // Cancel button
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "✘";
+  cancelBtn.classList.add("labels-cancel-btn");
+  
+  cancelBtn.addEventListener("click", async () => {
+    loadLabels(type, title);
+  })
+
   tickBtn.addEventListener("click", async () => {
-    // 不可与其他类别重名
+    const icon = iconBtn.textContent !== "Icon" ? iconBtn.textContent : "🏷️";
+    const name = nameInput.value.trim();
+    if (!name) {
+      showStatusMessage("The input name must not be empty.", "error")
+      return;
+    }
 
-    const icon = iconBtn.textContent !== "Icon" ? iconBtn.textContent : null;
-    const primary = primaryInput.value.trim();
-    if (!primary) return;
+    // check if this name is available
+    const allCategories = householdDocs[householdId][type];
+    const primaryNames = allCategories.map(c => c.primary); 
+    console.log(allCategories)
+    const secondaryNames = allCategories.flatMap(c => c.secondaries.map(s => s.name));
+    console.log(secondaryNames)
+    const allNames = [...primaryNames, ...secondaryNames];
+    console.log(allNames)
+    const valid = name === options.label || !allNames.includes(name)
+    // valid if the new name is not same as any existing names, except the current name being edited
 
-    const householdRef = doc(db, "households", householdId)
+    if (!valid) {
+      showStatusMessage("The input name must not match any existing catogories.", "error")
+      return;
+    }
+
+    const categories = householdDocs[householdId][type];
+    const householdRef = doc(db, "households", householdId);
 
     try {
-      if (options.primaryDocId) {
-        // Editing existing primary: only update label/emoji
-        await Promise.all([
-          updateDoc(householdRef, {
-            [`expense-categories.${options.primaryDocId}`]: {
-              name: primary,
-              icon: icon
-            },
-            lastSynced: getFormattedTime()
-          }),
-        ]);
-      } else if (options.isSecondary && options.parentId) {
-        // Adding secondary under a primary
-        const secondaries = householdData["expense-categories"]?.[options.parentId]?.secondaries || {};
-        const orderIndex = Object.keys(secondaries).length;
-        await Promise.all([
-          updateDoc(householdRef, {
-            [`expense-categories.${options.parentId}.secondaries`]: {
-              name: primary,
+      if (options.label && !options.isSecondary) {
+        // Editing existing primary
+        const updatedCategories = categories.map(cat => {
+          if (cat.primary === options.label) {
+            return {
+              ...cat,
+              primary: name,
               icon: icon,
-              orderIndex: orderIndex
-            },
-            lastSynced: getFormattedTime()
-          }),
-        ]);
+            };
+          }
+          return cat;
+        });
+
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
+      
+      } else if (options.label && options.isSecondary) {
+        // Editing existing secondary
+        const updatedCategories = categories.map(cat => {
+          if (cat.primary === options.parentName) {
+            // update only the secondaries of this parent
+            const updatedSecondaries = cat.secondaries.map(sec => {
+              if (sec.name === options.label) {
+                return {
+                  ...sec,
+                  name: name,
+                  icon: icon,
+                };
+              }
+              return sec;
+            });
+
+            return {
+              ...cat,
+              secondaries: updatedSecondaries
+            };
+          }
+
+          return cat;
+        });
+
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
+
+      } else if (!options.isSecondary) {
+        // Adding a new primary
+        const newCategory = {
+          primary: name,
+          icon: icon,
+          secondaries: []
+        };
+
+        const updatedCategories = [...categories, newCategory];
+
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
+
       } else {
-        // New primary
-        const primaries = householdData["expense-categories"];
-        const orderIndex = Object.keys(primaries).length;
+        // Adding a new secondary under a primary
+        const newSecondary = {
+          name: name, 
+          icon: icon
+        };
 
-        await Promise.all([
-          updateDoc(householdRef, {
-            [`expense-categories.${options.primaryDocId}`]: {
-              name: primary,
-              emoji: emoji,
-              orderIndex: orderIndex
-            },
-            lastSynced: getFormattedTime()
-          }),
-        ]);
-      }
-      ({ userDoc, householdDocs } = await syncData(user.uid));
+        const updatedCategories = categories.map(cat => {
+          if (cat.primary === options.parentName) {
+            // append the new secondary
+            return {
+              ...cat,
+              secondaries: [...cat.secondaries, newSecondary]
+            };
+          }
+          return cat;
+        });
 
-      if (options.onSave) {
-        options.onSave({ emoji, label: primary });
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
+
       }
+      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
       loadLabels(type, title);
     } catch (err) {
@@ -1779,8 +1839,9 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   });
 
   inputRow.appendChild(iconBtn);
-  inputRow.appendChild(primaryInput);
+  inputRow.appendChild(nameInput);
   inputRow.appendChild(tickBtn);
+  inputRow.appendChild(cancelBtn);
 
   return inputRow;
 }
@@ -1790,10 +1851,10 @@ function hideWrapper(wrapper) {
   wrapper.addEventListener("transitionend", () => wrapper.remove(), { once: true });
 }
 
-function createCategoryRow(name, icon, block, householdId, type, title, isSecondary = false, parentName = null) {
+function createCategoryRow(name, icon, parentWrapper, block, householdId, type, title, isSecondary = false, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
-  categoryWrapper.classList.add("category-wrapper");
+  categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
 
   // inner row container
   const rowContent = document.createElement("div");
@@ -1803,6 +1864,10 @@ function createCategoryRow(name, icon, block, householdId, type, title, isSecond
   const btn = document.createElement("button");
   btn.textContent = `${icon} ${name}`.trim();
   btn.classList.add(isSecondary ? "secondary-category" : "primary-category");
+  // Add identifiers 
+  btn.dataset.name = name; 
+  btn.dataset.type = isSecondary ? "secondary" : "primary";
+  btn.dataset.parentName = parentName; 
 
   // edit + delete buttons
   const editBtn = document.createElement("button");
@@ -1820,7 +1885,7 @@ function createCategoryRow(name, icon, block, householdId, type, title, isSecond
 
   // attach to wrapper
   categoryWrapper.appendChild(rowContent);
-  block.appendChild(categoryWrapper);
+  parentWrapper.appendChild(categoryWrapper);
 
   // === EDIT HANDLER ===
   editBtn.addEventListener("click", () => {
@@ -1833,33 +1898,51 @@ function createCategoryRow(name, icon, block, householdId, type, title, isSecond
       label: name,
       icon: icon,
       isSecondary,
-      parentName,
-      onSave: updated => {
-        btn.textContent = `${updated.icon || ""} ${updated.label}`.trim();
-        hideActions(categoryWrapper, editBtn, deleteBtn);
-      }
+      parentName
     });
 
-    block.insertBefore(inputRow, categoryWrapper.nextSibling);
+    rowContent.after(inputRow);
   });
 
   // === DELETE HANDLER ===
   deleteBtn.addEventListener("click", async () => {
     if (!confirm("Delete this category?")) return;
-    categoryWrapper.remove();
+    const categories = householdDocs[householdId][type];
+    const householdRef = doc(db, "households", householdId)
+
     try {
-      if (isSecondary && parentId) {
-        await householdRef.collection(type)
-          .doc(parentId)
-          .collection("secondaries")
-          .doc(docSnap.id)
-          .delete();
+      if (isSecondary) {
+        
+        const updatedCategories = categories.map(cat => {
+          if (cat.primary === parentName) {
+            return {
+              ...cat,
+              secondaries: cat.secondaries.filter(sec => sec.name !== name)
+            };
+          }
+          return cat;
+        });
+
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
+
       } else {
-        await householdRef.collection(type).doc(docSnap.id).delete();
+        const updatedCategories = categories.filter(cat => cat.primary !== name);
+
+        await updateDoc(householdRef, {
+          [type]: updatedCategories,
+          lastSynced: getFormattedTime()
+        });
       }
     } catch (err) {
       console.error("Error deleting category:", err);
     }
+
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+    loadLabels(type, title);
   });
 
   // gesture handling: swipe, right-click, or long press
@@ -1870,57 +1953,211 @@ function createCategoryRow(name, icon, block, householdId, type, title, isSecond
   btn.addEventListener("touchend", e => {
     const endX = e.changedTouches[0].clientX;
     if (startX - endX > 50) {
+      // Remove "has-actions" from any wrapper
+      block.querySelectorAll(".has-actions").forEach(wrapper => {
+        wrapper.classList.remove("has-actions");
+      });
+
+      // Remove "show" from any edit/delete buttons
+      block.querySelectorAll(".show").forEach(btn => {
+        btn.classList.remove("show");
+      });
+
       showActions(categoryWrapper, editBtn, deleteBtn);
     } else {
       hideActions(categoryWrapper, editBtn, deleteBtn);
     }
   });
 
+  let pressTimer;
+  let longPress = false;
+  let isDragging = false;
+
+  // RIGHT CLICK
   btn.addEventListener("contextmenu", e => {
+    if (longPress) {
+      // ignore the click triggered after long press
+      longPress = false;
+      e.preventDefault();
+      return;
+    }
+
     e.preventDefault();
-    showActions(categoryWrapper, editBtn, deleteBtn);
+    const isVisible = categoryWrapper.classList.contains("has-actions"); 
+    if (isVisible) { 
+      hideActions(categoryWrapper, editBtn, deleteBtn); 
+    } else { 
+      // Remove "has-actions" from any wrapper
+      block.querySelectorAll(".has-actions").forEach(wrapper => {
+        wrapper.classList.remove("has-actions");
+      });
+
+      // Remove "show" from any edit/delete buttons
+      block.querySelectorAll(".show").forEach(btn => {
+        btn.classList.remove("show");
+      });
+
+      showActions(categoryWrapper, editBtn, deleteBtn); 
+    }
   });
 
-  let pressTimer;
+  // LEFT CLICK
+  btn.addEventListener("click", e => {
+    if (longPress) {
+      // ignore the click triggered after long press
+      longPress = false;
+      return;
+    }
+
+    e.preventDefault();
+    hideActions(categoryWrapper, editBtn, deleteBtn);
+  });
+
+  // LONG PRESS
   btn.addEventListener("mousedown", () => {
+    longPress = false;
+
     pressTimer = setTimeout(() => {
+      if (isDragging) return; // prevent long press during drag
+
+      longPress = true;
+
+      // Clear any existing actions
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+
       showActions(categoryWrapper, editBtn, deleteBtn);
     }, 600);
   });
+
   btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
   btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
 
   // === Dragging ===
-  if (!isSecondary) {
-    // Primaries: drag the wrapper
-    categoryWrapper.setAttribute("draggable", true);
+  btn.setAttribute("draggable", true);
 
-    categoryWrapper.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("categoryId", docSnap.id);
-      e.dataTransfer.setData("isSecondary", "0");
-      categoryWrapper.classList.add("dragging");
-    });
+  btn.addEventListener("dragstart", e => {
+    isDragging = true; // mark drag started 
+    clearTimeout(pressTimer); // cancel long press immediately 
+    longPress = false; // ensure no long-press logic fires
 
-    categoryWrapper.addEventListener("dragend", () => {
-      categoryWrapper.classList.remove("dragging");
-    });
-  } else {
-    // Secondaries: drag the row itself
-    rowContent.setAttribute("draggable", true);
+    if (!isSecondary) {
+      block.querySelectorAll(".secondary-wrapper").forEach(w => {
+        w.style.display = "none";
+      });
+    }
 
-    rowContent.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("categoryId", docSnap.id);
-      e.dataTransfer.setData("isSecondary", "1");
-      e.dataTransfer.setData("parentId", parentId);
-      rowContent.classList.add("dragging");
-    });
+    // On dragstart, store what is being dragged
+    e.dataTransfer.setData("drag-name", btn.dataset.name); 
+    e.dataTransfer.setData("drag-type", btn.dataset.type);
+    e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
 
-    rowContent.addEventListener("dragend", () => {
-      rowContent.classList.remove("dragging");
-    });
-  }
+    btn.classList.add("dragging");
+  });
 
-  return categoryWrapper;
+  btn.addEventListener("dragover", e => {
+    e.preventDefault(); // required
+  });
+
+  btn.addEventListener("drop", async e => {
+    e.preventDefault();
+
+    const draggedName   = e.dataTransfer.getData("drag-name");
+    const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
+    const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
+
+    const targetName    = btn.dataset.name;
+    const targetType    = btn.dataset.type;                      // "primary" | "secondary"
+    const targetParent  = btn.dataset.parentName;                // primary name for secondary
+
+    const rect = btn.getBoundingClientRect();
+    const dropY = e.clientY;
+    const midpoint = rect.top + rect.height / 2;
+    const position = dropY < midpoint ? "before" : "after";
+
+    // Enforce rules
+    if (draggedType === "secondary" && targetType === "primary") return;
+    if (draggedType === "primary" && targetType === "secondary") return;
+    if (draggedName === targetName) return;
+
+    const categories = householdDocs[householdId][type];
+    const householdRef = doc(db, "households", householdId);
+
+    // ============================================================
+    // PRIMARY MOVE
+    // ============================================================
+    if (draggedType === "primary") {
+      // Find dragged primary object + index
+      const oldIndex = categories.findIndex(p => p.primary === draggedName);
+      if (oldIndex === -1) return;
+
+      const draggedObj = categories[oldIndex];
+
+      // Remove it
+      categories.splice(oldIndex, 1);
+
+      // Find target index
+      let newIndex = categories.findIndex(p => p.primary === targetName);
+      if (newIndex === -1) return;
+
+      if (position === "after") newIndex++;
+
+      // Insert at new position
+      categories.splice(newIndex, 0, draggedObj);
+
+      await updateDoc(householdRef, {
+        [type]: categories
+      });
+    }
+
+    // ============================================================
+    // SECONDARY MOVE
+    // ============================================================
+    if (draggedType === "secondary") {
+      // Find source primary
+      const fromPrimary = categories.find(p => p.primary === draggedParent);
+      if (!fromPrimary) return;
+
+      // Find target primary
+      const toPrimary = categories.find(p => p.primary === targetParent);
+      if (!toPrimary) return;
+
+      const fromArr = fromPrimary.secondaries;
+      const toArr   = toPrimary.secondaries;
+
+      // Find dragged secondary object + index
+      const oldIndex = fromArr.findIndex(s => s.name === draggedName);
+      if (oldIndex === -1) return;
+
+      const draggedObj = fromArr[oldIndex];
+
+      // Remove from old parent
+      fromArr.splice(oldIndex, 1);
+
+      // Find target secondary index in new parent
+      let newIndex = toArr.findIndex(s => s.name === targetName);
+      if (newIndex === -1) return;
+
+      if (position === "after") newIndex++;
+
+      // Insert into new parent
+      toArr.splice(newIndex, 0, draggedObj);
+
+      await updateDoc(householdRef, {
+        [type]: categories
+      });
+    }
+
+    isDragging = false;
+    btn.classList.remove("dragging");
+
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+    loadLabels(type, title);
+
+  });
+
+  return [rowContent, categoryWrapper];
 }
 
 function showActions(wrapper, editBtn, deleteBtn) {
@@ -1933,62 +2170,6 @@ function hideActions(wrapper, editBtn, deleteBtn) {
   wrapper.classList.remove("has-actions");
   editBtn.classList.remove("show");
   deleteBtn.classList.remove("show");
-}
-
-function enableDrop(container, householdRef, type, parentId, mode) {
-  container.addEventListener("dragover", e => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-
-    const dragging = document.querySelector(".dragging");
-    if (!dragging) return;
-
-    const afterElement = getDragAfterElement(container, e.clientY, mode);
-console.log(afterElement)
-    if (afterElement && afterElement.parentNode === container) {
-      container.insertBefore(dragging, afterElement);
-    } else {
-      container.appendChild(dragging);
-    }
-  });
-
-  container.addEventListener("drop", async e => {
-    e.preventDefault();
-
-    const draggedId = e.dataTransfer.getData("categoryId");
-    const isSecondary = e.dataTransfer.getData("isSecondary") === "1";
-    const fromParentId = e.dataTransfer.getData("parentId") || "";
-
-    if (mode === "primary" && !isSecondary) {
-      // Reorder primaries using the order of direct children
-      const orderedIds = Array.from(container.children)
-        .filter(el => el.classList.contains("primary-category-row"))
-        .map(el => el.querySelector(".category-row").dataset.id || el.dataset.id || el.getAttribute("data-id") || "");
-      await reorderPrimaries(householdRef, type, orderedIds);
-      return;
-    }
-
-    if (mode === "secondary" && isSecondary) {
-      const toParentId = parentId;
-      if (!draggedId) return;
-
-      if (fromParentId === toParentId) {
-        // Reorder within same parent
-        const orderedIds = Array.from(container.children)
-          .filter(el => el.classList.contains("secondary-category-row"))
-          .map(el => el.dataset.id || el.getAttribute("data-id") || el.querySelector(".category-row")?.dataset.id || "");
-        await reorderSecondaries(householdRef, type, toParentId, orderedIds);
-      } else {
-        // Move secondary to a new parent, then reorder in the destination
-        await moveSecondary(householdRef, type, fromParentId, toParentId, draggedId);
-
-        const orderedIds = Array.from(container.children)
-          .filter(el => el.classList.contains("secondary-category-row"))
-          .map(el => el.dataset.id || el.getAttribute("data-id") || el.querySelector(".category-row")?.dataset.id || "");
-        await reorderSecondaries(householdRef, type, toParentId, orderedIds);
-      }
-    }
-  });
 }
 
 function getDragAfterElement(container, y, mode) {

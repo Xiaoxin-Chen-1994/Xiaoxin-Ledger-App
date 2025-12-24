@@ -1320,28 +1320,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   background: none;
 }
 
-/* Cancel lives off-screen, slides in */
-.labels-cancel-btn {
-  padding: 0.5rem;
-  position: absolute;
-  right: calc(-1 * (var(--cancel-w) + var(--gap)));
-  width: var(--cancel-w);
-  opacity: 0;
-  pointer-events: none;
-  transition: right 0.3s ease, opacity 0.3s ease;
-}
-
-/* When showing Cancel, reserve space with wrapper padding */
-.labels-add-cancel-wrapper.has-cancel {
-  padding-right: calc(var(--cancel-w) + var(--gap));
-}
-
-.labels-cancel-btn.show {
-  right: 0;
-  opacity: 1;
-  pointer-events: auto;
-}
-
 .labels-input-row {
   display: flex;
   gap: 8px;
@@ -1377,8 +1355,10 @@ emoji-picker {
   margin-bottom: 0.5rem;
 }
 
-.labels-tick-btn {
+.labels-tick-btn, .labels-cancel-btn {
+  display: flex;
   flex: 0 0 auto;   /* do not grow, do not shrink, size to content */
+  min-width: 2rem;
   padding: 0 1rem;   /* keep it tight */
   align-items: center;
   justify-content: center;
@@ -1423,6 +1403,7 @@ emoji-picker {
 }
 
 .primary-category-row, .secondary-category-row {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -1433,6 +1414,7 @@ emoji-picker {
 .primary-category, .primary-category:hover {
   text-align: left;
   color: var(--text);
+  font-weight: bold;
   background: var(--primary-category-bg);
   flex: 1;             /* take most width */
   padding: 0.5rem;
@@ -1449,8 +1431,6 @@ emoji-picker {
   min-width: 0;
   transition: flex 0.3s ease;
 }
-
-.indented { margin-left: 2rem; }
 
 /* Action buttons off-screen initially */
 .label-edit-btn,
@@ -1475,11 +1455,6 @@ emoji-picker {
 .label-delete-btn {
   right: calc(-1 * (var(--action-w)));
   background: #f44336;
-}
-
-/* When showing actions, reserve space */
-.category-wrapper.has-actions {
-  padding-right: calc(var(--action-w)*2);
 }
 
 /* Slide them in */
