@@ -445,7 +445,7 @@ const firebaseConfig = {
   appId: "1:571079523490:web:039d2d334230a764f2abfb",
   measurementId: "G-RXX64YWRZX"
 };
-        showStatusMessage("success", "success"); 
+
 // import functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { 
@@ -474,10 +474,10 @@ import {
   arrayRemove,
   enableIndexedDbPersistence 
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-        showStatusMessage("success", "error"); 
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
+        showStatusMessage("firebase success", "success"); 
 // Get references to services
 const auth = getAuth(app);
 const db = getFirestore(app);
