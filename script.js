@@ -1234,9 +1234,9 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     document.getElementById(`nav-${page}`).style.background = "";
     document.getElementById(`nav-${page}`).classList.remove("active");
   });
-
+showStatusMessage("success1", "success"); 
   navigator.vibrate(30); // milliseconds
-
+showStatusMessage("success2", "success"); 
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
       // hide the current page
@@ -1286,7 +1286,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     // push a new history entry for this non-base page
     history.pushState({ page: latestPage, base: currentBase }, "", location.href);
   }
-showStatusMessage("success1", "success"); 
+
   document.getElementById("app-title").textContent = latestTitle;
   document.getElementById(navBtn).style.background = "var(--primary)";
   document.getElementById(navBtn).classList.add("active");
@@ -1339,7 +1339,7 @@ showStatusMessage("success1", "success");
   } else { // for all other pages
     document.getElementById("save-btn-headerbar").style.display = "none";
   }
-showStatusMessage("success2", "success"); 
+
   if (latestPage === "settings") {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${userEmail}`;
   }
@@ -1351,7 +1351,6 @@ showStatusMessage("success2", "success");
   if (!isBaseAndFresh && !isAlreadyActive) {
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle]); // add to the history stacks
   }
-  showStatusMessage("success3", "success"); 
 }
 window.showPage = showPage;
 
