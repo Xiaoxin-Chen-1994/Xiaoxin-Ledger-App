@@ -2036,7 +2036,7 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   // === Dragging ===
   btn.setAttribute("draggable", true);
 
-  btn.addEventListener("dragstart", e => {
+  btn.addEventListener("touchstart", e => {
     isDragging = true; // mark drag started 
     clearTimeout(pressTimer); // cancel long press immediately 
     longPress = false; // ensure no long-press logic fires
@@ -2055,11 +2055,11 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     btn.classList.add("dragging");
   });
 
-  btn.addEventListener("dragover", e => {
+  btn.addEventListener("touchmove", e => {
     e.preventDefault(); // required
   });
 
-  btn.addEventListener("drop", async e => {
+  btn.addEventListener("touchend", async e => {
     e.preventDefault();
 
     const draggedName   = e.dataTransfer.getData("drag-name");
