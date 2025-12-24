@@ -668,7 +668,7 @@ async function syncData(userId) {
   );
 
   console.timeEnd("Retrieve data from Firebase");
-        showStatusMessage("success", "success"); 
+        showStatusMessage("success", "error"); 
   // assuming userDoc and householdDocs will always face the same online/offline connection
   if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
     localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
