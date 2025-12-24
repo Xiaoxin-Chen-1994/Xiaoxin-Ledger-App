@@ -696,12 +696,12 @@ onAuthStateChanged(auth, async (user) => {
 
     // Apply profile settings
     displayHomeImage()
-showStatusMessage("success", "success"); 
+
     if (userDoc.profile.language) {
       currentLang = userDoc.profile.language;
       setLanguage(currentLang, false, false);
     }
-
+showStatusMessage("success1", "success"); 
     if (isMobileBrowser()) {
       if (userDoc.profile.fontsizeMobile) {
         document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeMobile);
@@ -711,7 +711,7 @@ showStatusMessage("success", "success");
         document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeDesktop);
       }
     }
-
+showStatusMessage("success2", "success"); 
     if (userDoc.profile.themeColor) {
       applyThemeColor(userDoc.profile.themeColor, false)
     }
@@ -720,9 +720,10 @@ showStatusMessage("success", "success");
       setColorScheme(userDoc.profile.colorScheme, false, false);
       document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
     }
-
+showStatusMessage("success3", "success"); 
     // ✅ Load main app
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
+    showStatusMessage("success4", "success"); 
     updateHomeKanban();
   } else {
     window.scrollTo(0, 0);
