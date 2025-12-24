@@ -701,7 +701,7 @@ onAuthStateChanged(auth, async (user) => {
       currentLang = userDoc.profile.language;
       setLanguage(currentLang, false, false);
     }
-showStatusMessage("success1", "success"); 
+
     if (isMobileBrowser()) {
       if (userDoc.profile.fontsizeMobile) {
         document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeMobile);
@@ -711,7 +711,7 @@ showStatusMessage("success1", "success");
         document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeDesktop);
       }
     }
-showStatusMessage("success2", "success"); 
+
     if (userDoc.profile.themeColor) {
       applyThemeColor(userDoc.profile.themeColor, false)
     }
@@ -720,10 +720,9 @@ showStatusMessage("success2", "success");
       setColorScheme(userDoc.profile.colorScheme, false, false);
       document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
     }
-showStatusMessage("success3", "success"); 
+
     // ✅ Load main app
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
-    showStatusMessage("success4", "success"); 
     updateHomeKanban();
   } else {
     window.scrollTo(0, 0);
@@ -1287,7 +1286,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     // push a new history entry for this non-base page
     history.pushState({ page: latestPage, base: currentBase }, "", location.href);
   }
-
+showStatusMessage("success1", "success"); 
   document.getElementById("app-title").textContent = latestTitle;
   document.getElementById(navBtn).style.background = "var(--primary)";
   document.getElementById(navBtn).classList.add("active");
@@ -1340,7 +1339,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   } else { // for all other pages
     document.getElementById("save-btn-headerbar").style.display = "none";
   }
-
+showStatusMessage("success2", "success"); 
   if (latestPage === "settings") {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${userEmail}`;
   }
@@ -1352,6 +1351,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   if (!isBaseAndFresh && !isAlreadyActive) {
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle]); // add to the history stacks
   }
+  showStatusMessage("success3", "success"); 
 }
 window.showPage = showPage;
 
