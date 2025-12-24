@@ -487,7 +487,7 @@ enableIndexedDbPersistence(db)
   .catch(err => {
     console.error("Persistence error:", err);
   });
-        showStatusMessage("success", "success"); 
+
 navigator.serviceWorker.ready.then(() => {
   navigator.serviceWorker.addEventListener('message', event => {
     const banner = document.getElementById('offline-banner');
@@ -506,7 +506,7 @@ navigator.serviceWorker.ready.then(() => {
       }
   });
 });
-        showStatusMessage("worker success", "success"); 
+
 // --- Authentication ---
 async function signup() {
   const email = document.getElementById("username").value;
@@ -632,7 +632,7 @@ async function syncData(userId) {
   let lastSyncStatus = {};
 
   console.time("Retrieve data from Firebase");
-
+        showStatusMessage("Retrieve data from Firebase", "success"); 
   // --- Fetch user doc ---
   const userRef = doc(db, "users", userId);
   const userSnap = await getDoc(userRef);
