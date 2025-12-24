@@ -415,6 +415,12 @@ if (!isIOS()) {
   }
 } else {
   showStatusMessage("iOS detected — service worker disabled", "info"); 
+
+  navigator.serviceWorker.getRegistrations()
+    .then(regs => { 
+      regs.forEach(reg => reg.unregister()); 
+      showStatusMessage("removed", "info"); 
+    });
 }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
