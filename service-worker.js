@@ -32,14 +32,17 @@ self.addEventListener('fetch', event => {
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        notifyClients({ offline: false, syncedAt: Date.now() });
-        return response;
-      })
-      .catch(() => {
-        notifyClients({ offline: true });
-        return caches.match(event.request);
-      })
+    caches.open(CACHE_NAME).then(cache =>
+      fetch(event.request)
+        .then(response => {
+          cache.put(event.request, response.clone()); // <-- update cache
+          notifyClients({ offline: false, syncedAt: Date.now() });
+          return response;
+        })
+        .catch(() => {
+          notifyClients({ offline: true });
+          return caches.match(event.request);
+        })
+    )
   );
 });
