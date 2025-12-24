@@ -403,6 +403,9 @@ const translations = {
 
 window.translations = translations;
 window.currentLang = currentLang;
+window.onerror = function (msg, url, line, col, err) {
+  alert("JS Error: " + msg);
+};
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
