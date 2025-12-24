@@ -1234,9 +1234,11 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     document.getElementById(`nav-${page}`).style.background = "";
     document.getElementById(`nav-${page}`).classList.remove("active");
   });
-showStatusMessage("success1", "success"); 
-  navigator.vibrate(30); // milliseconds
-showStatusMessage("success2", "success"); 
+
+  if (!isIOS()) {
+    navigator.vibrate(30); // milliseconds
+  }
+
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
       // hide the current page
