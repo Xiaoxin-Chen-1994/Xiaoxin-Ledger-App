@@ -419,7 +419,6 @@ if (!isIOS()) {
   navigator.serviceWorker.getRegistrations()
     .then(regs => { 
       regs.forEach(reg => reg.unregister()); 
-      showStatusMessage("removed", "info"); 
     });
 }
 
@@ -433,6 +432,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   let newSize = current - 0.1;
   // Set it back with unit
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
+        showStatusMessage("success", "success"); 
 }
 
 // --- Firebase Initialization ---
