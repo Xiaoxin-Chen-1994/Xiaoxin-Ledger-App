@@ -1969,9 +1969,11 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     }
   });
 
-  let pressTimer;
-  let longPress = false;
-  let isDragging = false;
+  // Global / outer-scope state for pointer-based dragging 
+  let activeDrag = null; // { btn, type, name, parent, startY, currentY, dropTarget } 
+  let isDragging = false; 
+  let longPress = false; 
+  let pressTimer = null;
 
   // RIGHT CLICK
   btn.addEventListener("contextmenu", e => {
@@ -2033,13 +2035,13 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
   btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
 
-  // === Dragging ===
+  // === Dragging (desktop HTML5 drag) ===
   btn.setAttribute("draggable", true);
 
-  btn.addEventListener("touchstart", e => {
-    isDragging = true; // mark drag started 
-    clearTimeout(pressTimer); // cancel long press immediately 
-    longPress = false; // ensure no long-press logic fires
+  btn.addEventListener("dragstart", e => {
+    isDragging = true;
+    clearTimeout(pressTimer);
+    longPress = false;
 
     if (!isSecondary) {
       block.querySelectorAll(".secondary-wrapper").forEach(w => {
@@ -2047,117 +2049,138 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
       });
     }
 
-    // On dragstart, store what is being dragged
-    e.dataTransfer.setData("drag-name", btn.dataset.name); 
+    e.dataTransfer.setData("drag-name", btn.dataset.name);
     e.dataTransfer.setData("drag-type", btn.dataset.type);
     e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
 
     btn.classList.add("dragging");
   });
 
-  btn.addEventListener("touchmove", e => {
+  btn.addEventListener("dragover", e => {
     e.preventDefault(); // required
   });
 
-  btn.addEventListener("touchend", async e => {
+  btn.addEventListener("drop", async e => {
     e.preventDefault();
 
     const draggedName   = e.dataTransfer.getData("drag-name");
-    const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
-    const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
+    const draggedType   = e.dataTransfer.getData("drag-type");
+    const draggedParent = e.dataTransfer.getData("drag-parent");
 
-    const targetName    = btn.dataset.name;
-    const targetType    = btn.dataset.type;                      // "primary" | "secondary"
-    const targetParent  = btn.dataset.parentName;                // primary name for secondary
-
-    const rect = btn.getBoundingClientRect();
-    const dropY = e.clientY;
-    const midpoint = rect.top + rect.height / 2;
-    const position = dropY < midpoint ? "before" : "after";
-
-    // Enforce rules
-    if (draggedType === "secondary" && targetType === "primary") return;
-    if (draggedType === "primary" && targetType === "secondary") return;
-    if (draggedName === targetName) return;
-
-    const categories = householdDocs[householdId][type];
-    const householdRef = doc(db, "households", householdId);
-
-    // ============================================================
-    // PRIMARY MOVE
-    // ============================================================
-    if (draggedType === "primary") {
-      // Find dragged primary object + index
-      const oldIndex = categories.findIndex(p => p.primary === draggedName);
-      if (oldIndex === -1) return;
-
-      const draggedObj = categories[oldIndex];
-
-      // Remove it
-      categories.splice(oldIndex, 1);
-
-      // Find target index
-      let newIndex = categories.findIndex(p => p.primary === targetName);
-      if (newIndex === -1) return;
-
-      if (position === "after") newIndex++;
-
-      // Insert at new position
-      categories.splice(newIndex, 0, draggedObj);
-
-      await updateDoc(householdRef, {
-        [type]: categories
+    try {
+      await handleCategoryDrop({
+        draggedName,
+        draggedType,
+        draggedParent,
+        targetBtn: btn,
+        dropY: e.clientY,
+        householdId,
+        type,
+        db,
+        currentUser,
+        title,
+        loadLabels,
+        syncData
       });
+    } finally {
+      isDragging = false;
+      btn.classList.remove("dragging");
     }
-
-    // ============================================================
-    // SECONDARY MOVE
-    // ============================================================
-    if (draggedType === "secondary") {
-      // Find source primary
-      const fromPrimary = categories.find(p => p.primary === draggedParent);
-      if (!fromPrimary) return;
-
-      // Find target primary
-      const toPrimary = categories.find(p => p.primary === targetParent);
-      if (!toPrimary) return;
-
-      const fromArr = fromPrimary.secondaries;
-      const toArr   = toPrimary.secondaries;
-
-      // Find dragged secondary object + index
-      const oldIndex = fromArr.findIndex(s => s.name === draggedName);
-      if (oldIndex === -1) return;
-
-      const draggedObj = fromArr[oldIndex];
-
-      // Remove from old parent
-      fromArr.splice(oldIndex, 1);
-
-      // Find target secondary index in new parent
-      let newIndex = toArr.findIndex(s => s.name === targetName);
-      if (newIndex === -1) return;
-
-      if (position === "after") newIndex++;
-
-      // Insert into new parent
-      toArr.splice(newIndex, 0, draggedObj);
-
-      await updateDoc(householdRef, {
-        [type]: categories
-      });
-    }
-
-    isDragging = false;
-    btn.classList.remove("dragging");
-
-    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-
-    loadLabels(type, title);
-
   });
 
+
   return [rowContent, categoryWrapper];
+}
+
+async function handleCategoryDrop({
+  draggedName,
+  draggedType,
+  draggedParent,
+  targetBtn,      // the button we're dropping on
+  dropY,          // clientY at drop time
+  householdId,
+  type,
+  db,
+  currentUser,
+  title,
+  loadLabels,
+  syncData
+}) {
+  const targetName   = targetBtn.dataset.name;
+  const targetType   = targetBtn.dataset.type;        // "primary" | "secondary"
+  const targetParent = targetBtn.dataset.parentName;  // primary name for secondary
+
+  const rect = targetBtn.getBoundingClientRect();
+  const midpoint = rect.top + rect.height / 2;
+  const position = dropY < midpoint ? "before" : "after";
+
+  // Enforce rules
+  if (draggedType === "secondary" && targetType === "primary") return;
+  if (draggedType === "primary" && targetType === "secondary") return;
+  if (draggedName === targetName) return;
+
+  const categoriesOriginal = householdDocs[householdId][type];
+  const categories = window.structuredClone
+    ? structuredClone(categoriesOriginal)
+    : JSON.parse(JSON.stringify(categoriesOriginal));
+
+  const householdRef = doc(db, "households", householdId);
+
+  // ============================================================
+  // PRIMARY MOVE
+  // ============================================================
+  if (draggedType === "primary") {
+    const oldIndex = categories.findIndex(p => p.primary === draggedName);
+    if (oldIndex === -1) return;
+
+    const draggedObj = categories[oldIndex];
+    categories.splice(oldIndex, 1);
+
+    let newIndex = categories.findIndex(p => p.primary === targetName);
+    if (newIndex === -1) return;
+
+    if (position === "after") newIndex++;
+
+    categories.splice(newIndex, 0, draggedObj);
+
+    await updateDoc(householdRef, {
+      [type]: categories
+    });
+  }
+
+  // ============================================================
+  // SECONDARY MOVE
+  // ============================================================
+  if (draggedType === "secondary") {
+    const fromPrimary = categories.find(p => p.primary === draggedParent);
+    if (!fromPrimary) return;
+
+    const toPrimary = categories.find(p => p.primary === targetParent);
+    if (!toPrimary) return;
+
+    const fromArr = fromPrimary.secondaries;
+    const toArr   = toPrimary.secondaries;
+
+    const oldIndex = fromArr.findIndex(s => s.name === draggedName);
+    if (oldIndex === -1) return;
+
+    const draggedObj = fromArr[oldIndex];
+    fromArr.splice(oldIndex, 1);
+
+    let newIndex = toArr.findIndex(s => s.name === targetName);
+    if (newIndex === -1) return;
+
+    if (position === "after") newIndex++;
+
+    toArr.splice(newIndex, 0, draggedObj);
+
+    await updateDoc(householdRef, {
+      [type]: categories
+    });
+  }
+
+  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+  loadLabels(type, title);
 }
 
 function showActions(wrapper, editBtn, deleteBtn) {
