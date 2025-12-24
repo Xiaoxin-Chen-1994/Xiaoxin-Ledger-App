@@ -477,7 +477,7 @@ import {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-        showStatusMessage("firebase success", "success"); 
+
 // Get references to services
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -487,7 +487,7 @@ enableIndexedDbPersistence(db)
   .catch(err => {
     console.error("Persistence error:", err);
   });
-
+        showStatusMessage("success", "success"); 
 navigator.serviceWorker.ready.then(() => {
   navigator.serviceWorker.addEventListener('message', event => {
     const banner = document.getElementById('offline-banner');
@@ -506,7 +506,7 @@ navigator.serviceWorker.ready.then(() => {
       }
   });
 });
-
+        showStatusMessage("worker success", "success"); 
 // --- Authentication ---
 async function signup() {
   const email = document.getElementById("username").value;
