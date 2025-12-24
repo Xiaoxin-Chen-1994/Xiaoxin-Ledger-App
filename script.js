@@ -632,7 +632,7 @@ async function syncData(userId) {
   let lastSyncStatus = {};
 
   console.time("Retrieve data from Firebase");
-        showStatusMessage("Retrieve data from Firebase", "success"); 
+
   // --- Fetch user doc ---
   const userRef = doc(db, "users", userId);
   const userSnap = await getDoc(userRef);
@@ -668,12 +668,12 @@ async function syncData(userId) {
   );
 
   console.timeEnd("Retrieve data from Firebase");
-
+        showStatusMessage("success", "success"); 
   // assuming userDoc and householdDocs will always face the same online/offline connection
   if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
     localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
   }
-
+showStatusMessage("localStorage success", "success"); 
   return { userDoc, householdDocs };
 }
 
