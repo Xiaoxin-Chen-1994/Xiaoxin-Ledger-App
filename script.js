@@ -950,6 +950,12 @@ function setDefaultCategory(button, type) {
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
 
+function vibrate(ms) {
+  if (typeof navigator.vibrate === "function") { // checks whether the browser supports vibration
+    navigator.vibrate(ms); // milliseconds
+  }
+}
+
 function switchTab(index) {
   inputTypeIndex = index;
   wrapper.style.transform = `translateX(-${index * 105}%)`; // this includes the 5% gap in class .transaction-wrapper
@@ -958,7 +964,7 @@ function switchTab(index) {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
-  navigator.vibrate(30); // milliseconds
+  vibrate(30); // milliseconds
 
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
@@ -1235,9 +1241,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     document.getElementById(`nav-${page}`).classList.remove("active");
   });
 
-  if (!isIOS()) {
-    navigator.vibrate(30); // milliseconds
-  }
+  vibrate(30); // milliseconds
 
   if (basePages.includes(name)) { // when switching base nav, look for the latest stack
     if (currentBase !== name && latestPage != null) {
