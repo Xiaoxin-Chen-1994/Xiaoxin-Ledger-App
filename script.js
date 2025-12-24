@@ -152,6 +152,7 @@ const translations = {
     save: "✔️Save",
     basicSettingsTitle: "Basic Settings",
     openBasicSettings: "Open Basic Settings",
+    timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. If you are offline, please note that these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
     labels: "Labels",
     manageExpenseCategories: "Manage expense categories",
     manageIncomeCategories: "Manage income categories",
@@ -296,6 +297,7 @@ const translations = {
     save: "✔️保存",
     basicSettingsTitle: "基础设置",
     openBasicSettings: "打开基础设置",
+    timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。如果您正处于离线状态，请注意这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
     labels: "类别",
     manageExpenseCategories: "管理支出分类",
     manageIncomeCategories: "管理收入分类",
@@ -628,7 +630,7 @@ async function syncData(userId) {
   // Track whether the user document came from server
   let freshFromServer = userSnap.metadata.fromCache === false;
   if (freshFromServer) {
-    lastSyncStatus["个人偏好"] = userDoc.profile.lastSynced
+    lastSyncStatus["个人偏好（基础设置）"] = userDoc.profile.lastSynced
   }
 
   const householdIds = userDoc.households
@@ -761,7 +763,45 @@ function displayHomeImage() {
     }
 }
 
+function timeAgo(rawTime) {
+  const now = Date.now();
+  const past = new Date(rawTime).getTime();
+  const diff = Math.floor((now - past) / 1000); // seconds
+
+  if (currentLang === "zh") {
+    if (diff < 60) return `${diff} 秒前`;
+    const minutes = Math.floor(diff / 60);
+    if (minutes < 60) return `${minutes} 分钟前`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} 小时前`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} 天前`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} 周前`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} 个月前`;
+    const years = Math.floor(days / 365);
+    return `${years} 年前`;
+  } else { // English
+    if (diff < 60) return `${diff} seconds ago`;
+    const minutes = Math.floor(diff / 60);
+    if (minutes < 60) return `${minutes} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} weeks ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} months ago`;
+    const years = Math.floor(days / 365);
+    return `${years} years ago`;
+  }
+}
+
 document.getElementById("display-last-synced").addEventListener("click", () => {
+  const t = translations[currentLang];
+
   const container = document.getElementById("last-synced-text");
   
   // If already visible → hide it 
@@ -771,64 +811,63 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   }
   
   const lastSyncStatus = JSON.parse(localStorage.getItem("lastSyncStatus"));
+  
+  const notes = document.createElement("div"); 
+  notes.style.color = "var(--muted)"; 
+  notes.style.fontStyle = "italic"; 
+  container.appendChild(notes);
 
-  if (lastSyncStatus !== null) { // it exists 
+  if (lastSyncStatus !== null) { // it exists   
+    notes.textContent = t.timestampNotes;
+    
+    const blank = document.createElement("div"); 
+    blank.style.height = "0.8em";
+    container.appendChild(blank);
 
     for (const label in lastSyncStatus) { 
       const syncInfo = lastSyncStatus[label];
       if (!syncInfo) continue;
 
-      const utc = syncInfo.formattedTime;        // already formatted UTC
-      const local = formatRawToLocal(syncInfo.rawTime); // convert raw → local
+      const local = syncInfo.formattedTime; // already formatted local time
+      const ago = timeAgo(syncInfo.rawTime);
 
       const block = document.createElement("div");
       block.className = "last-synced-entry";
 
       block.innerHTML = `
         <div><strong>${label}</strong></div>
-        <div style="margin-left: 1.2em;">本地时间：${local}</div>
-        <div style="margin-left: 1.2em;">UTC 时间：${utc}</div>
+        <div style="margin-left: 1.2em;">
+          <span style="color: var(--muted); font-style: italic;">${ago} · </span>  
+          ${local}
+        </div>
       `;
 
       container.appendChild(block);
     }
   } else { // it does not exist 
     console.log("lastSyncStatus is not found in localStorage"); 
-    container.innerHTML = "Last sync status is not found in the browser's localStorage."
+    notes.textContent = "Last sync status is not found in the browser's localStorage."
   }  
 });
 
-function getFormattedUTC() {
+function getFormattedTime() {
   const now = new Date();
 
-  const utcTime = now.toLocaleString(undefined, {
-    timeZone: 'UTC',
+  const localTime = now.toLocaleString(currentLang, {
     weekday: 'long',
     month: 'short',
     day: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
-  }) + " UTC";
+    hour12: false,
+    timeZoneName: "short"
+  })
 
   return {
     rawTime: now.getTime(),
-    formattedTime: utcTime
+    formattedTime: localTime
   };
-}
-
-function formatRawToLocal(rawTime) {
-  return new Date(rawTime).toLocaleString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZoneName: "short"
-  });
 }
 
 function setCurrentTime(button) {
@@ -1578,7 +1617,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
               name: primary,
               emoji: emoji
             },
-            lastSynced: getFormattedUTC()
+            lastSynced: getFormattedTime()
           }),
         ]);
       } else if (options.isSecondary && options.parentId) {
@@ -1592,7 +1631,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
               emoji: emoji,
               orderIndex: orderIndex
             },
-            lastSynced: getFormattedUTC()
+            lastSynced: getFormattedTime()
           }),
         ]);
       } else {
@@ -1607,7 +1646,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
               emoji: emoji,
               orderIndex: orderIndex
             },
-            lastSynced: getFormattedUTC()
+            lastSynced: getFormattedTime()
           }),
         ]);
       }
@@ -2102,7 +2141,7 @@ async function setLanguage(lang, showMessage = false, upload = true) {
         // Update nested field
         await updateDoc(userRef, {
           "profile.language": lang, 
-          "profile.lastSynced": getFormattedUTC()
+          "profile.lastSynced": getFormattedTime()
         });
 
         ({ userDoc, householdDocs } = await syncData(currentUser.uid));
@@ -2160,7 +2199,7 @@ async function adjustFontsize(delta) {
       // Update nested field
       await updateDoc(userRef, {
         [field]: newSize, 
-        "profile.lastSynced": getFormattedUTC()
+        "profile.lastSynced": getFormattedTime()
       });
 
       ({ userDoc, householdDocs } = await syncData(currentUser.uid));
@@ -2240,7 +2279,7 @@ async function applyThemeColor(color, upload = true) {
         // Update nested field
         await updateDoc(userRef, {
           "profile.themeColor": color, 
-          "profile.lastSynced": getFormattedUTC()
+          "profile.lastSynced": getFormattedTime()
         });
 
         // Refresh local cache
@@ -2342,7 +2381,7 @@ async function saveHomeImages() {
     // Update nested field
     await updateDoc(userRef, {
       "profile.homeImages": homeImages, 
-      "profile.lastSynced": getFormattedUTC()
+      "profile.lastSynced": getFormattedTime()
     });
 
     // Refresh local cache
@@ -2439,7 +2478,7 @@ async function setColorScheme(scheme, showMessage = false, upload = true) {
         // Update nested field
         await updateDoc(userRef, {
           "profile.colorScheme": scheme, 
-          "profile.lastSynced": getFormattedUTC()
+          "profile.lastSynced": getFormattedTime()
         });
 
         // Refresh local cache
@@ -2533,7 +2572,7 @@ document.getElementById("rename-confirm").addEventListener("click", async () => 
     const householdRef = doc(db, "households", userDoc.personalHouseholdId);
     await updateDoc(householdRef, {
       name: newName,
-      lastSynced: getFormattedUTC()
+      lastSynced: getFormattedTime()
     });
 
     ({ userDoc, householdDocs } = await syncData(currentUser.uid));
@@ -2591,7 +2630,7 @@ document.getElementById("invite-confirm").onclick = async () => {
     const householdRef = doc(db, "households", myHouseholdId);
     await updateDoc(householdRef, {
       members: arrayUnion(invitedUserId),
-      lastSynced: getFormattedUTC()
+      lastSynced: getFormattedTime()
     });
 
     alert("邀请成功，对方已加入您的 household");
@@ -2707,7 +2746,7 @@ async function confirmRemoveMember(uid) {
   // 1. Remove user from household members
   await updateDoc(householdRef,{
     members: arrayRemove(uid),
-    lastSynced: getFormattedUTC()
+    lastSynced: getFormattedTime()
   });
 
   // 2. Remove household from user
@@ -2812,13 +2851,13 @@ async function confirmLeaveHousehold(hid) {
   // Remove myself from household members
   await updateDoc(doc(db, "households", hid), {
     members: arrayRemove(uid), 
-    lastSynced: getFormattedUTC()
+    lastSynced: getFormattedTime()
   });
 
   // Remove household from my user doc
   await updateDoc(userRef, {
     households: arrayRemove(hid),
-    "profile.lastSynced": getFormattedUTC()
+    "profile.lastSynced": getFormattedTime()
   });
 
   toggleHouseholdFormRows();
@@ -2889,7 +2928,7 @@ async function confirmDeleteAccount() {
       const householdRef = doc(db, "households", hid);
       await updateDoc(householdRef, {
         members: arrayRemove(uid),
-        lastSynced: getFormattedUTC()
+        lastSynced: getFormattedTime()
       });
     }
 
@@ -3119,7 +3158,7 @@ function ScrollToSelectItem(col, value = null) {
   col.addEventListener("touchstart", (e) => {
     touchMoved = false;
     touchStartY = e.touches[0].clientY;
-    touchStartTime = getFormattedUTC();
+    touchStartTime = getFormattedTime();
     lastStep = 0;
   }, { passive: false });
 
@@ -3129,7 +3168,7 @@ function ScrollToSelectItem(col, value = null) {
 
     const currentY = e.touches[0].clientY;
     const dy = currentY - touchStartY;
-    const dt = getFormattedUTC() - touchStartTime;
+    const dt = getFormattedTime() - touchStartTime;
 
     const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
     const distanceSteps = dy / itemHeight;
