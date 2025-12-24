@@ -403,7 +403,7 @@ const translations = {
 
 window.translations = translations;
 window.currentLang = currentLang;
-showStatusMessage("success1", "success"); 
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
