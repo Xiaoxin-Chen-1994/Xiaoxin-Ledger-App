@@ -408,18 +408,9 @@ function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document); 
 }
 
-if (!isIOS()) {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(() => console.log('Service Worker registered'));
-  }
-} else {
-  showStatusMessage("iOS detected — service worker disabled", "info"); 
-
-  navigator.serviceWorker.getRegistrations()
-    .then(regs => { 
-      regs.forEach(reg => reg.unregister()); 
-    });
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered'));
 }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
