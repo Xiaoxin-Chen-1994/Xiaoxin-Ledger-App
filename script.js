@@ -668,12 +668,12 @@ async function syncData(userId) {
   );
 
   console.timeEnd("Retrieve data from Firebase");
-        showStatusMessage("success", "error"); 
+
   // assuming userDoc and householdDocs will always face the same online/offline connection
   if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
     localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
   }
-showStatusMessage("localStorage success", "success"); 
+
   return { userDoc, householdDocs };
 }
 
@@ -696,7 +696,7 @@ onAuthStateChanged(auth, async (user) => {
 
     // Apply profile settings
     displayHomeImage()
-
+showStatusMessage("success", "success"); 
     if (userDoc.profile.language) {
       currentLang = userDoc.profile.language;
       setLanguage(currentLang, false, false);
