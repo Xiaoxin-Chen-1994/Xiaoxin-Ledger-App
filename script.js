@@ -1970,7 +1970,7 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   });
 
   let dragStartDelayTimer = null;
-  const DRAG_START_DELAY = 150; // adjust 120–200ms to taste
+  const DRAG_START_DELAY = 300; // adjust 120–200ms to taste
   let pressTimer;
   let longPress = false;
   let isDragging = false;
