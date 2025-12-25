@@ -1969,62 +1969,42 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     }
   });
 
-  // Global / outer-scope state for pointer-based dragging 
-  let activeDrag = null; // { btn, type, name, parent, startY, currentY, dropTarget } 
-  let isDragging = false; 
-  let longPress = false; 
-  let pressTimer = null;
+  let pressTimer;
+  let longPress = false;
+  let isDragging = false;
+  let dragGhost = null;
 
-  // RIGHT CLICK
+  // === RIGHT CLICK (still needed) ===
   btn.addEventListener("contextmenu", e => {
     if (longPress) {
-      // ignore the click triggered after long press
       longPress = false;
       e.preventDefault();
       return;
     }
 
     e.preventDefault();
-    const isVisible = categoryWrapper.classList.contains("has-actions"); 
-    if (isVisible) { 
-      hideActions(categoryWrapper, editBtn, deleteBtn); 
-    } else { 
-      // Remove "has-actions" from any wrapper
-      block.querySelectorAll(".has-actions").forEach(wrapper => {
-        wrapper.classList.remove("has-actions");
-      });
 
-      // Remove "show" from any edit/delete buttons
-      block.querySelectorAll(".show").forEach(btn => {
-        btn.classList.remove("show");
-      });
-
-      showActions(categoryWrapper, editBtn, deleteBtn); 
+    const isVisible = categoryWrapper.classList.contains("has-actions");
+    if (isVisible) {
+      hideActions(categoryWrapper, editBtn, deleteBtn);
+    } else {
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+      showActions(categoryWrapper, editBtn, deleteBtn);
     }
   });
 
-  // LEFT CLICK
-  btn.addEventListener("click", e => {
-    if (longPress) {
-      // ignore the click triggered after long press
-      longPress = false;
-      return;
-    }
-
-    e.preventDefault();
-    hideActions(categoryWrapper, editBtn, deleteBtn);
-  });
-
-  // LONG PRESS
-  btn.addEventListener("mousedown", () => {
+  // === POINTER DOWN (replaces mousedown) ===
+  btn.addEventListener("pointerdown", e => {
     longPress = false;
 
+    // Start long‑press timer
     pressTimer = setTimeout(() => {
-      if (isDragging) return; // prevent long press during drag
+      if (isDragging) return; // do not trigger long‑press during drag
 
       longPress = true;
 
-      // Clear any existing actions
+      // Clear existing actions
       block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
       block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
 
@@ -2032,13 +2012,39 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     }, 600);
   });
 
-  btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
-  btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+  // === POINTER UP (replaces mouseup + click) ===
+  btn.addEventListener("pointerup", e => {
+    clearTimeout(pressTimer);
 
-  // === Dragging (desktop HTML5 drag) ===
-  btn.setAttribute("draggable", true);
+    if (longPress) {
+      longPress = false;
+      return; // suppress click after long‑press
+    }
 
-  btn.addEventListener("dragstart", e => {
+    if (isDragging) return; // suppress click after drag
+
+    e.preventDefault();
+    hideActions(categoryWrapper, editBtn, deleteBtn);
+  });
+
+  // === POINTER LEAVE (replaces mouseleave) ===
+  btn.addEventListener("pointerleave", () => {
+    clearTimeout(pressTimer);
+  });
+
+  // === POINTER CANCEL (touch interruptions, OS gestures, etc.) ===
+  btn.addEventListener("pointercancel", () => {
+    clearTimeout(pressTimer);
+  });
+
+
+  // === Unified Pointer Drag System (desktop + touch + pen) ===
+  let pointerDrag = null;
+
+  btn.style.touchAction = "none"; // prevent scroll during drag
+
+  btn.addEventListener("pointerdown", e => {
+    // Start drag for ALL pointer types (mouse, touch, pen)
     isDragging = true;
     clearTimeout(pressTimer);
     longPress = false;
@@ -2049,31 +2055,74 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
       });
     }
 
-    e.dataTransfer.setData("drag-name", btn.dataset.name);
-    e.dataTransfer.setData("drag-type", btn.dataset.type);
-    e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
+    pointerDrag = {
+      draggedName: btn.dataset.name,
+      draggedType: btn.dataset.type,
+      draggedParent: btn.dataset.parentName,
+      currentY: e.clientY,
+      startBtn: btn
+    };
 
     btn.classList.add("dragging");
+    btn.setPointerCapture(e.pointerId);
+
+    // Create drag ghost
+    dragGhost = btn.cloneNode(true);
+    dragGhost.classList.add("drag-ghost");
+    dragGhost.style.position = "fixed";
+    dragGhost.style.left = e.clientX + "px";
+    dragGhost.style.top = e.clientY + "px";
+    dragGhost.style.opacity = "0.7";
+    dragGhost.style.pointerEvents = "none";
+    dragGhost.style.zIndex = "9999";
+    document.body.appendChild(dragGhost);
   });
 
-  btn.addEventListener("dragover", e => {
-    e.preventDefault(); // required
+  btn.addEventListener("pointermove", e => {
+    if (!pointerDrag) return;
+    pointerDrag.currentY = e.clientY;
+
+    if (dragGhost) {
+      dragGhost.style.left = e.clientX + "px";
+      dragGhost.style.top = e.clientY + "px";
+    }
   });
 
-  btn.addEventListener("drop", async e => {
-    e.preventDefault();
+  btn.addEventListener("pointerup", async e => {
+    if (!pointerDrag) return;
 
-    const draggedName   = e.dataTransfer.getData("drag-name");
-    const draggedType   = e.dataTransfer.getData("drag-type");
-    const draggedParent = e.dataTransfer.getData("drag-parent");
+    btn.releasePointerCapture(e.pointerId);
+
+    const { draggedName, draggedType, draggedParent, currentY } = pointerDrag;
+    pointerDrag = null;
+
+    if (dragGhost) {
+      dragGhost.remove();
+      dragGhost = null;
+    }
+
+    // Find drop target
+    const elem = document.elementFromPoint(e.clientX, e.clientY);
+    if (!elem) {
+      btn.classList.remove("dragging");
+      isDragging = false;
+      return;
+    }
+
+    const targetBtn = elem.closest("button"); // adjust if needed
+    if (!targetBtn) {
+      btn.classList.remove("dragging");
+      isDragging = false;
+      return;
+    }
 
     try {
-      await handleCategoryDrop({
+      await handleCategoryDropCore({
         draggedName,
         draggedType,
         draggedParent,
-        targetBtn: btn,
-        dropY: e.clientY,
+        targetBtn,
+        dropY: currentY,
         householdId,
         type,
         db,
@@ -2083,8 +2132,8 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
         syncData
       });
     } finally {
-      isDragging = false;
       btn.classList.remove("dragging");
+      isDragging = false;
     }
   });
 
@@ -2092,12 +2141,12 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   return [rowContent, categoryWrapper];
 }
 
-async function handleCategoryDrop({
+async function handleCategoryDropCore({
   draggedName,
   draggedType,
   draggedParent,
-  targetBtn,      // the button we're dropping on
-  dropY,          // clientY at drop time
+  targetBtn,
+  dropY,
   householdId,
   type,
   db,
@@ -2106,29 +2155,22 @@ async function handleCategoryDrop({
   loadLabels,
   syncData
 }) {
-  const targetName   = targetBtn.dataset.name;
-  const targetType   = targetBtn.dataset.type;        // "primary" | "secondary"
-  const targetParent = targetBtn.dataset.parentName;  // primary name for secondary
+  const targetName    = targetBtn.dataset.name;
+  const targetType    = targetBtn.dataset.type;
+  const targetParent  = targetBtn.dataset.parentName;
 
   const rect = targetBtn.getBoundingClientRect();
   const midpoint = rect.top + rect.height / 2;
   const position = dropY < midpoint ? "before" : "after";
 
-  // Enforce rules
   if (draggedType === "secondary" && targetType === "primary") return;
   if (draggedType === "primary" && targetType === "secondary") return;
   if (draggedName === targetName) return;
 
-  const categoriesOriginal = householdDocs[householdId][type];
-  const categories = window.structuredClone
-    ? structuredClone(categoriesOriginal)
-    : JSON.parse(JSON.stringify(categoriesOriginal));
-
+  const categories = householdDocs[householdId][type];
   const householdRef = doc(db, "households", householdId);
 
-  // ============================================================
   // PRIMARY MOVE
-  // ============================================================
   if (draggedType === "primary") {
     const oldIndex = categories.findIndex(p => p.primary === draggedName);
     if (oldIndex === -1) return;
@@ -2140,23 +2182,16 @@ async function handleCategoryDrop({
     if (newIndex === -1) return;
 
     if (position === "after") newIndex++;
-
     categories.splice(newIndex, 0, draggedObj);
 
-    await updateDoc(householdRef, {
-      [type]: categories
-    });
+    await updateDoc(householdRef, { [type]: categories });
   }
 
-  // ============================================================
   // SECONDARY MOVE
-  // ============================================================
   if (draggedType === "secondary") {
     const fromPrimary = categories.find(p => p.primary === draggedParent);
-    if (!fromPrimary) return;
-
-    const toPrimary = categories.find(p => p.primary === targetParent);
-    if (!toPrimary) return;
+    const toPrimary   = categories.find(p => p.primary === targetParent);
+    if (!fromPrimary || !toPrimary) return;
 
     const fromArr = fromPrimary.secondaries;
     const toArr   = toPrimary.secondaries;
@@ -2171,12 +2206,9 @@ async function handleCategoryDrop({
     if (newIndex === -1) return;
 
     if (position === "after") newIndex++;
-
     toArr.splice(newIndex, 0, draggedObj);
 
-    await updateDoc(householdRef, {
-      [type]: categories
-    });
+    await updateDoc(householdRef, { [type]: categories });
   }
 
   ({ userDoc, householdDocs } = await syncData(currentUser.uid));

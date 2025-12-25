@@ -1287,6 +1287,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   }
 }
 
+.drag-ghost {
+  transform: translate(-50%, -50%);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
 .labels-household-header {
   display: flex;
   justify-content: space-between;
