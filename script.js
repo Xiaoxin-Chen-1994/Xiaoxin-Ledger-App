@@ -2033,10 +2033,21 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
   btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
 
+  let lastPointerType = "mouse";
+
+  btn.addEventListener("pointerdown", e => {
+    lastPointerType = e.pointerType; // "mouse" | "touch" | "pen"
+  });
+
   // === Dragging ===
   btn.setAttribute("draggable", true);
 
   btn.addEventListener("dragstart", e => {
+    if (lastPointerType !== "mouse") { 
+      e.preventDefault(); 
+      return; // skip drag on touch or pen 
+    }
+
     isDragging = true; // mark drag started 
     clearTimeout(pressTimer); // cancel long press immediately 
     longPress = false; // ensure no long-press logic fires
@@ -2056,10 +2067,12 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   });
 
   btn.addEventListener("dragover", e => {
+    if (lastPointerType !== "mouse") return;
     e.preventDefault(); // required
   });
 
   btn.addEventListener("drop", async e => {
+    if (lastPointerType !== "mouse") return;
     e.preventDefault();
 
     const draggedName   = e.dataTransfer.getData("drag-name");
