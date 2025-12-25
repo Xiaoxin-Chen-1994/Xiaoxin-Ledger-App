@@ -2306,7 +2306,6 @@ function enablePageSwipe(pageEl) {
   });
 
   pageEl.addEventListener("touchmove", e => {
-    if (e.target.closest("input, textarea, [contenteditable]")) return;
 
     e.stopPropagation();
     if (!isDragging) return;
@@ -2317,7 +2316,6 @@ function enablePageSwipe(pageEl) {
   });
 
   pageEl.addEventListener("touchend", () => {
-    if (e.target.closest("input, textarea, [contenteditable]")) return;
 
     if (!isDragging) return;
     isDragging = false;
