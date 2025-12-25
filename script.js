@@ -527,126 +527,137 @@ async function signup() {
         lastSynced: "",
 
         accounts: {
-          'Cash Accounts': [
-            {name: 'Cash', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
-          ], 
-          'Credit Cards': [
-            {name: 'Credit Card', icon: "", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": []}
+          "Cash Accounts": [
+            { name: currentLang === "en" ? "Cash" : "现金", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
           ],
-          'Depository Accounts': [
-            {name: 'Bank Acount', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
+          "Credit Cards": [
+            { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
           ],
-          'Stored-Value Cards': [
-            {name: 'Stored Value Card', icon: "", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": []}
+          "Depository Accounts": [
+            { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
           ],
-          'Investment Accounts': [
-            {name: 'Investment Acount', icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": []}
+          "Stored-Value Cards": [
+            { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+          ],
+          "Investment Accounts": [
+            { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
           ]
         },
         "expense-categories": [
-          {primary: "Shopping", icon: "🛍️", secondaries: [
-            {name: "Offline Expenditure", icon: "🛒"},
-            {name: "Online Shopping", icon: "🛒"},
+          { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+            { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+            { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
           ]},
-          {primary: "Travel", icon: "🚗", secondaries: [
-            {name: "Public Transit", icon: "🚇"},
-            {name: "Ride Services", icon: "🚕"},
-            {name: "Fuel Costs", icon: "⛽"},
-            {name: "Parking Costs", icon: "🅿️"},
-            {name: "Auto Insurance", icon: "🚗"},
-            {name: "Vechicle Purchase", icon: "🚗"},
-            {name: "Vechicle Repair", icon: "🔧"},
-            {name: "Flight & Train Tickets", icon: "✈️"},
-            {name: "Lodging", icon: "🏨"},
+
+          { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+            { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+            { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+            { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+            { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+            { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+            { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+            { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+            { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+            { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
           ]},
-          {primary: "Entertainment", icon: "🎭", secondaries: [
-            {name: "Music & Films", icon: "🎬"},
-            {name: "Sightseeing", icon: "🗺️"},
+
+          { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+            { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+            { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
           ]},
-          {primary: "Subscriptions", icon: "🔄", secondaries: [
-            {name: "Phone Bills", icon: "📱"},
-            {name: "Streaming", icon: "📺"},
+
+          { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
+            { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+            { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
           ]},
-          {primary: "Home", icon: "🏡", secondaries: [
-            {name: "Housing", icon: "🏠"},
-            {name: "Utilities", icon: "💡"},
-            {name: "Home Insurance", icon: "🏠"},
-            {name: "Decoration", icon: "🖼️"},
+
+          { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+            { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+            { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+            { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+            { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
           ]},
-          {primary: "Health", icon: "🏥", secondaries: [
-            {name: "Hospitals & Clinics", icon: "🏥"},
-            {name: "Medication", icon: "💊"},
-            {name: "Health Insurance Premiums", icon: "🛡️"},
+
+          { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+            { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+            { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+            { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
           ]},
-          {primary: "Public Fees", icon: "🏛️", secondaries: [
-            {name: "Tuition & Exams", icon: "🎓"},
-            {name: "Tax Payment", icon: "🧾"},
-            {name: "Pension Contribution", icon: "🪙"},
-            {name: "Professional Expenses", icon: "🏛️"},
+
+          { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+            { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+            { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+            { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+            { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
           ]},
-          {primary: "Personal Spending", icon: "💇", secondaries: [
-            {name: "Haircut", icon: "💇"},
-            {name: "Laundry", icon: "🧺"},
+
+          { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+            { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+            { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
           ]},
-          {primary: "Gifts & Investments", icon: "💸", secondaries: [
-            {name: "Outgoing Transfer", icon: "💸"},
-            {name: "Gifts", icon: "🎁"},
-            {name: "Donations", icon: "🎁"},
-            {name: "Insurance Payments", icon: "💵"},
-            {name: "Investment Loss", icon: "📉"},
-          ]},
+
+          { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
+            { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+            { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+            { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+            { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+            { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+          ]}
         ],
         "income-categories": [
-          {primary: "Professional Income", icon: "💼", secondaries: [
-            {name: "Pay", icon: "💵"},
-            {name: "Scholarships & Awards", icon: "🏅"},
+          { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+            { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+            { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
           ]},
-          {primary: "Floating Income", icon: "🎉", secondaries: [
-            {name: "Investment Earnings", icon: "📈"},
-            {name: "Giveaways", icon: "🎉"},
-            {name: "Red Packet Receipts", icon: "🧧"},
+
+          { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+            { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+            { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+            { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
           ]},
-          {primary: "Refunds", icon: "💰", secondaries: [
-            {name: "Tax Credits", icon: "💰"},
-            {name: "Reimbursement", icon: "↩️"},
-            {name: "Insurance Payout", icon: "💰"},
+
+          { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+            { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+            { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+            { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
           ]},
-          {primary: "Pocket Money", icon: "🪙", secondaries: [
-            {name: "Incoming Transfer", icon: "💰"},
-          ]},
+
+          { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+            { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+          ]}
         ],
         collections: [
-          {name: "Food & Drinks", icon: "🍽️"},
-          {name: "Life Expenditure", icon: "🧩"},
-          {name: "Housing", icon: "🏡"},
-          {name: "Pay", icon: "💵"},
-          {name: "Scholarships & Awards", icon: "🏅"},
-          {name: "Tax-Free Investments", icon: "📈"},
-          {name: "Taxable Investments", icon: "📈"},
-          {name: "Gifts", icon: "🎁"},
-          {name: "Medical Expenses", icon: "🏥"},
-          {name: "Transportation", icon: "🚗"},
-          {name: "Travel Expenses", icon: "✈️"},
-          {name: "Entertainment", icon: "🎭"},
-          {name: "Phone Bills", icon: "📱"},
-          {name: "Electronic Devices", icon: "💻"},
-          {name: "Subscriptions", icon: "🔄"},
-          {name: "Pension", icon: "💰"},
-          {name: "Tax & Credits", icon: "🧾"},
-          {name: "Public Fees", icon: "🏛️"},
-          {name: "Incoming Transfer", icon: "💰"},
-          {name: "Outgoing Transfer", icon: "💸"},
-          {name: "Refunds", icon: "🔄"},
-          {name: "Work Expenses", icon: "💼"},
+          { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
+          { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
+          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
+          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
+          { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
+          { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
+          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+          { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
+          { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
+          { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
+          { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+          { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+          { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
+          { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
+          { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
+          { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
+          { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
+          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+          { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
+          { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
         ],
         subjects: [
-          {name: "Myself", icon: "🙂"},
-          {name: "Partner", icon: "❤️"},
-          {name: "Children", icon: "🧒"},
-          {name: "Parents", icon: "👨‍👩‍👦"},
-          {name: "Family", icon: "👪"},
-          {name: "Friends", icon: "🧑‍🤝‍🧑"},
-          {name: "Neighbourhood", icon: "🏘️"},
+          { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
+          { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
+          { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
+          { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
+          { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
+          { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
+          { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
         ],
         tags: [],
         entries: [],
