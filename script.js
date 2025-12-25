@@ -1375,7 +1375,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   });
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
-  document.getElementById("add-btn-headerbar").style.display = "none";
+  document.getElementById("manage-btn-headerbar").style.display = "none";
 
   let stack = null;
   let target = null;
@@ -1489,7 +1489,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     });
 
   } else if (latestPage === "manage-labels") {
-    document.getElementById("add-btn-headerbar").style.display = "block";
+    document.getElementById("manage-btn-headerbar").style.display = "block";
   } else { // for all other pages
 
   }
@@ -2328,6 +2328,7 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("reset-hint").textContent = t.resetHint;
   document.getElementById("return-btn").textContent = t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
+  document.getElementById("manage-btn-headerbar").textContent = t.manage;
 
   // Home text
   document.getElementById("home-month").textContent = t.monthBalance;
