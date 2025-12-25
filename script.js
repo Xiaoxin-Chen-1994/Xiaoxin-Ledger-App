@@ -1558,9 +1558,6 @@ function goBack() {
     }
 
     showPage(prevPage, prevNavBtn, prevTitle);
-
-    // replace state to reflect the new top of stack
-    
   }
 }
 
@@ -2258,6 +2255,9 @@ function handleSwipe() {
 }
 
 function enablePageSwipe(pageEl) {
+  if (pageEl._swipeEnabled) return; // prevent duplicates 
+  pageEl._swipeEnabled = true;
+
   let startX = 0, currentX = 0, isDragging = false;
 
   pageEl.addEventListener("touchstart", e => {
