@@ -1945,276 +1945,219 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     loadLabels(type, title);
   });
 
-  let pressTimer;
-  let dragStartDelayTimer;
+  // gesture handling: swipe, right-click, or long press
+  let startX = 0;
+  btn.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+  });
+  btn.addEventListener("touchend", e => {
+    const endX = e.changedTouches[0].clientX;
+    if (startX - endX > 50) {
+      // Remove "has-actions" from any wrapper
+      block.querySelectorAll(".has-actions").forEach(wrapper => {
+        wrapper.classList.remove("has-actions");
+      });
 
-  let longPressReady = false; // NEW: long press is armed, but not fired yet
+      // Remove "show" from any edit/delete buttons
+      block.querySelectorAll(".show").forEach(btn => {
+        btn.classList.remove("show");
+      });
+
+      showActions(categoryWrapper, editBtn, deleteBtn);
+    } else {
+      hideActions(categoryWrapper, editBtn, deleteBtn);
+    }
+  });
+
+  let pressTimer;
   let longPress = false;
   let isDragging = false;
-  let dragReady = false;   // NEW: drag is allowed, but not started yet
-  let pointerDrag = null;
-  let dragGhost = null;
 
-  const SWIPE_THRESHOLD = 50; // px
-  let pointerDownX = 0;
-  let pointerDownY = 0;
-
-  const DRAG_START_DELAY = 150;
-  const DRAG_MOVE_THRESHOLD = 8;
-
-
-  // === RIGHT CLICK (still needed) ===
+  // RIGHT CLICK
   btn.addEventListener("contextmenu", e => {
     if (longPress) {
+      // ignore the click triggered after long press
       longPress = false;
       e.preventDefault();
       return;
     }
 
     e.preventDefault();
+    const isVisible = categoryWrapper.classList.contains("has-actions"); 
+    if (isVisible) { 
+      hideActions(categoryWrapper, editBtn, deleteBtn); 
+    } else { 
+      // Remove "has-actions" from any wrapper
+      block.querySelectorAll(".has-actions").forEach(wrapper => {
+        wrapper.classList.remove("has-actions");
+      });
 
-    const isVisible = categoryWrapper.classList.contains("has-actions");
-    if (isVisible) {
-      hideActions(categoryWrapper, editBtn, deleteBtn);
-    } else {
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
-      showActions(categoryWrapper, editBtn, deleteBtn);
+      // Remove "show" from any edit/delete buttons
+      block.querySelectorAll(".show").forEach(btn => {
+        btn.classList.remove("show");
+      });
+
+      showActions(categoryWrapper, editBtn, deleteBtn); 
     }
   });
 
-  btn.addEventListener("pointerdown", e => {
-    clearTimeout(pressTimer);
-    clearTimeout(dragStartDelayTimer);
-
-    longPress = false;
-    longPressReady = false;
-    isDragging = false;
-    dragReady = false;
-    pointerDrag = null;
-
-    // Record pointer start position
-    pointerDownX = e.clientX;
-    pointerDownY = e.clientY;
-
-    // Long‑press arming timer
-    pressTimer = setTimeout(() => {
-      if (isDragging) return;
-      longPressReady = true;
-    }, 600);
-
-    // Drag readiness timer
-    dragStartDelayTimer = setTimeout(() => {
-      dragReady = true; // <-- THIS WAS MISSING
-    }, DRAG_START_DELAY);
-  });
-
-
-  btn.addEventListener("pointermove", e => {
-    if (!dragReady) return; // too early to drag
-
-    const dx = Math.abs(e.clientX - pointerDownX);
-    const dy = Math.abs(e.clientY - pointerDownY);
-
-    // Only start drag after movement threshold
-    if (!isDragging && (dx > DRAG_MOVE_THRESHOLD || dy > DRAG_MOVE_THRESHOLD)) {
-      isDragging = true;
-      longPress = false; // cancel long press
-      clearTimeout(pressTimer);
-
-      pointerDrag = {
-        draggedName: btn.dataset.name,
-        draggedType: btn.dataset.type,
-        draggedParent: btn.dataset.parentName,
-        currentY: e.clientY
-      };
-
-      if (btn.dataset.type === "primary") {
-        block.querySelectorAll(".secondary-wrapper").forEach(w => {
-          w.style.display = "none";
-        });
-      }
-
-      btn.classList.add("dragging");
-      btn.setPointerCapture(e.pointerId);
-
-      // Create ghost
-      dragGhost = btn.cloneNode(true);
-      dragGhost.classList.add("drag-ghost");
-      dragGhost.style.position = "fixed";
-      dragGhost.style.left = e.clientX + "px";
-      dragGhost.style.top = e.clientY + "px";
-      dragGhost.style.opacity = "0.7";
-      dragGhost.style.pointerEvents = "none";
-      dragGhost.style.zIndex = "9999";
-      document.body.appendChild(dragGhost);
-    }
-
-    // Update ghost
-    if (isDragging && dragGhost) {
-      dragGhost.style.left = e.clientX + "px";
-      dragGhost.style.top = e.clientY + "px";
-      pointerDrag.currentY = e.clientY;
-    }
-  });
-
-  btn.addEventListener("pointerup", async e => {
-    clearTimeout(pressTimer);
-    clearTimeout(dragStartDelayTimer);
-
-    // Remove ghost if exists
-    if (dragGhost) {
-      dragGhost.remove();
-      dragGhost = null;
-    }
-
-    // CASE 1: Drag happened → drop
-    if (isDragging && pointerDrag) {
-      btn.releasePointerCapture(e.pointerId);
-
-      const { draggedName, draggedType, draggedParent, currentY } = pointerDrag;
-      pointerDrag = null;
-
-      const elem = document.elementFromPoint(e.clientX, e.clientY);
-      const targetBtn = elem?.closest("button");
-
-      if (targetBtn) {
-        await handleCategoryDropCore({
-          draggedName,
-          draggedType,
-          draggedParent,
-          targetBtn,
-          dropY: currentY,
-          householdId,
-          type,
-          db,
-          currentUser,
-          title,
-          loadLabels,
-          syncData
-        });
-      }
-
-      btn.classList.remove("dragging");
-      isDragging = false;
+  // LEFT CLICK
+  btn.addEventListener("click", e => {
+    if (longPress) {
+      // ignore the click triggered after long press
+      longPress = false;
       return;
     }
 
-    // CASE 2: Long‑press was ARMED → fire it NOW on release
-    if (longPressReady) {
-      longPressReady = false;
-      longPress = true;
-
-      // Show actions now (on release)
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
-      showActions(categoryWrapper, editBtn, deleteBtn);
-
-      return; // do NOT treat as click
-    }
-
-    // CASE 2.5: Swipe-left gesture (only if no drag and no long-press)
-    const pointerUpX = e.clientX;
-    const deltaX = pointerDownX - pointerUpX;
-
-    if (!isDragging && !longPressReady && deltaX > SWIPE_THRESHOLD) {
-      // Clear existing actions
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
-
-      showActions(categoryWrapper, editBtn, deleteBtn);
-      return;
-    }
-
-    // CASE 3: Normal left click
+    e.preventDefault();
     hideActions(categoryWrapper, editBtn, deleteBtn);
   });
 
-  btn.addEventListener("pointerleave", () => {
-    clearTimeout(pressTimer);
-    longPressReady = false;
+  // LONG PRESS
+  btn.addEventListener("mousedown", () => {
+    longPress = false;
+
+    pressTimer = setTimeout(() => {
+      if (isDragging) return; // prevent long press during drag
+
+      longPress = true;
+
+      // Clear any existing actions
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+
+      showActions(categoryWrapper, editBtn, deleteBtn);
+    }, 600);
   });
 
-  btn.addEventListener("pointercancel", () => {
-    clearTimeout(pressTimer);
-    longPressReady = false;
+  btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
+  btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+
+  // === Dragging ===
+  btn.setAttribute("draggable", true);
+
+  btn.addEventListener("dragstart", e => {
+    isDragging = true; // mark drag started 
+    clearTimeout(pressTimer); // cancel long press immediately 
+    longPress = false; // ensure no long-press logic fires
+
+    if (!isSecondary) {
+      block.querySelectorAll(".secondary-wrapper").forEach(w => {
+        w.style.display = "none";
+      });
+    }
+
+    // On dragstart, store what is being dragged
+    e.dataTransfer.setData("drag-name", btn.dataset.name); 
+    e.dataTransfer.setData("drag-type", btn.dataset.type);
+    e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
+
+    btn.classList.add("dragging");
+  });
+
+  btn.addEventListener("dragover", e => {
+    e.preventDefault(); // required
+  });
+
+  btn.addEventListener("drop", async e => {
+    e.preventDefault();
+
+    const draggedName   = e.dataTransfer.getData("drag-name");
+    const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
+    const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
+
+    const targetName    = btn.dataset.name;
+    const targetType    = btn.dataset.type;                      // "primary" | "secondary"
+    const targetParent  = btn.dataset.parentName;                // primary name for secondary
+
+    const rect = btn.getBoundingClientRect();
+    const dropY = e.clientY;
+    const midpoint = rect.top + rect.height / 2;
+    const position = dropY < midpoint ? "before" : "after";
+
+    // Enforce rules
+    if (draggedType === "secondary" && targetType === "primary") return;
+    if (draggedType === "primary" && targetType === "secondary") return;
+    if (draggedName === targetName) return;
+
+    const categories = householdDocs[householdId][type];
+    const householdRef = doc(db, "households", householdId);
+
+    // ============================================================
+    // PRIMARY MOVE
+    // ============================================================
+    if (draggedType === "primary") {
+      // Find dragged primary object + index
+      const oldIndex = categories.findIndex(p => p.primary === draggedName);
+      if (oldIndex === -1) return;
+
+      const draggedObj = categories[oldIndex];
+
+      // Remove it
+      categories.splice(oldIndex, 1);
+
+      // Find target index
+      let newIndex = categories.findIndex(p => p.primary === targetName);
+      if (newIndex === -1) return;
+
+      if (position === "after") newIndex++;
+
+      // Insert at new position
+      categories.splice(newIndex, 0, draggedObj);
+
+      await updateDoc(householdRef, {
+        [type]: categories
+      });
+    }
+
+    // ============================================================
+    // SECONDARY MOVE
+    // ============================================================
+    if (draggedType === "secondary") {
+      // Find source primary
+      const fromPrimary = categories.find(p => p.primary === draggedParent);
+      if (!fromPrimary) return;
+
+      // Find target primary
+      const toPrimary = categories.find(p => p.primary === targetParent);
+      if (!toPrimary) return;
+
+      const fromArr = fromPrimary.secondaries;
+      const toArr   = toPrimary.secondaries;
+
+      // Find dragged secondary object + index
+      const oldIndex = fromArr.findIndex(s => s.name === draggedName);
+      if (oldIndex === -1) return;
+
+      const draggedObj = fromArr[oldIndex];
+
+      // Remove from old parent
+      fromArr.splice(oldIndex, 1);
+
+      // Find target secondary index in new parent
+      let newIndex = toArr.findIndex(s => s.name === targetName);
+      if (newIndex === -1) return;
+
+      if (position === "after") newIndex++;
+
+      // Insert into new parent
+      toArr.splice(newIndex, 0, draggedObj);
+
+      await updateDoc(householdRef, {
+        [type]: categories
+      });
+    }
+
+    isDragging = false;
+    btn.classList.remove("dragging");
+
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+    loadLabels(type, title);
+
   });
 
   return [rowContent, categoryWrapper];
-}
-
-async function handleCategoryDropCore({
-  draggedName,
-  draggedType,
-  draggedParent,
-  targetBtn,
-  dropY,
-  householdId,
-  type,
-  db,
-  currentUser,
-  title,
-  loadLabels,
-  syncData
-}) {
-  const targetName    = targetBtn.dataset.name;
-  const targetType    = targetBtn.dataset.type;
-  const targetParent  = targetBtn.dataset.parentName;
-
-  const rect = targetBtn.getBoundingClientRect();
-  const midpoint = rect.top + rect.height / 2;
-  const position = dropY < midpoint ? "before" : "after";
-
-  if (draggedType === "secondary" && targetType === "primary") return;
-  if (draggedType === "primary" && targetType === "secondary") return;
-  if (draggedName === targetName) return;
-
-  const categories = householdDocs[householdId][type];
-  const householdRef = doc(db, "households", householdId);
-
-  // PRIMARY MOVE
-  if (draggedType === "primary") {
-    const oldIndex = categories.findIndex(p => p.primary === draggedName);
-    if (oldIndex === -1) return;
-
-    const draggedObj = categories[oldIndex];
-    categories.splice(oldIndex, 1);
-
-    let newIndex = categories.findIndex(p => p.primary === targetName);
-    if (newIndex === -1) return;
-
-    if (position === "after") newIndex++;
-    categories.splice(newIndex, 0, draggedObj);
-
-    await updateDoc(householdRef, { [type]: categories });
-  }
-
-  // SECONDARY MOVE
-  if (draggedType === "secondary") {
-    const fromPrimary = categories.find(p => p.primary === draggedParent);
-    const toPrimary   = categories.find(p => p.primary === targetParent);
-    if (!fromPrimary || !toPrimary) return;
-
-    const fromArr = fromPrimary.secondaries;
-    const toArr   = toPrimary.secondaries;
-
-    const oldIndex = fromArr.findIndex(s => s.name === draggedName);
-    if (oldIndex === -1) return;
-
-    const draggedObj = fromArr[oldIndex];
-    fromArr.splice(oldIndex, 1);
-
-    let newIndex = toArr.findIndex(s => s.name === targetName);
-    if (newIndex === -1) return;
-
-    if (position === "after") newIndex++;
-    toArr.splice(newIndex, 0, draggedObj);
-
-    await updateDoc(householdRef, { [type]: categories });
-  }
-
-  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-  loadLabels(type, title);
 }
 
 function showActions(wrapper, editBtn, deleteBtn) {
