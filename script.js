@@ -160,11 +160,16 @@ const translations = {
     manageSubjects: "Manage subjects",
     primaryCategoryName: "Name for a primary category",
     secondaryCategoryName: "Name for a secondary category",
+    labelName: "Name for a label",
     createPrimaryCategory: "Create a new primary category",
     createSecondaryCategory: "Create a new secondary category",
+    createLabel: "Create a new label",
     noPrimaryCategories: "No primary categories yet.",
     noSecondaryCategories: "No secondary categories yet.",
     cancel: "Cancel",
+    reorderInstructions: `
+      <p>Drag the ≡ icon on the right to <strong>reorder items</strong>. Use the checkboxes on the left to <strong>select multiple items for deletion</strong>.</p>
+      <p><strong>Please note:</strong> deleting a label will <strong>permanently remove all associated transactions</strong>. Deleting a <strong>primary category</strong> will also <strong>permanently remove all of its secondary categories and their associated transactions</strong>.</p>`,
     myHouseholdsTitle: "My Households",
     renameHousehold: "Rename My household",
     confirmRename: "Confirm",
@@ -305,11 +310,16 @@ const translations = {
     manageSubjects: "管理交易对象（交易主体）",
     primaryCategoryName: "一级分类名称",
     secondaryCategoryName: "二级分类名称",
+    labelName: "标签名称",
     createPrimaryCategory: "新建一级分类",
     createSecondaryCategory: "新建二级分类",
+    createLabel: "新建标签",
     noPrimaryCategories: "暂无一级分类",
     noSecondaryCategories: "暂无二级分类",
     cancel: "取消",
+    reorderInstructions: `
+      <p>拖动右侧的 ≡ 图标即可<strong>重新排序</strong>。使用左侧的复选框可<strong>一次选择多个项目进行删除</strong>。</p>
+      <p><strong>请注意：</strong> 删除标签将<strong>永久删除其关联的所有交易</strong>。删除<strong>一级分类</strong>时，其下所有<strong>二级分类</strong>及其关联的交易也会被<strong>永久删除</strong>。</p>`,
     myHouseholdsTitle: "我的家庭",
     renameHousehold: "重命名我的家庭",
     confirmRename: "确认修改",
@@ -678,6 +688,7 @@ async function signup() {
         },
         personalHouseholdId: myHouseholdId,
         households: [myHouseholdId],
+        orderedHouseholds: [myHouseholdId],
 
         defaults: {
           expense: {},
@@ -1377,7 +1388,7 @@ let historyStacks = {
   settings: [["settings", "nav-settings", "Xiaoxin's Ledger App"]]
 };
 
-function showPage(name, navBtn = currentBase, title = latestTitle) {
+function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   const t = translations[currentLang];
 
   // hide all pages
@@ -1391,6 +1402,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
+  document.getElementById("delete-btn-headerbar").style.display = "none";
 
   let stack = null;
   let target = null;
@@ -1413,7 +1425,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
 
     currentBase = name;
     stack = historyStacks[name];
-    latest = stack ? stack[stack.length - 1] : [name, navBtn, title];
+    latest = stack ? stack[stack.length - 1] : [name, navBtn, title, options];
     [latestPage, latestNavBtn, latestTitle] = latest;
     target = document.getElementById(latestPage + "-page");
 
@@ -1504,25 +1516,29 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     });
 
   } else if (latestPage === "manage-labels") {
+    const activeHouseholdId = target.dataset.activeHouseholdId;
+    loadLabels(activeHouseholdId, "manage-labels", options.type, options.title)
+    
     const orderBtn = document.getElementById("manage-btn-headerbar");
     orderBtn.style.display = "block";
 
-    orderBtn.addEventListener("click", () => {
-      const managePage = document.getElementById("manage-labels-page");
-      const orderPage  = document.getElementById("order-labels-page");
+    // Always remove old listener first
+    if (orderBtn._orderListener) {
+      orderBtn.removeEventListener("click", orderBtn._orderListener);
+    }
 
-      // Clone the scroll content (deep clone)
-      const cloned = managePage.querySelector(".scroll").cloneNode(true);
+    // Create a fresh listener
+    orderBtn._orderListener = () => {
+      prepareHouseholdTabs('order-labels', options.type, options.title, activeHouseholdId);
+    };
 
-      // OPTIONAL: remove other interactive elements
-      // cloned.querySelectorAll(".labels-icon-btn, .labels-tick-btn, .labels-cancel-btn").forEach(el => el.remove());
+    // Add it again
+    orderBtn.addEventListener("click", orderBtn._orderListener);
 
-      // Clear order page and insert cleaned clone
-      orderPage.innerHTML = "";
-      orderPage.appendChild(cloned);
 
-      showPage("order-labels", latestNavBtn, title);
-    });
+  } else if (latestPage === "order-labels") {
+    const deleteBtn = document.getElementById("delete-btn-headerbar");
+    deleteBtn.style.display = 'block';
 
   } else { // for all other pages
 
@@ -1537,7 +1553,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
   const isBaseAndFresh = basePages.includes(latestPage) && stack.length < 2;
   const isAlreadyActive = stack?.[stack.length - 1]?.[0] === latestPage;
   if (!isBaseAndFresh && !isAlreadyActive) {
-    historyStacks[currentBase].push([latestPage, navBtn, latestTitle]); // add to the history stacks
+    historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
   }
 }
 window.showPage = showPage;
@@ -1551,91 +1567,167 @@ function goBack() {
     target.style.transform = "translateX(110%)";
     stack.pop(); // remove current page
 
-    const [prevPage, prevNavBtn, prevTitle] = stack[stack.length - 1]; // get the previous entry
+    const [prevPage, prevNavBtn, prevTitle, prevOptions] = stack[stack.length - 1]; // get the previous entry
 
     if (stack.length > 1) {
       stack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
     }
 
-    showPage(prevPage, prevNavBtn, prevTitle);
+    showPage(prevPage, prevNavBtn, prevTitle, prevOptions);
   }
 }
 
-async function loadLabels(type, title) {
+function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.orderedHouseholds[0]) {
+
+  if (userDoc.orderedHouseholds.length > 1) {  
+    const tabContainer = document.getElementById(task + "-household-tabs");
+    tabContainer.innerHTML = ""; // clear old buttons
+
+    for (const householdId of userDoc.orderedHouseholds) {
+      const btn = document.createElement("button");
+      btn.className = "tab-btn";
+      btn.dataset.id = householdId;
+      btn.textContent = householdDocs[householdId].name;
+
+      // Mark the first button as active 
+      if (householdId === activeHouseholdId) { 
+        btn.classList.add("active"); 
+      }
+
+      // Add click listener
+      btn.addEventListener("click", () => {
+        // 1. Update active household
+        activeHouseholdId = householdId;
+
+        // 2. Update UI active state
+        document.querySelectorAll("#"+task+"-household-tabs .tab-btn")
+          .forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        loadLabels(activeHouseholdId, task, type, title);
+
+        const page = document.getElementById(task + "-page"); 
+        page.dataset.activeHouseholdId = activeHouseholdId;
+      });
+
+      tabContainer.appendChild(btn);
+    }
+  }
+
+  const page = document.getElementById(task + "-page"); 
+  page.dataset.activeHouseholdId = activeHouseholdId;
+  loadLabels(activeHouseholdId, task, type, title);
+  showPage(task, latestNavBtn, title, {type: type, title: title});
+}
+window.prepareHouseholdTabs = prepareHouseholdTabs;
+
+async function loadLabels(activeHouseholdId, task, type, title) {
   const t = translations[currentLang];
 
-  const container = document.getElementById("labels-container");
+  const deleteBtn = document.getElementById("delete-btn-headerbar");
+  deleteBtn.style.color = "var(--muted)";
+  deleteBtn.style.pointerEvents = "none";
+
+  const container = document.getElementById(task + "-labels-container");
   container.innerHTML = "";
 
-  for (const householdId of userDoc.households) {
-    const householdData = householdDocs[householdId];
+  const householdData = householdDocs[activeHouseholdId];
 
-    const block = document.createElement("div");
-    block.classList.add("household-block");
+  const block = document.createElement("div");
+  block.classList.add("household-block");
 
-    // Household name header
-    const header = document.createElement("h3");
-    header.textContent = householdData.name;
-    block.appendChild(header);
+   // Household name header
+  const header = document.createElement("h3");
+  header.textContent = householdData.name;
+  block.appendChild(header);
+ 
+  let primaryCategories = householdDocs[activeHouseholdId][type];
 
-    let primaryCategories = householdDocs[householdId][type];
+  if (!primaryCategories || primaryCategories.length === 0) {
+    const emptyMsg = document.createElement("button");
+    emptyMsg.classList.add("primary-category");
+    emptyMsg.textContent = t.noPrimaryCategories;
+    emptyMsg.style.background = "none";
+    block.appendChild(emptyMsg);
+  } else {
+    if (task === 'order-labels') {
+      const notes = document.createElement("div"); 
+      notes.style.color = "var(--muted)"; 
+      notes.style.fontStyle = "italic"; 
+      notes.innerHTML = t.reorderInstructions;
+      block.appendChild(notes);
 
-    if (!primaryCategories || primaryCategories.length === 0) {
-      const emptyMsg = document.createElement("button");
-      emptyMsg.classList.add("primary-category");
-      emptyMsg.textContent = t.noPrimaryCategories;
-      emptyMsg.style.background = "none";
-      block.appendChild(emptyMsg);
-    } else {
-      // Allow adding a primary
-      const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, householdId, type, title, false);
-      block.appendChild(addWrapper);
+      const checkedCountText = document.createElement("div"); 
+      checkedCountText.style.color = "var(--muted)"; 
+      checkedCountText.style.fontStyle = "italic"; 
+      block.appendChild(checkedCountText);
+      block.checkedCountText = checkedCountText; // Store reference on the block
+    } 
 
-      if (["expense-categories", "income-categories"].includes(type)) {
-        for (const category of householdDocs[householdId][type]) {
-          const [row, primaryWrapper] = createCategoryRow(category.primary, category.icon, block, block, householdId, type, title, false);
+    if (["expense-categories", "income-categories"].includes(type)) {
 
-          let secondaryCategories = category.secondaries;
-          if (!secondaryCategories || secondaryCategories.length === 0) {
-            const emptyMsg = document.createElement("button");
-            emptyMsg.classList.add("secondary-category");
-            emptyMsg.textContent = t.noSecondaryCategories;
+      if (task != 'order-labels') {
+        // Allow adding a primary // not for the order-labels-page
+        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, activeHouseholdId, task, type, title, false, true);
+        block.appendChild(addWrapper);
+      }
 
-            const categoryWrapper = document.createElement("div");
-            categoryWrapper.classList.add("secondary-wrapper");
-            categoryWrapper.appendChild(emptyMsg);
-            primaryWrapper.appendChild(categoryWrapper);
+      for (const category of householdDocs[activeHouseholdId][type]) {
+        const [row, primaryWrapper] = createCategoryRow(category.primary, category.icon, block, block, activeHouseholdId, task, type, title, false, true);
 
-          } else {
-            for (const secondaryCategory of category.secondaries) {
-              const [secRow, secondaryWrapper] = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, primaryWrapper, block, householdId, type, title, true, category.primary);
-            }
+        let secondaryCategories = category.secondaries;
+        if (!secondaryCategories || secondaryCategories.length === 0) {
+          const emptyMsg = document.createElement("button");
+          emptyMsg.classList.add("secondary-category");
+          emptyMsg.textContent = t.noSecondaryCategories;
+
+          const categoryWrapper = document.createElement("div");
+          categoryWrapper.classList.add("secondary-wrapper");
+          categoryWrapper.appendChild(emptyMsg);
+          primaryWrapper.appendChild(categoryWrapper);
+
+        } else {
+          for (const secondaryCategory of category.secondaries) {
+            const [secRow, secondaryWrapper] = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
           }
+        }
 
-          // Allow adding a secondary
-          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, "➕", primaryWrapper, block, householdId, type, title, true, category.primary);
+        if (task != 'order-labels') {
+          // Allow adding a secondary // not for the order-labels-page
+          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, "➕", primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
           primaryWrapper.appendChild(secAddWrapper);
         }
-      } else {
-        for (const label of householdDocs[householdId][type]) {
-          console.log(type, label.name);
-        };
+      }
+
+      if (task != 'order-labels') {
+        // Allow adding a primary // not for the order-labels-page
+        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, activeHouseholdId, task, type, title, false, true);
+        block.appendChild(addWrapper);
+      }
+
+    } else {
+      if (task != 'order-labels') {
+        // Allow adding a primary // not for the order-labels-page
+        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, "➕", block, block, activeHouseholdId, task, type, title, false, false);
+        block.appendChild(addWrapper);
+      }
+
+      for (const label of householdDocs[activeHouseholdId][type]) {
+        const [row, primaryWrapper] = createCategoryRow(label.name, label.icon, block, block, activeHouseholdId, task, type, title, false, false);
+      };
+
+      if (task != 'order-labels') {
+        // Allow adding a primary // not for the order-labels-page
+        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, "➕", block, block, activeHouseholdId, task, type, title, false, false);
+        block.appendChild(addWrapper);
       }
     }
-    
-    // Allow adding a primary
-    const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, householdId, type, title, false);
-    block.appendChild(addWrapper);
-    
-    container.appendChild(block);
-    container.appendChild(document.createElement("hr"));
   }
-
-  showPage("manage-labels", latestNavBtn, title);
+  
+  container.appendChild(block);
 }
-window.loadLabels = loadLabels;
 
-function createAddCategoryRow(name, icon, parentWrapper, block, householdId, type, title, isSecondary = false, parentName = null) {
+function createAddCategoryRow(name, icon, parentWrapper, block, householdId, task, type, title, isSecondary, hasSecondary, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
   categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
@@ -1662,7 +1754,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, householdId, typ
     if (existingRow) existingRow.remove();
 
     // create a new empty input row
-    const inputRow = createCategoryInputRow(householdId, type, title, {
+    const inputRow = createCategoryInputRow(householdId, task, type, title, hasSecondary, {
       label: "",
       icon: "",
       isSecondary,
@@ -1675,7 +1767,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, householdId, typ
   return [rowContent, categoryWrapper];
 }
 
-function createCategoryInputRow(householdId, type, title, options = {}) {
+function createCategoryInputRow(activeHouseholdId, task, type, title, hasSecondary, options = {}) {
   // options: { primaryDocId, isSecondary, parentId, label, icon, onSave }
   const t = translations[currentLang];
 
@@ -1728,7 +1820,11 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   if (options.isSecondary) {
     nameInput.placeholder = t.secondaryCategoryName;
   } else {
-    nameInput.placeholder = t.primaryCategoryName;
+    if (hasSecondary) {
+      nameInput.placeholder = t.primaryCategoryName;
+    } else {
+      nameInput.placeholder = t.labelName;
+    }
   }
   nameInput.classList.add("labels-primary-input");
   if (options.label) {
@@ -1746,7 +1842,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   cancelBtn.classList.add("labels-cancel-btn");
   
   cancelBtn.addEventListener("click", async () => {
-    loadLabels(type, title);
+    loadLabels(activeHouseholdId, task, type, title);
   })
 
   tickBtn.addEventListener("click", async () => {
@@ -1756,27 +1852,30 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
       showStatusMessage("The input name must not be empty.", "error")
       return;
     }
+    
+    const categories = householdDocs[activeHouseholdId][type];
+    const householdRef = doc(db, "households", activeHouseholdId);
+    
+    const allCategories = householdDocs[activeHouseholdId][type];
 
-    // check if this name is available
-    const allCategories = householdDocs[householdId][type];
-    const primaryNames = allCategories.map(c => c.primary); 
-    console.log(allCategories)
-    const secondaryNames = allCategories.flatMap(c => c.secondaries.map(s => s.name));
-    console.log(secondaryNames)
-    const allNames = [...primaryNames, ...secondaryNames];
-    console.log(allNames)
-    const valid = name === options.label || !allNames.includes(name)
-    // valid if the new name is not same as any existing names, except the current name being edited
+    if (hasSecondary) {
+      // check if this name is available
+      const primaryNames = allCategories.map(c => c.primary); 
+      const secondaryNames = allCategories.flatMap(c => c.secondaries.map(s => s.name));
+      const allNames = [...primaryNames, ...secondaryNames];
+      const valid = name === options.label || !allNames.includes(name)
+      // valid if the new name is not same as any existing names, except the current name being edited
 
-    if (!valid) {
-      showStatusMessage("The input name must not match any existing catogories.", "error")
-      return;
-    }
+      if (!valid) {
+        showStatusMessage(
+          currentLang === "en"
+            ? "The input name must not match any existing categories."
+            : "输入的名称不能与现有项目重复。",
+          "error"
+        );
+        return;
+      }
 
-    const categories = householdDocs[householdId][type];
-    const householdRef = doc(db, "households", householdId);
-
-    try {
       if (options.label && !options.isSecondary) {
         // Editing existing primary
         const updatedCategories = categories.map(cat => {
@@ -1864,12 +1963,45 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
         });
 
       }
-      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+    } else {
+      // If editing, allow the same name; if adding, name must be unique
+      const valid = name === options.label || !allCategories.some(item => item.name === name);
 
-      loadLabels(type, title);
-    } catch (err) {
-      console.error("Error saving category:", err);
+      if (!valid) {
+        showStatusMessage(
+          currentLang === "en"
+            ? "The input name must not match any existing items."
+            : "输入的名称不能与现有条目重复。",
+          "error"
+        );
+        return;
+      }
+      let updatedList;
+
+      if (options.label) {
+        // Editing existing item
+        updatedList = allCategories.map(item =>
+          item.name === options.label
+            ? { ...item, name, icon }  // update only this item
+            : item
+        );
+      } else {
+        // Adding a new item
+        const newItem = { name, icon };
+        updatedList = [...allCategories, newItem];
+      }
+
+      // Update flat structure
+      await updateDoc(householdRef, {
+        [type]: updatedList,
+        lastSynced: getFormattedTime()
+      });
     }
+    
+    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+    loadLabels(activeHouseholdId, task, type, title);
+    
   });
 
   inputRow.appendChild(iconBtn);
@@ -1885,7 +2017,70 @@ function hideWrapper(wrapper) {
   wrapper.addEventListener("transitionend", () => wrapper.remove(), { once: true });
 }
 
-function createCategoryRow(name, icon, parentWrapper, block, householdId, type, title, isSecondary = false, parentName = null) {
+function handleDeleteClick(block, hasSecondary) {
+  const primaryChecked = block.querySelectorAll('.order-checkbox[data-type="primary"]:checked').length;
+  const secondaryChecked = block.querySelectorAll('.order-checkbox[data-type="secondary"]:checked').length;
+
+  let message = "";
+
+  if (currentLang === "en") {
+    if (hasSecondary) {
+      if (primaryChecked > 0) {
+        message += `You selected ${primaryChecked} primary categories. `;
+        message += `Deleting them will permanently remove all associated secondary categories and transactions.<br><br>`;
+      }
+
+      if (secondaryChecked > 0) {
+        message += `You selected ${secondaryChecked} secondary categories. `;
+        message += `Deleting them will permanently remove all associated transactions.`;
+      }
+    } else {
+      if (primaryChecked > 0) {
+        message += `You selected ${primaryChecked} labels. `;
+        message += `Deleting them will permanently remove all associated transactions.`;
+      }
+    }
+
+  } else {
+    if (hasSecondary) {
+      if (primaryChecked > 0) {
+        message += `您选择了 ${primaryChecked} 个一级分类。`;
+        message += `删除它们将永久删除其下所有二级分类及其关联的交易。<br><br>`;
+      }
+
+      if (secondaryChecked > 0) {
+        message += `您选择了 ${secondaryChecked} 个二级分类。`;
+        message += `删除它们将永久删除所有关联的交易。`;
+      }
+    } else {
+      if (primaryChecked > 0) {
+        message += `您选择了 ${primaryChecked} 个标签。`;
+        message += `删除它们将永久删除所有关联的交易。`;
+      }
+    }
+  }
+
+  showPopupWindow({
+    title: currentLang === "en" ? "Confirm Deletion" : "确认删除",
+    message,
+    buttons: [
+      {
+        text: currentLang === "en" ? "Cancel" : "取消",
+        primary: true,
+        onClick: () => {}
+      },
+      {
+        text: currentLang === "en" ? "Delete" : "删除",
+        onClick: () => {
+          console.log("Perform deletion here");
+          // TODO: delete from Firestore + update UI
+        }
+      }
+    ]
+  });
+}
+
+function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, task, type, title, isSecondary, hasSecondary, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
   categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
@@ -1894,317 +2089,551 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   const rowContent = document.createElement("div");
   rowContent.classList.add(isSecondary ? "secondary-category-row" : "primary-category-row");
 
+  // If ordering mode → insert checkbox BEFORE the button 
+  if (task === 'order-labels') {
+    const checkboxWrapper = document.createElement("div");
+    checkboxWrapper.classList.add("order-checkbox-wrapper");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.classList.add("order-checkbox");
+    checkbox.dataset.type = isSecondary ? "secondary" : "primary";
+
+    checkboxWrapper.appendChild(checkbox);
+    rowContent.appendChild(checkboxWrapper);
+
+    checkbox.addEventListener("change", () => { 
+      const checked = block.querySelectorAll(".order-checkbox:checked");
+      const checkedCount = checked.length;
+
+      const primaryChecked = block.querySelectorAll('.order-checkbox[data-type="primary"]:checked').length;
+      const secondaryChecked = block.querySelectorAll('.order-checkbox[data-type="secondary"]:checked').length;
+
+      // Update UI text
+      if (hasSecondary) {
+        block.checkedCountText.textContent =
+          currentLang==='en'
+            ? `${checkedCount} selected (${primaryChecked} primary, ${secondaryChecked} secondary)`
+            : `已勾选 ${checkedCount} 项（一级 ${primaryChecked} 项，二级 ${secondaryChecked} 项）`;
+      } else {
+        block.checkedCountText.textContent =
+          currentLang==='en'
+            ? `${checkedCount} selected `
+            : `已勾选 ${checkedCount} 项`;
+      }
+
+      const deleteBtn = document.getElementById("delete-btn-headerbar");
+
+      // Disable delete button
+      if (checkedCount < 1) {
+        deleteBtn.style.color = "var(--muted)";
+        deleteBtn.style.pointerEvents = "none";
+
+        // Always remove listener if it exists
+        if (deleteBtn._deleteListener) {
+          deleteBtn.removeEventListener("click", deleteBtn._deleteListener);
+          deleteBtn._deleteListener = null;
+        }
+        return;
+      }
+
+      // Enable delete button
+      deleteBtn.style.color = "var(--primary)";
+      deleteBtn.style.pointerEvents = "auto";
+
+      // Always remove old listener first
+      if (deleteBtn._deleteListener) {
+        deleteBtn.removeEventListener("click", deleteBtn._deleteListener);
+      }
+
+      // Create a fresh listener
+      deleteBtn._deleteListener = () => handleDeleteClick(block, hasSecondary);
+
+      // Add it again
+      deleteBtn.addEventListener("click", deleteBtn._deleteListener);
+    });
+  }
+
   // main button
   const btn = document.createElement("button");
   btn.textContent = `${icon} ${name}`.trim();
   btn.classList.add(isSecondary ? "secondary-category" : "primary-category");
+
   // Add identifiers 
   btn.dataset.name = name; 
   btn.dataset.type = isSecondary ? "secondary" : "primary";
   btn.dataset.parentName = parentName; 
-
-  // edit + delete buttons
-  const editBtn = document.createElement("button");
-  editBtn.textContent = "✏️";
-  editBtn.classList.add("label-edit-btn");
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "🗑️";
-  deleteBtn.classList.add("label-delete-btn");
-
-  // assemble row
   rowContent.appendChild(btn);
-  rowContent.appendChild(editBtn);
-  rowContent.appendChild(deleteBtn);
-
+  
   // attach to wrapper
   categoryWrapper.appendChild(rowContent);
   parentWrapper.appendChild(categoryWrapper);
+  
+  if (task === 'order-labels') {
+    const handle = document.createElement("div"); 
+    handle.classList.add("drag-handle"); 
+    handle.textContent = "≡"; 
+    rowContent.appendChild(handle);
+    
+    let pressTimer; 
+    let longPress = false; 
+    let isDragging = false; 
+    let dragInfo = null;
+    let ghost = null;
 
-  // === EDIT HANDLER ===
-  editBtn.addEventListener("click", () => {
-    // remove any existing input row
-    const existingRow = block.querySelector(".labels-input-row");
-    if (existingRow) existingRow.remove();
+    handle.addEventListener("pointerdown", e => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
 
-    // create a new input row with current values
-    const inputRow = createCategoryInputRow(householdId, type, title, {
-      label: name,
-      icon: icon,
-      isSecondary,
-      parentName
-    });
+      e.stopPropagation();
+      e.preventDefault();
 
-    rowContent.after(inputRow);
-  });
+      isDragging = true;
+      longPress = false;
+      clearTimeout(pressTimer);
 
-  // === DELETE HANDLER ===
-  deleteBtn.addEventListener("click", async () => {
-    if (!confirm("Delete this category?")) return;
-    const categories = householdDocs[householdId][type];
-    const householdRef = doc(db, "households", householdId)
+      const btnRect = btn.getBoundingClientRect();
 
-    try {
-      if (isSecondary) {
-        
-        const updatedCategories = categories.map(cat => {
-          if (cat.primary === parentName) {
-            return {
-              ...cat,
-              secondaries: cat.secondaries.filter(sec => sec.name !== name)
-            };
-          }
-          return cat;
-        });
+      dragInfo = {
+        startY: e.clientY,
+        startTop: btnRect.top,
+        height: btnRect.height,
+        draggedName: btn.dataset.name,
+        draggedType: btn.dataset.type,
+        draggedParent: btn.dataset.parentName
+      };
 
-        await updateDoc(householdRef, {
-          [type]: updatedCategories,
-          lastSynced: getFormattedTime()
-        });
+      btn.classList.add("dragging");
 
-      } else {
-        const updatedCategories = categories.filter(cat => cat.primary !== name);
-
-        await updateDoc(householdRef, {
-          [type]: updatedCategories,
-          lastSynced: getFormattedTime()
+      if (!isSecondary) {
+        block.querySelectorAll(".secondary-wrapper").forEach(w => {
+          w.style.display = "none";
         });
       }
-    } catch (err) {
-      console.error("Error deleting category:", err);
-    }
 
-    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+      handle.setPointerCapture(e.pointerId);
 
-    loadLabels(type, title);
-  });
+      // Compute row position BEFORE cloning
+      const rowRect = rowContent.getBoundingClientRect();
 
-  // gesture handling: swipe, right-click, or long press
-  let startX = 0;
-  btn.addEventListener("touchstart", e => {
-    startX = e.touches[0].clientX;
-  });
-  btn.addEventListener("touchend", e => {
-    const endX = e.changedTouches[0].clientX;
-    if (startX - endX > 50) {
-      // Remove "has-actions" from any wrapper
-      block.querySelectorAll(".has-actions").forEach(wrapper => {
-        wrapper.classList.remove("has-actions");
+      // Create ghost
+      ghost = rowContent.cloneNode(true);
+      ghost.classList.add("drag-ghost");
+
+      ghost.style.width = `${rowRect.width}px`;
+      ghost.style.position = "fixed";
+      ghost.style.left = `${rowRect.left}px`;
+      ghost.style.top = `${rowRect.top}px`;
+      ghost.style.pointerEvents = "none";
+      ghost.style.opacity = "0.9";
+      ghost.style.zIndex = "9999";
+
+      document.body.appendChild(ghost);
+
+      // Fade original row
+      rowContent.style.opacity = "0.3";
+    });
+
+    handle.addEventListener("pointermove", e => {
+      if (!isDragging || !dragInfo) return;
+
+      const dy = e.clientY - dragInfo.startY;
+
+      // Visual movement
+      ghost.style.transform = `translateY(${dy}px)`;
+
+      // Determine target row
+      const rows = [...block.querySelectorAll(".primary-category, .secondary-category")];
+      const currentCenter = dragInfo.startTop + dy + dragInfo.height / 2;
+
+      let targetBtn = null;
+      for (const r of rows) {
+        const rect = r.getBoundingClientRect();
+        if (currentCenter > rect.top && currentCenter < rect.bottom) {
+          targetBtn = r;
+          break;
+        }
+      }
+
+      dragInfo.targetBtn = targetBtn;
+    });
+
+    handle.addEventListener("pointerup", async e => {
+      // Stop dragging
+      if (!isDragging) return;
+      isDragging = false;
+
+      // Release pointer capture if used
+      try { handle.releasePointerCapture(e.pointerId); } catch {}
+
+      // Reset visuals
+      if (ghost) {
+        ghost.remove();
+        ghost = null;
+      }
+
+      rowContent.style.opacity = "";
+
+      // No drag info → nothing to reorder
+      if (!dragInfo || !dragInfo.targetBtn) {
+        dragInfo = null;
+        return;
+      }
+
+      // Extract drag info
+      const {
+        draggedName,
+        draggedType,
+        draggedParent,
+        targetBtn
+      } = dragInfo;
+
+      const targetName   = targetBtn.dataset.name;
+      const targetType   = targetBtn.dataset.type;
+      const targetParent = targetBtn.dataset.parentName;
+
+      // Compute before/after
+      const rect = targetBtn.getBoundingClientRect();
+      const position = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+      
+      // Enforce rules
+      if (draggedType === "primary" && targetType === "secondary") return;
+      if (draggedName === targetName) return;
+      if (!targetName) return;
+
+      // Perform reorder
+      await reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type});
+
+      dragInfo = null;
+
+      // Refresh UI
+      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+      loadLabels(activeHouseholdId, task, type, title);
+    });    
+
+  } else { // not for the order-labels-page
+    // edit + delete buttons
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "✏️";
+    editBtn.classList.add("label-edit-btn");
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "🗑️";
+    deleteBtn.classList.add("label-delete-btn");
+
+    rowContent.appendChild(editBtn);
+    rowContent.appendChild(deleteBtn);  
+
+    // === EDIT HANDLER ===
+    editBtn.addEventListener("click", () => {
+      // remove any existing input row
+      const existingRow = block.querySelector(".labels-input-row");
+      if (existingRow) existingRow.remove();
+
+      // create a new input row with current values
+      const inputRow = createCategoryInputRow(activeHouseholdId, task, type, title, hasSecondary, {
+        label: name,
+        icon: icon,
+        isSecondary,
+        parentName
       });
 
-      // Remove "show" from any edit/delete buttons
-      block.querySelectorAll(".show").forEach(btn => {
-        btn.classList.remove("show");
-      });
+      rowContent.after(inputRow);
+    });
 
-      showActions(categoryWrapper, editBtn, deleteBtn);
-    } else {
-      hideActions(categoryWrapper, editBtn, deleteBtn);
-    }
-  });
+    // === DELETE HANDLER ===
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm("Delete this category?")) return;
+      const categories = householdDocs[activeHouseholdId][type];
+      const householdRef = doc(db, "households", activeHouseholdId)
 
-  let pressTimer;
-  let longPress = false;
-  let isDragging = false;
+      try {
+        if (isSecondary) {
+          
+          const updatedCategories = categories.map(cat => {
+            if (cat.primary === parentName) {
+              return {
+                ...cat,
+                secondaries: cat.secondaries.filter(sec => sec.name !== name)
+              };
+            }
+            return cat;
+          });
 
-  // RIGHT CLICK
-  btn.addEventListener("contextmenu", e => {
-    if (longPress) {
-      // ignore the click triggered after long press
-      longPress = false;
+          await updateDoc(householdRef, {
+            [type]: updatedCategories,
+            lastSynced: getFormattedTime()
+          });
+
+        } else {
+          const updatedCategories = categories.filter(cat => cat.primary !== name);
+
+          await updateDoc(householdRef, {
+            [type]: updatedCategories,
+            lastSynced: getFormattedTime()
+          });
+        }
+      } catch (err) {
+        console.error("Error deleting category:", err);
+      }
+
+      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+
+      loadLabels(activeHouseholdId, task, type, title);
+    });
+
+    // gesture handling: swipe, right-click, or long press
+    let startX = 0;
+    btn.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+    });
+    btn.addEventListener("touchend", e => {
+      const endX = e.changedTouches[0].clientX;
+      if (startX - endX > 50) {
+        // Remove "has-actions" from any wrapper
+        block.querySelectorAll(".has-actions").forEach(wrapper => {
+          wrapper.classList.remove("has-actions");
+        });
+
+        // Remove "show" from any edit/delete buttons
+        block.querySelectorAll(".show").forEach(btn => {
+          btn.classList.remove("show");
+        });
+
+        showActions(categoryWrapper, editBtn, deleteBtn);
+      } else {
+        hideActions(categoryWrapper, editBtn, deleteBtn);
+      }
+    });
+
+    let pressTimer;
+    let longPress = false;
+    let isDragging = false;
+
+    // RIGHT CLICK
+    btn.addEventListener("contextmenu", e => {
+      if (longPress) {
+        // ignore the click triggered after long press
+        longPress = false;
+        e.preventDefault();
+        return;
+      }
+
       e.preventDefault();
-      return;
-    }
+      const isVisible = categoryWrapper.classList.contains("has-actions"); 
+      if (isVisible) { 
+        hideActions(categoryWrapper, editBtn, deleteBtn); 
+      } else { 
+        // Remove "has-actions" from any wrapper
+        block.querySelectorAll(".has-actions").forEach(wrapper => {
+          wrapper.classList.remove("has-actions");
+        });
 
-    e.preventDefault();
-    const isVisible = categoryWrapper.classList.contains("has-actions"); 
-    if (isVisible) { 
-      hideActions(categoryWrapper, editBtn, deleteBtn); 
-    } else { 
-      // Remove "has-actions" from any wrapper
-      block.querySelectorAll(".has-actions").forEach(wrapper => {
-        wrapper.classList.remove("has-actions");
-      });
+        // Remove "show" from any edit/delete buttons
+        block.querySelectorAll(".show").forEach(btn => {
+          btn.classList.remove("show");
+        });
 
-      // Remove "show" from any edit/delete buttons
-      block.querySelectorAll(".show").forEach(btn => {
-        btn.classList.remove("show");
-      });
+        showActions(categoryWrapper, editBtn, deleteBtn); 
+      }
+    });
 
-      showActions(categoryWrapper, editBtn, deleteBtn); 
-    }
-  });
+    // LEFT CLICK
+    btn.addEventListener("click", e => {
+      if (longPress) {
+        // ignore the click triggered after long press
+        longPress = false;
+        return;
+      }
 
-  // LEFT CLICK
-  btn.addEventListener("click", e => {
-    if (longPress) {
-      // ignore the click triggered after long press
+      e.preventDefault();
+      hideActions(categoryWrapper, editBtn, deleteBtn);
+    });
+
+    // LONG PRESS
+    btn.addEventListener("mousedown", () => {
       longPress = false;
-      return;
-    }
 
-    e.preventDefault();
-    hideActions(categoryWrapper, editBtn, deleteBtn);
-  });
+      pressTimer = setTimeout(() => {
+        if (isDragging) return; // prevent long press during drag
 
-  // LONG PRESS
-  btn.addEventListener("mousedown", () => {
-    longPress = false;
+        longPress = true;
 
-    pressTimer = setTimeout(() => {
-      if (isDragging) return; // prevent long press during drag
+        // Clear any existing actions
+        block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+        block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
 
-      longPress = true;
+        showActions(categoryWrapper, editBtn, deleteBtn);
+      }, 600);
+    });
 
-      // Clear any existing actions
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+    btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
+    btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
 
-      showActions(categoryWrapper, editBtn, deleteBtn);
-    }, 600);
-  });
+    let lastPointerType = "mouse";
 
-  btn.addEventListener("mouseup", () => clearTimeout(pressTimer));
-  btn.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+    btn.addEventListener("pointerdown", e => {
+      lastPointerType = e.pointerType; // "mouse" | "touch" | "pen"
+    });
 
-  let lastPointerType = "mouse";
+    // === Dragging ===
+    btn.setAttribute("draggable", true);
 
-  btn.addEventListener("pointerdown", e => {
-    lastPointerType = e.pointerType; // "mouse" | "touch" | "pen"
-  });
+    btn.addEventListener("dragstart", e => {
+      if (lastPointerType !== "mouse") { 
+        e.preventDefault(); 
+        return; // skip drag on touch or pen 
+      }
 
-  // === Dragging ===
-  btn.setAttribute("draggable", true);
+      isDragging = true; // mark drag started 
+      clearTimeout(pressTimer); // cancel long press immediately 
+      longPress = false; // ensure no long-press logic fires
 
-  btn.addEventListener("dragstart", e => {
-    if (lastPointerType !== "mouse") { 
-      e.preventDefault(); 
-      return; // skip drag on touch or pen 
-    }
+      if (!isSecondary) {
+        block.querySelectorAll(".secondary-wrapper").forEach(w => {
+          w.style.display = "none";
+        });
+      }
 
-    isDragging = true; // mark drag started 
-    clearTimeout(pressTimer); // cancel long press immediately 
-    longPress = false; // ensure no long-press logic fires
+      // On dragstart, store what is being dragged
+      e.dataTransfer.setData("drag-name", btn.dataset.name); 
+      e.dataTransfer.setData("drag-type", btn.dataset.type);
+      e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
 
-    if (!isSecondary) {
-      block.querySelectorAll(".secondary-wrapper").forEach(w => {
-        w.style.display = "none";
-      });
-    }
+      btn.classList.add("dragging");
+    });
 
-    // On dragstart, store what is being dragged
-    e.dataTransfer.setData("drag-name", btn.dataset.name); 
-    e.dataTransfer.setData("drag-type", btn.dataset.type);
-    e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
+    btn.addEventListener("dragover", e => {
+      if (lastPointerType !== "mouse") return;
+      e.preventDefault(); // required
+    });
 
-    btn.classList.add("dragging");
-  });
+    btn.addEventListener("drop", async e => {
+      if (lastPointerType !== "mouse") return;
+      e.preventDefault();
 
-  btn.addEventListener("dragover", e => {
-    if (lastPointerType !== "mouse") return;
-    e.preventDefault(); // required
-  });
+      const draggedName   = e.dataTransfer.getData("drag-name");
+      const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
+      const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
 
-  btn.addEventListener("drop", async e => {
-    if (lastPointerType !== "mouse") return;
-    e.preventDefault();
+      const targetName    = btn.dataset.name;
+      const targetType    = btn.dataset.type;                      // "primary" | "secondary"
+      const targetParent  = btn.dataset.parentName;                // primary name for secondary
 
-    const draggedName   = e.dataTransfer.getData("drag-name");
-    const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
-    const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
+      const rect = btn.getBoundingClientRect();
+      const dropY = e.clientY;
+      const midpoint = rect.top + rect.height / 2;
+      const position = dropY < midpoint ? "before" : "after";
 
-    const targetName    = btn.dataset.name;
-    const targetType    = btn.dataset.type;                      // "primary" | "secondary"
-    const targetParent  = btn.dataset.parentName;                // primary name for secondary
+      // Enforce rules
+      if (draggedType === "primary" && targetType === "secondary") return;
+      if (draggedName === targetName) return;
+      if (!targetName) return;
 
-    const rect = btn.getBoundingClientRect();
-    const dropY = e.clientY;
-    const midpoint = rect.top + rect.height / 2;
-    const position = dropY < midpoint ? "before" : "after";
+      reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type})
 
-    // Enforce rules
-    if (draggedType === "secondary" && targetType === "primary") return;
-    if (draggedType === "primary" && targetType === "secondary") return;
-    if (draggedName === targetName) return;
+      isDragging = false;
+      btn.classList.remove("dragging");
 
-    const categories = householdDocs[householdId][type];
-    const householdRef = doc(db, "households", householdId);
+      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
+      loadLabels(activeHouseholdId, task, type, title);
+
+    });
+  }
+
+  return [rowContent, categoryWrapper];
+}
+
+async function reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type}) {
+  const categories = householdDocs[activeHouseholdId][type];
+  const householdRef = doc(db, "households", activeHouseholdId);
+
+  if (hasSecondary) {
     // ============================================================
     // PRIMARY MOVE
     // ============================================================
     if (draggedType === "primary") {
-      // Find dragged primary object + index
       const oldIndex = categories.findIndex(p => p.primary === draggedName);
-      if (oldIndex === -1) return;
+      if (oldIndex === -1) return false;
 
-      const draggedObj = categories[oldIndex];
+      const draggedObj = categories.splice(oldIndex, 1)[0];
 
-      // Remove it
-      categories.splice(oldIndex, 1);
-
-      // Find target index
       let newIndex = categories.findIndex(p => p.primary === targetName);
-      if (newIndex === -1) return;
+      if (newIndex === -1) return false;
 
       if (position === "after") newIndex++;
 
-      // Insert at new position
       categories.splice(newIndex, 0, draggedObj);
 
-      await updateDoc(householdRef, {
-        [type]: categories
-      });
+      await updateDoc(householdRef, { [type]: categories });
+      return true;
     }
 
     // ============================================================
     // SECONDARY MOVE
     // ============================================================
     if (draggedType === "secondary") {
-      // Find source primary
       const fromPrimary = categories.find(p => p.primary === draggedParent);
-      if (!fromPrimary) return;
-
-      // Find target primary
-      const toPrimary = categories.find(p => p.primary === targetParent);
-      if (!toPrimary) return;
+      
+      if (!fromPrimary) return false;
 
       const fromArr = fromPrimary.secondaries;
-      const toArr   = toPrimary.secondaries;
 
-      // Find dragged secondary object + index
       const oldIndex = fromArr.findIndex(s => s.name === draggedName);
-      if (oldIndex === -1) return;
+      if (oldIndex === -1) return false;
 
-      const draggedObj = fromArr[oldIndex];
+      const draggedObj = fromArr.splice(oldIndex, 1)[0];
 
-      // Remove from old parent
-      fromArr.splice(oldIndex, 1);
+      // When dropped to a primary, insert at the beginning of the target primary's secondaries 
+      if (targetType === "primary") { 
+        const toPrimary   = categories.find(p => p.primary === targetName);
+        const toArr   = toPrimary.secondaries;
 
-      // Find target secondary index in new parent
-      let newIndex = toArr.findIndex(s => s.name === targetName);
-      if (newIndex === -1) return;
+        toArr.splice(0, 0, draggedObj); 
+        await updateDoc(householdRef, { [type]: categories }); 
+        return true; 
 
-      if (position === "after") newIndex++;
+      } else {
+        const toPrimary   = categories.find(p => p.primary === targetParent);
+        const toArr   = toPrimary.secondaries;
 
-      // Insert into new parent
-      toArr.splice(newIndex, 0, draggedObj);
+        let newIndex = toArr.findIndex(s => s.name === targetName);
+        if (newIndex === -1) return false;
 
-      await updateDoc(householdRef, {
-        [type]: categories
-      });
+        if (position === "after") newIndex++;
+
+        toArr.splice(newIndex, 0, draggedObj);
+
+        await updateDoc(householdRef, { [type]: categories });
+        return true;
+      }
     }
+  } else {
 
-    isDragging = false;
-    btn.classList.remove("dragging");
+    // ============================================================
+    // NO SECONDARY STRUCTURE → FLAT LIST MOVE
+    // ============================================================
 
-    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+    // Find old index
+    const oldIndex = categories.findIndex(item => item.name === draggedName);
+    if (oldIndex === -1) return false;
 
-    loadLabels(type, title);
+    const draggedObj = categories.splice(oldIndex, 1)[0];
 
-  });
+    // Find new index
+    let newIndex = categories.findIndex(item => item.name === targetName);
+    if (newIndex === -1) return false;
 
-  return [rowContent, categoryWrapper];
+    if (position === "after") newIndex++;
+
+    // Insert at new position
+    categories.splice(newIndex, 0, draggedObj);
+
+    await updateDoc(householdRef, { [type]: categories });
+    return true;
+  }
+
+  return false;
 }
 
 function showActions(wrapper, editBtn, deleteBtn) {
@@ -2912,6 +3341,7 @@ document.getElementById("invite-confirm").onclick = async () => {
     const invitedUserRef = doc(db, "users", invitedUserId);
     await updateDoc(invitedUserRef, {
       households: arrayUnion(myHouseholdId),
+      orderedHouseholds: arrayUnion(myHouseholdId),
       lastHouseholdChange: myHouseholdId
     });
 
@@ -3041,6 +3471,7 @@ async function confirmRemoveMember(uid) {
   // 2. Remove household from user
   await updateDoc(doc(db, "users", uid), {
     households: arrayRemove(myHouseholdId),
+    orderedHouseholds: arrayRemove(myHouseholdId),
     lastHouseholdChange: myHouseholdId
   });
 
@@ -3146,6 +3577,7 @@ async function confirmLeaveHousehold(hid) {
   // Remove household from my user doc
   await updateDoc(userRef, {
     households: arrayRemove(hid),
+    orderedHouseholds: arrayRemove(hid),
     "profile.lastSynced": getFormattedTime()
   });
 
@@ -3231,6 +3663,7 @@ async function confirmDeleteAccount() {
         const memberRef = doc(db, "users", memberUid);
         await updateDoc(memberRef, {
           households: arrayRemove(myHouseholdId),
+          orderedHouseholds: arrayRemove(myHouseholdId),
           lastHouseholdChange: myHouseholdId
         });
       }
@@ -3259,6 +3692,55 @@ async function confirmDeleteAccount() {
     console.error("Error deleting account:", err);
     alert("删除失败: " + err.message);
   }
+}
+
+function showPopupWindow({ title, message, buttons = [] }) {
+  // Overlay
+  const overlay = document.createElement("div");
+  overlay.classList.add("glass-popup-overlay");
+
+  // Close when clicking outside the popup
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
+
+  // Popup window
+  const popup = document.createElement("div");
+  popup.classList.add("glass-popup-window");
+
+  const titleEl = document.createElement("h3");
+  titleEl.textContent = title;
+
+  const msgEl = document.createElement("p");
+  msgEl.innerHTML = message;
+
+  const btnRow = document.createElement("div");
+  btnRow.classList.add("glass-popup-buttons");
+
+  // Dynamically create buttons
+  buttons.forEach(btn => {
+    const b = document.createElement("button");
+    b.textContent = btn.text;
+    b.classList.add("glass-popup-btn");
+
+    if (btn.primary) b.classList.add("primary");
+
+    b.addEventListener("click", () => {
+      overlay.remove();
+      btn.onClick && btn.onClick();
+    });
+
+    btnRow.appendChild(b);
+  });
+
+  popup.appendChild(titleEl);
+  popup.appendChild(msgEl);
+  popup.appendChild(btnRow);
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
 }
 
 function showStatusMessage(message, type = 'info', duration = 2000) {
@@ -3652,7 +4134,6 @@ function initHouseholdSelector() {
   const householdNames = Object.values(householdDocs)
     .filter(data => data)   // remove nulls
     .map(data => data.name);
-
 
   createList(col, householdNames);
 }

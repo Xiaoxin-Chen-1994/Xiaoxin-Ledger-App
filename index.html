@@ -22,6 +22,7 @@
     <button id="save-btn-headerbar" class="header-right-button" onclick="addEntry()" style="display: none;">✔️保存</button>
     <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display: none;">🔍搜索</button>
     <button id="manage-btn-headerbar" class="header-right-button" style="display: none;">管理</button>
+    <button id="delete-btn-headerbar" class="header-right-button" style="display: none;">删除</button>
   </div>
 
   <!-- Login / Signup Section -->
@@ -429,22 +430,22 @@
           <p id="labels-title">标签</p>
           <div id="labels-actions">
               <button id="manage-expense-categories-btn" class="settings-button"
-                      onclick="loadLabels('expense-categories', translations[currentLang].manageExpenseCategories)">
+                      onclick="prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)">
                 管理支出分类
               </button>
 
               <button id="manage-income-categories-btn" class="settings-button"
-                      onclick="loadLabels('income-categories', translations[currentLang].manageIncomeCategories)">
+                      onclick="prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)">
                 管理收入分类
               </button>
 
               <button id="manage-collections-btn" class="settings-button"
-                      onclick="loadLabels('collections', translations[currentLang].manageCollections)">
+                      onclick="prepareHouseholdTabs('manage-labels', 'collections', translations[currentLang].manageCollections)">
                 管理项目
               </button>
 
               <button id="manage-subjects-btn" class="settings-button"
-                      onclick="loadLabels('subjects', translations[currentLang].manageSubjects)">
+                      onclick="prepareHouseholdTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects)">
                 管理交易对象（交易主体）
               </button>
           </div>
@@ -558,13 +559,16 @@
   
     <div class="page" id="manage-labels-page">
       <div class="scroll">
-        <h2 id="labels-title"></h2>
-        <div id="labels-container"></div>
+        <!-- Tabs -->
+        <div id="manage-labels-household-tabs" class="transaction-tabs"></div>
+        <div id="manage-labels-labels-container"></div>
       </div>
     </div>
 
     <div class="page" id="order-labels-page">
       <div class="scroll">
+        <div id="order-labels-household-tabs" class="transaction-tabs"></div>
+        <div id="order-labels-labels-container"></div>
       </div>
     </div>
 
