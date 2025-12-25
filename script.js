@@ -1945,36 +1945,23 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     loadLabels(type, title);
   });
 
-  // gesture handling: swipe, right-click, or long press
-  let startX = 0;
-  btn.addEventListener("touchstart", e => {
-    startX = e.touches[0].clientX;
-  });
-  btn.addEventListener("touchend", e => {
-    const endX = e.changedTouches[0].clientX;
-    if (startX - endX > 50) {
-      // Remove "has-actions" from any wrapper
-      block.querySelectorAll(".has-actions").forEach(wrapper => {
-        wrapper.classList.remove("has-actions");
-      });
-
-      // Remove "show" from any edit/delete buttons
-      block.querySelectorAll(".show").forEach(btn => {
-        btn.classList.remove("show");
-      });
-
-      showActions(categoryWrapper, editBtn, deleteBtn);
-    } else {
-      hideActions(categoryWrapper, editBtn, deleteBtn);
-    }
-  });
-
-  let dragStartDelayTimer = null;
-  const DRAG_START_DELAY = 300; // adjust 120–200ms to taste
   let pressTimer;
+  let dragStartDelayTimer;
+
+  let longPressReady = false; // NEW: long press is armed, but not fired yet
   let longPress = false;
   let isDragging = false;
+  let dragReady = false;   // NEW: drag is allowed, but not started yet
+  let pointerDrag = null;
   let dragGhost = null;
+
+  const SWIPE_THRESHOLD = 50; // px
+  let pointerDownX = 0;
+  let pointerDownY = 0;
+
+  const DRAG_START_DELAY = 150;
+  const DRAG_MOVE_THRESHOLD = 8;
+
 
   // === RIGHT CLICK (still needed) ===
   btn.addEventListener("contextmenu", e => {
@@ -1996,86 +1983,53 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     }
   });
 
-  // === POINTER DOWN (replaces mousedown) ===
-  btn.addEventListener("pointerdown", e => {
-    longPress = false;
-
-    // Start long‑press timer
-    pressTimer = setTimeout(() => {
-      if (isDragging) return; // do not trigger long‑press during drag
-
-      longPress = true;
-
-      // Clear existing actions
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
-
-      showActions(categoryWrapper, editBtn, deleteBtn);
-    }, 600);
-  });
-
-  // === POINTER UP (replaces mouseup + click) ===
-  btn.addEventListener("pointerup", e => {
-    clearTimeout(pressTimer);
-
-    if (longPress) {
-      longPress = false;
-      return; // suppress click after long‑press
-    }
-
-    if (isDragging) return; // suppress click after drag
-
-    e.preventDefault();
-    hideActions(categoryWrapper, editBtn, deleteBtn);
-  });
-
-  // === POINTER LEAVE (replaces mouseleave) ===
-  btn.addEventListener("pointerleave", () => {
-    clearTimeout(pressTimer);
-  });
-
-  // === POINTER CANCEL (touch interruptions, OS gestures, etc.) ===
-  btn.addEventListener("pointercancel", () => {
-    clearTimeout(pressTimer);
-  });
-
-
-  // === Unified Pointer Drag System (desktop + touch + pen) ===
-  let pointerDrag = null;
-
-  btn.style.touchAction = "none"; // prevent scroll during drag
-
   btn.addEventListener("pointerdown", e => {
     clearTimeout(pressTimer);
     clearTimeout(dragStartDelayTimer);
 
     longPress = false;
-    isDragging = false; // <-- important: do NOT start dragging immediately
+    longPressReady = false;
+    isDragging = false;
+    dragReady = false;
+    pointerDrag = null;
 
-    // Start long‑press timer (unchanged)
+    // Record pointer start position
+    pointerDownX = e.clientX;
+    pointerDownY = e.clientY;
+
+    // Long‑press arming timer
     pressTimer = setTimeout(() => {
       if (isDragging) return;
-      longPress = true;
-
-      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
-      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
-      showActions(categoryWrapper, editBtn, deleteBtn);
+      longPressReady = true;
     }, 600);
 
-    // Delay before drag actually starts
+    // Drag readiness timer
     dragStartDelayTimer = setTimeout(() => {
-      // Now drag begins
+      dragReady = true; // <-- THIS WAS MISSING
+    }, DRAG_START_DELAY);
+  });
+
+
+  btn.addEventListener("pointermove", e => {
+    if (!dragReady) return; // too early to drag
+
+    const dx = Math.abs(e.clientX - pointerDownX);
+    const dy = Math.abs(e.clientY - pointerDownY);
+
+    // Only start drag after movement threshold
+    if (!isDragging && (dx > DRAG_MOVE_THRESHOLD || dy > DRAG_MOVE_THRESHOLD)) {
       isDragging = true;
+      longPress = false; // cancel long press
+      clearTimeout(pressTimer);
 
       pointerDrag = {
         draggedName: btn.dataset.name,
         draggedType: btn.dataset.type,
         draggedParent: btn.dataset.parentName,
-        currentY: e.clientY,
-        startBtn: btn
+        currentY: e.clientY
       };
 
-      if (!isSecondary) {
+      if (btn.dataset.type === "primary") {
         block.querySelectorAll(".secondary-wrapper").forEach(w => {
           w.style.display = "none";
         });
@@ -2084,7 +2038,7 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
       btn.classList.add("dragging");
       btn.setPointerCapture(e.pointerId);
 
-      // Create drag ghost
+      // Create ghost
       dragGhost = btn.cloneNode(true);
       dragGhost.classList.add("drag-ghost");
       dragGhost.style.position = "fixed";
@@ -2094,68 +2048,97 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
       dragGhost.style.pointerEvents = "none";
       dragGhost.style.zIndex = "9999";
       document.body.appendChild(dragGhost);
-    }, DRAG_START_DELAY);
-  });
+    }
 
-  btn.addEventListener("pointermove", e => {
-    if (!pointerDrag) return;
-    pointerDrag.currentY = e.clientY;
-
-    if (dragGhost) {
+    // Update ghost
+    if (isDragging && dragGhost) {
       dragGhost.style.left = e.clientX + "px";
       dragGhost.style.top = e.clientY + "px";
+      pointerDrag.currentY = e.clientY;
     }
   });
 
   btn.addEventListener("pointerup", async e => {
-    if (!pointerDrag) return;
+    clearTimeout(pressTimer);
+    clearTimeout(dragStartDelayTimer);
 
-    btn.releasePointerCapture(e.pointerId);
-
-    const { draggedName, draggedType, draggedParent, currentY } = pointerDrag;
-    pointerDrag = null;
-
+    // Remove ghost if exists
     if (dragGhost) {
       dragGhost.remove();
       dragGhost = null;
     }
 
-    // Find drop target
-    const elem = document.elementFromPoint(e.clientX, e.clientY);
-    if (!elem) {
+    // CASE 1: Drag happened → drop
+    if (isDragging && pointerDrag) {
+      btn.releasePointerCapture(e.pointerId);
+
+      const { draggedName, draggedType, draggedParent, currentY } = pointerDrag;
+      pointerDrag = null;
+
+      const elem = document.elementFromPoint(e.clientX, e.clientY);
+      const targetBtn = elem?.closest("button");
+
+      if (targetBtn) {
+        await handleCategoryDropCore({
+          draggedName,
+          draggedType,
+          draggedParent,
+          targetBtn,
+          dropY: currentY,
+          householdId,
+          type,
+          db,
+          currentUser,
+          title,
+          loadLabels,
+          syncData
+        });
+      }
+
       btn.classList.remove("dragging");
       isDragging = false;
       return;
     }
 
-    const targetBtn = elem.closest("button"); // adjust if needed
-    if (!targetBtn) {
-      btn.classList.remove("dragging");
-      isDragging = false;
+    // CASE 2: Long‑press was ARMED → fire it NOW on release
+    if (longPressReady) {
+      longPressReady = false;
+      longPress = true;
+
+      // Show actions now (on release)
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+      showActions(categoryWrapper, editBtn, deleteBtn);
+
+      return; // do NOT treat as click
+    }
+
+    // CASE 2.5: Swipe-left gesture (only if no drag and no long-press)
+    const pointerUpX = e.clientX;
+    const deltaX = pointerDownX - pointerUpX;
+
+    if (!isDragging && !longPressReady && deltaX > SWIPE_THRESHOLD) {
+      // Clear existing actions
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+
+      showActions(categoryWrapper, editBtn, deleteBtn);
       return;
     }
 
-    try {
-      await handleCategoryDropCore({
-        draggedName,
-        draggedType,
-        draggedParent,
-        targetBtn,
-        dropY: currentY,
-        householdId,
-        type,
-        db,
-        currentUser,
-        title,
-        loadLabels,
-        syncData
-      });
-    } finally {
-      btn.classList.remove("dragging");
-      isDragging = false;
-    }
+    // CASE 3: Normal left click
+    hideActions(categoryWrapper, editBtn, deleteBtn);
   });
 
+  btn.addEventListener("pointerleave", () => {
+    clearTimeout(pressTimer);
+    longPressReady = false;
+  });
+
+  btn.addEventListener("pointercancel", () => {
+    clearTimeout(pressTimer);
+    longPressReady = false;
+  });
 
   return [rowContent, categoryWrapper];
 }
