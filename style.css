@@ -1,5 +1,5 @@
 :root {
-  --bg: #f7f7f8;
+  --bg: white;
   --card: rgba(255, 255, 255, 0.7);
   --text: #1f2328;
   --muted: #6b7280;
@@ -37,7 +37,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b0c0e;
+    --bg: black;
     --btnBg: #252525;
     --card: rgba(18, 19, 23, 0.7);
     --text: #eaeef3;
@@ -190,7 +190,7 @@ a {
 }
 
 
-#return-btn {
+#return-btn, #cancel-btn {
   position: absolute;        /* pin button to the left */
   left: 1rem;
   text-align: left;
@@ -202,7 +202,7 @@ a {
   cursor: pointer;
   font-weight: bold;         /* make text bold */
 }
-#return-btn:hover {
+#return-btn:hover, #cancel-btn:hover {
   background: transparent;
   color: var(--primary);
 }
@@ -675,14 +675,14 @@ input[type="password"], input[type="url"], .selector-button,
   color: #5e5e5e;
   line-height: 40px;
   text-align: center;
-  font-size: calc(var(--font-size) * 0.75); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
 }
 
 .dt-item.selected {
   background: var(--primary);
   color: var(--text);
   border-radius: 6px;
-  font-size: calc(var(--font-size) * 1.1); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 1.2); /* a percentage of the base font size */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -872,7 +872,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 .lang-switch,
 .settings-section.fontsize-change,
 .settings-section.theme-color-change,
-.settings-section.color-switch {
+.settings-section.color-switch,
+.settings-section.defaults {
   display: flex;
   align-items: center;   /* vertical alignment */
   gap: 0.5rem;
@@ -922,9 +923,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   width: 100%;
   margin-top: 0.1rem;
   margin-bottom: 0.1rem;
-  border: 1px solid #ddd;
+  border: 1px solid #e6e6e6;
   border-radius: 6px;
-  background: #f5f5f5;
+  background: #f8f8f8;
   font-size: calc(var(--font-size) * 1.0);
   color: var(--text);
   cursor: pointer;
@@ -933,7 +934,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 /* Hover/focus states */
 .settings-section button:hover, select:hover {
-  background: var(--primary);
+  background: #f8f8f8;
   border-color: #ccc;
   outline: none;
 }

@@ -78,7 +78,7 @@ let householdDocs = {}; // this variable will contain all data of each household
 let workspace = {} // use this variable to store temporary transaction data before being saved
 //workspace = {
 //   create: {
-//     inputDatetime: datetime,
+//     inputTransactionTime: datetime,
 //     inputTypeIndex: typeIndex,
 //     inputType: type,
 //     expense: {
@@ -98,8 +98,7 @@ let workspace = {} // use this variable to store temporary transaction data befo
 //   }
 // }
 const transactionTypes = ["expense", "income", "transfer", "balance"];
-let expenseInputCategoryInnerHTML= "";
-let incomeInputCategoryInnerHTML= "";
+const accountTypes = ["cashAccounts", "creditCards", "depositoryAccounts", "storedValueCards", "investmentAccounts"];
 let inputNotes = null;
 
 let currentBase = "home";
@@ -135,6 +134,11 @@ const translations = {
     household: "👥Household",
     category: "📁Category",
     account: "💳Account",
+    cashAccounts: "Cash Accounts", 
+    creditCards: "Credit Cards",
+    depositoryAccounts: "Depository Accounts",
+    storedValueCards: "Stored-Value Cards",
+    investmentAccounts: "Investment Accounts",
     time: "🕒Time",
     now: "Now",
     dismiss: "Dismiss ▼",
@@ -148,8 +152,8 @@ const translations = {
     transferTo: "To",
     notes: "📝Notes",
     save: "✔️Save",
-    basicSettingsTitle: "Basic Settings",
-    openBasicSettings: "Open Basic Settings",
+    personalSettingsTitle: "Personal Settings",
+    openPersonalSettings: "Open Personal Settings",
     timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. Please note that, if you are offline, these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
     labels: "Labels",
     manageExpenseCategories: "Manage expense categories",
@@ -199,11 +203,14 @@ const translations = {
     colorSchemeSwitchFailed: "Failed to save color scheme",
     homeImageTitle: "Homepage Image",
     manage: "Manage",
+    manageHomeImage: "Manage homepage images",
     add: "Add",
     delete: "Delete",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
     homeImageSaved: "Homepage images saved",
     homeImageSaveFailed: "Failed to save homepage images",
+    defaults: 'Templates',
+    manageDefaults: 'Manage transaction templates',
     logout: "Logout",
     deleteAccount: "Delete my account",
     navHome: "Home",
@@ -285,6 +292,11 @@ const translations = {
     household: "👥家庭",
     category: "📁分类",
     account: "💳账户",
+    cashAccounts: "现金账户",
+    creditCards: "信用卡",
+    depositoryAccounts: "银行账户",
+    storedValueCards: "储值卡",
+    investmentAccounts: "投资账户",
     time: "🕒时间",
     now: "现在",
     dismiss: "收起 ▼",
@@ -298,8 +310,8 @@ const translations = {
     transferFrom: "转入",
     notes: "📝备注",
     save: "✔️保存",
-    basicSettingsTitle: "基础设置",
-    openBasicSettings: "打开基础设置",
+    personalSettingsTitle: "个人偏好",
+    openPersonalSettings: "打开个人偏好",
     timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。请注意，如果您正处于离线状态，这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
     labels: "类别",
     manageExpenseCategories: "管理支出分类",
@@ -349,11 +361,14 @@ const translations = {
     colorSchemeSwitchFailed: "颜色方案保存出错",
     homeImageTitle: "首页图",
     manage: "管理",
+    manageHomeImage: "管理首页图",
     add: "增加",
     delete: "删除",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
     homeImageSaveFailed: "首页图保存出错",
+    defaults: '交易模版',
+    manageDefaults: '管理交易模版',
     logout: "退出登录",
     deleteAccount: "删除账户",
     navHome: "首页",
@@ -525,177 +540,229 @@ async function signup() {
     const userRef = doc(db, "users", user.uid);
     const profileRef = doc(db, "profiles", user.uid);
 
-    // Create all documents in parallel
-    await Promise.all([
-      // Household doc
-      setDoc(householdRef, {
-        name: householdName,
-        admin: user.uid,
-        members: [user.uid],
-        lastSynced: "",
+    // Household doc
+    await setDoc(householdRef, {
+      name: householdName,
+      admin: user.uid,
+      members: [user.uid],
+      lastSynced: getFormattedTime(),
 
-        accounts: {
-          "Cash Accounts": [
-            { name: currentLang === "en" ? "Cash" : "现金", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          "Credit Cards": [
-            { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          "Depository Accounts": [
-            { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          "Stored-Value Cards": [
-            { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          "Investment Accounts": [
-            { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ]
-        },
-        "expense-categories": [
-          { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
-            { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
-            { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
-          ]},
-
-          { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
-            { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
-            { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
-            { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
-            { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
-            { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
-            { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
-            { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
-            { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
-            { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
-          ]},
-
-          { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
-            { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
-            { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
-            { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-            { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
-          ]},
-
-          { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
-            { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
-            { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
-            { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
-            { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
-            { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
-            { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
-            { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
-            { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
-            { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
-            { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
-            { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
-            { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
-            { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
-          ]},
-
-          { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
-            { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-            { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-            { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
-            { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
-            { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
-          ]}
+      accounts: {
+        cashAccounts: [
+          { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
         ],
-        "income-categories": [
-          { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
-            { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-            { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
-          ]},
-
-          { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
-            { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
-            { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
-            { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
-          ]},
-
-          { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
-            { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
-            { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
-            { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
-          ]},
-
-          { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
-            { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
-          ]}
+        creditCards: [
+          { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
         ],
-        collections: [
-          { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
-          { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
-          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
-          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
-          { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-          { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
-          { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
-          { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
-          { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+        depositoryAccounts: [
+          { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+        ],
+        storedValueCards: [
+          { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+        ],
+        investmentAccounts: [
+          { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+        ]
+      },
+      "expense-categories": [
+        { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+          { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+          { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
+        ]},
+
+        { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+          { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+          { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+          { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+          { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+          { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+          { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+          { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+          { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+          { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
+        ]},
+
+        { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+          { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+          { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
           { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-          { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
-          { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
-          { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
-          { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
-          { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
-          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+          { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
+        ]},
+
+        { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+          { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+          { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+          { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+          { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+          { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+          { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+          { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+          { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+          { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+          { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+          { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+          { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
+        ]},
+
+        { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
           { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-          { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
-          { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
-        ],
-        subjects: [
-          { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
-          { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
-          { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
-          { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
-          { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
-          { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
-          { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
-        ],
-        tags: [],
-        entries: [],
-      }),
+          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+          { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+          { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+          { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+        ]}
+      ],
+      "income-categories": [
+        { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
+        ]},
 
-      // Profile doc
-      setDoc(profileRef, { email }),
+        { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+          { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+          { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+          { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
+        ]},
 
-      // User doc
-      setDoc(userRef, {
-        profile: {
-          email,
-          language: currentLang,
-          homeImages: [],
-          fontsize: "",
-          themeColor: "",
-          settings: {}
-        },
-        personalHouseholdId: myHouseholdId,
-        households: [myHouseholdId],
-        orderedHouseholds: [myHouseholdId],
+        { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+          { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+          { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+          { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
+        ]},
 
-        defaults: {
-          expense: {},
-          income: {},
-          transfer: {},
-          balance: {}
-        }
-      })
-    ]);
+        { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+        ]}
+      ],
+      collections: [
+        { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
+        { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
+        { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
+        { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+        { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
+        { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
+        { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
+        { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+        { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
+        { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
+        { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
+        { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+        { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+        { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
+        { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
+        { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
+        { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
+        { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
+        { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+        { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+        { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
+        { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
+      ],
+      subjects: [
+        { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
+        { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
+        { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
+        { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
+        { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
+        { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
+        { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
+      ],
+      tags: [],
+      entries: [],
+    });
+
+    // Profile doc
+    await setDoc(profileRef, { email });
+
+    const householdSnap = await getDoc(householdRef);
+    const household = householdSnap.data();
+    const firstExpensePrimary = household["expense-categories"][0];
+    const firstIncomePrimary = household["income-categories"][0];
+    
+    const accountEntries = Object.entries(household.accounts);
+    const [firstAccountType, firstAccountList] = accountEntries[0];
+    const firstAccount = firstAccountList[0];
+    const [secondAccountType, secondAccountList] = accountEntries[1];
+    const secondAccount = secondAccountList?.[0];
+
+    const defaults = {
+      expense: {
+        householdId: myHouseholdId,
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon,
+        primary: firstExpensePrimary.primary,
+        primaryIcon: firstExpensePrimary.icon,
+        secondary: firstExpensePrimary.secondaries[0].name,
+        secondaryIcon: firstExpensePrimary.secondaries[0].icon,
+        subject: household.subjects[0].name,
+        subjectIcon: household.subjects[0].icon,
+        collection: household.collections[0].name,
+        collectionIcon: household.collections[0].icon
+      },
+
+      income: {
+        householdId: myHouseholdId,
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon,
+        primary: firstIncomePrimary.primary,
+        primaryIcon: firstExpensePrimary.icon,
+        secondary: firstIncomePrimary.secondaries[0].name,
+        secondaryIcon: firstExpensePrimary.secondaries[0].icon,
+        subject: household.subjects[0].name,
+        subjectIcon: household.subjects[0].icon,
+        collection: household.collections[0].name,
+        collectionIcon: household.collections[0].icon
+      },
+
+      transfer: {
+        householdId: myHouseholdId,
+        fromType: firstAccountType,
+        fromAccount: firstAccount.name,
+        fromAccountIcon: firstAccount.icon,
+        toType: secondAccountType,
+        toAccount: secondAccount.name,
+        toAccountIcon: secondAccount.icon
+      },
+
+      balance: {
+        householdId: myHouseholdId,
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon
+      }
+    };
+
+    // User doc
+    await setDoc(userRef, {
+      profile: {
+        email,
+        language: currentLang,
+        homeImages: [],
+        fontsize: "",
+        themeColor: "",
+        settings: {},
+        lastSynced: getFormattedTime(),
+      },
+      personalHouseholdId: myHouseholdId,
+      households: [myHouseholdId],
+      orderedHouseholds: [myHouseholdId],
+      defaults: defaults
+    })
 
   } catch (error) {
     showStatusMessage(error.message, "error");
@@ -762,13 +829,16 @@ async function syncData(userId) {
 
   // --- Fetch user doc ---
   const userRef = doc(db, "users", userId);
-  const userSnap = await getDoc(userRef);
+  let userSnap; 
+  do { 
+    userSnap = await getDoc(userRef); 
+  } while (!userSnap.exists()); // make sure userSnap is ready. This is useful after signup.
   const userDoc = userSnap.data();
 
   // Track whether the user document came from server
   let freshFromServer = userSnap.metadata.fromCache === false;
   if (freshFromServer) {
-    lastSyncStatus["个人偏好（基础设置）"] = userDoc.profile.lastSynced
+    lastSyncStatus["个人偏好"] = userDoc.profile.lastSynced
   }
 
   const householdIds = userDoc.households
@@ -1019,96 +1089,262 @@ function setCurrentTime(button, subWorkspace) {
 
   const prefix = getDatePrefix(now);
 
-  subWorkspace.inputDatetime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  subWorkspace.yyyy = yyyy;
+  subWorkspace.mm = mm;
+  subWorkspace.dd = dd;
+  subWorkspace.hh = hh;
+  subWorkspace.min = min;
 
-  button.textContent = `${prefix}` + subWorkspace.inputDatetime;
+  subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+
+  button.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
   button.dataset.value = now.toISOString();
 }
 
-function setDefaultHousehold(button, subWorkspace) {
-  let inputHouseholdId = "";
-  // Only set default if the button has no content
-  if (button && button.textContent.trim() === "") {
-    inputHouseholdId = userDoc.orderedHouseholds[0];
-
-    if (!subWorkspace[subWorkspace.inputType]) {
-      subWorkspace[subWorkspace.inputType] = {};
+function setDefaultHouseholds(button, subWorkspace) {
+  // Set default if workspace is empty
+  transactionTypes.forEach(type => {
+    if (!subWorkspace[type]) {
+      subWorkspace[type] = {};
     }
-    subWorkspace[subWorkspace.inputType].householdId = inputHouseholdId;
+    
+    if (!subWorkspace[type].householdId) {
+      subWorkspace[type].householdId = userDoc.defaults[type].householdId;
+    }
+  });
 
-  } else {
-    inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
-  }
+  let inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
 
   button.textContent = householdDocs[inputHouseholdId].name;
   button.dataset.value = inputHouseholdId;
 }
 
 function setDefaultCategory(button, subWorkspace) {
-  const type = subWorkspace.inputType;
-  const inputHouseholdId = subWorkspace[type].householdId;
+  // Set default if workspace is empty
+  transactionTypes.forEach(type => {
+    if (["expense", "income"].includes(type)) {
+      // transfer and balance types do not have a category
 
-  const cats = categoriesByHousehold[inputHouseholdId][type];
+      if (!subWorkspace[type]) {
+        subWorkspace[type] = {};
+      }
 
-  let primaryCat = null;
-  let secondaryCat = null;
-
-  if (cats && cats.length > 0) {
-    primaryCat = cats[0]; // first primary category
-
-    if (primaryCat.secondaries && primaryCat.secondaries.length > 0) {
-      secondaryCat = primaryCat.secondaries[0]; // first secondary category
-    } else {
-      secondaryCat = { emoji: "", name: "" };
+      if (!subWorkspace[type].primaryCategory) {
+        subWorkspace[type].primaryCategory = userDoc.defaults[type].primary;
+        subWorkspace[type].primaryCategoryIcon = userDoc.defaults[type].primaryIcon;
+        subWorkspace[type].secondaryCategory = userDoc.defaults[type].secondary;
+        subWorkspace[type].secondaryCategoryIcon = userDoc.defaults[type].secondaryIcon;
+      
+        subWorkspace[type].catInnerHTML = `
+          <span class="cat-part">${subWorkspace[type].primaryCategoryIcon} ${subWorkspace[type].primaryCategory}</span>
+          <span class="cat-separator">&gt;</span>
+          <span class="cat-part">${subWorkspace[type].secondaryCategoryIcon} ${subWorkspace[type].secondaryCategory}</span>
+        `;
+      }
     }
-  } else {
-    // no categories at all
-    primaryCat = { emoji: "", primary: "" };
-    secondaryCat = { emoji: "", name: "" };
+  });
+
+  const inputType = subWorkspace.inputType;
+  const householdId = subWorkspace[inputType].householdId;
+
+  if (["expense", "income"].includes(subWorkspace.inputType)) {
+    // transfer and balance types do not have a category
+
+    const cats = householdDocs[householdId][inputType + "-categories"]; 
+
+    // Build primary list
+    const primaryList = cats.map(cat => ({
+      icon: cat.icon || "",
+      name: cat.primary || ""
+    }));
+
+    // Build secondary map
+    const secondaryMap = {};
+    cats.forEach(cat => {
+      secondaryMap[cat.primary] = Object.entries(cat.secondaries || {}).map(
+        ([name, data]) => ({
+          icon: data.icon || "",
+          name
+        })
+      );
+    });
+
+    const currentPrimary = subWorkspace[inputType].primaryCategory;
+    const primaryExists = primaryList.some(p => p.name === currentPrimary);
+
+    if (!primaryExists) {
+      const def = userDoc.defaults[inputType];
+      const sameHouseholdAsDefault = householdId === def.householdId;
+
+      if (sameHouseholdAsDefault) {
+        // Restore defaults
+        subWorkspace[inputType].primaryCategory = def.primary;
+        subWorkspace[inputType].primaryCategoryIcon = def.primaryIcon;
+
+        subWorkspace[inputType].secondaryCategory = def.secondary;
+        subWorkspace[inputType].secondaryCategoryIcon = def.secondaryIcon;
+
+      } else {
+        // Use first available primary + its first secondary
+        const firstPrimary = primaryList[0].name;
+        const firstSecondaryObj = secondaryMap[firstPrimary]?.[0] || { name: "", icon: "" };
+
+        subWorkspace[inputType].primaryCategory = firstPrimary;
+        subWorkspace[inputType].primaryCategoryIcon = primaryList[0].icon;
+
+        subWorkspace[inputType].secondaryCategory = firstSecondaryObj.name;
+        subWorkspace[inputType].secondaryCategoryIcon = firstSecondaryObj.icon;
+      }
+
+      // Update HTML
+      subWorkspace[inputType].catInnerHTML = `
+        <span class="cat-part">${subWorkspace[inputType].primaryCategoryIcon} ${subWorkspace[inputType].primaryCategory}</span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">${subWorkspace[inputType].secondaryCategoryIcon} ${subWorkspace[inputType].secondaryCategory}</span>
+      `;
+    }
+
+    button.innerHTML = subWorkspace[inputType].catInnerHTML;
+
+    // Prepare category columns
+    const primaryCol   = categorySelector.querySelector(".primary-col");
+    const secondaryCol = categorySelector.querySelector(".secondary-col");
+
+    createList(primaryCol, primaryList);
+    ScrollToSelectItem(primaryCol, subWorkspace[inputType].primaryCategory);
+
+    updateSecondaryColumn(button, subWorkspace, secondaryCol);
+    ScrollToSelectItem(secondaryCol, subWorkspace[inputType].secondaryCategory);
+  }
+}
+
+function findSelectedAccount(householdId, accountType, accountName) {
+
+  const accountsByType = householdDocs[householdId].accounts[accountType];
+  if (!accountsByType) return null;
+
+  // -----------------------------------------
+  // 1. Try to match a top-level account
+  // -----------------------------------------
+  let top = accountsByType.find(acc => acc.name === accountName);
+
+  if (top) {
+    return {
+      type: accountType,
+      account: top,            // the account object
+      parent: null,            // no parent
+    };
   }
 
-  // Safely extract values, defaulting to ""
-  const primaryEmoji = primaryCat.emoji ? primaryCat.emoji : "";
-  const secondaryEmoji = secondaryCat.emoji ? secondaryCat.emoji : "";
+  // -----------------------------------------
+  // 2. Try to match a sub-account
+  // -----------------------------------------
+  for (const acc of accountsByType) {
+    const subList = acc["sub-accounts"] || [];
+    const sub = subList.find(sa => sa.name === accountName);
 
-  // prepare the category columns
-  const primaryCol   = categorySelector.querySelector(".primary-col");
-  const secondaryCol = categorySelector.querySelector(".secondary-col");
-
-  const primaryList = cats.map(cat => ({
-    emoji: cat.emoji || "",
-    name:  cat.primary || ""
-  }));
-
-  createList(primaryCol, primaryList);
-  updateSecondaryColumn(button, secondaryCol);
-
-  // Only set default if the button has no innerHTML (or only whitespace)
-  if (button && button.innerHTML.trim() === "") {
-    if (type === "expense") {
-      expenseInputPrimaryCategory   = primaryCat.primary;
-      expenseInputSecondaryCategory = secondaryCat.name;
-
-      expenseInputCategoryInnerHTML = `
-        <span class="cat-part">${primaryEmoji} ${expenseInputPrimaryCategory}</span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">${secondaryEmoji} ${expenseInputSecondaryCategory}</span>
-      `;
-
-      button.innerHTML = expenseInputCategoryInnerHTML;
-
-    } else if (type === "income") {
-      incomeInputPrimaryCategory   = primaryCat.primary;
-      incomeInputSecondaryCategory = secondaryCat.name;
-
-      incomeInputCategoryInnerHTML = `
-        <span class="cat-part">${primaryEmoji} ${incomeInputPrimaryCategory}</span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">${secondaryEmoji} ${incomeInputSecondaryCategory}</span>
-      `;
-
-      button.innerHTML = incomeInputCategoryInnerHTML;
+    if (sub) {
+      return {
+        type: accountType,
+        account: sub,                         // the sub-account object
+        parent: acc,                          // parent account object
+      };
     }
+  }
+
+  return null;
+}
+
+function setDefaultAccount(button, subWorkspace) {
+  const t = translations[currentLang];
+
+  // Set default if workspace is empty
+  transactionTypes.forEach(type => {
+    if (!subWorkspace[type]) {
+      subWorkspace[type] = {};
+    }
+
+    if (["expense", "income", "balance"].includes(type)) {
+      // these types have one account
+      if (!subWorkspace[type].accountInfo) {
+        subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].householdId, userDoc.defaults[type].accountType, userDoc.defaults[type].account)
+        const accountType = subWorkspace[type].accountInfo.type;
+        const accountName = subWorkspace[type].accountInfo.account.name;
+        const accountIcon = subWorkspace[type].accountInfo.account.icon;
+        const accountCurrency = subWorkspace[type].accountInfo.account.currency;
+        
+        subWorkspace[type].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
+      }
+    }
+
+    if (type === "transfer") {
+      // this type has two accounts
+
+      // FROM ACCOUNT
+      if (!subWorkspace.transfer.fromAccountInfo) {
+        subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
+        const from = subWorkspace.transfer.fromAccountInfo.account;
+        const fromIcon = from.icon || "";
+        const fromName = from.name;
+        const fromCurrency = from.currency;
+
+        subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
+      }
+
+      // TO ACCOUNT
+      if (!subWorkspace.transfer.toAccountInfo) {
+        subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.toType, userDoc.defaults.transfer.toAccount);
+        const to = subWorkspace.transfer.toAccountInfo.account;
+        const toIcon = to.icon || "";
+        const toName = to.name;
+        const toCurrency = to.currency;
+
+        subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
+      }
+    }
+  });
+
+  const inputType = subWorkspace.inputType;
+  const householdId = subWorkspace[inputType].householdId;
+
+  if (["expense", "income", "balance"].includes(inputType)) {
+    const accountTypeList = accountTypes.map(type => t[type]);
+
+    // If accountInfo is missing, initialize it using defaults
+    if (!subWorkspace[inputType].accountInfo) {
+      const def = userDoc.defaults[inputType];
+
+      subWorkspace[inputType].accountInfo = findSelectedAccount(householdId, def.accountType, def.account);
+
+      // Extract account info
+      const info = subWorkspace[inputType].accountInfo;
+      const accountObj = info.account;
+      const accountName = accountObj.name;
+      const accountIcon = accountObj.icon || "";
+      const accountCurrency = accountObj.currency;
+
+      if (isUrl(accountIcon)) { // render <img>
+        subWorkspace[inputType].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
+      } else { // render text directly
+        subWorkspace[inputType].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
+      }
+    }
+
+    button.innerHTML = subWorkspace[inputType].accountInnerHTML;
+
+    // Prepare account column
+    const accountTypeCol = accountSelector.querySelector(".primary-col");
+    const accountCol = accountSelector.querySelector(".secondary-col");
+
+    createList(accountTypeCol, accountTypeList);
+    ScrollToSelectItem(accountTypeCol, t[subWorkspace[inputType].accountInfo.type]); 
+    
+    updateSecondaryColumn(button, subWorkspace, accountCol);
+    ScrollToSelectItem(accountCol, `${subWorkspace[inputType].accountInfo.name} (${subWorkspace[inputType].accountInfo.currency})`); 
+  }
+
+  if (inputType === "transfer") {
+  
   }
 }
 
@@ -1137,7 +1373,7 @@ function switchTab(index) {
   // household
   const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
 
-  setDefaultHousehold(householdEl);
+  setDefaultHouseholds(householdEl);
 
   // initialize category columns and button text
   const type = transactionTypes[inputTypeIndex];
@@ -1398,6 +1634,8 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
       p.classList.remove("active");
     }
   });
+  document.getElementById("return-btn").style.display = "none";
+  document.getElementById("cancel-btn").style.display = "none";
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
@@ -1435,12 +1673,6 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
       target.classList.add('active');
     }
 
-    if (stack.length < 2) { // if already returned to base
-      document.getElementById("return-btn").style.display = "none";
-    } else {
-      document.getElementById("return-btn").style.display = "block";
-    };
-
     if (stack.length < 3 && name === "home") { // at home page
       document.getElementById("search-btn-headerbar").style.display = "block";
     };
@@ -1459,12 +1691,13 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     target.zIndex = stack.length;
     enablePageSwipe(target);
 
-    document.getElementById("return-btn").style.display = "block";
-
     // push a new history entry for this non-base page
     history.pushState({ page: latestPage, base: currentBase }, "", location.href);
   }
 
+  if (stack.length > 1) { // if not at base
+    document.getElementById("return-btn").style.display = "block";
+  };
   document.getElementById("app-title").textContent = latestTitle;
   document.getElementById(navBtn).style.background = "var(--primary)";
   document.getElementById(navBtn).classList.add("active");
@@ -1482,9 +1715,13 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   let dateTimeBtn = null;
 
   // transaction page special handling
-  if (latestPage.includes("transaction")) {        
+  if (latestPage.includes("transaction")) {     
+    let subWorkspace = null;
+
     if (latestNavBtn === "nav-transaction") { // when creating an entry
       document.getElementById("app-title").textContent = t.navTransaction;
+
+      document.getElementById("cancel-btn").style.display = "block";
 
       const inProgress = !!workspace.create;
       if (!inProgress) { // reset button texts when creating a new entry
@@ -1492,16 +1729,23 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         
         workspace.create.inputTypeIndex = 0;
         workspace.create.inputType = transactionTypes[0]; // start with expense
+        workspace.create.notes = "";
         const activeForm = workspace.create.inputType + "-form";
         dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
         let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
         let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+        let accountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='account']`);
+ 
+        setCurrentTime(dateTimeBtn, workspace.create);
+        setDefaultHouseholds(householdBtn, workspace.create);
+        setDefaultCategory(categoryBtn, workspace.create);
+        setDefaultAccount(accountBtn, workspace.create);
 
-        if (dateTimeBtn) setCurrentTime(dateTimeBtn, workspace.create);
-        if (householdBtn) setDefaultHousehold(householdBtn, workspace.create);
-        if (categoryBtn) setDefaultCategory(categoryBtn, workspace.create);
-        creatingTransaction = true;
+        const notesEl = document.querySelector(`#${activeForm} textarea[id$='notes']`);
+        notesEl.value = workspace.create.notes;
       }
+
+      subWorkspace = workspace.create;
 
     } else { // when loading an existing entry
       document.getElementById("app-title").textContent = t.transaction;
@@ -1512,16 +1756,17 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
       const activeForm = type + "-form";
       dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
       switchTab(inputTypeIndex);
+
+      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
     }
 
     // prepare date time selector columns in advance
-    const { year, month, day, hour, minute } = parseButtonDate(dateTimeBtn);
-    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
-    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
+    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.yyyy);
+    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.mm);
     updateDayColumn();
-    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
-    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
-    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
+    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
+    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.hh);
+    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.min);
     
     document.getElementById("save-btn-headerbar").style.display = "block";
     document.querySelectorAll('.form-row label').forEach(label => {
@@ -1570,6 +1815,13 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   }
 }
 window.showPage = showPage;
+
+function resetCreate() {
+  delete workspace.create;
+  closeSelector();
+  showPage('transaction', 'nav-transaction');
+}
+window.resetCreate = resetCreate;
 
 function goBack() {
   closeSelector();
@@ -1819,7 +2071,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
     requestAnimationFrame(() => wrapper.classList.add("show"));
 
     const outsideClickHandler = (ev) => {
-      if (!wrapper.contains(ev.target) && ev.target !== emojiBtn) {
+      if (!wrapper.contains(ev.target) && ev.target !== iconBtn) {
         hideWrapper(wrapper);
         document.removeEventListener("click", outsideClickHandler);
       }
@@ -2804,8 +3056,8 @@ async function setLanguage(lang, showMessage = false, upload = true) {
 
   // Settings
   document.getElementById("settings-title").textContent = t.settings;
-  document.getElementById("basic-settings-title").textContent = t.basicSettingsTitle;
-  document.getElementById("open-basic-settings").textContent = t.openBasicSettings;
+  document.getElementById("basic-settings-title").textContent = t.personalSettingsTitle;
+  document.getElementById("open-basic-settings").textContent = t.openPersonalSettings;
   document.getElementById("labels-title").textContent = t.labels;
   document.getElementById("manage-expense-categories-btn").textContent = t.manageExpenseCategories;
   document.getElementById("manage-income-categories-btn").textContent = t.manageIncomeCategories;
@@ -2832,7 +3084,7 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("privacy-content").innerHTML = t.privacyContent;
 
   // Basic settings
-  document.getElementById("basic-settings-header").textContent = t.basicSettingsTitle;
+  document.getElementById("basic-settings-header").textContent = t.personalSettingsTitle;
   document.querySelectorAll('[id$="-language-title"]').forEach(el => {
     el.textContent = t.language;
   });
@@ -2847,13 +3099,15 @@ async function setLanguage(lang, showMessage = false, upload = true) {
     opt.textContent = t.colorSchemeOptions[i];
   });
   document.getElementById("home-image-title").textContent = t.homeImageTitle;
-  document.getElementById("manage-home-image-btn").textContent = t.manage;
+  document.getElementById("manage-home-image-btn").textContent = t.manageHomeImage;
   document.getElementById("home-image-instruction").textContent = t.homeImageInstruction;
   document.querySelectorAll('.home-image-row button').forEach(btn => {
     btn.textContent = t.delete;
   });
   document.getElementById("add-home-image-btn").textContent = t.add;
   document.getElementById("save-home-image-btn").textContent = t.save;
+  document.getElementById("defaults-title").textContent = t.defaults;
+  document.getElementById("manage-defaults-btn").textContent = t.manageDefaults;
   document.getElementById("logout-btn").textContent = t.logout;
   document.getElementById("delete-account-btn").textContent = t.deleteAccount;
 
@@ -3822,14 +4076,27 @@ function getDatePrefix(targetDate) {
 const datetimeSelector = document.getElementById("datetime-selector");
 const householdSelector = document.getElementById("household-selector");
 const categorySelector = document.getElementById("category-selector");
+const accountSelector = document.getElementById("account-selector");
 
 const selectorList = [
   datetimeSelector,
   householdSelector,
-  categorySelector
+  categorySelector,
+  accountSelector
 ];
 
 let lastButton = null;
+
+function isUrl(string) {
+  if (!string) return false;
+
+  return (
+    string.startsWith("http://") ||
+    string.startsWith("https://") ||
+    string.startsWith("//") ||
+    /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(string)
+  );
+}
 
 function createList(col, values) {
   col.innerHTML = ""; // clear existing items
@@ -3838,25 +4105,61 @@ function createList(col, values) {
     const div = document.createElement("div");
     div.className = "dt-item";
 
+    // -----------------------------
+    // CASE 1: Primitive value
+    // -----------------------------
     if (typeof v === "string" || typeof v === "number") {
-      // Simple case: just one value
       div.textContent = v;
-    } else if (v && typeof v === "object") {
-      // Object case: emoji + name
-      if (v.emoji) {
-        const emojiSpan = document.createElement("span");
-        emojiSpan.className = "emoji";
-        emojiSpan.textContent = v.emoji;
-        div.appendChild(emojiSpan);
-      }
-
-      const labelSpan = document.createElement("span");
-      labelSpan.className = "label";
-      labelSpan.textContent = v.name || "";
-      div.appendChild(labelSpan);
+      col.appendChild(div);
+      return;
     }
 
-    col.appendChild(div);
+    // -----------------------------
+    // CASE 2: Object (icon + name/value + optional note)
+    // -----------------------------
+    if (v && typeof v === "object") {
+      const hasNote = "note" in v;
+
+      // If note exists → create two-line structure
+      const valueDiv = document.createElement("div");
+      valueDiv.className = hasNote ? "value" : "";
+
+      // ICON (if any)
+      if (v.icon) {
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "icon";
+
+        if (isUrl(v.icon)) {
+          const img = document.createElement("img");
+          img.src = v.icon;
+          img.alt = "";
+          img.className = "icon-img";
+          iconSpan.appendChild(img);
+        } else {
+          iconSpan.textContent = v.icon;
+        }
+
+        valueDiv.appendChild(iconSpan);
+      }
+
+      // LABEL (name or value)
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "label";
+      labelSpan.textContent = v.name || v.value || "";
+      valueDiv.appendChild(labelSpan);
+
+      div.appendChild(valueDiv);
+
+      // NOTE (if exists)
+      if (hasNote) {
+        const notesDiv = document.createElement("div");
+        notesDiv.className = "notes";
+        notesDiv.textContent = v.note;
+        div.appendChild(notesDiv);
+      }
+
+      col.appendChild(div);
+    }
   });
 }
 
@@ -3882,10 +4185,11 @@ function ScrollToSelectItem(col, value = null) {
       return parseInt(text, 10) === value;
     });
 
-    // If no match, take the last item
+    // If no match, take the last item // take the last date
     if (!target) {
       target = items[items.length - 1];
     }
+
   } else {
     // Try to find string match
     target = items.find(i => {
@@ -3995,8 +4299,17 @@ function ScrollToSelectItem(col, value = null) {
 function updateSelectorPreview(updatedCol) {
   if (!lastButton) return;
 
-  const type = transactionTypes[inputTypeIndex];
-  const activeForm = type + "-form";
+  let subWorkspace = null;
+
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  const inputType = subWorkspace.inputType;
+
+  const activeForm = inputType + "-form";
 
   if (lastButton.dataset.type === "datetime") {
 
@@ -4005,9 +4318,9 @@ function updateSelectorPreview(updatedCol) {
       updatedCol.classList.contains("year-col") ||
       updatedCol.classList.contains("month-col")
     ) {
-      day = getSelectedValue(datetimeSelector, ".day-col");
+      subWorkspace.dd = getSelectedValue(datetimeSelector, ".day-col");
       updateDayColumn();
-      ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
+      ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
     }
 
     const yEl = datetimeSelector.querySelector(".year-col .selected");
@@ -4018,20 +4331,24 @@ function updateSelectorPreview(updatedCol) {
 
     if (!yEl || !mEl || !dEl || !hEl || !minEl) return;
 
-    const y = Number(yEl.textContent);
-    const m = Number(mEl.textContent);
-    const d = Number(dEl.textContent);
-    const h = Number(hEl.textContent);
+    const yyyy = Number(yEl.textContent);
+    const mm = Number(mEl.textContent);
+    const dd = Number(dEl.textContent);
+    const hh = Number(hEl.textContent);
     const min = Number(minEl.textContent);
 
-    const dateObj = new Date(y, m - 1, d, h, min);
+    const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
     const prefix = getDatePrefix(dateObj);
 
-    inputTransactionTime = `${prefix}${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} ` +
-      `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+    subWorkspace.yyyy = yyyy;
+    subWorkspace.mm = String(mm).padStart(2, "0");
+    subWorkspace.dd = String(dd).padStart(2, "0");
+    subWorkspace.hh = String(hh).padStart(2, "0");
+    subWorkspace.min = String(min).padStart(2, "0");
 
-    lastButton.textContent = inputTransactionTime;
+    subWorkspace.inputTransactionTime = `${subWorkspace.yyyy}-${subWorkspace.mm}-${subWorkspace.dd} ${subWorkspace.hh}:${subWorkspace.min}`;
 
+    lastButton.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
     lastButton.dataset.value = dateObj.toISOString();
 
   } else if (lastButton.dataset.type === "household") {
@@ -4039,62 +4356,76 @@ function updateSelectorPreview(updatedCol) {
 
     if (!hhEl) return;
 
-    const household = households.find(
-      h => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
-    );
+    const [inputHouseholdId, household] = Object.entries(householdDocs).find(
+      ([id, h]) => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
+    ) || [];
 
-    if (household) {
-      inputHouseholdId = household.id;           // use the id directly
-      lastButton.textContent = household.name;
+    subWorkspace[subWorkspace.inputType].householdId = inputHouseholdId;
 
-      // update other buttons when household change
-      let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
-      if (categoryBtn) {setDefaultCategory(categoryBtn, type)};
-    }
-    
-  } else { // assuming all other selectors are categorySelectors
+    lastButton.textContent = household.name;
+    lastButton.dataset.value = inputHouseholdId;
+
+    // update other buttons when household change
+    let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+    if (categoryBtn) {setDefaultCategory(categoryBtn, subWorkspace)};
+
+  } else if (lastButton.dataset.type === "category") {
     const primaryCol = categorySelector.querySelector(".primary-col");
     const secondaryCol = categorySelector.querySelector(".secondary-col");
 
     // update secondary column if primary is changed
     if (updatedCol.classList.contains("primary-col")) {
-      updateSecondaryColumn(lastButton, secondaryCol);
+      updateSecondaryColumn(lastButton, subWorkspace, secondaryCol);
       ScrollToSelectItem(secondaryCol);
     }
-
-    const { emoji: pEmoji, name: pName } =
-      getSelectedValue(categorySelector, ".primary-col", true);
-    const { emoji: sEmoji, name: sName } =
+    
+    const { icon: sIcon, name: sName } =
       getSelectedValue(categorySelector, ".secondary-col", true);
 
-    const primaryEmoji = pEmoji;
-    const secondaryEmoji = sEmoji;
+    subWorkspace[inputType].secondaryCategory = sName;
+    subWorkspace[inputType].secondaryCategoryIcon = sIcon;
 
-    if (type === "expense") {
-      expenseInputPrimaryCategory   = pName;
-      expenseInputSecondaryCategory = sName;
+    subWorkspace[inputType].catInnerHTML = `
+      <span class="cat-part">${subWorkspace[inputType].primaryCategoryIcon} ${subWorkspace[inputType].primaryCategory}</span>
+      <span class="cat-separator">&gt;</span>
+      <span class="cat-part">${subWorkspace[inputType].secondaryCategoryIcon} ${subWorkspace[inputType].secondaryCategory}</span>
+    `;
 
-      expenseInputCategoryInnerHTML = `
-        <span class="cat-part">${primaryEmoji} ${expenseInputPrimaryCategory}</span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">${secondaryEmoji} ${expenseInputSecondaryCategory}</span>
-      `;
+    lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
+  } else if (lastButton.dataset.type === "account") {
+    const inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
 
-      lastButton.innerHTML = expenseInputCategoryInnerHTML;
+    if (["expense", "income", "balance"].includes(inputType)) {
+      const accountTypeCol = accountSelector.querySelector(".primary-col");
+      const accountCol = accountSelector.querySelector(".secondary-col");
 
-    } else if (type === "income") {
-      incomeInputPrimaryCategory   = pName;
-      incomeInputSecondaryCategory = sName;
+      // update secondary column if primary is changed
+      if (updatedCol.classList.contains("primary-col")) {
+        updateSecondaryColumn(lastButton, subWorkspace, accountCol);
+        ScrollToSelectItem(accountCol);
+      }
+      
+      const { icon: sIcon, name: sName } =
+        getSelectedValue(accountSelector, ".secondary-col", true);
 
-      incomeInputCategoryInnerHTML = `
-        <span class="cat-part">${primaryEmoji} ${incomeInputPrimaryCategory}</span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">${secondaryEmoji} ${incomeInputSecondaryCategory}</span>
-      `;
+      const accountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      lastButton.innerHTML = incomeInputCategoryInnerHTML;
+      subWorkspace[inputType].accountInfo = findSelectedAccount(inputHouseholdId, subWorkspace[inputType].accountInfo.type, accountName);
+      
+      // Extract account info
+      const info = subWorkspace[inputType].accountInfo;
+      const accountObj = info.account;
+      const accountIcon = accountObj.icon || "";
+      const accountCurrency = accountObj.currency;
+
+      if (isUrl(accountIcon)) { // render <img>
+        subWorkspace[inputType].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
+      } else { // render text directly
+        subWorkspace[inputType].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
+      }
+
+      lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
     }
-
   }
 }
 
@@ -4112,19 +4443,6 @@ function removeDatePrefix(text) {
   const regex = new RegExp(`^(${escaped.join("|")})\\s*`, "i");
 
   return text.replace(regex, "");
-}
-
-/* Parse datetime from button */
-function parseButtonDate(btn) {
-  let text = btn.textContent.trim();
-
-  text = removeDatePrefix(text);
-
-  const [datePart, timePart] = text.split(" ");
-  const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min] = timePart.split(":").map(Number);
-
-  return { year: y, month: m, day: d, hour: h, minute: min };
 }
 
 /* Initialize selector */
@@ -4153,41 +4471,87 @@ function initHouseholdSelector() {
 }
 
 function updateDayColumn() {
-  const year = getSelectedValue(datetimeSelector, ".year-col");
-  const month = getSelectedValue(datetimeSelector, ".month-col");
+  let subWorkspace = null;
 
-  const days = daysInMonth(year, month);
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  subWorkspace.yyyy = getSelectedValue(datetimeSelector, ".year-col");
+  subWorkspace.mm = getSelectedValue(datetimeSelector, ".month-col");
+
+  const days = daysInMonth(subWorkspace.yyyy, subWorkspace.mm);
   const dayCol = datetimeSelector.querySelector(".day-col");
   createList(dayCol, Array.from({ length: days }, (_, i) => i + 1));
 }
 
-function updateSecondaryColumn(lastButton, secondaryCol) {
+function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
+  const t = translations[currentLang];
+
+  const inputType = subWorkspace.inputType;
+  const inputHouseholdId = subWorkspace[inputType].householdId;
   let cats = null;
-  let inputPrimary = null;
-  const type = transactionTypes[inputTypeIndex];
+  let primaryCat = null;
+  let secondaries =null;
+  let secondaryList = [];
 
   if (lastButton.dataset.type === "category") {
-    cats = categoriesByHousehold[inputHouseholdId][type];
-    if (type === "expense") {
-      inputPrimary = expenseInputPrimaryCategory;
+    cats = householdDocs[inputHouseholdId][inputType + '-categories'];
 
-    } else if (type === "income") {
-      inputPrimary = incomeInputPrimaryCategory;
-    }
+    const { icon: pIcon, name: pName } =
+      getSelectedValue(categorySelector, ".primary-col", true);
+    
+    subWorkspace[inputType].primaryCategory = pName;
+    subWorkspace[inputType].primaryCategoryIcon = pIcon;
+    
+    // Find the primary category object that matches the selected primary name
+    primaryCat = cats.find(cat => cat.primary === subWorkspace[inputType].primaryCategory);
+    
+    // If found, use its secondaries; otherwise fallback to empty list
+    secondaries = primaryCat ? primaryCat.secondaries : [];
+    
+    // Build the list of secondary items as objects
+    secondaryList = secondaries.map(sec => ({
+      icon: sec.icon || "",
+      name:  sec.name || ""
+    }));
+    
+  } else if (lastButton.dataset.type === "account") {
+    cats = householdDocs[inputHouseholdId].accounts;
+
+    const inputAccountTypeString = getSelectedValue(accountSelector, ".primary-col", false);
+    const reverseMap = Object.fromEntries( Object.entries(t).map(([key, value]) => [value, key]) );
+    const inputAccountType = reverseMap[inputAccountTypeString];
+
+    subWorkspace[inputType].accountInfo.type = inputAccountType;
+
+    const accountsByType = cats[inputAccountType];
+
+    if (!accountsByType) return [];
+
+    accountsByType.forEach(acc => {
+      const subs = acc["sub-accounts"] || [];
+
+      if (subs.length > 0) {
+        // Use sub-accounts
+        subs.forEach(sub => {
+          secondaryList.push({
+            icon: sub.icon,
+            name: `${sub.name} (${sub.currency})`
+          });
+        });
+      } else {
+        // Use the account itself
+        secondaryList.push({
+          icon: acc.icon,
+          name: `${acc.name} (${acc.currency})`
+        });
+      }
+    });
   }
-
-  // Find the primary category object that matches the selected primary name
-  const primaryCat = cats.find(cat => cat.primary === inputPrimary);
-
-  // If found, use its secondaries; otherwise fallback to empty list
-  const secondaries = primaryCat ? primaryCat.secondaries : [];
-
-  // Build the list of secondary items as objects
-  const secondaryList = secondaries.map(sec => ({
-    emoji: sec.emoji || "",
-    name:  sec.name || ""
-  }));
-
+  
   // Populate the secondary column
   createList(secondaryCol, secondaryList);
 }
@@ -4201,16 +4565,27 @@ function getSelectedValue(selector, colName, strip = false) {
 
   // If strip=true, return structured parts from separate elements
   if (strip) {
-    const emojiEl = selectedItem.querySelector(".emoji");
+    let icon;
+    let isUrlIcon = false;
+
     const iconEl  = selectedItem.querySelector(".icon"); // <img class="icon">
+    if (iconEl) {
+      const img = iconEl.querySelector("img");
+
+      if (img) {
+        // URL icon
+        isUrlIcon = true;
+        icon = img.getAttribute("src");
+      } else {
+        // Emoji icon
+        icon = iconEl.textContent.trim();
+      }
+    }
 
     const labelEl = selectedItem.querySelector(".label") || selectedItem;
-
-    const emoji = emojiEl ? emojiEl.textContent.trim() : "";
-    const icon  = iconEl && iconEl.getAttribute("src") ? iconEl.getAttribute("src") : "";
     const name  = labelEl.textContent.trim();
 
-    return { emoji, icon, name };
+    return { icon, name };
   }
 
   // Otherwise, return the full text (legacy behavior)
@@ -4226,20 +4601,28 @@ function daysInMonth(year, month) {
 }
 
 function clickToSetNow() {
-  const type = transactionTypes[inputTypeIndex];
-  const activeForm = type + "-form";
+  let subWorkspace = null;
+
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  const inputType = subWorkspace.inputType;
+
+  const activeForm = inputType + "-form";
 
   let btn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-  if (btn) setCurrentTime(btn);
+  if (btn) setCurrentTime(btn, subWorkspace);
 
-  const { year, month, day, hour, minute } = parseButtonDate(btn);
-
-  ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), year);
-  ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), month);
-  ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), day);
-  ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), hour);
-  ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), minute);
+  ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.yyyy);
+  ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.mm);
+  ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
+  ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.hh);
+  ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.min);
 }
+window.clickToSetNow = clickToSetNow;
 
 let openSelector = null;
 
@@ -4280,6 +4663,7 @@ function closeSelector() {
   // Clear dummy state so further back presses exit normally
   history.back();
 }
+window.closeSelector = closeSelector;
 
 window.addEventListener('popstate', () => {
   if (openSelector) {
@@ -4328,18 +4712,51 @@ document.querySelectorAll(".selector-button[data-type='category']")
 
       showSelector('category')
 
-      const type = transactionTypes[inputTypeIndex];
+      let subWorkspace = null;
 
-      if (type === "expense") {
-        ScrollToSelectItem(categorySelector.querySelector(".primary-col"), expenseInputPrimaryCategory);
-        ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), expenseInputSecondaryCategory);
+      if (latestNavBtn === "nav-transaction") { // when creating an entry
+        subWorkspace = workspace.create;
       } else {
-        ScrollToSelectItem(categorySelector.querySelector(".primary-col"), incomeInputPrimaryCategory);
-        ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), incomeInputSecondaryCategory);
+        subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
       }
+
+      const inputType = subWorkspace.inputType;
+
+      ScrollToSelectItem(categorySelector.querySelector(".primary-col"), subWorkspace[inputType].primaryCategory);
+      ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), subWorkspace[inputType].secondaryCategory);
     });
   });
   
+document.querySelectorAll(".selector-button[data-type='account']")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      lastButton = btn;
+
+      showSelector('account')
+
+      let subWorkspace = null;
+
+      if (latestNavBtn === "nav-transaction") { // when creating an entry
+        subWorkspace = workspace.create;
+      } else {
+        subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+      }
+
+      const inputType = subWorkspace.inputType;
+
+      if (["expense", "income", "balance"].includes(inputType)) {
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), subWorkspace[inputType].accountInfo.type);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.name} (${subWorkspace[inputType].accountInfo.currency})`);
+      }
+
+      if (inputType === "transfer") {
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.name} (${subWorkspace[inputType].fromAccountInfo.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.name} (${subWorkspace[inputType].toAccountInfo.currency})`);
+      }
+    });
+  });
+
 /* Close when clicking outside */
 document.addEventListener("click", e => {
   if (!openSelector) return; // nothing open → do nothing

@@ -18,6 +18,7 @@
 
   <div class="header-bar">
     <button id="return-btn" onclick="history.back()" style="display: none;">&lt; 返回</button>
+    <button id="cancel-btn" onclick="resetCreate()" style="display: none;">取消</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
     <button id="save-btn-headerbar" class="header-right-button" onclick="addEntry()" style="display: none;">✔️保存</button>
     <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display: none;">🔍搜索</button>
@@ -372,13 +373,30 @@
       <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col primary-col">
-        <span class="emoji"></span>
+        <span class="icon"></span>
         <img class="icon" src="" alt="" />
         <span class="label"></span>
       </div>
       <span class="cat-separator">&gt;</span>
       <div class="dt-col secondary-col">
-        <span class="emoji"></span>
+        <span class="icon"></span>
+        <img class="icon" src="" alt="" />
+        <span class="label"></span>
+      </div>
+    </div>
+
+    <div id="account-selector" class="selector">
+      <button id="selector-manage-account-btn" type="button" class="datetime-now" onclick="showPage('manage-labels', 'nav-settings', translations[currentLang].manageAccounts)">管理</button>
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
+
+      <div class="dt-col primary-col">
+        <span class="icon"></span>
+        <img class="icon" src="" alt="" />
+        <span class="label"></span>
+      </div>
+      <span class="cat-separator">&gt;</span>
+      <div class="dt-col secondary-col">
+        <span class="icon"></span>
         <img class="icon" src="" alt="" />
         <span class="label"></span>
       </div>
@@ -390,7 +408,10 @@
 
       <div class="dt-col year-col"></div>
       <div class="dt-col month-col"></div>
-      <div class="dt-col day-col"></div>
+      <div class="dt-col day-col">
+        <div class="value"></div>
+        <div class="notes"></div>
+      </div>
       <div class="dt-col hour-col"></div>
       <div class="dt-col minute-col"></div>
     </div>
@@ -412,9 +433,9 @@
 
         <!-- Basic settings -->
         <section class="settings-section basic-settings">
-          <p id="basic-settings-title">基础设置</p>
+          <p id="basic-settings-title">个人偏好</p>
           <button id="open-basic-settings" class="settings-button"
-            onclick="showPage('basic-settings', 'nav-settings')">打开基础设置</button>
+            onclick="showPage('basic-settings', 'nav-settings')">打开个人偏好</button>
         </section>
 
         <section class="settings-section last-synced">
@@ -499,7 +520,7 @@
     <div class="page" id="basic-settings-page">
       <div class="scroll">
         <div class="settings-header">
-          <h2 id="basic-settings-header">基础设置</h2>
+          <h2 id="basic-settings-header">个人偏好</h2>
         </div>
 
         <!-- Language -->
@@ -547,6 +568,14 @@
                 <button id="save-home-image-btn" type="button">保存</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- Defaults -->
+        <section class="settings-section defaults">
+          <p id="defaults-title">默认配置</p>
+          <div id="defaults-actions">
+            <button id="manage-defaults-btn" class="settings-button">管理默认配置</button>
           </div>
         </section>
 
