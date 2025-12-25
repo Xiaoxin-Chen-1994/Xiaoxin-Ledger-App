@@ -1969,6 +1969,8 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
     }
   });
 
+  let dragStartDelayTimer = null;
+  const DRAG_START_DELAY = 150; // adjust 120–200ms to taste
   let pressTimer;
   let longPress = false;
   let isDragging = false;
@@ -2044,38 +2046,55 @@ function createCategoryRow(name, icon, parentWrapper, block, householdId, type, 
   btn.style.touchAction = "none"; // prevent scroll during drag
 
   btn.addEventListener("pointerdown", e => {
-    // Start drag for ALL pointer types (mouse, touch, pen)
-    isDragging = true;
     clearTimeout(pressTimer);
+    clearTimeout(dragStartDelayTimer);
+
     longPress = false;
+    isDragging = false; // <-- important: do NOT start dragging immediately
 
-    if (!isSecondary) {
-      block.querySelectorAll(".secondary-wrapper").forEach(w => {
-        w.style.display = "none";
-      });
-    }
+    // Start long‑press timer (unchanged)
+    pressTimer = setTimeout(() => {
+      if (isDragging) return;
+      longPress = true;
 
-    pointerDrag = {
-      draggedName: btn.dataset.name,
-      draggedType: btn.dataset.type,
-      draggedParent: btn.dataset.parentName,
-      currentY: e.clientY,
-      startBtn: btn
-    };
+      block.querySelectorAll(".has-actions").forEach(w => w.classList.remove("has-actions"));
+      block.querySelectorAll(".show").forEach(b => b.classList.remove("show"));
+      showActions(categoryWrapper, editBtn, deleteBtn);
+    }, 600);
 
-    btn.classList.add("dragging");
-    btn.setPointerCapture(e.pointerId);
+    // Delay before drag actually starts
+    dragStartDelayTimer = setTimeout(() => {
+      // Now drag begins
+      isDragging = true;
 
-    // Create drag ghost
-    dragGhost = btn.cloneNode(true);
-    dragGhost.classList.add("drag-ghost");
-    dragGhost.style.position = "fixed";
-    dragGhost.style.left = e.clientX + "px";
-    dragGhost.style.top = e.clientY + "px";
-    dragGhost.style.opacity = "0.7";
-    dragGhost.style.pointerEvents = "none";
-    dragGhost.style.zIndex = "9999";
-    document.body.appendChild(dragGhost);
+      pointerDrag = {
+        draggedName: btn.dataset.name,
+        draggedType: btn.dataset.type,
+        draggedParent: btn.dataset.parentName,
+        currentY: e.clientY,
+        startBtn: btn
+      };
+
+      if (!isSecondary) {
+        block.querySelectorAll(".secondary-wrapper").forEach(w => {
+          w.style.display = "none";
+        });
+      }
+
+      btn.classList.add("dragging");
+      btn.setPointerCapture(e.pointerId);
+
+      // Create drag ghost
+      dragGhost = btn.cloneNode(true);
+      dragGhost.classList.add("drag-ghost");
+      dragGhost.style.position = "fixed";
+      dragGhost.style.left = e.clientX + "px";
+      dragGhost.style.top = e.clientY + "px";
+      dragGhost.style.opacity = "0.7";
+      dragGhost.style.pointerEvents = "none";
+      dragGhost.style.zIndex = "9999";
+      document.body.appendChild(dragGhost);
+    }, DRAG_START_DELAY);
   });
 
   btn.addEventListener("pointermove", e => {
