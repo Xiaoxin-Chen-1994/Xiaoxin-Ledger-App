@@ -171,7 +171,7 @@ a {
 .base-page .scroll,
 .page .scroll {
   height: 100%; 
-  padding: 0 4% calc(var(--font-size) * 5 + 1rem);
+  padding: 0 4% 0;
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;         /* ✅ vertical scroll works */

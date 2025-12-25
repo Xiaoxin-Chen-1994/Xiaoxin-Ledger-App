@@ -76,29 +76,27 @@ let userDoc = null; // this variable will contain all data under this userId in 
 let householdDocs = {}; // this variable will contain all data of each household to which this userId has access
 
 let workspace = {} // use this variable to store temporary transaction data before being saved
-//workspace = [
-//   {
-//     create: {
-//       expense: {
-//          typeIndex, 
-//          type, 
-//          householdId, 
-//          datetime, 
-//          primaryCategory, 
-//          secondaryCategory, 
-//          primaryAccount, 
-//          secondaryAccount, 
-//          subject, 
-//          collection, 
-//          tags, 
-//          notes
-//       },
-//       income: {},
-//       transfer: {},
-//       balance: {},
-//     }
+//workspace = {
+//   create: {
+//     inputDatetime: datetime,
+//     inputTypeIndex: typeIndex,
+//     inputType: type,
+//     expense: {
+//        householdId, 
+//        primaryCategory, 
+//        secondaryCategory, 
+//        primaryAccount, 
+//        secondaryAccount, 
+//        subject, 
+//        collection, 
+//        tags, 
+//        notes
+//     },
+//     income: {},
+//     transfer: {},
+//     balance: {},
 //   }
-// ];
+// }
 const transactionTypes = ["expense", "income", "transfer", "balance"];
 let expenseInputCategoryInnerHTML= "";
 let incomeInputCategoryInnerHTML= "";
@@ -1010,7 +1008,7 @@ function getFormattedTime() {
   };
 }
 
-function setCurrentTime(button) {
+function setCurrentTime(button, subWorkspace) {
   const now = new Date();
 
   const yyyy = now.getFullYear();
@@ -1021,34 +1019,35 @@ function setCurrentTime(button) {
 
   const prefix = getDatePrefix(now);
 
-  inputTransactionTime = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`
+  subWorkspace.inputDatetime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
 
-  button.textContent = inputTransactionTime;
+  button.textContent = `${prefix}` + subWorkspace.inputDatetime;
   button.dataset.value = now.toISOString();
 }
 
-function setDefaultHousehold(button) {
+function setDefaultHousehold(button, subWorkspace) {
+  let inputHouseholdId = "";
   // Only set default if the button has no content
   if (button && button.textContent.trim() === "") {
-    inputHouseholdId = households[0].id;
-    button.textContent = households[0].name;
-    button.dataset.value = households[0].id;
-  } else {
-    const type = transactionTypes[inputTypeIndex];
-    const activeForm = type + "-form";
-    let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
-    const household = households.find(
-      h => h.name.toLowerCase() === householdBtn.textContent.toLowerCase()
-    );
+    inputHouseholdId = userDoc.orderedHouseholds[0];
 
-    if (household) {
-      inputHouseholdId = household.id;           // use the id directly
+    if (!subWorkspace[subWorkspace.inputType]) {
+      subWorkspace[subWorkspace.inputType] = {};
     }
+    subWorkspace[subWorkspace.inputType].householdId = inputHouseholdId;
+
+  } else {
+    inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
   }
-  console.log(inputHouseholdId)
+
+  button.textContent = householdDocs[inputHouseholdId].name;
+  button.dataset.value = inputHouseholdId;
 }
 
-function setDefaultCategory(button, type) {
+function setDefaultCategory(button, subWorkspace) {
+  const type = subWorkspace.inputType;
+  const inputHouseholdId = subWorkspace[type].householdId;
+
   const cats = categoriesByHousehold[inputHouseholdId][type];
 
   let primaryCat = null;
@@ -1470,6 +1469,16 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   document.getElementById(navBtn).style.background = "var(--primary)";
   document.getElementById(navBtn).classList.add("active");
 
+  // Get the nav element
+  const nav = document.querySelector(".bottom-nav");   // or your specific selector
+
+  const rect = nav.getBoundingClientRect();
+
+  const navHeight = rect.height;
+  const navBottom = getComputedStyle(nav).bottom;
+  const targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
+  targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
+  
   let dateTimeBtn = null;
 
   // transaction page special handling
@@ -1477,16 +1486,20 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     if (latestNavBtn === "nav-transaction") { // when creating an entry
       document.getElementById("app-title").textContent = t.navTransaction;
 
-      const type = transactionTypes[0]; // start with expense
-      const activeForm = type + "-form";
-      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-      let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
-      let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+      const inProgress = !!workspace.create;
+      if (!inProgress) { // reset button texts when creating a new entry
+        workspace.create = {};
+        
+        workspace.create.inputTypeIndex = 0;
+        workspace.create.inputType = transactionTypes[0]; // start with expense
+        const activeForm = workspace.create.inputType + "-form";
+        dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+        let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
+        let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
 
-      if (creatingTransaction === false) { // reset button texts when creating a new entry
-        if (dateTimeBtn) {setCurrentTime(dateTimeBtn);};
-        if (householdBtn) setDefaultHousehold(householdBtn);
-        if (categoryBtn) setDefaultCategory(categoryBtn, type);
+        if (dateTimeBtn) setCurrentTime(dateTimeBtn, workspace.create);
+        if (householdBtn) setDefaultHousehold(householdBtn, workspace.create);
+        if (categoryBtn) setDefaultCategory(categoryBtn, workspace.create);
         creatingTransaction = true;
       }
 
@@ -2190,6 +2203,12 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       isDragging = true;
       longPress = false;
       clearTimeout(pressTimer);
+      
+      if (!isSecondary) {
+        block.querySelectorAll(".secondary-wrapper").forEach(w => {
+          w.style.display = "none";
+        });
+      }
 
       const btnRect = btn.getBoundingClientRect();
 
@@ -2204,12 +2223,6 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
 
       btn.classList.add("dragging");
 
-      if (!isSecondary) {
-        block.querySelectorAll(".secondary-wrapper").forEach(w => {
-          w.style.display = "none";
-        });
-      }
-
       handle.setPointerCapture(e.pointerId);
 
       // Compute row position BEFORE cloning
@@ -2222,7 +2235,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       ghost.style.width = `${rowRect.width}px`;
       ghost.style.position = "fixed";
       ghost.style.left = `${rowRect.left}px`;
-      ghost.style.top = `${rowRect.top}px`;
+      ghost.style.top = `${e.clientY - dragInfo.height / 2}px`;
       ghost.style.pointerEvents = "none";
       ghost.style.opacity = "0.9";
       ghost.style.zIndex = "9999";
@@ -4130,10 +4143,11 @@ function parseButtonDate(btn) {
 function initHouseholdSelector() {
   const col = document.querySelector("#household-selector .household-col");
 
-  // Use names for display
-  const householdNames = Object.values(householdDocs)
-    .filter(data => data)   // remove nulls
-    .map(data => data.name);
+  // Get names for display
+  const householdNames = userDoc.orderedHouseholds
+    .map(id => householdDocs[id])     // get the doc for each id
+    .filter(doc => doc)               // remove null/undefined
+    .map(doc => doc.name);            // extract the name
 
   createList(col, householdNames);
 }
