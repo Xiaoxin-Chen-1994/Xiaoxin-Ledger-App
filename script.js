@@ -1168,12 +1168,16 @@ let startX = 0;
 let endX = 0;
 
 wrapper.addEventListener("touchstart", e => {
+  if (e.target.closest("input, textarea, [contenteditable]")) return;
+
   // do not add preventDefault otherwise the selectors won't show!
   // e.preventDefault();   // stop the browser from scrolling the page
   startX = e.touches[0].clientX;
 });
 
 wrapper.addEventListener("touchend", e => {
+  if (e.target.closest("input, textarea, [contenteditable]")) return;
+
   // do not add preventDefault otherwise the selectors won't show!
   // e.preventDefault();   // stop the browser from scrolling the page
   endX = e.changedTouches[0].clientX;
