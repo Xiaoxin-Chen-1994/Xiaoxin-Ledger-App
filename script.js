@@ -1504,7 +1504,26 @@ function showPage(name, navBtn = currentBase, title = latestTitle) {
     });
 
   } else if (latestPage === "manage-labels") {
-    document.getElementById("manage-btn-headerbar").style.display = "block";
+    const orderBtn = document.getElementById("manage-btn-headerbar");
+    orderBtn.style.display = "block";
+
+    orderBtn.addEventListener("click", () => {
+      const managePage = document.getElementById("manage-labels-page");
+      const orderPage  = document.getElementById("order-labels-page");
+
+      // Clone the scroll content (deep clone)
+      const cloned = managePage.querySelector(".scroll").cloneNode(true);
+
+      // OPTIONAL: remove other interactive elements
+      // cloned.querySelectorAll(".labels-icon-btn, .labels-tick-btn, .labels-cancel-btn").forEach(el => el.remove());
+
+      // Clear order page and insert cleaned clone
+      orderPage.innerHTML = "";
+      orderPage.appendChild(cloned);
+
+      showPage("order-labels", latestNavBtn, title);
+    });
+
   } else { // for all other pages
 
   }
@@ -1541,10 +1560,9 @@ function goBack() {
     showPage(prevPage, prevNavBtn, prevTitle);
 
     // replace state to reflect the new top of stack
-    history.back();
+    
   }
 }
-window.goBack = goBack;
 
 async function loadLabels(type, title) {
   const t = translations[currentLang];
@@ -2204,64 +2222,6 @@ function hideActions(wrapper, editBtn, deleteBtn) {
   deleteBtn.classList.remove("show");
 }
 
-function getDragAfterElement(container, y, mode) {
-  const targetClass = mode === "primary" ? "primary-category-row" : "secondary-category-row";
-console.log("container", container)
-  console.log("children", container.children)
-  // Only consider direct children that match the target class and are not being dragged
-  const children = Array.from(container.children).filter(
-    el => el.classList.contains(targetClass) && !el.classList.contains("dragging")
-  );
-  if (children.length === 0) return null;
-
-  let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
-  for (const child of children) {
-    const box = child.getBoundingClientRect();
-    const offset = y - (box.top + box.height / 2);
-    if (offset < 0 && offset > closest.offset) {
-      closest = { offset, element: child };
-    }
-  }
-  return closest.element;
-}
-
-async function reorderPrimaries(householdRef, type, orderedIds) {
-  const batch = householdRef.firestore.batch();
-  orderedIds.forEach((docId, index) => {
-    const ref = householdRef.collection(type).doc(docId);
-    batch.update(ref, { orderIndex: index });
-  });
-  await batch.commit();
-}
-
-async function reorderSecondaries(householdRef, type, parentId, orderedIds) {
-  const batch = householdRef.firestore.batch();
-  orderedIds.forEach((docId, index) => {
-    const ref = householdRef.collection(type).doc(parentId)
-                            .collection("secondaries").doc(docId);
-    batch.update(ref, { orderIndex: index });
-  });
-  await batch.commit();
-}
-
-async function moveSecondary(householdRef, type, fromParentId, toParentId, secondaryId) {
-  const fromRef = householdRef.collection(type).doc(fromParentId)
-                              .collection("secondaries").doc(secondaryId);
-  const toRef = householdRef.collection(type).doc(toParentId)
-                            .collection("secondaries").doc(secondaryId);
-
-  const snap = await fromRef.get();
-  if (!snap.exists) return;
-  const data = snap.data();
-
-  await fromRef.delete();
-
-  const toListSnap = await householdRef.collection(type).doc(toParentId)
-                                       .collection("secondaries").orderBy("orderIndex").get();
-  const nextIndex = toListSnap.size;
-  await toRef.set({ ...data, orderIndex: nextIndex });
-}
-
 // Attach swipe detection to the whole nav
 const nav = document.querySelector('.bottom-nav');
 const buttons = Array.from(nav.querySelectorAll('button'));
@@ -2328,7 +2288,7 @@ function enablePageSwipe(pageEl) {
 
     if (currentX > threshold) {
       pageEl.style.transform = "translateX(110%)";
-      setTimeout(() => goBack(), 300);
+      setTimeout(() => history.back(), 300);
     } else {
       pageEl.style.transform = "translateX(0)";
     }

@@ -17,7 +17,7 @@
   </div>
 
   <div class="header-bar">
-    <button id="return-btn" onclick="goBack()" style="display: none;">&lt; 返回</button>
+    <button id="return-btn" onclick="history.back()" style="display: none;">&lt; 返回</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
     <button id="save-btn-headerbar" class="header-right-button" onclick="addEntry()" style="display: none;">✔️保存</button>
     <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display: none;">🔍搜索</button>
@@ -560,6 +560,11 @@
       <div class="scroll">
         <h2 id="labels-title"></h2>
         <div id="labels-container"></div>
+      </div>
+    </div>
+
+    <div class="page" id="order-labels-page">
+      <div class="scroll">
       </div>
     </div>
 
