@@ -1209,7 +1209,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   .settings-section select,
   .settings-section select,
   .actions button {
-    background: var(--card);
+    background: var(--primary-category-bg); 
     color: var(--text);
     border-color: #ccc;
     outline: none;
@@ -1311,28 +1311,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   overflow-x: hidden;
 }
 
-/* Add stays full width; no JS width changes needed */
-.labels-add-row-btn {
-  text-align: left;
-  color: var(--text);
-  background: none;
-  flex: 1;
-  padding: 0.5rem;
-  min-width: 0; /* avoid unexpected overflow */
-}
-
-.labels-add-row-btn:hover {
-  color: var(--text);
-  background: none;
-}
-
 .labels-input-row {
   display: flex;
   gap: 8px;
   align-items: stretch;   /* stretch children to equal height */
 }
 
-.labels-emoji-btn {
+.labels-icon-btn {
   flex: 0 0 auto;   /* do not grow, do not shrink, size to content */
   background: var(--primary);
   padding: 0 0.2rem;   /* keep it tight */
@@ -1375,7 +1360,7 @@ emoji-picker {
   flex: 1 1 auto;   /* grow to fill remaining space */
   min-width: 0;     /* allow shrinking if needed */
   width: 100%;      /* ensures max width inside flex */
-  margin: 0;
+  margin: 0 !important;
   padding: 0;
   box-sizing: border-box;
 }

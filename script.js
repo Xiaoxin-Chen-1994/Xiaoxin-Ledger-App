@@ -1568,6 +1568,10 @@ async function loadLabels(type, title) {
       emptyMsg.style.background = "none";
       block.appendChild(emptyMsg);
     } else {
+      // Allow adding a primary
+      const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, householdId, type, title, false);
+      block.appendChild(addWrapper);
+
       if (["expense-categories", "income-categories"].includes(type)) {
         for (const category of householdDocs[householdId][type]) {
           const [row, primaryWrapper] = createCategoryRow(category.primary, category.icon, block, block, householdId, type, title, false);
@@ -1662,7 +1666,7 @@ function createCategoryInputRow(householdId, type, title, options = {}) {
   // icon button
   const iconBtn = document.createElement("button");
   iconBtn.textContent = options.icon || "Icon";
-  iconBtn.classList.add("labels-emoji-btn");
+  iconBtn.classList.add("labels-icon-btn");
 
   iconBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -2293,6 +2297,8 @@ function enablePageSwipe(pageEl) {
   let startX = 0, currentX = 0, isDragging = false;
 
   pageEl.addEventListener("touchstart", e => {
+    if (e.target.closest("input, textarea, [contenteditable]")) return;
+
     e.stopPropagation();
     startX = e.touches[0].clientX;
     isDragging = true;
@@ -2300,6 +2306,8 @@ function enablePageSwipe(pageEl) {
   });
 
   pageEl.addEventListener("touchmove", e => {
+    if (e.target.closest("input, textarea, [contenteditable]")) return;
+
     e.stopPropagation();
     if (!isDragging) return;
     currentX = e.touches[0].clientX - startX;
@@ -2309,6 +2317,8 @@ function enablePageSwipe(pageEl) {
   });
 
   pageEl.addEventListener("touchend", () => {
+    if (e.target.closest("input, textarea, [contenteditable]")) return;
+
     if (!isDragging) return;
     isDragging = false;
     const threshold = 100;
