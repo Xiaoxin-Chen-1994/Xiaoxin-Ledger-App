@@ -5142,6 +5142,9 @@ console.log(key.dataset.key)
   key.addEventListener('touchcancel', () => {
     key.classList.remove('pressed');
   });
+
+  // block right click
+  key.addEventListener("contextmenu", (e) => { e.preventDefault(); });
 });
 
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
