@@ -544,12 +544,23 @@ input[type="password"], input[type="url"], .selector-button,
   gap: 0.5rem;
 }
 
+/* Row 1: input + button + suggestions */
 .tag-input-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
+/* Input must NOT shrink */
+.tag-input {
+  flex: 1 1 auto;
+  min-width: 0; /* allows wrapping without disappearing */
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #ccc;
+}
+
+/* Button stays small */
 .add-tag-btn {
   flex: 0 0 auto;
   padding: 0.5rem 1rem;
@@ -558,22 +569,15 @@ input[type="password"], input[type="url"], .selector-button,
   background: var(--primary);
   color: #fff;
   cursor: pointer;
-  width: fit-content;
-  flex-shrink: 0;
 }
 
+/* Suggestions stay on the same row but wrap INSIDE their own area */
 .tag-suggestions {
-  margin-left: 1rem;
+  flex: 0 1 auto;
   display: flex;
-  gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.tag-suggestions span {
-  background: var(--card);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
+  gap: 0.5rem;
+  max-width: 40%; /* prevents pushing input away */
 }
 
 .tagged {
