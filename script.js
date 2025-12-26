@@ -1970,9 +1970,10 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         if (el) el.style.display = "none";
       });
     }
-  } else {
-    stack = historyStacks[latestNavBtn.replace("nav-", "")];
 
+    stack = historyStacks[navBtn.replace("nav-", "")];
+
+    // if a page was shown, hide all pages at the old base page
     stack.forEach(entry => {
       const el = document.getElementById(entry[0] + "-page");
       if (el) el.style.display = "block";
@@ -1984,7 +1985,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   stack = historyStacks[currentBase];
   latest = stack[stack.length - 1]; // there should always be at least one stack for each base page
   [latestPage, latestNavBtn, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
-    
+
   if (name !== latestPage && name !== currentBase) {
     // if the target page is not latest page, and is not base page, display this page
     latestPage = name;
@@ -2003,7 +2004,9 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
 
   if (!target) return;
 
-  if (!switchedBase) {
+  const current = getComputedStyle(target).transform;
+  // If it's not already at translateX(0), move it there
+  if (current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0")) {
     target.style.transform = "translateX(0%)";
     enablePageSwipe(target);
   }
@@ -2182,8 +2185,12 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
 
   const page = document.getElementById(task + "-page"); 
   page.dataset.activeHouseholdId = activeHouseholdId;
-  loadLabels(activeHouseholdId, task, type, title);
-  showPage(task, latestNavBtn, title, {type: type, title: title});
+
+  if (task === "manage-labels" || task === "order-labels") {
+    loadLabels(activeHouseholdId, task, type, title);
+    showPage(task, 'nav-settings', title, { type, title });
+  }
+
 }
 window.prepareHouseholdTabs = prepareHouseholdTabs;
 
@@ -4378,6 +4385,7 @@ function getDatePrefix(targetDate) {
   return prefix;
 }
 
+const amountSelector = document.getElementById("amount-selector");
 const datetimeSelector = document.getElementById("datetime-selector");
 const householdSelector = document.getElementById("household-selector");
 const categorySelector = document.getElementById("category-selector");
@@ -4386,6 +4394,7 @@ const subjectSelector = document.getElementById("subject-selector");
 const collectionSelector = document.getElementById("collection-selector");
 
 const selectorList = [
+  amountSelector,
   datetimeSelector,
   householdSelector,
   categorySelector,
@@ -5012,7 +5021,7 @@ function showSelector(selName) {
   if (sel) {
     sel.style.transform = 'translateY(0)';
   }
-
+console.log(selName, sel)
   return sel
 }
 
@@ -5047,6 +5056,16 @@ window.addEventListener('popstate', (e) => {
 });
 
 /* Open selector */
+document.querySelectorAll(".amount-row").forEach(btn => {
+  btn.onclick = e => {
+    e.stopPropagation();
+    lastButton = btn;
+
+    // Show the desired selector
+    showSelector('amount')
+  };
+});
+
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
   btn.onclick = e => {
     e.stopPropagation();

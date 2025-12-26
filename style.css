@@ -683,6 +683,65 @@ input[type="password"], input[type="url"], .selector-button,
   margin-right: 10px;
 }
 
+/* Inner panel (bottom sheet) */
+#amount-selector .keys {
+  background: var(--card);
+  width: 100%;
+  padding: 1rem;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+/* Close button */
+#amount-selector .selector-close {
+  position: absolute;
+  bottom: calc(100% - 0.5rem);
+  right: 1rem;
+  background: var(--card);
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+/* Key buttons */
+#amount-selector .keys button {
+  padding: 1rem;
+  font-size: 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--primary-light);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+/* Special buttons */
+#amount-selector .keys button.clear {
+  background: #ffb3b3;
+}
+
+#amount-selector .keys button.equals {
+  background: #b3ffb3;
+}
+
+#amount-selector .keys button.close {
+  background: #ddd;
+}
+
+/* Button press feedback */
+#amount-selector .keys button:active {
+  background: var(--primary);
+  color: white;
+}
+
 .dt-col {
   flex: 1;
   height: 100%;

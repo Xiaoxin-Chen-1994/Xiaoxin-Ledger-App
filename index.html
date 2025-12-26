@@ -131,7 +131,7 @@
 
           <!-- Expense -->
           <div class="transaction-page" id="expense-form">
-            <form class="transaction-form">
+            <form class="transaction-form" autocomplete="off">
               <div id="expense-amount-row" class="amount-row">
                 <button type="button" id="expense-amount" class="amount-button">0.00</button>
                 <label id="expense-calculation" class="calculation">2+3</label>
@@ -192,7 +192,7 @@
 
           <!-- Income -->
           <div class="transaction-page" id="income-form">
-            <form class="transaction-form">
+            <form class="transaction-form" autocomplete="off">
               <div id="income-amount-row" class="amount-row">
                 <button type="button" id="income-amount" class="amount-button">0.00</button>
                 <label id="income-calculation" class="calculation"></label>
@@ -253,7 +253,7 @@
 
           <!-- Transfer -->
           <div class="transaction-page" id="transfer-form">
-            <form class="transaction-form">
+            <form class="transaction-form" autocomplete="off">
               <div id="simple-transfer-amount-row" class="amount-row" style="display:none;">
                 <button type="button" id="transfer-amount" class="amount-button">0.00</button>
                 <label id="transfer-calculation" class="calculation"></label>
@@ -324,7 +324,7 @@
 
           <!-- Balance -->
           <div class="transaction-page" id="balance-form">
-            <form class="transaction-form">
+            <form class="transaction-form" autocomplete="off">
               <div id="balance-amount-row" class="amount-row">
                 <button type="button" id="balance-amount" class="amount-button">0.00</button>
                 <label id="balance-calculation" class="calculation"></label>
@@ -374,6 +374,37 @@
     </div>
 
     <!-- Selector panels -->
+    <div id="amount-selector" class="selector">
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
+
+      <div class="keys">
+        <button data-key="7">7</button>
+        <button data-key="8">8</button>
+        <button data-key="9">9</button>
+        <button data-key="÷">÷</button>
+
+        <button data-key="4">4</button>
+        <button data-key="5">5</button>
+        <button data-key="6">6</button>
+        <button data-key="×">×</button>
+
+        <button data-key="1">1</button>
+        <button data-key="2">2</button>
+        <button data-key="3">3</button>
+        <button data-key="-">−</button>
+
+        <button data-key="0">0</button>
+        <button data-key=".">.</button>
+        <button data-key="(">(</button>
+        <button data-key=")">)</button>
+
+        <button data-key="+">+</button>
+        <button data-key="C" class="clear">C</button>
+        <button data-key="=" class="equals">=</button>
+        <button data-key="close" class="close">Close</button>
+      </div>
+    </div>
+
     <div id="household-selector" class="selector">
       <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
