@@ -5064,6 +5064,43 @@ window.addEventListener('popstate', (e) => {
   // At base page: let Android handle back (exit to home)
 });
 
+const allowedKeys = {
+  "0": "0",
+  "1": "1",
+  "2": "2",
+  "3": "3",
+  "4": "4",
+  "5": "5",
+  "6": "6",
+  "7": "7",
+  "8": "8",
+  "9": "9",
+  ".": ".",
+  "+": "+",
+  "-": "-",
+  "*": "×",   // map keyboard * to ×
+  "/": "÷",   // map keyboard / to ÷
+  "(": "(",
+  ")": ")",
+  "Backspace": "backspace",
+  "Enter": "confirm"
+};
+
+document.addEventListener("keydown", e => {
+  const sel = document.getElementById("amount-selector");
+
+  // Only accept keyboard input when selector is visible
+  if (!sel || sel.style.transform === "translateY(120%)") return;
+
+  // If key not allowed, ignore
+  if (!(e.key in allowedKeys)) return;
+
+  e.preventDefault(); // stop typing into page
+
+  const mapped = allowedKeys[e.key];
+  handleAmountKey(mapped);
+});
+
 function tryUpdateAmount(expr, amountButton) {
   if (!expr) return;
 
