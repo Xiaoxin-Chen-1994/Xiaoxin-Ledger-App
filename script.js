@@ -505,24 +505,24 @@ enableIndexedDbPersistence(db)
     console.error("Persistence error:", err);
   });
 
-navigator.serviceWorker.ready.then(() => {
-  navigator.serviceWorker.addEventListener('message', event => {
-    const banner = document.getElementById('offline-banner');
-    const data = event.data;
+// navigator.serviceWorker.ready.then(() => {
+//   navigator.serviceWorker.addEventListener('message', event => {
+//     const banner = document.getElementById('offline-banner');
+//     const data = event.data;
 
-    if (data.offline) {
-      banner.textContent = `You are in offline mode. Check the data version you are using in Settings. New data will be uploaded when the internet becomes available.`;
+//     if (data.offline) {
+//       banner.textContent = `You may be offline. Check the data version you are using in Settings. New data will be uploaded when the internet becomes available.`;
 
-      banner.style.display = 'block';
-      const h = banner.offsetHeight; 
-      document.documentElement.style.setProperty("--banner-height", h + "px")
-    } else {
-      banner.textContent = "";
-      banner.style.display = 'none';
-      document.documentElement.style.setProperty("--banner-height", "0px")
-      }
-  });
-});
+//       banner.style.display = 'block';
+//       const h = banner.offsetHeight; 
+//       document.documentElement.style.setProperty("--banner-height", h + "px")
+//     } else {
+//       banner.textContent = "";
+//       banner.style.display = 'none';
+//       document.documentElement.style.setProperty("--banner-height", "0px")
+//       }
+//   });
+// });
 
 // --- Authentication ---
 async function signup() {
@@ -4950,9 +4950,7 @@ function closeSelector() {
 }
 window.closeSelector = closeSelector;
 
-window.addEventListener('popstate', (e) => {
-  e.preventDefault();
-  
+window.addEventListener('popstate', (e) => {  
   if (openSelector) {
     closeSelector();
     return;
