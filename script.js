@@ -5064,6 +5064,57 @@ window.addEventListener('popstate', (e) => {
   // At base page: let Android handle back (exit to home)
 });
 
+function tryUpdateAmount(expr, amountButton) {
+  if (!expr) return;
+
+  // Replace symbols with JS operators
+  const safeExpr = expr
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/');
+
+  try {
+    const result = Function(`"use strict"; return (${safeExpr})`)();
+
+    // Only update if result is a real number
+    if (typeof result === 'number' && isFinite(result)) {
+      amountButton.textContent = result.toFixed(2);
+    }
+  } catch (e) {
+    // Invalid expression → do nothing
+  }
+}
+
+function handleAmountKey(key) {
+  if (!lastButton) return;
+
+  const calcLabel = lastButton.querySelector('.calculation');
+  const amountButton = lastButton.querySelector('.amount-button');
+
+  let expr = calcLabel.textContent.trim();
+
+  // Handle backspace
+  if (key === 'backspace') {
+    expr = expr.slice(0, -1);
+    calcLabel.textContent = expr;
+    tryUpdateAmount(expr, amountButton);
+    return;
+  }
+
+  // Handle confirm
+  if (key === 'confirm') {
+    // You may want to close selector here
+    closeSelector();
+    return;
+  }
+
+  // Append normal key
+  expr += key;
+  calcLabel.textContent = expr;
+
+  // Try evaluating
+  tryUpdateAmount(expr, amountButton);
+}
+
 /* Open selector */
 document.querySelectorAll(".amount-row").forEach(btn => {
   btn.onclick = e => {
@@ -5076,18 +5127,20 @@ document.querySelectorAll(".amount-row").forEach(btn => {
 });
 
 // listener for amount-selector keys
-document.querySelectorAll('#amount-selector .keys button').forEach(btn => {
-  btn.addEventListener('touchstart', () => {
-    btn.classList.add('pressed');
+document.querySelectorAll('#amount-selector .keys button').forEach(key => {
+  key.addEventListener('touchstart', () => {
+    key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
+
+    handleAmountKey(key.dataset.key);
   });
 
-  btn.addEventListener('touchend', () => {
-    btn.classList.remove('pressed');
+  key.addEventListener('touchend', () => {
+    key.classList.remove('pressed');
   });
 
-  btn.addEventListener('touchcancel', () => {
-    btn.classList.remove('pressed');
+  key.addEventListener('touchcancel', () => {
+    key.classList.remove('pressed');
   });
 });
 
