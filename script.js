@@ -1586,7 +1586,7 @@ function switchTab(index) {
     let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
     if (subWorkspace.amount == null) {
       subWorkspace.amount = "0.00";
-      subWorkspace.calculation = "0.00";
+      subWorkspace.calculation = "";
     }
     amountBtn.textContent = subWorkspace.amount;
     calculationBtn.textContent = subWorkspace.calculation;
@@ -1601,7 +1601,7 @@ function switchTab(index) {
     let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
     if (subWorkspace.amount == null) {
       subWorkspace.amount = "0.00";
-      subWorkspace.calculation = "0.00";
+      subWorkspace.calculation = "";
     }
     amountBtn.textContent = subWorkspace.amount;
     calculationBtn.textContent = subWorkspace.calculation;
@@ -1615,7 +1615,7 @@ function switchTab(index) {
     let toCalculationBtn = document.getElementById('transfer-to-calculation');
     if (subWorkspace.transfer.toAmount == null) {
       subWorkspace.transfer.toAmount = "0.00";
-      subWorkspace.transfer.toCalculation = "0.00";
+      subWorkspace.transfer.toCalculation = "";
     }
     toAmountBtn.textContent = subWorkspace.transfer.toAmount;
     toCalculationBtn.textContent = subWorkspace.transfer.toCalculation;
@@ -4827,12 +4827,16 @@ function updateSelectorPreview(updatedCol) {
 
         if (subWorkspace.amount == null) {
           subWorkspace.amount = "0.00";
-          subWorkspace.calculation = "0.00";
+          subWorkspace.calculation = "";
         }
         amountBtn.textContent = subWorkspace.amount;
         calculationBtn.textContent = subWorkspace.calculation;
     
       } else {
+
+        document.getElementById("transfer-from-currency").textContent = fromCurrency;
+        document.getElementById("transfer-to-currency").textContent = toCurrency;
+        
         document.getElementById("simple-transfer-amount-row").style.display = "none";
         document.getElementById("exchange-transfer-amount-row").style.display = "block";
 
@@ -4841,7 +4845,7 @@ function updateSelectorPreview(updatedCol) {
         let fromCalculationBtn = document.getElementById('transfer-from-calculation');
         if (subWorkspace.amount == null) {
           subWorkspace.amount = "0.00";
-          subWorkspace.calculation = "0.00";
+          subWorkspace.calculation = "";
         }
         fromAmountBtn.textContent = subWorkspace.amount;
         fromCalculationBtn.textContent = subWorkspace.calculation;
