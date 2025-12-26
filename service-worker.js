@@ -1,4 +1,5 @@
-const CACHE_NAME = 'ledger-cache-v1';
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `my-app-cache-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/index.html',
