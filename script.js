@@ -438,7 +438,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
 }
-console.log("SW controller:", navigator.serviceWorker.controller);
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
@@ -5111,6 +5110,7 @@ document.addEventListener("click", e => {
 
 const updateBtn = document.getElementById("update-cached-code");
 const updateStatus = document.getElementById("update-status");
+console.log("SW controller:", navigator.serviceWorker.controller);
 
 updateBtn.addEventListener("click", () => {
   if (navigator.serviceWorker.controller) {
