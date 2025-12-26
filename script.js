@@ -433,6 +433,7 @@ const translations = {
 
 window.translations = translations;
 window.currentLang = currentLang;
+window.scrollTo(0, 0);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
