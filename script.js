@@ -438,6 +438,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
     .then(() => console.log('Service Worker registered'));
 }
+console.log("SW controller:", navigator.serviceWorker.controller);
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
@@ -5108,5 +5109,24 @@ document.addEventListener("click", e => {
   }
 });
 
+const updateBtn = document.getElementById("update-cached-code");
+const updateStatus = document.getElementById("update-status");
 
+updateBtn.addEventListener("click", () => {
+  if (navigator.serviceWorker.controller) {
+    updateStatus.textContent = "正在更新程序，请稍候…";
+    navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+  }
+});
 
+navigator.serviceWorker.addEventListener("message", (event) => {
+  if (event.data.updated) {
+    updateStatus.innerHTML = `
+      更新完成！<button id="reload-app">重新加载</button>
+    `;
+
+    document.getElementById("reload-app").addEventListener("click", () => {
+      location.reload();
+    });
+  }
+});
