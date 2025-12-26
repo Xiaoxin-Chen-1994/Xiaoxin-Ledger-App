@@ -2037,7 +2037,6 @@ function resetCreate() {
 window.resetCreate = resetCreate;
 
 function goBack() {
-console.log('goback')
   closeSelector();
   
   const stack = historyStacks[currentBase];
@@ -4949,6 +4948,7 @@ window.addEventListener('popstate', (event) => {
   }
 
   const stack = historyStacks[currentBase];
+  showStatusMessage("stack="+stack.length, 'info')
   if (stack.length > 1) {
     goBack();
     return;
