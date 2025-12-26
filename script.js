@@ -1702,22 +1702,26 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     suggestionsDiv.innerHTML = "";
 
     if (text.length === 0) return;
+    
+    let subWorkspace = null;
 
-    // v8 style: households/{householdId}/tags
-    const tagsRef = db
-      .collection("households")
-      .doc(inputHouseholdId)
-      .collection("tags");
+    if (latestNavBtn === "nav-transaction") { // when creating an entry
+      subWorkspace = workspace.create;
+    } else {
+      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    }
+    const inputType = subWorkspace.inputType;
+    const householdId = subWorkspace[inputType].householdId;
 
-    const snapshot = await tagsRef.get();
+    const tags = householdDocs[householdId].tags
 
-    snapshot.forEach(doc => {
-      const tag = doc.data(); // { name, entryIds }
-      if (tag.name && tag.name.includes(text)) {
+    tags.forEach(tag => {
+      if (tag && tag.includes(text)) {
         const span = document.createElement("span");
-        span.textContent = tag.name;
+        span.textContent = tag;
+        console.log(span)
         span.addEventListener("click", () => {
-          input.value = tag.name;
+          input.value = tag;
         });
         suggestionsDiv.appendChild(span);
       }
@@ -1728,10 +1732,57 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
   button.addEventListener("click", () => {
     const newTag = input.value.trim();
     if (!newTag) return;
-    console.log("Add tag:", newTag, "for", container.className);
-    // TODO: update Firestore entryIds here
+    
+    let subWorkspace = null;
+
+    if (latestNavBtn === "nav-transaction") { // when creating an entry
+      subWorkspace = workspace.create;
+    } else {
+      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    }
+    
+    if (!Array.isArray(subWorkspace.tag)) {
+      subWorkspace.tags = [];
+    }
+    subWorkspace.tags.push(newTag);
+    addTag(newTag, subWorkspace);
+
   });
 });
+
+function addTag(newTag, subWorkspace) {
+  // Find the form container
+  const form = document.getElementById(`${subWorkspace.inputType}-form`);
+  if (!form) return;
+
+  // Find the .tagged div inside this form
+  const container = form.querySelector('.tagged');
+    console.log(container)
+  if (!container) return;
+
+  const tagEl = document.createElement('div');
+  tagEl.className = 'tag';
+
+  tagEl.innerHTML = `
+    <span>${newTag}</span>
+    <button class="delete-tag">×</button>
+  `;
+
+  // Delete behavior
+  tagEl.querySelector('.delete-tag').addEventListener('click', () => {
+  // Remove from UI
+  tagEl.remove();
+
+  // Remove from data model
+  const index = subWorkspace.tags.indexOf(newTag);
+    if (index !== -1) {
+      subWorkspace.tags.splice(index, 1);
+    }
+  });
+
+  container.appendChild(tagEl);
+}
+
 
 document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
   textarea.addEventListener('input', function () {
