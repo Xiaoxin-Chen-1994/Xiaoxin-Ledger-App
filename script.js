@@ -4959,7 +4959,7 @@ window.addEventListener('popstate', (e) => {
   const stack = historyStacks[currentBase];
 
   if (stack.length > 1) {
-    // goBack();
+    goBack();
     return;
   }
 
