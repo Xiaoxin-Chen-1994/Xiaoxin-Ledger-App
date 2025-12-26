@@ -9,69 +9,33 @@ const urlsToCache = [
   '/icons/icon-192.png'
 ];
 
-// Cache app shell on install
+// Disable all caching
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
-});
-self.addEventListener('install', event => {
+  // Activate immediately
   self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
+  // Delete ALL caches
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.map(key => caches.delete(key)))
     )
   );
+
+  // Take control of all pages immediately
+  self.clients.claim();
 });
 
-// Helper to notify all clients
-function notifyClients(data) {
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => client.postMessage(data));
-  });
-}
-
-// ❗ NEW: Listen for manual update request
-self.addEventListener('message', async event => {
-  if (event.data && event.data.type === 'UPDATE_CACHE') {
-    console.log("SW: Starting manual update…");
-
-    const cache = await caches.open(CACHE_NAME);
-
-    for (const url of urlsToCache) {
-      try {
-        console.log("SW: Fetching", url);
-        const response = await fetch(url, { cache: 'reload' });
-        await cache.put(url, response);
-      } catch (err) {
-        console.error("SW: Failed to update", url, err);
-      }
-    }
-
-    console.log("SW: Update complete");
-    notifyClients({ updated: true });
-  }
-});
-
-// ❗ NEW: Cache-first fetch handler (no auto-updating)
+// Always fetch from network, never use cache
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  if (url.origin !== location.origin) return;
-
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) {
-        return cached; // Always prefer cached version
-      }
-
-      // If not cached, fetch from network
-      return fetch(event.request)
-        .then(response => response)
-        .catch(() => caches.match('/index.html'));
-    })
+    fetch(event.request, { cache: 'no-store' })
+      .catch(() => {
+        // fallback only if offline AND request is navigation
+        if (event.request.mode === 'navigate') {
+          return fetch('/index.html', { cache: 'no-store' });
+        }
+      })
   );
 });
