@@ -5066,6 +5066,7 @@ function clickToSetNow() {
 window.clickToSetNow = clickToSetNow;
 
 let openSelector = null;
+let keypadOpen = false;
 
 function showSelector(selName) {
   // Case 1: same selector already open → do nothing
@@ -5080,7 +5081,7 @@ function showSelector(selName) {
       prevSel.style.transform = 'translateY(120%)';
     }
   }
-
+  
   history.pushState({ selector: true }, '', location.href);
 
   // Open the new selector in cases 2 and 3
@@ -5094,6 +5095,8 @@ function showSelector(selName) {
       // Auto height based on content
       sel.style.height = 'auto';
       sel.style.maxHeight = '80vh'; // optional safety cap
+
+      keypadOpen = true;
     } else {
       // Fixed height for all other selectors
       sel.style.height = '30%';
@@ -5105,6 +5108,8 @@ function showSelector(selName) {
 
 function closeSelector() {
   if (!openSelector) return;
+  
+  keypadOpen = false;
 
   const sel = document.getElementById(openSelector + '-selector');
   if (sel) {
@@ -5160,9 +5165,8 @@ const allowedKeys = {
 let backspaceInterval = null;
 
 document.addEventListener("keydown", e => {
-  const sel = document.getElementById("amount-selector");
+  if (!keypadOpen) return; // only respond when keypad is open
 
-  if (!sel || sel.style.transform === "translateY(120%)") return;
   if (!(e.key in allowedKeys)) return;
 
   e.preventDefault();
