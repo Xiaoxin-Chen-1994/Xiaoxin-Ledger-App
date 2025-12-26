@@ -5199,7 +5199,6 @@ document.querySelectorAll(".amount-row").forEach(btn => {
 // listener for amount-selector keys
 document.querySelectorAll('#amount-selector .keys button').forEach(key => {
 
-  // MOUSE (desktop)
   key.addEventListener('mousedown', e => {
     e.preventDefault();
     key.classList.add('pressed');
@@ -5226,30 +5225,6 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
 
   // block right click
   key.addEventListener("contextmenu", e => e.preventDefault());
-
-  // TOUCH
-  key.addEventListener('touchstart', () => {
-    key.classList.add('pressed');
-    if (navigator.vibrate) navigator.vibrate(30);
-
-    const k = key.dataset.key;
-
-    if (k === 'backspace') {
-      startBackspaceHold();
-    } else {
-      handleAmountKey(k);
-    }
-  });
-
-  key.addEventListener('touchend', () => {
-    key.classList.remove('pressed');
-    stopBackspaceHold();
-  });
-
-  key.addEventListener('touchcancel', () => {
-    key.classList.remove('pressed');
-    stopBackspaceHold();
-  });
 });
 
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
