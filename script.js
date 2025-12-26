@@ -5135,35 +5135,60 @@ function stopBackspaceHold() {
 function tryUpdateAmount(expr, amountButton) {
   if (!expr) return;
 
-  // Replace symbols with JS operators
-  const safeExpr = expr
-    .replace(/×/g, '*')
-    .replace(/÷/g, '/');
+  const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
 
-    // Only update if result is a real number
     if (typeof result === 'number' && isFinite(result)) {
       amountButton.textContent = result.toFixed(2);
-      
-      const defaultSize = `calc(var(--font-size) * 2.5)`;
-      let size = 2.5; // multiplier
 
-      // Reset to default first
-      amountButton.style.fontSize = defaultSize;
+      // Initialize scale if missing
+      if (!amountButton.dataset.fontScale) {
+        amountButton.dataset.fontScale = "2.5";
+      }
 
-      // If it fits, we're done
-      if (amountButton.scrollWidth <= amountButton.clientWidth) return;
+      let size = parseFloat(amountButton.dataset.fontScale);
+      const defaultSize = 2.5;
 
-      // Otherwise shrink until it fits
+      // Apply current size
+      amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
+
+      // Force reflow so scrollWidth is accurate
+      amountButton.offsetWidth;
+
+      // Try growing first
+      if (amountButton.scrollWidth <= amountButton.clientWidth) {
+        while (size < defaultSize) {
+          size += 0.1;
+          amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
+
+          // Force reflow
+          amountButton.offsetWidth;
+
+          if (amountButton.scrollWidth > amountButton.clientWidth) {
+            size -= 0.1;
+            amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
+            break;
+          }
+        }
+        amountButton.dataset.fontScale = size.toFixed(2);
+        return;
+      }
+
+      // Otherwise shrink
       while (amountButton.scrollWidth > amountButton.clientWidth && size > 1.0) {
         size -= 0.1;
         amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
+
+        // Force reflow
+        amountButton.offsetWidth;
       }
+
+      amountButton.dataset.fontScale = size.toFixed(2);
     }
   } catch (e) {
-    // Invalid expression → do nothing
+    // invalid expression → ignore
   }
 }
 
