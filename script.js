@@ -5089,7 +5089,7 @@ function handleAmountKey(key) {
 
   const calcLabel = lastButton.querySelector('.calculation');
   const amountButton = lastButton.querySelector('.amount-button');
-
+console.log(calcLabel)
   let expr = calcLabel.textContent.trim();
 
   // Handle backspace
@@ -5131,7 +5131,7 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
   key.addEventListener('touchstart', () => {
     key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
-
+console.log(key.dataset.key)
     handleAmountKey(key.dataset.key);
   });
 
