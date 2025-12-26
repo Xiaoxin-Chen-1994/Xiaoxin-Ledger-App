@@ -5135,60 +5135,20 @@ function stopBackspaceHold() {
 function tryUpdateAmount(expr, amountButton) {
   if (!expr) return;
 
-  const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
+  // Replace symbols with JS operators
+  const safeExpr = expr
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/');
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
 
+    // Only update if result is a real number
     if (typeof result === 'number' && isFinite(result)) {
       amountButton.textContent = result.toFixed(2);
-
-      // Initialize scale if missing
-      if (!amountButton.dataset.fontScale) {
-        amountButton.dataset.fontScale = "2.5";
-      }
-
-      let size = parseFloat(amountButton.dataset.fontScale);
-      const defaultSize = 2.5;
-
-      // Apply current size
-      amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
-
-      // Force reflow so scrollWidth is accurate
-      amountButton.offsetWidth;
-
-      // Try growing first
-      if (amountButton.scrollWidth <= amountButton.clientWidth) {
-        while (size < defaultSize) {
-          size += 0.1;
-          amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
-
-          // Force reflow
-          amountButton.offsetWidth;
-
-          if (amountButton.scrollWidth > amountButton.clientWidth) {
-            size -= 0.1;
-            amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
-            break;
-          }
-        }
-        amountButton.dataset.fontScale = size.toFixed(2);
-        return;
-      }
-      
-      // Otherwise shrink
-      while (amountButton.scrollWidth > amountButton.clientWidth && size > 1.0) {
-        size -= 0.1;
-        amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
-
-        // Force reflow
-        amountButton.offsetWidth;
-      }
-
-      amountButton.dataset.fontScale = size.toFixed(2);
     }
   } catch (e) {
-    // invalid expression → ignore
+    // Invalid expression → do nothing
   }
 }
 
