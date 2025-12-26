@@ -78,9 +78,13 @@ let householdDocs = {}; // this variable will contain all data of each household
 let workspace = {} // use this variable to store temporary transaction data before being saved
 //workspace = {
 //   create: {
+//     amount: amount, 
+//     amountCalulation: string,
 //     inputTransactionTime: datetime,
 //     inputTypeIndex: typeIndex,
-//     inputType: type,
+//     inputType: type, 
+//     inputNotes: notes,
+//     tags: array, 
 //     expense: {
 //        householdId, 
 //        primaryCategory, 
@@ -88,18 +92,18 @@ let workspace = {} // use this variable to store temporary transaction data befo
 //        primaryAccount, 
 //        secondaryAccount, 
 //        subject, 
-//        collection, 
-//        tags, 
-//        notes
+//        collection
 //     },
 //     income: {},
-//     transfer: {},
+//     transfer: {
+//        toAmount: amount, 
+//        toAmountCalculation: string,
+//       },
 //     balance: {},
 //   }
 // }
 const transactionTypes = ["expense", "income", "transfer", "balance"];
 const accountTypes = ["cashAccounts", "creditCards", "depositoryAccounts", "storedValueCards", "investmentAccounts"];
-let inputNotes = null;
 
 let currentBase = "home";
 let latestPage = null;
@@ -1219,35 +1223,45 @@ function setDefaultCategory(button, subWorkspace) {
 }
 
 function findSelectedAccount(householdId, accountType, accountName) {
+  const accountsRoot = householdDocs[householdId].accounts;
 
-  const accountsByType = householdDocs[householdId].accounts[accountType];
+  // -----------------------------------------------------
+  // If accountType is null → search ALL account types
+  // -----------------------------------------------------
+  if (!accountType) {
+    for (const typeKey of accountTypes) {
+      const result = findSelectedAccount(householdId, typeKey, accountName);
+      if (result) return result;
+    }
+    return null; // not found anywhere
+  }
+
+  // -----------------------------------------------------
+  // Normal behavior: search within a specific accountType
+  // -----------------------------------------------------
+  const accountsByType = accountsRoot[accountType];
   if (!accountsByType) return null;
 
-  // -----------------------------------------
   // 1. Try to match a top-level account
-  // -----------------------------------------
-  let top = accountsByType.find(acc => acc.name === accountName);
-
+  const top = accountsByType.find(acc => acc.name === accountName);
   if (top) {
     return {
       type: accountType,
-      account: top,            // the account object
-      parent: null,            // no parent
+      account: top,
+      parent: null
     };
   }
 
-  // -----------------------------------------
   // 2. Try to match a sub-account
-  // -----------------------------------------
   for (const acc of accountsByType) {
-    const subList = acc["sub-accounts"] || [];
-    const sub = subList.find(sa => sa.name === accountName);
+    const subs = acc["sub-accounts"] || [];
+    const sub = subs.find(sa => sa.name === accountName);
 
     if (sub) {
       return {
         type: accountType,
-        account: sub,                         // the sub-account object
-        parent: acc,                          // parent account object
+        account: sub,
+        parent: acc
       };
     }
   }
@@ -1273,7 +1287,11 @@ function setDefaultAccount(button, subWorkspace) {
         const accountIcon = subWorkspace[type].accountInfo.account.icon;
         const accountCurrency = subWorkspace[type].accountInfo.account.currency;
         
-        subWorkspace[type].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
+        if (isUrl(accountIcon)) { // render <img>
+          subWorkspace[type].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
+        } else { // render text directly
+          subWorkspace[type].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
+        }
       }
     }
 
@@ -1288,7 +1306,11 @@ function setDefaultAccount(button, subWorkspace) {
         const fromName = from.name;
         const fromCurrency = from.currency;
 
-        subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
+        if (isUrl(fromIcon)) { // render <img>
+          subWorkspace.transfer.fromAccountInnerHTML = `<img src="${fromIcon}" class="account-icon"> ${fromName} (${fromCurrency})`;
+        } else { // render text directly
+          subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
+        }
       }
 
       // TO ACCOUNT
@@ -1299,13 +1321,21 @@ function setDefaultAccount(button, subWorkspace) {
         const toName = to.name;
         const toCurrency = to.currency;
 
-        subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
+        if (isUrl(toIcon)) { // render <img>
+          subWorkspace.transfer.toAccountInnerHTML = `<img src="${toIcon}" class="account-icon"> ${toName} (${toCurrency})`;
+        } else { // render text directly
+          subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
+        }
       }
     }
   });
 
   const inputType = subWorkspace.inputType;
   const householdId = subWorkspace[inputType].householdId;
+
+  // Prepare account column
+  const accountTypeCol = accountSelector.querySelector(".primary-col");
+  const accountCol = accountSelector.querySelector(".secondary-col");
 
   if (["expense", "income", "balance"].includes(inputType)) {
     const accountTypeList = accountTypes.map(type => t[type]);
@@ -1332,10 +1362,6 @@ function setDefaultAccount(button, subWorkspace) {
 
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
-    // Prepare account column
-    const accountTypeCol = accountSelector.querySelector(".primary-col");
-    const accountCol = accountSelector.querySelector(".secondary-col");
-
     createList(accountTypeCol, accountTypeList);
     ScrollToSelectItem(accountTypeCol, t[subWorkspace[inputType].accountInfo.type]); 
     
@@ -1344,7 +1370,166 @@ function setDefaultAccount(button, subWorkspace) {
   }
 
   if (inputType === "transfer") {
-  
+    const allAccounts = [];
+
+    accountTypes.forEach(typeKey => {
+      const accountsOfType = householdDocs[householdId].accounts[typeKey] || [];
+
+      accountsOfType.forEach(acc => {
+        const subs = acc["sub-accounts"] || [];
+
+        if (subs.length > 0) {
+          // Add each sub-account
+          subs.forEach(sub => {
+            allAccounts.push({
+              icon: sub.icon,
+              name: `${sub.name} (${sub.currency})`,
+              currency: sub.currency,
+              parent: acc.name,
+              type: typeKey
+            });
+          });
+        } else {
+          // Add the main account
+          allAccounts.push({
+            icon: acc.icon,
+            name: `${acc.name} (${acc.currency})`,
+            currency: acc.currency,
+            parent: null,
+            type: typeKey
+          });
+        }
+      });
+    });
+
+    button[0].innerHTML = subWorkspace[inputType].fromAccountInnerHTML;
+    button[1].innerHTML = subWorkspace[inputType].toAccountInnerHTML;
+
+    createList(accountTypeCol, allAccounts);
+    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].fromAccountInfo.name} (${subWorkspace[inputType].fromAccountInfo.currency})`); 
+
+    createList(accountCol, allAccounts);
+    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].toAccountInfo.name} (${subWorkspace[inputType].toAccountInfo.currency})`); 
+  }
+}
+
+function setDefaultSubject(button, subWorkspace) {
+  // Initialize workspace for each type
+  transactionTypes.forEach(type => {
+    if (["expense", "income"].includes(type)) {
+      if (!subWorkspace[type]) {
+        subWorkspace[type] = {};
+      }
+
+      // Set default subject if missing
+      if (!subWorkspace[type].subject) {
+        subWorkspace[type].subject = userDoc.defaults[type].subject;
+        subWorkspace[type].subjectIcon = userDoc.defaults[type].subjectIcon;
+
+        subWorkspace[type].subjectInnerHTML = `${subWorkspace[type].subjectIcon} ${subWorkspace[type].subject}`;
+      }
+    }
+  });
+
+  const inputType = subWorkspace.inputType;
+  const householdId = subWorkspace[inputType].householdId;
+
+  if (["expense", "income"].includes(inputType)) {
+    const subjects = householdDocs[householdId].subjects;
+
+    const currentSubject = subWorkspace[inputType].subject;
+    const subjectExists = subjects.some(s => s.name === currentSubject);
+
+    if (!subjectExists) {
+      const def = userDoc.defaults[inputType];
+      const sameHouseholdAsDefault = householdId === def.householdId;
+
+      if (sameHouseholdAsDefault) {
+        // Restore defaults
+        subWorkspace[inputType].subject = def.subject;
+        subWorkspace[inputType].subjectIcon = def.subjectIcon;
+
+      } else {
+        // Use first available subject
+        const first = subjects[0] || { name: "", icon: "" };
+
+        subWorkspace[inputType].subject = first.name;
+        subWorkspace[inputType].subjectIcon = first.icon;
+      }
+
+      // Update HTML
+      subWorkspace[inputType].subjectInnerHTML = `${subWorkspace[inputType].subjectIcon} ${subWorkspace[inputType].subject}`;
+    }
+
+    // Update button
+    button.innerHTML = subWorkspace[inputType].subjectInnerHTML;
+
+    // Prepare subject column
+    const subjectCol = subjectSelector.querySelector(".subject-col");
+
+    createList(subjectCol, subjects);
+    ScrollToSelectItem(subjectCol, subWorkspace[inputType].subject);
+  }
+}
+
+function setDefaultCollection(button, subWorkspace) {
+  // Initialize workspace for each type
+  transactionTypes.forEach(type => {
+    if (["expense", "income"].includes(type)) {
+      if (!subWorkspace[type]) {
+        subWorkspace[type] = {};
+      }
+
+      // Set default collection if missing
+      if (!subWorkspace[type].collection) {
+        subWorkspace[type].collection = userDoc.defaults[type].collection;
+        subWorkspace[type].collectionIcon = userDoc.defaults[type].collectionIcon;
+
+        subWorkspace[type].collectionInnerHTML =
+          `${subWorkspace[type].collectionIcon} ${subWorkspace[type].collection}`;
+      }
+    }
+  });
+
+  const inputType = subWorkspace.inputType;
+  const householdId = subWorkspace[inputType].householdId;
+
+  if (["expense", "income"].includes(inputType)) {
+    const collections = householdDocs[householdId].collections;
+
+    const currentCollection = subWorkspace[inputType].collection;
+    const collectionExists = collections.some(c => c.name === currentCollection);
+
+    if (!collectionExists) {
+      const def = userDoc.defaults[inputType];
+      const sameHouseholdAsDefault = householdId === def.householdId;
+
+      if (sameHouseholdAsDefault) {
+        // Restore defaults
+        subWorkspace[inputType].collection = def.collection;
+        subWorkspace[inputType].collectionIcon = def.collectionIcon;
+
+      } else {
+        // Use first available collection
+        const first = collections[0] || { name: "", icon: "" };
+
+        subWorkspace[inputType].collection = first.name;
+        subWorkspace[inputType].collectionIcon = first.icon;
+      }
+
+      // Update HTML
+      subWorkspace[inputType].collectionInnerHTML =
+        `${subWorkspace[inputType].collectionIcon} ${subWorkspace[inputType].collection}`;
+    }
+
+    // Update button
+    button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
+
+    // Prepare collection column
+    const collectionCol = collectionSelector.querySelector(".collection-col");
+
+    createList(collectionCol, collections);
+    ScrollToSelectItem(collectionCol, subWorkspace[inputType].collection);
   }
 }
 
@@ -1358,7 +1543,17 @@ function vibrate(ms) {
 }
 
 function switchTab(index) {
-  inputTypeIndex = index;
+  let subWorkspace = null;
+
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  const inputType = transactionTypes[index];
+  subWorkspace.inputType = inputType;
+
   wrapper.style.transform = `translateX(-${index * 105}%)`; // this includes the 5% gap in class .transaction-wrapper
 
   // Update active button
@@ -1369,37 +1564,59 @@ function switchTab(index) {
 
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
+  const activeForm = inputType + "-form";
 
   // household
-  const householdEl = activeTab.querySelector(".selector-button[data-type='household']");
+  const householdEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='household']`);
+  setDefaultHouseholds(householdEl, subWorkspace);
+  
+  // category
+  if (["expense", "income"].includes(inputType)) {
+    let categoryBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+    setDefaultCategory(categoryBtn, subWorkspace);
+  }
 
-  setDefaultHouseholds(householdEl);
-
-  // initialize category columns and button text
-  const type = transactionTypes[inputTypeIndex];
-  const activeForm = type + "-form";
-  if (type === "income" || type === "expense") {
-    let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
-    setDefaultCategory(categoryBtn, type);
+  // account
+  if (["expense", "income", "balance"].includes(inputType)) {
+    let accountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='account']`);
+    setDefaultAccount(accountBtn, subWorkspace);
+  } else { // for transfer
+    let fromAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
+    let toAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
+    setDefaultAccount([fromAccountBtn, toAccountBtn], subWorkspace);
   }
 
   // datetime
-  const datetimeEl = activeTab.querySelector(".selector-button[data-type='datetime']");
-  if (datetimeEl && inputTransactionTime) {
-    datetimeEl.textContent = inputTransactionTime;
-  }
+  const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+  const [yyyy, mm, dd, hh, min] = parseDateFromString(subWorkspace.inputTransactionTime);
+  const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
+  const prefix = getDatePrefix(dateObj);
+  datetimeEl.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
 
-  // person
-  const personEl = activeTab.querySelector("input[list='person-list']");
-  if (personEl && inputPerson) {
-    personEl.value = inputPerson;
+  // subject
+  if (["expense", "income"].includes(inputType)) {
+    const subjectEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
+    subjectEl.textContent = subWorkspace[inputType].subjectInnerHTML;
+
+    // collection
+    const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
+    collectionEl.textContent = subWorkspace[inputType].collectionInnerHTML;
   }
 
   // notes
-  const notesEl = activeTab.querySelector("textarea[id$='notes']");
-  if (notesEl && inputNotes) {
-    notesEl.value = inputNotes;
-  }
+  const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
+  notesEl.value = subWorkspace.inputNotes;
+}
+
+/* Parse datetime from string */
+function parseDateFromString(string) {
+  const text = removeDatePrefix(string);
+
+  const [datePart, timePart] = text.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.split(":").map(Number);
+
+  return [y, m, d, h, min ];
 }
 
 // Button click
@@ -1515,12 +1732,20 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
   });
 });
 
-document.querySelectorAll('textarea').forEach(textarea => {
+document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
   textarea.addEventListener('input', function () {
     this.style.height = 'auto';              // reset height
     this.style.height = this.scrollHeight + 'px'; // set to content height
 
-    inputNotes = this.value; // copy content into inputNotes
+    let subWorkspace = null;
+
+    if (latestNavBtn === "nav-transaction") { // when creating an entry
+      subWorkspace = workspace.create;
+    } else {
+      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    }
+
+    subWorkspace.inputNotes = this.value; // copy content into inputNotes
   });
 });
 
@@ -1735,11 +1960,15 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
         let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
         let accountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='account']`);
+        let subjectBtn = document.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
+        let collectionBtn = document.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
  
         setCurrentTime(dateTimeBtn, workspace.create);
         setDefaultHouseholds(householdBtn, workspace.create);
         setDefaultCategory(categoryBtn, workspace.create);
         setDefaultAccount(accountBtn, workspace.create);
+        setDefaultSubject(subjectBtn, workspace.create);
+        setDefaultCollection(collectionBtn, workspace.create);
 
         const notesEl = document.querySelector(`#${activeForm} textarea[id$='notes']`);
         notesEl.value = workspace.create.notes;
@@ -4077,12 +4306,16 @@ const datetimeSelector = document.getElementById("datetime-selector");
 const householdSelector = document.getElementById("household-selector");
 const categorySelector = document.getElementById("category-selector");
 const accountSelector = document.getElementById("account-selector");
+const subjectSelector = document.getElementById("subject-selector");
+const collectionSelector = document.getElementById("collection-selector");
 
 const selectorList = [
   datetimeSelector,
   householdSelector,
   categorySelector,
-  accountSelector
+  accountSelector,
+  subjectSelector,
+  collectionSelector
 ];
 
 let lastButton = null;
@@ -4394,11 +4627,11 @@ function updateSelectorPreview(updatedCol) {
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
   } else if (lastButton.dataset.type === "account") {
     const inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
+    
+    const accountTypeCol = accountSelector.querySelector(".primary-col");
+    const accountCol = accountSelector.querySelector(".secondary-col");
 
     if (["expense", "income", "balance"].includes(inputType)) {
-      const accountTypeCol = accountSelector.querySelector(".primary-col");
-      const accountCol = accountSelector.querySelector(".secondary-col");
-
       // update secondary column if primary is changed
       if (updatedCol.classList.contains("primary-col")) {
         updateSecondaryColumn(lastButton, subWorkspace, accountCol);
@@ -4425,7 +4658,61 @@ function updateSelectorPreview(updatedCol) {
       }
 
       lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
+    } else {
+      const { icon: pIcon, name: pName } =
+        getSelectedValue(accountSelector, ".primary-col", true);
+      const { icon: sIcon, name: sName } =
+        getSelectedValue(accountSelector, ".secondary-col", true);
+      
+      const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
+      const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
+
+      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputHouseholdId, null, fromAccountName);
+      subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputHouseholdId, null, toAccountName);
+      
+      const from = subWorkspace.transfer.fromAccountInfo.account;
+      const fromIcon = from.icon || "";
+      const fromName = from.name;
+      const fromCurrency = from.currency;
+
+      if (isUrl(fromIcon)) { // render <img>
+          subWorkspace.transfer.fromAccountInnerHTML = `<img src="${fromIcon}" class="account-icon"> ${fromName} (${fromCurrency})`;
+        } else { // render text directly
+          subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
+        }
+
+      const to = subWorkspace.transfer.toAccountInfo.account;
+      const toIcon = to.icon || "";
+      const toName = to.name;
+      const toCurrency = to.currency;
+
+      if (isUrl(toIcon)) { // render <img>
+        subWorkspace.transfer.toAccountInnerHTML = `<img src="${toIcon}" class="account-icon"> ${toName} (${toCurrency})`;
+      } else { // render text directly
+        subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
+      }
+
+      let fromAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
+      let toAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
+      lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
+
     }
+  } else if (lastButton.dataset.type === "subject") {
+    const { icon: icon, name: name } =
+        getSelectedValue(subjectSelector, ".subject-col", true);
+
+    subWorkspace[subWorkspace.inputType].subject = name;
+    subWorkspace[subWorkspace.inputType].subjectIcon = icon;
+
+    lastButton.innerHTML = `${icon} ${name}`;
+  } else if (lastButton.dataset.type === "collection") {
+    const { icon: icon, name: name } =
+        getSelectedValue(collectionSelector, ".collection-col", true);
+
+    subWorkspace[subWorkspace.inputType].collection = name;
+    subWorkspace[subWorkspace.inputType].collectionIcon = icon;
+
+    lastButton.innerHTML = `${icon} ${name}`;
   }
 }
 
@@ -4726,9 +5013,12 @@ document.querySelectorAll(".selector-button[data-type='category']")
       ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), subWorkspace[inputType].secondaryCategory);
     });
   });
-  
-document.querySelectorAll(".selector-button[data-type='account']")
-  .forEach(btn => {
+
+document.querySelectorAll( 
+  ".selector-button[data-type='account'], " + 
+  ".selector-button[data-type='fromAccount'], " + 
+  ".selector-button[data-type='toAccount']"
+).forEach(btn => {
     btn.addEventListener("click", e => {
       e.stopPropagation();
       lastButton = btn;
@@ -4745,15 +5035,41 @@ document.querySelectorAll(".selector-button[data-type='account']")
 
       const inputType = subWorkspace.inputType;
 
+      const t = translations[currentLang];
+
       if (["expense", "income", "balance"].includes(inputType)) {
-        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), subWorkspace[inputType].accountInfo.type);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.name} (${subWorkspace[inputType].accountInfo.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
       }
 
       if (inputType === "transfer") {
-        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.name} (${subWorkspace[inputType].fromAccountInfo.currency})`);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.name} (${subWorkspace[inputType].toAccountInfo.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
       }
+    });
+  });
+
+document.querySelectorAll(".selector-button[data-type='subject']")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      lastButton = btn;
+
+      showSelector('subject')
+
+      ScrollToSelectItem(subjectSelector.querySelector(".subject-col"), btn.textContent);
+    });
+  });
+
+document.querySelectorAll(".selector-button[data-type='collection']")
+  .forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      lastButton = btn;
+
+      showSelector('collection')
+
+      ScrollToSelectItem(collectionSelector.querySelector(".collection-col"), btn.textContent);
     });
   });
 

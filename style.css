@@ -309,7 +309,7 @@ input[type="password"], input[type="url"], .selector-button,
   padding: 0.75rem;
   border: 0.0625rem solid var(--border);
   border-radius: 0.5rem;
-  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */;
   background: var(--card);
   color: var(--text);
   box-sizing: border-box;        /* include padding + border in width */
@@ -809,7 +809,7 @@ button {
   color: #fff;
   padding: 0.5rem 0.6rem;
   border-radius: 0.5rem;
-  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
 }
 
 /* Kanban rows */
@@ -821,10 +821,10 @@ button {
   padding: 0.1rem 0;
 }
 .kanban-title { font-weight: bold; font-size: calc(var(--font-size) * 1);}
-.kanban-sub { font-size: calc(var(--font-size) * 0.7); color: var(--muted); }
+.kanban-sub { font-size: calc(var(--font-size) * 0.9); color: var(--muted); }
 .kanban-right { text-align: right; }
-.kanban-income { color: var(--income-color); font-size: calc(var(--font-size) * 0.8);}
-.kanban-expense { color: var(--expense-color); font-size: calc(var(--font-size) * 0.8);}
+.kanban-income { color: var(--income-color); font-size: calc(var(--font-size) * 0.9);}
+.kanban-expense { color: var(--expense-color); font-size: calc(var(--font-size) * 0.9);}
 hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 #statusMessage {
@@ -959,7 +959,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   padding: 0.5rem 1rem;
   border-radius: 1rem;
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-  font-size: calc(var(--font-size) * 0.8);
+  font-size: calc(var(--font-size) * 0.9);
 
   /* text handling applies to all children */
   text-align: center;
@@ -1108,7 +1108,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 #home-image-panel p {
   width: 100%;   /* fill parent */
-  font-size: calc(var(--font-size) * 0.7); /* a percentage of the base font size */;
+  font-size: calc(var(--font-size) * 0.9); /* a percentage of the base font size */;
   margin: 0 0 8px 0;
 }
 

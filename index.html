@@ -216,7 +216,7 @@
               </div>
 
               <div class="form-row">
-                <label class="transaction-subject-title">成员</label>
+                <label class="transaction-subject-title">主体</label>
                 <button type="button" id="income-subject" class="selector-button" data-type="subject"></button>
               </div>
 
@@ -278,12 +278,12 @@
                 <div class="transfer-accounts">
                   <div class="transfer-account">
                     <p id="transfer-from-title" class="transfer-label">转出</p>
-                    <button type="button" id="transfer-from-account" class="selector-button" data-type="account">
+                    <button type="button" id="transfer-from-account" class="selector-button" data-type="fromAccount">
                   </div>
                   <label id="tranfer-between-indicator">⇌</label>
                   <div class="transfer-account">
                     <p id="transfer-to-title" class="transfer-label">转入</p>
-                    <button type="button" id="transfer-to-account" class="selector-button" data-type="account">
+                    <button type="button" id="transfer-to-account" class="selector-button" data-type="toAccount">
                   </div>
                 </div>
               </div>
@@ -414,6 +414,18 @@
       </div>
       <div class="dt-col hour-col"></div>
       <div class="dt-col minute-col"></div>
+    </div>
+
+    <div id="subject-selector" class="selector">
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
+
+      <div class="dt-col subject-col"></div>
+    </div>
+
+    <div id="collection-selector" class="selector">
+      <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
+
+      <div class="dt-col collection-col"></div>
     </div>
 
     <!-- Utilities Page -->
