@@ -329,6 +329,7 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 .amount-button {
+  width: 100%;
   font-size: calc(var(--font-size) * 2.5);
   position: absolute; /* now bottom works */
   bottom: calc(var(--font-size) * 0.7);
@@ -339,6 +340,7 @@ input[type="password"], input[type="url"], .selector-button,
   padding: 0;
   margin: 0;
   flex-grow: 1;
+  transition: font-size 0.1s ease;
 }
 
 .amount-button:hover,

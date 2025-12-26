@@ -5214,6 +5214,35 @@ document.querySelectorAll(".amount-row").forEach(btn => {
 // listener for amount-selector keys
 document.querySelectorAll('#amount-selector .keys button').forEach(key => {
 
+  // MOUSE (desktop)
+  key.addEventListener('mousedown', e => {
+    e.preventDefault();
+    key.classList.add('pressed');
+    if (navigator.vibrate) navigator.vibrate(30);
+
+    const k = key.dataset.key;
+
+    if (k === 'backspace') {
+      startBackspaceHold();
+    } else {
+      handleAmountKey(k);
+    }
+  });
+
+  key.addEventListener('mouseup', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+  });
+
+  key.addEventListener('mouseleave', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+  });
+
+  // block right click
+  key.addEventListener("contextmenu", e => e.preventDefault());
+
+  // TOUCH
   key.addEventListener('touchstart', () => {
     key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
@@ -5236,9 +5265,6 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
     key.classList.remove('pressed');
     stopBackspaceHold();
   });
-
-  // block right click
-  key.addEventListener("contextmenu", e => e.preventDefault());
 });
 
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
