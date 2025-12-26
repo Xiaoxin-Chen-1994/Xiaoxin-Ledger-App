@@ -3231,6 +3231,9 @@ nav.addEventListener('touchend', (e) => {
   endX = 0;
 });
 
+// block right click
+nav.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+
 function handleSwipe() {
   const activeIndex = buttons.findIndex(btn => btn.classList.contains('active'));
   const threshold = 50; // minimum px swipe distance
@@ -4484,123 +4487,123 @@ function ScrollToSelectItem(col, value = null) {
   let target;
 
   if (typeof value === "number") {
-    // Try to find numeric match
     target = items.find(i => {
       const labelEl = i.querySelector(".label");
       const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
       return parseInt(text, 10) === value;
     });
-
-    // If no match, take the last item // take the last date
-    if (!target) {
-      target = items[items.length - 1];
-    }
-
+    if (!target) target = items[items.length - 1];
   } else {
-    // Try to find string match
     target = items.find(i => {
       const labelEl = i.querySelector(".label");
       const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
       return text === String(value).trim();
     });
-
-    // If no match OR value is null/undefined, take the first item
-    if (!target) {
-      target = items[0];
-    }
+    if (!target) target = items[0];
   }
 
-  if (target) {
-    selectItem(target);
+  if (target) selectItem(target);
+
+  // Initialize state on the element
+  col._touchMoved = false;
+  col._wheelDelta = 0;
+  col._touchStartY = 0;
+  col._touchStartTime = 0;
+  col._lastStep = 0;
+
+  // Remove old listeners if they exist
+  if (col._handlers) {
+    col.removeEventListener("click", col._handlers.click);
+    col.removeEventListener("wheel", col._handlers.wheel);
+    col.removeEventListener("touchstart", col._handlers.touchstart);
+    col.removeEventListener("touchmove", col._handlers.touchmove);
+    col.removeEventListener("touchend", col._handlers.touchend);
   }
 
-  let touchMoved = false;
+  col._handlers = {
+    click: (e) => {
+      if (!col._touchMoved) {
+        const item = e.target.closest(".dt-item");
+        if (item && col.contains(item)) {
+          selectItem(item);
+          updateSelectorPreview(col);
+        }
+      }
+    },
 
-  // ✅ Click selection
-  col.addEventListener("click", (e) => {
-    if (!touchMoved) { // run only if it was a tap, not a drag
-      const item = e.target.closest(".dt-item");
-      if (item && col.contains(item)) {
-        selectItem(item);
+    wheel: (e) => {
+      e.preventDefault();
+      col._wheelDelta += e.deltaY;
+
+      const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
+      if (col._wheelDelta >= itemHeight) {
+        selectItem(col.querySelector(".dt-item.selected")?.nextElementSibling);
+        col._wheelDelta = 0;
+      } else if (col._wheelDelta <= -itemHeight) {
+        selectItem(col.querySelector(".dt-item.selected")?.previousElementSibling);
+        col._wheelDelta = 0;
+      }
+      updateSelectorPreview(col);
+    },
+
+    touchstart: (e) => {
+      col._touchMoved = false;
+      col._touchStartY = e.touches[0].clientY;
+      col._touchStartTime = getFormattedTime();
+      col._lastStep = 0;
+    },
+
+    touchmove: (e) => {
+      e.preventDefault();
+      col._touchMoved = true;
+
+      const currentY = e.touches[0].clientY;
+      const dy = currentY - col._touchStartY;
+      const dt = getFormattedTime() - col._touchStartTime;
+
+      const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
+      const distanceSteps = dy / itemHeight;
+      const velocity = dy / dt;
+
+      const FAST = 0.5;
+      const DIST = itemHeight * 2;
+
+      let velocitySteps = 0;
+      if (Math.abs(velocity) > FAST && Math.abs(dy) > DIST) {
+        velocitySteps = velocity * 3;
+      }
+
+      const steps = Math.round(distanceSteps + velocitySteps);
+
+      if (steps !== col._lastStep) {
+        const items = [...col.querySelectorAll(".dt-item")];
+        const selected = col.querySelector(".dt-item.selected");
+        if (!selected) return;
+
+        let index = items.indexOf(selected);
+        let newIndex = index - (steps - col._lastStep);
+        newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
+
+        selectItem(items[newIndex]);
+        col._lastStep = steps;
         updateSelectorPreview(col);
       }
+    },
+
+    touchend: () => {
+      col._touchStartY = 0;
+      col._touchStartTime = 0;
+      col._lastStep = 0;
     }
-  });
+  };
 
-  // Wheel / trackpad scroll
-  let wheelDelta = 0;
-  col.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    wheelDelta += e.deltaY;
-
-    const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
-    if (wheelDelta >= itemHeight) {
-      selectItem(col.querySelector(".dt-item.selected")?.nextElementSibling);
-      wheelDelta = 0;
-    } else if (wheelDelta <= -itemHeight) {
-      selectItem(col.querySelector(".dt-item.selected")?.previousElementSibling);
-      wheelDelta = 0;
-    }
-    updateSelectorPreview(col)
-  }, { passive: false });
-
-  // Touch swipe
-  let touchStartY = null;
-  let touchStartTime = null;
-  let lastStep = 0;
-
-  col.addEventListener("touchstart", (e) => {
-    touchMoved = false;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = getFormattedTime();
-    lastStep = 0;
-  }, { passive: false });
-
-  col.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    touchMoved = true;
-
-    const currentY = e.touches[0].clientY;
-    const dy = currentY - touchStartY;
-    const dt = getFormattedTime() - touchStartTime;
-
-    const itemHeight = col.querySelector(".dt-item")?.offsetHeight || 40;
-    const distanceSteps = dy / itemHeight;
-
-    const velocity = dy / dt; // px per ms
-
-    // Thresholds
-    const FAST_SWIPE_THRESHOLD = 0.5;   // px/ms
-    const DISTANCE_THRESHOLD = itemHeight * 2; // at least 2 items worth of movement
-
-    let velocitySteps = 0;
-    if (Math.abs(velocity) > FAST_SWIPE_THRESHOLD && Math.abs(dy) > DISTANCE_THRESHOLD) {
-      velocitySteps = velocity * 3; // apply multiplier only if both conditions met
-    }
-
-    const steps = Math.round((distanceSteps + velocitySteps));
-
-    if (steps !== lastStep) {
-      const items = [...col.querySelectorAll(".dt-item")];
-      const selected = col.querySelector(".dt-item.selected");
-      if (!selected) return;
-
-      let index = items.indexOf(selected);
-      let newIndex = index - (steps - lastStep); // move only the delta
-      newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
-
-      selectItem(items[newIndex]);
-      lastStep = steps;
-      updateSelectorPreview(col);
-    }
-  }, { passive: false });
-
-  col.addEventListener("touchend", (e) => {
-    touchStartY = null;
-    touchStartTime = null;
-    lastStep = 0;
-  }, { passive: false });
+  col.addEventListener("click", col._handlers.click);
+  col.addEventListener("wheel", col._handlers.wheel, { passive: false });
+  col.addEventListener("touchstart", col._handlers.touchstart, { passive: false });
+  col.addEventListener("touchmove", col._handlers.touchmove, { passive: false });
+  col.addEventListener("touchend", col._handlers.touchend, { passive: false });
 }
+
 
 function updateSelectorPreview(updatedCol) {
   if (!lastButton) return;
