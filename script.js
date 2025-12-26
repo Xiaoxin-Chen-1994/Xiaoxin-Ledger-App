@@ -5116,17 +5116,16 @@ document.addEventListener("keydown", e => {
   handleAmountKey(mapped);
 });
 
-function startBackspaceHold() {
-  // Delete one immediately
-  handleBackspaceOnce();
+function startBackspaceHold(calcLabel, amountButton) {
+  handleBackspaceOnce(calcLabel, amountButton);
 
-  // Start repeating delete
-  backspaceInterval = setInterval(handleBackspaceOnce, 80);
+  backspaceInterval = setInterval(() => {
+    handleBackspaceOnce(calcLabel, amountButton);
+  }, 80);
 
-  // After long hold → clear all
   clearAllTimeout = setTimeout(() => {
-    clearExpressionCompletely();
-  }, 700); // adjust to taste
+    clearExpressionCompletely(calcLabel, amountButton);
+  }, 700);
 }
 
 function stopBackspaceHold() {
@@ -5136,15 +5135,16 @@ function stopBackspaceHold() {
   clearAllTimeout = null;
 }
 
-function handleBackspaceOnce() {
-  if (!expr || expr.length === 0) return;
+function handleBackspaceOnce(calcLabel, amountButton) {
+  let expr = calcLabel.textContent.trim();
+  if (expr.length === 0) return;
+
   expr = expr.slice(0, -1);
   calcLabel.textContent = expr;
   tryUpdateAmount(expr, amountButton);
 }
 
-function clearExpressionCompletely() {
-  expr = "";
+function clearExpressionCompletely(calcLabel, amountButton) {
   calcLabel.textContent = "";
   tryUpdateAmount("", amountButton);
 }
@@ -5243,6 +5243,8 @@ let touchActive = false;
 
 // listener for amount-selector keys
 document.querySelectorAll('#amount-selector .keys button').forEach(key => {
+  const calcLabel = lastButton.querySelector('.calculation');
+  const amountButton = lastButton.querySelector('.amount-button');
 
   // MOUSE (desktop)
   key.addEventListener('mousedown', e => {
@@ -5252,9 +5254,8 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
     if (navigator.vibrate) navigator.vibrate(30);
 
     const k = key.dataset.key;
-
     if (k === 'backspace') {
-      startBackspaceHold();
+      startBackspaceHold(calcLabel, amountButton);
     } else {
       handleAmountKey(k);
     }
@@ -5283,9 +5284,8 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
     if (navigator.vibrate) navigator.vibrate(30);
 
     const k = key.dataset.key;
-
     if (k === 'backspace') {
-      startBackspaceHold();
+      startBackspaceHold(calcLabel, amountButton);
     } else {
       handleAmountKey(k);
     }
