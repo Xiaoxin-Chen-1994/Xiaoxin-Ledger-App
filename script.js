@@ -4949,6 +4949,7 @@ window.addEventListener('popstate', (event) => {
 
   const stack = historyStacks[currentBase];
   showStatusMessage("stack="+stack.length, 'info')
+  alert("stack="+stack.length)
   if (stack.length > 1) {
     goBack();
     return;
