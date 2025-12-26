@@ -638,7 +638,7 @@ input[type="password"], input[type="url"], .selector-button,
   left: 0;
   height: 30%;
   bottom: 0;
-  width: 100%;
+  width: calc(100% - 1rem);
   background: var(--bg);
   border-top: 1px solid #ccc;
   padding: 1rem 0.5rem 0.5rem 0.5rem;
@@ -685,7 +685,6 @@ input[type="password"], input[type="url"], .selector-button,
 
 /* Inner panel (bottom sheet) */
 #amount-selector .keys {
-  background: var(--card);
   width: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -694,9 +693,9 @@ input[type="password"], input[type="url"], .selector-button,
 /* Key buttons */
 /* Base button styling */
 #amount-selector .keys button {
-  padding: 1rem;
+  padding: 0.8rem;
   margin: 0;
-  font-size: calc(var(--font-size) * 1.2);
+  font-size: calc(var(--font-size) * 1.3);
   border: none;
   border-radius: 0.5rem;
   background: none;
@@ -724,6 +723,11 @@ input[type="password"], input[type="url"], .selector-button,
 #amount-selector .keys button.equals,
 #amount-selector .keys button.close {
   display: none;
+}
+
+/* Press feedback */
+#amount-selector .keys button:active {
+  background: var(--primary);
 }
 
 .dt-col {
