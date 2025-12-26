@@ -714,7 +714,7 @@ input[type="password"], input[type="url"], .selector-button,
 /* Key buttons */
 #amount-selector .keys button {
   padding: 1rem;
-  font-size: 1.25rem;
+  font-size: calc(var(--font-size)*1.2);
   border: none;
   border-radius: 0.5rem;
   background: var(--primary-light);

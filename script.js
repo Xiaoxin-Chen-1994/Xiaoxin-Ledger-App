@@ -5020,8 +5020,17 @@ function showSelector(selName) {
   const sel = document.getElementById(selName + '-selector');
   if (sel) {
     sel.style.transform = 'translateY(0)';
+
+    if (selName === 'amount') {
+      // Auto height based on content
+      sel.style.height = 'auto';
+      sel.style.maxHeight = '80vh'; // optional safety cap
+    } else {
+      // Fixed height for all other selectors
+      sel.style.height = '30%';
+    }
   }
-console.log(selName, sel)
+
   return sel
 }
 
