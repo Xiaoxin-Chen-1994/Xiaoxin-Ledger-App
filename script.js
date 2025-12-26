@@ -5196,10 +5196,14 @@ document.querySelectorAll(".amount-row").forEach(btn => {
   };
 });
 
+let touchActive = false;
+
 // listener for amount-selector keys
 document.querySelectorAll('#amount-selector .keys button').forEach(key => {
 
+  // MOUSE (desktop)
   key.addEventListener('mousedown', e => {
+    if (touchActive) return; // ignore synthetic mouse events
     e.preventDefault();
     key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
@@ -5214,17 +5218,47 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
   });
 
   key.addEventListener('mouseup', () => {
+    if (touchActive) return;
     key.classList.remove('pressed');
     stopBackspaceHold();
   });
 
   key.addEventListener('mouseleave', () => {
+    if (touchActive) return;
     key.classList.remove('pressed');
     stopBackspaceHold();
   });
 
   // block right click
   key.addEventListener("contextmenu", e => e.preventDefault());
+
+  // TOUCH
+  key.addEventListener('touchstart', () => {
+    touchActive = true; // mark that this interaction is touch 
+    e.preventDefault();
+    key.classList.add('pressed');
+    if (navigator.vibrate) navigator.vibrate(30);
+
+    const k = key.dataset.key;
+
+    if (k === 'backspace') {
+      startBackspaceHold();
+    } else {
+      handleAmountKey(k);
+    }
+  });
+
+  key.addEventListener('touchend', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+    setTimeout(() => touchActive = false, 50); // allow next tap
+  });
+
+  key.addEventListener('touchcancel', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+    touchActive = false;
+  });
 });
 
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
