@@ -1604,6 +1604,11 @@ function switchTab(index) {
     collectionEl.textContent = subWorkspace[inputType].collectionInnerHTML;
   }
 
+  if (!Array.isArray(subWorkspace.tag)) {
+    subWorkspace.tags = [];
+  }
+  addTag(subWorkspace.tags, subWorkspace);
+
   // notes
   const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
   notesEl.value = subWorkspace.inputNotes;
@@ -1694,7 +1699,7 @@ const fieldMap = {
 document.querySelectorAll(".tag-input-container").forEach(container => {
   const input = container.querySelector("input");
   const button = container.querySelector("button");
-  const suggestionsDiv = container.querySelector("div");
+  const suggestionsDiv = container.querySelector(".tag-suggestions");
 
   // Listen for typing
   input.addEventListener("input", async (e) => {
@@ -1719,7 +1724,6 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
       if (tag && tag.includes(text)) {
         const span = document.createElement("span");
         span.textContent = tag;
-        console.log(span)
         span.addEventListener("click", () => {
           input.value = tag;
         });
@@ -1746,40 +1750,57 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     }
     subWorkspace.tags.push(newTag);
     addTag(newTag, subWorkspace);
-
   });
 });
 
-function addTag(newTag, subWorkspace) {
+function addTag(tag, subWorkspace) {
   // Find the form container
   const form = document.getElementById(`${subWorkspace.inputType}-form`);
   if (!form) return;
 
   // Find the .tagged div inside this form
   const container = form.querySelector('.tagged');
-    console.log(container)
   if (!container) return;
 
-  const tagEl = document.createElement('div');
-  tagEl.className = 'tag';
+  // Helper to create a single tag element
+  function createTagElement(tagValue) {
+    const tagEl = document.createElement('div');
+    tagEl.className = 'tag';
 
-  tagEl.innerHTML = `
-    <span>${newTag}</span>
-    <button class="delete-tag">×</button>
-  `;
+    tagEl.innerHTML = `
+      <span>${tagValue}</span>
+      <button class="delete-tag">×</button>
+    `;
 
-  // Delete behavior
-  tagEl.querySelector('.delete-tag').addEventListener('click', () => {
-  // Remove from UI
-  tagEl.remove();
+    // Delete behavior
+    tagEl.querySelector('.delete-tag').addEventListener('click', () => {
+      // Remove from UI
+      tagEl.remove();
 
-  // Remove from data model
-  const index = subWorkspace.tags.indexOf(newTag);
-    if (index !== -1) {
-      subWorkspace.tags.splice(index, 1);
-    }
-  });
+      // Remove from data model
+      const index = subWorkspace.tags.indexOf(tagValue);
+      if (index !== -1) {
+        subWorkspace.tags.splice(index, 1);
+      }
+    });
 
+    return tagEl;
+  }
+
+  // If tag is an array → clear and render all
+  if (Array.isArray(tag)) {
+    container.innerHTML = ""; // clear UI
+
+    tag.forEach(t => {
+      const tagEl = createTagElement(t);
+      container.appendChild(tagEl);
+    });
+
+    return;
+  }
+
+  // Otherwise tag is a single string → append one
+  const tagEl = createTagElement(tag);
   container.appendChild(tagEl);
 }
 
