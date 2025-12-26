@@ -265,7 +265,6 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
   color: var(--text);
   border-radius: 0.5rem;
   cursor: pointer;
-  z-index: 1;
   transition: background 0.3s ease, color 0.3s ease; /* animate background + text color */
 }
 

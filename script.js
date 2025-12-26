@@ -109,6 +109,7 @@ let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
 let latestTitle = null;
+let latestOptions = null;
 
 const translations = {
   en: {
@@ -1878,47 +1879,51 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
 
   vibrate(30); // milliseconds
 
-  if (basePages.includes(name)) { // when switching base nav, look for the latest stack
-    if (currentBase !== name && latestPage != null) {
-      // hide the current page
+  let switchedBase = false;
+
+  if (latestNavBtn !==navBtn) { // when switching base nav, look for the latest stack
+    switchedBase = true;
+
+    if (latestPage != null) {
+      // if a page was shown, hide the page
       document.getElementById(latestPage + "-page").style.display = "none";
       document.getElementById(currentBase + "-page").style.display = "none";
     }
+  }
 
-    currentBase = name;
-    stack = historyStacks[name];
-    latest = stack ? stack[stack.length - 1] : [name, navBtn, title, options];
-    [latestPage, latestNavBtn, latestTitle] = latest;
-    target = document.getElementById(latestPage + "-page");
+  currentBase = navBtn.replace("nav-", "");
 
-    if (!target) return;
-
-    target.style.display = "block";
-    if (basePages.includes(latestPage)) {
-      target.classList.add('active');
-    }
-
-    if (stack.length < 3 && name === "home") { // at home page
-      document.getElementById("search-btn-headerbar").style.display = "block";
-    };
-
-  } else { // if switching pages at the same base nav
-    stack = historyStacks[currentBase];
-
+  stack = historyStacks[currentBase];
+  latest = stack[stack.length - 1]; // there should always be at least one stack for each base page
+  [latestPage, latestNavBtn, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
+    
+  if (name !== latestPage && name !== currentBase) {
+    // if the target page is not latest page, and is not base page, display this page
     latestPage = name;
     latestTitle = title;
-    target = document.getElementById(latestPage + "-page");
-
-    if (!target) return;
-
-    target.style.transform = "translateX(0%)";
-    target.style.display = "block";
-    target.zIndex = stack.length;
-    enablePageSwipe(target);
-
-    // push a new history entry for this non-base page
+    latestOptions = options;
+    
+    // push a new history entry for this new page
     history.pushState({ page: latestPage, base: currentBase }, "", location.href);
+    historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
+    stack = historyStacks[currentBase]; // update stack
   }
+
+  target = document.getElementById(latestPage + "-page");
+  target.style.display = "block";
+  target.zIndex = stack.length;
+
+  if (!target) return;
+
+  if (!switchedBase) {
+    target.style.transform = "translateX(0%)";
+    enablePageSwipe(target);
+  }
+  
+  if (name === "home" && navBtn === "nav-home" && stack.length < 3) {
+    // at home page (base page and the first page)
+    document.getElementById("search-btn-headerbar").style.display = "block";
+  };
 
   if (stack.length > 1) { // if not at base
     document.getElementById("return-btn").style.display = "block";
@@ -1928,7 +1933,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   document.getElementById(navBtn).classList.add("active");
 
   // Get the nav element
-  const nav = document.querySelector(".bottom-nav");   // or your specific selector
+  const nav = document.querySelector(".bottom-nav"); 
 
   const rect = nav.getBoundingClientRect();
 
@@ -2003,25 +2008,12 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     });
 
   } else if (latestPage === "manage-labels") {
-    const activeHouseholdId = target.dataset.activeHouseholdId;
-    loadLabels(activeHouseholdId, "manage-labels", options.type, options.title)
-    
+
     const orderBtn = document.getElementById("manage-btn-headerbar");
     orderBtn.style.display = "block";
-
-    // Always remove old listener first
-    if (orderBtn._orderListener) {
-      orderBtn.removeEventListener("click", orderBtn._orderListener);
-    }
-
-    // Create a fresh listener
-    orderBtn._orderListener = () => {
-      prepareHouseholdTabs('order-labels', options.type, options.title, activeHouseholdId);
+    orderBtn.onclick = () => {
+      prepareHouseholdTabs('order-labels', options.type, options.title);
     };
-
-    // Add it again
-    orderBtn.addEventListener("click", orderBtn._orderListener);
-
 
   } else if (latestPage === "order-labels") {
     const deleteBtn = document.getElementById("delete-btn-headerbar");
@@ -2034,14 +2026,6 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   if (latestPage === "settings") {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${userEmail}`;
   }
-
-  stack = historyStacks[currentBase];
-  // If reaching base page or the page is already active, do nothing
-  const isBaseAndFresh = basePages.includes(latestPage) && stack.length < 2;
-  const isAlreadyActive = stack?.[stack.length - 1]?.[0] === latestPage;
-  if (!isBaseAndFresh && !isAlreadyActive) {
-    historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
-  }
 }
 window.showPage = showPage;
 
@@ -2053,8 +2037,9 @@ function resetCreate() {
 window.resetCreate = resetCreate;
 
 function goBack() {
+console.log('goback')
   closeSelector();
-
+  
   const stack = historyStacks[currentBase];
   if (stack.length > 1) {
     const target = document.getElementById(latestPage + "-page");
@@ -2132,6 +2117,7 @@ async function loadLabels(activeHouseholdId, task, type, title) {
 
    // Household name header
   const header = document.createElement("h3");
+
   header.textContent = householdData.name;
   block.appendChild(header);
  
@@ -4936,6 +4922,8 @@ function showSelector(selName) {
   if (sel) {
     sel.style.transform = 'translateY(0)';
   }
+
+  return sel
 }
 
 function closeSelector() {
@@ -4952,7 +4940,9 @@ function closeSelector() {
 }
 window.closeSelector = closeSelector;
 
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (event) => {
+  console.log(event);
+  
   if (openSelector) {
     closeSelector();
     return;
@@ -4969,35 +4959,35 @@ window.addEventListener('popstate', () => {
 
 /* Open selector */
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
-  btn.addEventListener("click", e => {
+  btn.onclick = e => {
     e.stopPropagation();
     lastButton = btn;
 
     // Show the desired selector
     showSelector('datetime')
 
-  });
+  };
 });
 
 document.querySelectorAll(".selector-button[data-type='household']")
   .forEach(btn => {
-    btn.addEventListener("click", e => {
+    btn.onclick = e => {
       e.stopPropagation();
       lastButton = btn;
 
       showSelector('household')
 
       ScrollToSelectItem(householdSelector.querySelector(".household-col"), btn.textContent);
-    });
+    };
   });
 
 document.querySelectorAll(".selector-button[data-type='category']")
   .forEach(btn => {
-    btn.addEventListener("click", e => {
+    btn.onclick = e => {
       e.stopPropagation();
       lastButton = btn;
 
-      showSelector('category')
+      const sel = showSelector('category')
 
       let subWorkspace = null;
 
@@ -5009,9 +4999,18 @@ document.querySelectorAll(".selector-button[data-type='category']")
 
       const inputType = subWorkspace.inputType;
 
+      const manageLabelsBtn = document.getElementById("selector-manage-category-btn");
+      manageLabelsBtn.onclick = f => {
+        f.stopPropagation();
+        
+        sel.style.transform = 'translateY(120%)';
+        if (inputType === "expense") {prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)};
+        if (inputType === "income") {prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)};  
+      };
+
       ScrollToSelectItem(categorySelector.querySelector(".primary-col"), subWorkspace[inputType].primaryCategory);
       ScrollToSelectItem(categorySelector.querySelector(".secondary-col"), subWorkspace[inputType].secondaryCategory);
-    });
+    };
   });
 
 document.querySelectorAll( 
@@ -5019,7 +5018,7 @@ document.querySelectorAll(
   ".selector-button[data-type='fromAccount'], " + 
   ".selector-button[data-type='toAccount']"
 ).forEach(btn => {
-    btn.addEventListener("click", e => {
+    btn.onclick = e => {
       e.stopPropagation();
       lastButton = btn;
 
@@ -5046,31 +5045,47 @@ document.querySelectorAll(
         ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
         ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
       }
-    });
+    };
   });
 
 document.querySelectorAll(".selector-button[data-type='subject']")
   .forEach(btn => {
-    btn.addEventListener("click", e => {
+    btn.onclick = e => {
       e.stopPropagation();
       lastButton = btn;
 
-      showSelector('subject')
+      const sel = showSelector('subject')
 
+      const manageLabelsBtn = document.getElementById("selector-manage-subject-btn");
+      manageLabelsBtn.onclick = f => {
+        f.stopPropagation();
+        
+        sel.style.transform = 'translateY(120%)';
+        prepareHouseholdTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects);
+      };
+      
       ScrollToSelectItem(subjectSelector.querySelector(".subject-col"), btn.textContent);
-    });
+    };
   });
 
 document.querySelectorAll(".selector-button[data-type='collection']")
   .forEach(btn => {
-    btn.addEventListener("click", e => {
+    btn.onclick = e => {
       e.stopPropagation();
       lastButton = btn;
 
-      showSelector('collection')
+      const sel = showSelector('collection')
+
+      const manageLabelsBtn = document.getElementById("selector-manage-collection-btn");
+      manageLabelsBtn.onclick = f => {
+        f.stopPropagation();
+        
+        sel.style.transform = 'translateY(120%)';
+        prepareHouseholdTabs('manage-labels', 'collections', translations[currentLang].manageCollections);
+      };
 
       ScrollToSelectItem(collectionSelector.querySelector(".collection-col"), btn.textContent);
-    });
+    };
   });
 
 /* Close when clicking outside */
