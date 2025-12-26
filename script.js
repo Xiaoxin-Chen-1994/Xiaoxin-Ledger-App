@@ -1604,14 +1604,17 @@ function switchTab(index) {
     collectionEl.textContent = subWorkspace[inputType].collectionInnerHTML;
   }
 
-  if (!Array.isArray(subWorkspace.tag)) {
+  if (!Array.isArray(subWorkspace.tags)) {
     subWorkspace.tags = [];
   }
+
   addTag(subWorkspace.tags, subWorkspace);
 
   // notes
-  const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
-  notesEl.value = subWorkspace.inputNotes;
+  if (subWorkspace.inputNotes !== undefined) {
+    const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
+    notesEl.value = subWorkspace.inputNotes;
+  }
 }
 
 /* Parse datetime from string */
@@ -1745,11 +1748,12 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
       subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
     }
     
-    if (!Array.isArray(subWorkspace.tag)) {
+    if (!Array.isArray(subWorkspace.tags)) {
       subWorkspace.tags = [];
     }
     subWorkspace.tags.push(newTag);
     addTag(newTag, subWorkspace);
+    input.value = null;
   });
 });
 
@@ -1793,6 +1797,7 @@ function addTag(tag, subWorkspace) {
 
     tag.forEach(t => {
       const tagEl = createTagElement(t);
+      console.log(tagEl)
       container.appendChild(tagEl);
     });
 
