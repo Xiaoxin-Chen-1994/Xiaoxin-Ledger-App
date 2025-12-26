@@ -552,7 +552,7 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 .add-tag-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem !important;
   border: none;
   border-radius: 0.25rem;
   background: var(--primary);
