@@ -5198,6 +5198,7 @@ document.querySelectorAll(".amount-row").forEach(btn => {
 
 // listener for amount-selector keys
 document.querySelectorAll('#amount-selector .keys button').forEach(key => {
+
   key.addEventListener('touchstart', () => {
     key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
@@ -5211,11 +5212,18 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
     }
   });
 
-  key.addEventListener('touchend', stopBackspaceHold);
-  key.addEventListener('touchcancel', stopBackspaceHold);
+  key.addEventListener('touchend', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+  });
+
+  key.addEventListener('touchcancel', () => {
+    key.classList.remove('pressed');
+    stopBackspaceHold();
+  });
 
   // block right click
-  key.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+  key.addEventListener("contextmenu", e => e.preventDefault());
 });
 
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
