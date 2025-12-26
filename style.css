@@ -350,6 +350,8 @@ input[type="password"], input[type="url"], .selector-button,
 .amount-button:hover,
 .amount-button:focus {
   background-color: var(--bg);
+  border:none;
+  outline: none;
 }
 
 #expense-amount-row {

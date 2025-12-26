@@ -5089,6 +5089,7 @@ const allowedKeys = {
 };
 
 let backspaceInterval = null;
+let clearAllTimeout = null;
 
 document.addEventListener("keydown", e => {
   const sel = document.getElementById("amount-selector");
@@ -5116,20 +5117,36 @@ document.addEventListener("keydown", e => {
 });
 
 function startBackspaceHold() {
-  // Delete one immediately for responsiveness
-  handleAmountKey('backspace');
+  // Delete one immediately
+  handleBackspaceOnce();
 
   // Start repeating delete
-  backspaceInterval = setInterval(() => {
-    handleAmountKey('backspace');
-  }, 80); // 80ms feels like a real keyboard
+  backspaceInterval = setInterval(handleBackspaceOnce, 80);
+
+  // After long hold → clear all
+  clearAllTimeout = setTimeout(() => {
+    clearExpressionCompletely();
+  }, 700); // adjust to taste
 }
 
 function stopBackspaceHold() {
-  if (backspaceInterval) {
-    clearInterval(backspaceInterval);
-    backspaceInterval = null;
-  }
+  clearInterval(backspaceInterval);
+  clearTimeout(clearAllTimeout);
+  backspaceInterval = null;
+  clearAllTimeout = null;
+}
+
+function handleBackspaceOnce() {
+  if (!expr || expr.length === 0) return;
+  expr = expr.slice(0, -1);
+  calcLabel.textContent = expr;
+  tryUpdateAmount(expr, amountButton);
+}
+
+function clearExpressionCompletely() {
+  expr = "";
+  calcLabel.textContent = "";
+  tryUpdateAmount("", amountButton);
 }
 
 function getAmountColor(amountButton) {
