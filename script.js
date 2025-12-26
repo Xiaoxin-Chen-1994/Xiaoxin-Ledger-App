@@ -5175,7 +5175,7 @@ function tryUpdateAmount(expr, amountButton) {
         amountButton.dataset.fontScale = size.toFixed(2);
         return;
       }
-
+      
       // Otherwise shrink
       while (amountButton.scrollWidth > amountButton.clientWidth && size > 1.0) {
         size -= 0.1;

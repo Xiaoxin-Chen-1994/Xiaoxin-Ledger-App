@@ -330,6 +330,10 @@ input[type="password"], input[type="url"], .selector-button,
 
 .amount-button {
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+
   font-size: calc(var(--font-size) * 2.5);
   position: absolute; /* now bottom works */
   bottom: calc(var(--font-size) * 0.7);
