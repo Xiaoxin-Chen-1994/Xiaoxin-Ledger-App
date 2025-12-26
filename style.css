@@ -712,34 +712,33 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 /* Key buttons */
-#amount-selector .keys button {
-  padding: 1rem;
-  font-size: calc(var(--font-size)*1.2);
-  border: none;
-  border-radius: 0.5rem;
-  background: var(--primary-light);
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease;
+#amount-selector .keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
 }
 
-/* Special buttons */
-#amount-selector .keys button.clear {
+/* Confirm button spans 2 rows */
+#amount-selector .keys .confirm {
+  grid-row: span 2;
+  background: #b3ffb3;
+  font-size: 1.2rem;
+  border-radius: 0.5rem;
+}
+
+/* Clear button styling */
+#amount-selector .keys .clear {
   background: #ffb3b3;
 }
 
-#amount-selector .keys button.equals {
-  background: #b3ffb3;
-}
-
-#amount-selector .keys button.close {
-  background: #ddd;
-}
-
-/* Button press feedback */
-#amount-selector .keys button:active {
-  background: var(--primary);
-  color: white;
+/* General button styling */
+#amount-selector .keys button {
+  padding: 1rem;
+  font-size: 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--primary-light);
+  cursor: pointer;
 }
 
 .dt-col {
