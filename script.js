@@ -5146,6 +5146,21 @@ function tryUpdateAmount(expr, amountButton) {
     // Only update if result is a real number
     if (typeof result === 'number' && isFinite(result)) {
       amountButton.textContent = result.toFixed(2);
+      
+      const defaultSize = `calc(var(--font-size) * 2.5)`;
+      let size = 2.5; // multiplier
+
+      // Reset to default first
+      amountButton.style.fontSize = defaultSize;
+
+      // If it fits, we're done
+      if (amountButton.scrollWidth <= amountButton.clientWidth) return;
+
+      // Otherwise shrink until it fits
+      while (amountButton.scrollWidth > amountButton.clientWidth && size > 1.0) {
+        size -= 0.1;
+        amountButton.style.fontSize = `calc(var(--font-size) * ${size})`;
+      }
     }
   } catch (e) {
     // Invalid expression → do nothing
