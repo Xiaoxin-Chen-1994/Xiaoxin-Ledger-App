@@ -1577,14 +1577,48 @@ function switchTab(index) {
     setDefaultCategory(categoryBtn, subWorkspace);
   }
 
-  // account
+  // account and amount
   if (["expense", "income", "balance"].includes(inputType)) {
     let accountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='account']`);
     setDefaultAccount(accountBtn, subWorkspace);
+
+    let amountBtn = activeTab.querySelector(`#${activeForm} .amount-button`);
+    let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
+    if (subWorkspace.amount == null) {
+      subWorkspace.amount = "0.00";
+      subWorkspace.calculation = "0.00";
+    }
+    amountBtn.textContent = subWorkspace.amount;
+    calculationBtn.textContent = subWorkspace.calculation;
+    
   } else { // for transfer
     let fromAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
     let toAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
     setDefaultAccount([fromAccountBtn, toAccountBtn], subWorkspace);
+
+    // update both simple amount and exchange amount
+    let amountBtn = activeTab.querySelector(`#${activeForm} .amount-button`);
+    let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
+    if (subWorkspace.amount == null) {
+      subWorkspace.amount = "0.00";
+      subWorkspace.calculation = "0.00";
+    }
+    amountBtn.textContent = subWorkspace.amount;
+    calculationBtn.textContent = subWorkspace.calculation;
+
+    let fromAmountBtn = document.getElementById('transfer-from-amount');
+    let fromCalculationBtn = document.getElementById('transfer-from-calculation');
+    fromAmountBtn.textContent = subWorkspace.amount;
+    fromCalculationBtn.textContent = subWorkspace.calculation;
+
+    let toAmountBtn = document.getElementById('transfer-to-amount');
+    let toCalculationBtn = document.getElementById('transfer-to-calculation');
+    if (subWorkspace.transfer.toAmount == null) {
+      subWorkspace.transfer.toAmount = "0.00";
+      subWorkspace.transfer.toCalculation = "0.00";
+    }
+    toAmountBtn.textContent = subWorkspace.transfer.toAmount;
+    toCalculationBtn.textContent = subWorkspace.transfer.toCalculation;
   }
 
   // datetime
@@ -4710,7 +4744,7 @@ function updateSelectorPreview(updatedCol) {
     `;
 
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
-  } else if (lastButton.dataset.type === "account") {
+  } else if (['account', 'fromAccount', 'toAccount'].includes(lastButton.dataset.type)) {
     const inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
     
     const accountTypeCol = accountSelector.querySelector(".primary-col");
@@ -4743,7 +4777,7 @@ function updateSelectorPreview(updatedCol) {
       }
 
       lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
-    } else {
+    } else { // for transfer
       const { icon: pIcon, name: pName } =
         getSelectedValue(accountSelector, ".primary-col", true);
       const { icon: sIcon, name: sName } =
@@ -4778,9 +4812,40 @@ function updateSelectorPreview(updatedCol) {
       }
 
       let fromAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
-      let toAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
-      lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
+      let toAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
+      
+      fromAccountBtn.innerHTML = subWorkspace.transfer.fromAccountInnerHTML;
+      toAccountBtn.innerHTML = subWorkspace.transfer.toAccountInnerHTML;
 
+      if (fromCurrency === toCurrency) {
+        document.getElementById("simple-transfer-amount-row").style.display = "block";
+        document.getElementById("exchange-transfer-amount-row").style.display = "none";
+
+        // make sure simple amount is updated
+        let amountBtn = document.querySelector(`#${activeForm} .amount-button`);
+        let calculationBtn = document.querySelector(`#${activeForm} .calculation`);
+
+        if (subWorkspace.amount == null) {
+          subWorkspace.amount = "0.00";
+          subWorkspace.calculation = "0.00";
+        }
+        amountBtn.textContent = subWorkspace.amount;
+        calculationBtn.textContent = subWorkspace.calculation;
+    
+      } else {
+        document.getElementById("simple-transfer-amount-row").style.display = "none";
+        document.getElementById("exchange-transfer-amount-row").style.display = "block";
+
+        // make sure exchange amount is updated
+        let fromAmountBtn = document.getElementById('transfer-from-amount');
+        let fromCalculationBtn = document.getElementById('transfer-from-calculation');
+        if (subWorkspace.amount == null) {
+          subWorkspace.amount = "0.00";
+          subWorkspace.calculation = "0.00";
+        }
+        fromAmountBtn.textContent = subWorkspace.amount;
+        fromCalculationBtn.textContent = subWorkspace.calculation;
+      }
     }
   } else if (lastButton.dataset.type === "subject") {
     const { icon: icon, name: name } =
@@ -5144,8 +5209,26 @@ function getAmountColor(amountButton) {
 function tryUpdateAmount(expr, amountButton) {
   const calcLabel = amountButton.closest('.amount-row').querySelector('.calculation');
 
+  let subWorkspace = null;
+
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  const inputType = subWorkspace.inputType;
+
   if (!expr) {
     amountButton.textContent = "0.00";
+    if (inputType === 'transfer' && amountButton.id === 'transfer-to-amount') {
+      subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
+      subWorkspace.transfer.toCalculation = expr;                 // raw expression
+    } else {
+      subWorkspace.amount = result.toFixed(2);             // numeric
+      subWorkspace.calculation = expr;                            // raw expression
+    }
+
     // Empty expression → reset colors
     calcLabel.style.color = 'grey';
     amountButton.style.color = getAmountColor(amountButton);
@@ -5160,6 +5243,13 @@ function tryUpdateAmount(expr, amountButton) {
     if (typeof result === 'number' && isFinite(result)) {
       // VALID expression
       amountButton.textContent = result.toFixed(2);
+      if (inputType === 'transfer' && amountButton.id === 'transfer-to-amount') {
+        subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
+        subWorkspace.transfer.toCalculation = expr;                 // raw expression
+      } else {
+        subWorkspace.amount = result.toFixed(2);             // numeric
+        subWorkspace.calculation = expr;                           // raw expression
+      }
 
       calcLabel.style.color = 'grey';
       amountButton.style.color = getAmountColor(amountButton);
