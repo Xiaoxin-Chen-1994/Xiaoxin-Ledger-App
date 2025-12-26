@@ -5132,19 +5132,27 @@ function stopBackspaceHold() {
   }
 }
 
+function getAmountColor(amountButton) {
+  const id = amountButton.id;
+
+  if (id === 'expense-amount') return 'var(--expense-color)';
+  if (id === 'income-amount') return 'var(--income-color)';
+
+  return 'var(--text)';
+}
+
 function tryUpdateAmount(expr, amountButton) {
   const calcLabel = amountButton.closest('.amount-row').querySelector('.calculation');
 
   if (!expr) {
+    amountButton.textContent = "0.00";
     // Empty expression → reset colors
     calcLabel.style.color = 'grey';
-    amountButton.style.color = 'var(--text)';
+    amountButton.style.color = getAmountColor(amountButton);
     return;
   }
 
-  const safeExpr = expr
-    .replace(/×/g, '*')
-    .replace(/÷/g, '/');
+  const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
@@ -5154,15 +5162,15 @@ function tryUpdateAmount(expr, amountButton) {
       amountButton.textContent = result.toFixed(2);
 
       calcLabel.style.color = 'grey';
-      amountButton.style.color = 'var(--text)';
+      amountButton.style.color = getAmountColor(amountButton);
     } else {
-      // Not a number → treat as error
+      // Not a number → error
       calcLabel.style.color = 'red';
       amountButton.style.color = 'red';
     }
 
   } catch (e) {
-    // INVALID expression → error state
+    // INVALID expression → error
     calcLabel.style.color = 'red';
     amountButton.style.color = 'red';
   }
@@ -5179,8 +5187,7 @@ function handleAmountKey(key) {
   // Handle backspace
   if (key === 'backspace') {
     if (expr.length === 0) {
-      amountButton.textContent = "0.00";
-      return;
+      return; // nothing to delete
     }
 
     expr = expr.slice(0, -1);
