@@ -1886,12 +1886,11 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
 
     if (latestPage != null) {
       stack = historyStacks[latestNavBtn.replace("nav-", "")];
-console.log(latestNavBtn, stack)
+
       // if a page was shown, hide all pages at the old base page
       stack.forEach(entry => {
         const el = document.getElementById(entry[0] + "-page");
         if (el) el.style.display = "none";
-        console.log(el)
       });
     }
   } else {
@@ -1915,12 +1914,12 @@ console.log(latestNavBtn, stack)
     latestTitle = title;
     latestOptions = options;
     
-    // push a new history entry for this new page
-    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
     stack = historyStacks[currentBase]; // update stack
   }
-
+// push a new history entry for this new page
+    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
+    
   target = document.getElementById(latestPage + "-page");
   target.style.display = "block";
   target.zIndex = stack.length;
@@ -4953,7 +4952,6 @@ window.closeSelector = closeSelector;
 
 window.addEventListener('popstate', (e) => {
   e.preventDefault();
-  console.log(e);
   
   if (openSelector) {
     closeSelector();
