@@ -5043,6 +5043,8 @@ function closeSelector() {
   }
   openSelector = null;
 
+  stopBackspaceHold();
+
   // Clear dummy state so further back presses exit normally
   history.back();
 }
@@ -5086,20 +5088,49 @@ const allowedKeys = {
   "Enter": "confirm"
 };
 
+let backspaceInterval = null;
+
 document.addEventListener("keydown", e => {
   const sel = document.getElementById("amount-selector");
 
-  // Only accept keyboard input when selector is visible
   if (!sel || sel.style.transform === "translateY(120%)") return;
-
-  // If key not allowed, ignore
   if (!(e.key in allowedKeys)) return;
 
-  e.preventDefault(); // stop typing into page
+  e.preventDefault();
 
   const mapped = allowedKeys[e.key];
+
+  // Handle keyboard backspace hold
+  if (mapped === 'backspace') {
+    handleAmountKey('backspace'); // repeated automatically by key repeat
+    return;
+  }
+
+  // Handle keyboard confirm
+  if (mapped === 'confirm') {
+    closeSelector();
+    return;
+  }
+
   handleAmountKey(mapped);
 });
+
+function startBackspaceHold() {
+  // Delete one immediately for responsiveness
+  handleAmountKey('backspace');
+
+  // Start repeating delete
+  backspaceInterval = setInterval(() => {
+    handleAmountKey('backspace');
+  }, 80); // 80ms feels like a real keyboard
+}
+
+function stopBackspaceHold() {
+  if (backspaceInterval) {
+    clearInterval(backspaceInterval);
+    backspaceInterval = null;
+  }
+}
 
 function tryUpdateAmount(expr, amountButton) {
   if (!expr) return;
@@ -5126,11 +5157,13 @@ function handleAmountKey(key) {
 
   const calcLabel = lastButton.querySelector('.calculation');
   const amountButton = lastButton.querySelector('.amount-button');
-console.log(calcLabel)
+
   let expr = calcLabel.textContent.trim();
 
   // Handle backspace
   if (key === 'backspace') {
+    if (expr.length === 0) return;   // nothing to delete
+
     expr = expr.slice(0, -1);
     calcLabel.textContent = expr;
     tryUpdateAmount(expr, amountButton);
@@ -5168,17 +5201,18 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
   key.addEventListener('touchstart', () => {
     key.classList.add('pressed');
     if (navigator.vibrate) navigator.vibrate(30);
-console.log(key.dataset.key)
-    handleAmountKey(key.dataset.key);
+
+    const k = key.dataset.key;
+
+    if (k === 'backspace') {
+      startBackspaceHold();
+    } else {
+      handleAmountKey(k);
+    }
   });
 
-  key.addEventListener('touchend', () => {
-    key.classList.remove('pressed');
-  });
-
-  key.addEventListener('touchcancel', () => {
-    key.classList.remove('pressed');
-  });
+  key.addEventListener('touchend', stopBackspaceHold);
+  key.addEventListener('touchcancel', stopBackspaceHold);
 
   // block right click
   key.addEventListener("contextmenu", (e) => { e.preventDefault(); });

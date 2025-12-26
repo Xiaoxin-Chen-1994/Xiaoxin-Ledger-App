@@ -702,6 +702,12 @@ input[type="password"], input[type="url"], .selector-button,
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s ease;
+
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+
 }
 
 /* Clear button */
