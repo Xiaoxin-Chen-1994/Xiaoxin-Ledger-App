@@ -5133,9 +5133,15 @@ function stopBackspaceHold() {
 }
 
 function tryUpdateAmount(expr, amountButton) {
-  if (!expr) return;
+  const calcLabel = amountButton.closest('.amount-row').querySelector('.calculation');
 
-  // Replace symbols with JS operators
+  if (!expr) {
+    // Empty expression → reset colors
+    calcLabel.style.color = 'grey';
+    amountButton.style.color = 'var(--text)';
+    return;
+  }
+
   const safeExpr = expr
     .replace(/×/g, '*')
     .replace(/÷/g, '/');
@@ -5143,12 +5149,22 @@ function tryUpdateAmount(expr, amountButton) {
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
 
-    // Only update if result is a real number
     if (typeof result === 'number' && isFinite(result)) {
+      // VALID expression
       amountButton.textContent = result.toFixed(2);
+
+      calcLabel.style.color = 'grey';
+      amountButton.style.color = 'var(--text)';
+    } else {
+      // Not a number → treat as error
+      calcLabel.style.color = 'red';
+      amountButton.style.color = 'red';
     }
+
   } catch (e) {
-    // Invalid expression → do nothing
+    // INVALID expression → error state
+    calcLabel.style.color = 'red';
+    amountButton.style.color = 'red';
   }
 }
 
