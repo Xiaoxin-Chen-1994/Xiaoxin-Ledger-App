@@ -5233,7 +5233,7 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
   key.addEventListener("contextmenu", e => e.preventDefault());
 
   // TOUCH
-  key.addEventListener('touchstart', () => {
+  key.addEventListener('touchstart', e => {
     touchActive = true; // mark that this interaction is touch 
     e.preventDefault();
     key.classList.add('pressed');
