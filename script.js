@@ -5093,6 +5093,7 @@ document.querySelectorAll(".selector-button[data-type='category']")
         f.stopPropagation();
         
         sel.style.transform = 'translateY(120%)';
+        openSelector = null;
         if (inputType === "expense") {prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)};
         if (inputType === "income") {prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)};  
       };
@@ -5150,6 +5151,7 @@ document.querySelectorAll(".selector-button[data-type='subject']")
         f.stopPropagation();
         
         sel.style.transform = 'translateY(120%)';
+        openSelector = null;
         prepareHouseholdTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects);
       };
       
@@ -5170,6 +5172,7 @@ document.querySelectorAll(".selector-button[data-type='collection']")
         f.stopPropagation();
         
         sel.style.transform = 'translateY(120%)';
+        openSelector = null;
         prepareHouseholdTabs('manage-labels', 'collections', translations[currentLang].manageCollections);
       };
 
