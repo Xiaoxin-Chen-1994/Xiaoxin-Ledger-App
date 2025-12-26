@@ -4951,9 +4951,9 @@ function closeSelector() {
 }
 window.closeSelector = closeSelector;
 
-window.addEventListener('popstate', (event) => {
-return
-  console.log(event);
+window.addEventListener('popstate', (e) => {
+  e.preventDefault();
+  console.log(e);
   
   if (openSelector) {
     closeSelector();
