@@ -687,38 +687,19 @@ input[type="password"], input[type="url"], .selector-button,
 #amount-selector .keys {
   background: var(--card);
   width: 100%;
-  padding: 1rem;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
-  border-radius: 1rem 1rem 0 0;
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-}
-
-/* Close button */
-#amount-selector .selector-close {
-  position: absolute;
-  bottom: calc(100% - 0.5rem);
-  right: 1rem;
-  background: var(--card);
-  border: none;
-  padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  cursor: pointer;
 }
 
 /* Key buttons */
 /* Base button styling */
 #amount-selector .keys button {
   padding: 1rem;
+  margin: 0;
   font-size: calc(var(--font-size) * 1.2);
   border: none;
   border-radius: 0.5rem;
-  background: var(--primary-light);
+  background: none;
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -731,9 +712,9 @@ input[type="password"], input[type="url"], .selector-button,
 
 /* Confirm button (replaces equals, vertical 2-row span) */
 #amount-selector .keys button.confirm {
-  background: #b3ffb3;
+  background: var(--primary);
   grid-row: span 2;        /* makes it vertical */
-  font-size: calc(var(--font-size) * 1.1);
+  font-size: calc(var(--font-size) * 1.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -743,12 +724,6 @@ input[type="password"], input[type="url"], .selector-button,
 #amount-selector .keys button.equals,
 #amount-selector .keys button.close {
   display: none;
-}
-
-/* Press feedback */
-#amount-selector .keys button:active {
-  background: var(--primary);
-  color: white;
 }
 
 .dt-col {
