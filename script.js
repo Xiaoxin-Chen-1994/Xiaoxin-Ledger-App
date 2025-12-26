@@ -1914,12 +1914,12 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     latestTitle = title;
     latestOptions = options;
     
+    // push a new history entry for this new page
+    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
     stack = historyStacks[currentBase]; // update stack
   }
-// push a new history entry for this new page
-    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
-    
+
   target = document.getElementById(latestPage + "-page");
   target.style.display = "block";
   target.zIndex = stack.length;
@@ -4961,7 +4961,7 @@ window.addEventListener('popstate', (e) => {
   const stack = historyStacks[currentBase];
 
   if (stack.length > 1) {
-    goBack();
+    // goBack();
     return;
   }
 
