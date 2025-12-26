@@ -5162,7 +5162,10 @@ function handleAmountKey(key) {
 
   // Handle backspace
   if (key === 'backspace') {
-    if (expr.length === 0) return;   // nothing to delete
+    if (expr.length === 0) {
+      amountButton.textContent = "0.00";
+      return;
+    }
 
     expr = expr.slice(0, -1);
     calcLabel.textContent = expr;
