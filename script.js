@@ -5075,6 +5075,22 @@ document.querySelectorAll(".amount-row").forEach(btn => {
   };
 });
 
+// listener for amount-selector keys
+document.querySelectorAll('#amount-selector .keys button').forEach(btn => {
+  btn.addEventListener('touchstart', () => {
+    btn.classList.add('pressed');
+    if (navigator.vibrate) navigator.vibrate(30);
+  });
+
+  btn.addEventListener('touchend', () => {
+    btn.classList.remove('pressed');
+  });
+
+  btn.addEventListener('touchcancel', () => {
+    btn.classList.remove('pressed');
+  });
+});
+
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
   btn.onclick = e => {
     e.stopPropagation();

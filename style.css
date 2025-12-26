@@ -726,7 +726,7 @@ input[type="password"], input[type="url"], .selector-button,
 }
 
 /* Press feedback */
-#amount-selector .keys button:active {
+#amount-selector .keys button.pressed {
   background: var(--primary);
 }
 
