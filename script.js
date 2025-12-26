@@ -1885,10 +1885,22 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     switchedBase = true;
 
     if (latestPage != null) {
-      // if a page was shown, hide the page
-      document.getElementById(latestPage + "-page").style.display = "none";
-      document.getElementById(currentBase + "-page").style.display = "none";
+      stack = historyStacks[latestNavBtn.replace("nav-", "")];
+console.log(latestNavBtn, stack)
+      // if a page was shown, hide all pages at the old base page
+      stack.forEach(entry => {
+        const el = document.getElementById(entry[0] + "-page");
+        if (el) el.style.display = "none";
+        console.log(el)
+      });
     }
+  } else {
+    stack = historyStacks[latestNavBtn.replace("nav-", "")];
+
+    stack.forEach(entry => {
+      const el = document.getElementById(entry[0] + "-page");
+      if (el) el.style.display = "block";
+    });
   }
 
   currentBase = navBtn.replace("nav-", "");
@@ -4940,6 +4952,7 @@ function closeSelector() {
 window.closeSelector = closeSelector;
 
 window.addEventListener('popstate', (event) => {
+return
   console.log(event);
   
   if (openSelector) {
@@ -4948,8 +4961,7 @@ window.addEventListener('popstate', (event) => {
   }
 
   const stack = historyStacks[currentBase];
-  showStatusMessage("stack="+stack.length, 'info')
-  alert("stack="+stack.length)
+
   if (stack.length > 1) {
     goBack();
     return;
