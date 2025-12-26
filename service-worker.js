@@ -48,10 +48,7 @@ self.addEventListener('message', async event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Skip Firebase Auth
-  if (url.origin.includes('googleapis.com') || url.origin.includes('gstatic.com')) {
-    return;
-  }
+  if (url.origin !== location.origin) return;
 
   event.respondWith(
     caches.match(event.request).then(cached => {
