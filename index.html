@@ -677,10 +677,12 @@
         <!-- Import -->
         <section class="settings-section import-data">
           <p id="import-data-title">导入数据</p>
-          <button class="settings-button" onclick="document.getElementById('csv-input').click()">从CSV文件导入数据</button>
-          <div id="import-data-feedback"></div>
+          <div>
+            <button class="settings-button" onclick="document.getElementById('csv-input').click()">从CSV文件导入数据</button>
+            <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="importFromCSV(event)">
+            <div id="import-data-feedback"></div>
+          </div>
         </section>
-        <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="importFromCSV(event)">
       </div>
     </div>
 
