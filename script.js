@@ -2060,29 +2060,28 @@ let subWorkspace = null;
 }
 window.saveEntry = saveEntry;
 
-function importFromCSV(event) {
+const dfd = window.dfd;
+
+async function importFromCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
+  // Read raw text from the file
+  const text = await file.text();
 
-  reader.onload = function(e) {
-    const text = e.target.result;
-    const rows = text.split(/\r?\n/).map(r => r.split(","));
+  // Remove the first line (metadata: 随手记导出文件(...))
+  const cleanedText = text
+    .split(/\r?\n/)
+    .slice(1) // drop line 0
+    .join("\n");
 
-    console.log("Parsed CSV:", rows);
+  // Now let Danfo parse the cleaned CSV
+  const df = await dfd.readCSV(cleanedText);
 
-    document.getElementById("import-data-feedback").textContent =
-      "CSV 文件已成功加载，共 " + rows.length + " 行";
-  };
-
-  reader.onerror = function() {
-    document.getElementById("import-data-feedback").textContent =
-      "读取 CSV 文件失败";
-  };
-
-  reader.readAsText(file);
+  df.print();
 }
+
+
 window.importFromCSV = importFromCSV;
 
 
