@@ -5543,9 +5543,7 @@ document.querySelectorAll(".selector-button[data-type='category']")
   });
 
 document.querySelectorAll( 
-  ".selector-button[data-type='account'], " + 
-  ".selector-button[data-type='fromAccount'], " + 
-  ".selector-button[data-type='toAccount']"
+  ".selector-button[data-type='account'], "
 ).forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
