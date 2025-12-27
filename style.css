@@ -1684,7 +1684,7 @@ emoji-picker {
   
   opacity: 0; 
   transform: scale(0.92); 
-  transition: 0.25s ease;
+  transition: 0.2s ease;
 }
 
 .glass-popup-window.show { 
