@@ -355,13 +355,13 @@ input[type="password"], input[type="url"],
 }
 
 #expense-amount-row {
-  border-bottom: 3px solid var(--expense-color);
+  border-bottom: 1px solid var(--expense-color);
 }
 #expense-amount {
   color: var(--expense-color);
 }
 #income-amount-row {
-  border-bottom: 3px solid var(--income-color);
+  border-bottom: 1px solid var(--income-color);
 }
 #income-amount {
   color: var(--income-color);
