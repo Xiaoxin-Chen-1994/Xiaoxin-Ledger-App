@@ -312,7 +312,7 @@ const translations = {
     enterTagName: "输入标签名称",
     exchangeRate: "汇率",
     transferFrom: "转出",
-    transferFrom: "转入",
+    transferTo: "转入",
     notes: "📝备注",
     save: "✔️保存",
     personalSettingsTitle: "个人偏好",
