@@ -2413,7 +2413,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   // icon button
   const iconBtn = document.createElement("button");
   iconBtn.innerHTML = options.icon || "Icon";
-  iconBtn.classList.add("labels-icon-btn");
+  iconBtn.classList.add("icon");
 
   iconBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -4576,10 +4576,10 @@ function createList(col, values) {
       const hasNote = "note" in v;
 
       const valueDiv = document.createElement("div");
-      valueDiv.className = "dt-item";
+      valueDiv.className = "selector-item";
 
       const iconSpan = document.createElement("span");
-      iconSpan.className = "icon";
+      iconSpan.className = "selector-item-icon";
       iconSpan.innerHTML = v.icon;
       valueDiv.appendChild(iconSpan);
 
