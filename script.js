@@ -5085,18 +5085,25 @@ let keypadOpen = false;
 
 function showSelector(selName) {
   if (prevLastButton !== lastButton) { // when switching to a different button
-    console.log(selName)
     if (openSelector === 'amount') { // if previously was an amount-selector
       prevLastButton.style.borderWidth = "1px"; 
     } else {
       if (prevLastButton) {
-        prevLastButton.style.background = "var(--bg)";
+        if (['transfer-from-account', 'transfer-to-account'].includes(prevLastButton)) {
+          document.getElementById("transfer-accounts").style.background = "var(--bg)";
+        } else {
+          prevLastButton.style.background = "var(--bg)";
+        }
       }
     }
   }
-  
+  console.log(lastButton)
   if (selName !== 'amount') { // if currently not an amount-selector
-    lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+    if (['transfer-from-account', 'transfer-to-account'].includes(lastButton.id)) {
+      document.getElementById("transfer-accounts").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+    } else {
+      lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+    }
   }
 
   // Case 1: same selector already open → do nothing
@@ -5144,7 +5151,11 @@ function closeSelector() {
   if (openSelector === 'amount') {
     lastButton.style.borderWidth = "1px";
   } else {
-    lastButton.style.background = "var(--bg)";
+    if (['transfer-from-account', 'transfer-to-account'].includes(openSelector)) {
+      document.getElementById("transfer-accounts").style.background = "var(--bg)";
+    } else {
+      lastButton.style.background = "var(--bg)";
+    }
   }
   
   const sel = document.getElementById(openSelector + '-selector');

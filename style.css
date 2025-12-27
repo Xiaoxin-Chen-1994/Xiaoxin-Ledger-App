@@ -261,7 +261,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
   flex: 1;
   padding: 0.75rem 0;
   border: 1px solid var(--border);
-  background: var(--card);
+  background: var(--bg);
   color: var(--text);
   border-radius: 0.5rem;
   cursor: pointer;
@@ -535,6 +535,9 @@ input[type="password"], input[type="url"],
   cursor: text;              /* typing cursor */
   transition: background 0.2s ease;
 }
+.form-row textarea:focus {
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
+}
 
 #expense-category,
 #income-category {
@@ -582,7 +585,7 @@ input[type="password"], input[type="url"],
 }
 .tag-input:focus {
   outline: 0.0625rem solid var(--border);
-  background: color-mix(in srgb, var(--primary) 20%, --bg);
+  background: color-mix(in srgb, var(--primary) 40%, var(--bg));
 }
 
 /* Button stays small */
