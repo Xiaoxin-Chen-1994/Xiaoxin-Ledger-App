@@ -5085,6 +5085,9 @@ let keypadOpen = false;
 function showSelector(selName) {
   // Case 1: same selector already open → do nothing
   if (openSelector === selName) {
+    if (openSelector === 'amount') {
+      lastButton.style.borderWidth = "1px";
+    }
     return;
   }
 
