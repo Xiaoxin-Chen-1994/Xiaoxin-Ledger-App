@@ -64,7 +64,7 @@
 //       personId: string           // reference to predefined persons
 //       collection: string       // reference to collections/{collectionId}
 //       datetime: timestamp
-//       items: [ { name: string, notes: string, amount: number } ]
+//       notes: notes
 //       amount: number
 //       createdBy: string          // userId
 //       lastModifiedBy: string     // userId
@@ -110,6 +110,7 @@ let latestPage = null;
 let latestNavBtn = null;
 let latestTitle = null;
 let latestOptions = null;
+let entryData_original = {};
 
 const translations = {
   en: {
@@ -483,6 +484,7 @@ import {
   getDoc, 
   getDocs,
   updateDoc,
+  serverTimestamp,
   deleteDoc,
   collection,
   query,
@@ -1098,11 +1100,14 @@ function setCurrentTime(button, subWorkspace) {
 
   const prefix = getDatePrefix(now);
 
-  subWorkspace.yyyy = yyyy;
-  subWorkspace.mm = mm;
-  subWorkspace.dd = dd;
-  subWorkspace.hh = hh;
-  subWorkspace.min = min;
+  if (!subWorkspace.inputTransactionTimeRaw) {
+    subWorkspace.inputTransactionTimeRaw = {};
+  }
+  subWorkspace.inputTransactionTimeRaw.yyyy = yyyy;
+  subWorkspace.inputTransactionTimeRaw.mm = mm;
+  subWorkspace.inputTransactionTimeRaw.dd = dd;
+  subWorkspace.inputTransactionTimeRaw.hh = hh;
+  subWorkspace.inputTransactionTimeRaw.min = min;
 
   subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
 
@@ -1317,16 +1322,13 @@ function setDefaultAccount(button, subWorkspace) {
     if (type === "transfer") {
       // this type has two accounts
 
-      let fromCurrency;
-      let toCurrency;
-
       // FROM ACCOUNT
       if (!subWorkspace.transfer.fromAccountInfo) {
         subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
         const from = subWorkspace.transfer.fromAccountInfo.account;
         const fromIcon = from.icon || "";
         const fromName = from.name;
-        fromCurrency = from.currency;
+        const fromCurrency = from.currency;
 
         subWorkspace.transfer.fromAccountInnerHTML = `
           <span class="cat-part">
@@ -1342,7 +1344,7 @@ function setDefaultAccount(button, subWorkspace) {
         const to = subWorkspace.transfer.toAccountInfo.account;
         const toIcon = to.icon || "";
         const toName = to.name;
-        toCurrency = to.currency;
+        const toCurrency = to.currency;
 
         subWorkspace.transfer.toAccountInnerHTML = `
           <span class="cat-part">
@@ -1352,8 +1354,10 @@ function setDefaultAccount(button, subWorkspace) {
         `;
       }
 
-      if (fromCurrency === toCurrency) {
+      if (subWorkspace.transfer.fromAccountInfo.account.currency === subWorkspace.transfer.toAccountInfo.account.currency) {
         subWorkspace.transfer.sameCurrency = true;
+      } else {
+        subWorkspace.transfer.sameCurrency = false;
       }
     }
   });
@@ -1597,6 +1601,7 @@ function switchTab(index) {
   }
 
   const inputType = transactionTypes[index];
+  subWorkspace.inputTypeIndex = index;
   subWorkspace.inputType = inputType;
 
   wrapper.style.transform = `translateX(-${index * 105}%)`; // this includes the 5% gap in class .transaction-wrapper
@@ -1629,10 +1634,10 @@ function switchTab(index) {
     let amountBtn = activeTab.querySelector(`#${activeForm} .amount-button`);
     let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
     if (subWorkspace.amount == null) {
-      subWorkspace.amount = "0.00";
+      subWorkspace.amount = 0;
       subWorkspace.calculation = "";
     }
-    amountBtn.textContent = subWorkspace.amount;
+    amountBtn.textContent = subWorkspace.amount.toFixed(2);
     calculationBtn.textContent = subWorkspace.calculation;
     
   } else { // for transfer
@@ -1644,24 +1649,24 @@ function switchTab(index) {
     let amountBtn = activeTab.querySelector(`#${activeForm} .amount-button`);
     let calculationBtn = activeTab.querySelector(`#${activeForm} .calculation`);
     if (subWorkspace.amount == null) {
-      subWorkspace.amount = "0.00";
+      subWorkspace.amount = 0;
       subWorkspace.calculation = "";
     }
-    amountBtn.textContent = subWorkspace.amount;
+    amountBtn.textContent = subWorkspace.amount.toFixed(2);
     calculationBtn.textContent = subWorkspace.calculation;
 
     let fromAmountBtn = document.getElementById('transfer-from-amount');
     let fromCalculationBtn = document.getElementById('transfer-from-calculation');
-    fromAmountBtn.textContent = subWorkspace.amount;
+    fromAmountBtn.textContent = subWorkspace.amount.toFixed(2);
     fromCalculationBtn.textContent = subWorkspace.calculation;
 
     let toAmountBtn = document.getElementById('transfer-to-amount');
     let toCalculationBtn = document.getElementById('transfer-to-calculation');
     if (subWorkspace.transfer.toAmount == null) {
-      subWorkspace.transfer.toAmount = "0.00";
+      subWorkspace.transfer.toAmount = 0;
       subWorkspace.transfer.toCalculation = "";
     }
-    toAmountBtn.textContent = subWorkspace.transfer.toAmount;
+    toAmountBtn.textContent = subWorkspace.transfer.toAmount.toFixed(2);
     toCalculationBtn.textContent = subWorkspace.transfer.toCalculation;
 
     const fromLabel = document.getElementById("exchange-rate-from-label");
@@ -1923,90 +1928,172 @@ document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
 });
 
 // --- Ledger add entry ---
-function addEntry() {
+async function saveEntry() {
   if (!currentUser) return;
 
-  const householdId = inputHouseholdId; // regardless of household name
-  const type = transactionTypes[inputTypeIndex];
+  let subWorkspace = null;
+  let nav = true;
 
-  // Read fields depending on type
-  let inputPrimaryCategory, inputSecondaryCategory, account, person, fromAccount, toAccount;
-
-  if (type === "expense") {
-    const map = fieldMap[type];
-
-    inputPrimaryCategory = expenseInputPrimaryCategory;
-    inputSecondaryCategory = expenseInputSecondaryCategory;
-    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
-    account = document.getElementById(map.account).value.trim();
-    person = document.getElementById(map.person).value.trim();
-    notes = document.getElementById(map.notes).value.trim();
-  } else if (type === "income") {
-    const map = fieldMap[type];
-
-    inputPrimaryCategory = incomeInputPrimaryCategory;
-    inputSecondaryCategory = incomeInputSecondaryCategory;
-    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
-    account = document.getElementById(map.account).value.trim();
-    person = document.getElementById(map.person).value.trim();
-    notes = document.getElementById(map.notes).value.trim();
-  } else if (type === "transfer") {
-    const map = fieldMap.transfer;
-
-    inputPrimaryCategory = "";
-    inputSecondaryCategory = "";
-    datetime = removeDatePrefix(document.getElementById(map.datetime).textContent);
-    fromAccount = document.getElementById(map.fromAccount).value.trim();
-    toAccount = document.getElementById(map.toAccount).value.trim();
-    notes = document.getElementById(map.notes).value.trim();
-  } else if (type === "balance") {
-    const map = fieldMap.balance;
-
-    inputPrimaryCategory = "";
-    inputSecondaryCategory = "";
-    notes = document.getElementById(map.notes).value.trim();
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    nav = 'create';
+  } else {
+    nav = latestNavBtn.replace("nav-", "");
   }
 
-  // Update datalists
-  if (account && !accounts.includes(account)) {
-    accounts.push(account);
-    updateDatalist("account-list", accounts);
-  }
-  if (person && !persons.includes(person)) {
-    persons.push(person);
-    updateDatalist("person-list", persons);
-  }
+  subWorkspace = workspace[nav];
+
+  const inputType = subWorkspace.inputType;
+
+  const householdId = subWorkspace[inputType].householdId; // regardless of household name
 
   // 🔑 Store transaction under selected household
-  db.collection("households").doc(householdId).collection("entries").add({
-    type,
-    inputPrimaryCategory,
-    inputSecondaryCategory,
-    account,
-    datetime,
-    person,
-    notes,
-    createdBy: currentUser.uid,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => {
-    // Reset form
-    document.getElementById("transaction-form").reset();
-    updateHomeKanban(householdId); // pass householdId so kanban updates for that household
-  }).catch(err => {
-    console.error("Error adding transaction:", err);
-    showStatus("添加交易失败");
-  });
-}
-window.addEntry = addEntry;
+  try {
+    // 1. Reference the household document
+    const householdRef = doc(db, "households", householdId);
 
-function updateDatalist(id, values) {
-  const datalist = document.getElementById(id);
-  datalist.innerHTML = "";
-  values.forEach(v => {
-    const option = document.createElement("option");
-    option.value = v;
-    datalist.appendChild(option);
-  });
+    // 2. Generate a unique entry ID
+    const entryId = crypto.randomUUID();
+    let entryData;
+    let changes;
+    
+    // 3. Build the entry object
+    if (["expense", "income"].includes(inputType)) {
+      entryData = {
+        entryId,
+        type: inputType,
+        amount: subWorkspace.amount ?? 0,
+        householdId,
+        primaryCategory: subWorkspace[inputType].primaryCategory,
+        secondaryCategory: subWorkspace[inputType].secondaryCategory,
+        account: subWorkspace[inputType].accountInfo.account.name,
+        transactionTime: subWorkspace.inputTransactionTime,
+        subject: subWorkspace[inputType].subject,
+        collection: subWorkspace[inputType].collection,
+        tags: subWorkspace.tags ?? [],
+        notes: subWorkspace.notes ?? "",
+
+        createdBy: currentUser.uid,
+        createdTimestamp: getFormattedTime(),
+        lastModifiedBy: currentUser.uid,
+        lastModifiedTimestamp: getFormattedTime(),
+      };
+    } else if (["transfer"].includes(inputType)) {
+      entryData = {
+        entryId,
+        type: inputType,
+        amount: subWorkspace.amount ?? 0,
+        toAmount: subWorkspace.toAmount ?? 0,
+        sameCurrency: subWorkspace[inputType].sameCurrency,
+        householdId,
+        fromAccount: subWorkspace[inputType].fromAccountInfo.account.name,
+        toAccount: subWorkspace[inputType].fromAccountInfo.account.name,
+        transactionTime: subWorkspace.inputTransactionTime,
+        tags: subWorkspace.tags ?? [],
+        notes: subWorkspace.notes ?? "",
+
+        createdBy: currentUser.uid,
+        createdTimestamp: getFormattedTime(),
+        lastModifiedBy: currentUser.uid,
+        lastModifiedTimestamp: getFormattedTime(),
+      };
+    } else if (["balance"].includes(inputType)) {
+      entryData = {
+        entryId,
+        type: inputType,
+        amount: subWorkspace.amount ?? 0,
+        householdId,
+        account: subWorkspace[inputType].accountInfo.account.name,
+        transactionTime: subWorkspace.inputTransactionTime,
+        tags: subWorkspace.tags ?? [],
+        notes: subWorkspace.notes ?? "",
+
+        createdBy: currentUser.uid,
+        createdTimestamp: getFormattedTime(),
+        lastModifiedBy: currentUser.uid,
+        lastModifiedTimestamp: getFormattedTime(),
+      };
+    }
+
+    // 4. Write it under households.householdId.entries.entryId
+    await updateDoc(householdRef, {
+      [`entries.${entryId}`]: entryData,
+      lastSynced: getFormattedTime()
+    });
+
+    if (nav !== 'create') { // modifying an existing entry
+      changes = diffEntries(entryData_original[inputType], entryData);
+
+      await updateDoc(householdRef, { 
+        entryChangeLog: arrayUnion(changes) 
+      });
+    }
+
+    showStatusMessage({
+      en: 'Transaction saved successfully!',
+      zh: '已成功保存！'
+    }[currentLang], "success")
+
+    // recycle variables
+    delete workspace[nav];
+    delete entryData_original[nav];
+
+    // 5. Reset UI 
+    if (nav === 'create') {
+      resetCreate();
+    } else { // for other base pages
+      history.back();
+    }
+    updateHomeKanban(householdId);
+    showPage('home', 'nav-home');
+
+  } catch (err) {
+    console.error("Error adding transaction:", err);
+    showStatusMessage("添加交易失败", 'error');
+  }
+}
+window.saveEntry = saveEntry;
+
+function diffEntries(original, updated) {
+  // this function is used to find out the modifications made to an existing entry
+  const changes = {};
+
+  // Fields we want to ignore when comparing
+  const ignore = new Set([
+    "createdBy",
+    "createdTimestamp",
+    "lastModifiedBy",
+    "lastModifiedTimestamp"
+  ]);
+
+  for (const key in updated) {
+    if (ignore.has(key)) continue; // skip metadata fields
+
+    if (updated[key] !== original[key]) {
+      changes[key] = {
+        before: original[key],
+        after: updated[key]
+      };
+    }
+  }
+
+  changes.entryId = updated.entryId;
+  changes.transactionTime = updated.transactionTime;
+  changes.lastModifiedBy = updated.lastModifiedBy;
+  changes.lastModifiedTimestamp = updated.lastModifiedTimestamp;
+
+  return changes;
+
+// Example output
+// {
+//   entryId: string,
+//   transactionTime: datetime string,
+//   lastModifiedBy: userId,
+//   lastModifiedBy: timestamp,
+//
+//   amount: { before: 20, after: 30 },
+//   notes: { before: "", after: "Lunch" }
+// }
+
 }
 
 // define base pages
@@ -2145,6 +2232,9 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         
         workspace.create.inputTypeIndex = 0;
         workspace.create.inputType = transactionTypes[0]; // start with expense
+        workspace.create.amount = 0;
+        workspace.create.calculation = "";
+        workspace.create.tags = [];
         workspace.create.notes = "";
         const activeForm = workspace.create.inputType + "-form";
         dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
@@ -2161,6 +2251,16 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         setDefaultSubject(subjectBtn, workspace.create);
         setDefaultCollection(collectionBtn, workspace.create);
 
+        const amountEl = document.querySelector(`#${activeForm} .amount-button`);
+        amountEl.textContent = workspace.create.amount;
+        const calculationEl = document.querySelector(`#${activeForm} .calculation`);
+        calculationEl.textContent = workspace.create.calculation;
+        const tagInputEl = document.querySelector(`#${activeForm} .tag-input`);
+        tagInputEl.textContent = "";
+        const tagSuggestionsEl = document.querySelector(`#${activeForm} .tag-suggestions`);
+        tagSuggestionsEl.textContent = "";
+        const taggedEl = document.querySelector(`#${activeForm} .tagged`);
+        taggedEl.innerHTML = "";
         const notesEl = document.querySelector(`#${activeForm} textarea[id$='notes']`);
         notesEl.value = workspace.create.notes;
       }
@@ -2181,12 +2281,12 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     }
 
     // prepare date time selector columns in advance
-    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.yyyy);
-    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.mm);
+    ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.inputTransactionTimeRaw.yyyy);
+    ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.inputTransactionTimeRaw.mm);
     updateDayColumn();
-    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
-    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.hh);
-    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.min);
+    ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
+    ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
+    ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
     
     document.getElementById("save-btn-headerbar").style.display = "block";
     document.querySelectorAll('.form-row label').forEach(label => {
@@ -4803,9 +4903,9 @@ function updateSelectorPreview(updatedCol) {
       updatedCol.classList.contains("year-col") ||
       updatedCol.classList.contains("month-col")
     ) {
-      subWorkspace.dd = getSelectedValue(datetimeSelector, ".day-col");
+      subWorkspace.inputTransactionTimeRaw.dd = getSelectedValue(datetimeSelector, ".day-col");
       updateDayColumn();
-      ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
+      ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
     }
 
     const yEl = datetimeSelector.querySelector(".year-col .selected");
@@ -4825,13 +4925,13 @@ function updateSelectorPreview(updatedCol) {
     const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
     const prefix = getDatePrefix(dateObj);
 
-    subWorkspace.yyyy = yyyy;
-    subWorkspace.mm = String(mm).padStart(2, "0");
-    subWorkspace.dd = String(dd).padStart(2, "0");
-    subWorkspace.hh = String(hh).padStart(2, "0");
-    subWorkspace.min = String(min).padStart(2, "0");
+    subWorkspace.inputTransactionTimeRaw.yyyy = yyyy;
+    subWorkspace.inputTransactionTimeRaw.mm = String(mm).padStart(2, "0");
+    subWorkspace.inputTransactionTimeRaw.dd = String(dd).padStart(2, "0");
+    subWorkspace.inputTransactionTimeRaw.hh = String(hh).padStart(2, "0");
+    subWorkspace.inputTransactionTimeRaw.min = String(min).padStart(2, "0");
 
-    subWorkspace.inputTransactionTime = `${subWorkspace.yyyy}-${subWorkspace.mm}-${subWorkspace.dd} ${subWorkspace.hh}:${subWorkspace.min}`;
+    subWorkspace.inputTransactionTime = `${subWorkspace.inputTransactionTimeRaw.yyyy}-${subWorkspace.inputTransactionTimeRaw.mm}-${subWorkspace.inputTransactionTimeRaw.dd} ${subWorkspace.inputTransactionTimeRaw.hh}:${subWorkspace.inputTransactionTimeRaw.min}`;
 
     lastButton.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
     lastButton.dataset.value = dateObj.toISOString();
@@ -4970,10 +5070,10 @@ function updateSelectorPreview(updatedCol) {
         let calculationBtn = document.querySelector(`#${activeForm} .calculation`);
 
         if (subWorkspace.amount == null) {
-          subWorkspace.amount = "0.00";
+          subWorkspace.amount = 0;
           subWorkspace.calculation = "";
         }
-        amountBtn.textContent = subWorkspace.amount;
+        amountBtn.textContent = subWorkspace.amount.toFixed(2);
         calculationBtn.textContent = subWorkspace.calculation;
     
       } else {
@@ -4989,10 +5089,10 @@ function updateSelectorPreview(updatedCol) {
         let fromAmountBtn = document.getElementById('transfer-from-amount');
         let fromCalculationBtn = document.getElementById('transfer-from-calculation');
         if (subWorkspace.amount == null) {
-          subWorkspace.amount = "0.00";
+          subWorkspace.amount = 0;
           subWorkspace.calculation = "";
         }
-        fromAmountBtn.textContent = subWorkspace.amount;
+        fromAmountBtn.textContent = subWorkspace.amount.toFixed(2);
         fromCalculationBtn.textContent = subWorkspace.calculation;
       }
     }
@@ -5065,10 +5165,10 @@ function updateDayColumn() {
     subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
   }
 
-  subWorkspace.yyyy = getSelectedValue(datetimeSelector, ".year-col");
-  subWorkspace.mm = getSelectedValue(datetimeSelector, ".month-col");
+  subWorkspace.inputTransactionTimeRaw.yyyy = getSelectedValue(datetimeSelector, ".year-col");
+  subWorkspace.inputTransactionTimeRaw.mm = getSelectedValue(datetimeSelector, ".month-col");
 
-  const days = daysInMonth(subWorkspace.yyyy, subWorkspace.mm);
+  const days = daysInMonth(subWorkspace.inputTransactionTimeRaw.yyyy, subWorkspace.inputTransactionTimeRaw.mm);
   const dayCol = datetimeSelector.querySelector(".day-col");
   createList(dayCol, Array.from({ length: days }, (_, i) => i + 1));
 }
@@ -5192,11 +5292,11 @@ function clickToSetNow() {
   let btn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
   if (btn) setCurrentTime(btn, subWorkspace);
 
-  ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.yyyy);
-  ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.mm);
-  ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.dd);
-  ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.hh);
-  ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.min);
+  ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.inputTransactionTimeRaw.yyyy);
+  ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.inputTransactionTimeRaw.mm);
+  ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
+  ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
+  ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
 }
 window.clickToSetNow = clickToSetNow;
 
@@ -5407,7 +5507,7 @@ function tryUpdateAmount(expr, amountButton) {
     amountButton.textContent = "0.00";
     if (inputType === 'transfer') {
       if (amountButton.id === 'transfer-to-amount') {
-        subWorkspace.transfer.toAmount = "0.00";
+        subWorkspace.transfer.toAmount = 0;
         subWorkspace.transfer.toCalculation = "";
       }
 
@@ -5423,8 +5523,8 @@ function tryUpdateAmount(expr, amountButton) {
       }
 
     } else {
-      subWorkspace.amount = result.toFixed(2);             // numeric
-      subWorkspace.calculation = expr;                            // raw expression
+      subWorkspace.amount = 0;
+      subWorkspace.calculation = "";
     }
 
     // Empty expression → reset colors
@@ -5443,8 +5543,8 @@ function tryUpdateAmount(expr, amountButton) {
       amountButton.textContent = result.toFixed(2);
       if (inputType === 'transfer') {
         if (amountButton.id === 'transfer-to-amount') {
-          subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
-          subWorkspace.transfer.toCalculation = expr;                 // raw expression
+          subWorkspace.transfer.toAmount = result;  // numeric
+          subWorkspace.transfer.toCalculation = expr;          // raw expression
         }
 
         if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
@@ -5470,7 +5570,7 @@ function tryUpdateAmount(expr, amountButton) {
         }
 
       } else {
-        subWorkspace.amount = result.toFixed(2);             // numeric
+        subWorkspace.amount = result;             // numeric
         subWorkspace.calculation = expr;                           // raw expression
       }
 
@@ -5514,6 +5614,30 @@ function handleAmountKey(key) {
   if (key === 'confirm') {
     // You may want to close selector here
     closeSelector();
+    return;
+  }
+
+  const isOp = c => "+-×÷".includes(c);
+  const isParen = c => "()".includes(c);
+  const last = expr.slice(-1);
+
+  // Identify current number segment
+  const lastNumber = expr.split(/[-+×÷]/).pop();
+
+  // 1. Prevent two decimals in one number
+  if (key === "." && lastNumber.includes(".")) {
+    return;
+  }
+
+  // 2. Prevent parentheses next to operators
+  if (isParen(key) && isOp(last)) return;
+  if (isOp(key) && isParen(last)) return;
+
+  // 3. Replace operator if two typed consecutively
+  if (isOp(key) && isOp(last)) {
+    expr = expr.slice(0, -1) + key;
+    calcLabel.textContent = expr;
+    tryUpdateAmount(expr, amountButton);
     return;
   }
 

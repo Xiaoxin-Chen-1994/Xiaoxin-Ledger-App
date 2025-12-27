@@ -20,7 +20,7 @@
     <button id="return-btn" onclick="history.back()" style="display: none;">&lt; 返回</button>
     <button id="cancel-btn" onclick="resetCreate()" style="display: none;">取消</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
-    <button id="save-btn-headerbar" class="header-right-button" onclick="addEntry()" style="display: none;">✔️保存</button>
+    <button id="save-btn-headerbar" class="header-right-button" onclick="saveEntry()" style="display: none;">✔️保存</button>
     <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display: none;">🔍搜索</button>
     <button id="manage-btn-headerbar" class="header-right-button" style="display: none;">管理</button>
     <button id="delete-btn-headerbar" class="header-right-button" style="display: none;">删除</button>
@@ -185,7 +185,7 @@
               </div>
 
               <div class="actions">
-                <button id="save-btn-expense" type="button" onclick="addEntry()">保存</button>
+                <button id="save-btn-expense" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
@@ -246,7 +246,7 @@
               </div>
 
               <div class="actions">
-                <button id="save-btn-income" type="button" onclick="addEntry()">保存</button>
+                <button id="save-btn-income" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
@@ -317,7 +317,7 @@
               </div>
 
               <div class="actions">
-                <button id="save-btn-transfer" type="button" onclick="addEntry()">保存</button>
+                <button id="save-btn-transfer" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
@@ -363,7 +363,7 @@
               </div>
 
               <div class="actions">
-                <button id="save-btn-balance" type="button" onclick="addEntry()">保存</button>
+                <button id="save-btn-balance" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
