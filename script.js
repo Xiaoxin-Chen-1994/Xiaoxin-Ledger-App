@@ -2304,7 +2304,7 @@ async function loadLabels(activeHouseholdId, task, type, title) {
 
       if (task != 'order-labels') {
         // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, activeHouseholdId, task, type, title, false, true);
+        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, true);
         block.appendChild(addWrapper);
       }
 
@@ -2330,21 +2330,21 @@ async function loadLabels(activeHouseholdId, task, type, title) {
 
         if (task != 'order-labels') {
           // Allow adding a secondary // not for the order-labels-page
-          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, "➕", primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
+          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, `<span class="icon-content">➕</span>`, primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
           primaryWrapper.appendChild(secAddWrapper);
         }
       }
 
       if (task != 'order-labels') {
         // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, "➕", block, block, activeHouseholdId, task, type, title, false, true);
+        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, true);
         block.appendChild(addWrapper);
       }
 
     } else {
       if (task != 'order-labels') {
         // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, "➕", block, block, activeHouseholdId, task, type, title, false, false);
+        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, false);
         block.appendChild(addWrapper);
       }
 
@@ -2354,7 +2354,7 @@ async function loadLabels(activeHouseholdId, task, type, title) {
 
       if (task != 'order-labels') {
         // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, "➕", block, block, activeHouseholdId, task, type, title, false, false);
+        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, false);
         block.appendChild(addWrapper);
       }
     }
@@ -2374,7 +2374,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, householdId, tas
 
   // main button
   const addBtn = document.createElement("button");
-  addBtn.textContent = `${icon} ${name}`.trim();
+  addBtn.innerHTML = `${icon} ${name.trim()}`;
   addBtn.classList.add(isSecondary ? "secondary-category" : "primary-category");
   
   // assemble row
@@ -2412,7 +2412,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
 
   // icon button
   const iconBtn = document.createElement("button");
-  iconBtn.textContent = options.icon || "Icon";
+  iconBtn.innerHTML = options.icon || "Icon";
   iconBtn.classList.add("labels-icon-btn");
 
   iconBtn.addEventListener("click", (e) => {
@@ -2453,7 +2453,8 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
 
     const emojiPicker  = document.createElement("emoji-picker");
     emojiPicker.addEventListener("emoji-click", event => {
-      iconBtn.textContent = event.detail.unicode;
+      iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
+      iconBtn.style.background = "var(--bg)";
       hideWrapper(wrapper);
     });
 
@@ -2474,10 +2475,8 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
           item.appendChild(img); 
           
           item.addEventListener("click", () => { 
-            iconBtn.textContent = ""; // clear emoji 
-            iconBtn.style.backgroundImage = `url('/icons/${file}')`; 
-            iconBtn.style.backgroundSize = "cover"; 
-            iconBtn.style.backgroundPosition = "center"; 
+            iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
+            iconBtn.style.backgroundColor = "var(--bg)";
             hideWrapper(wrapper); 
           }); 
           
@@ -2553,7 +2552,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   })
 
   tickBtn.addEventListener("click", async () => {
-    const icon = iconBtn.textContent !== "Icon" ? iconBtn.textContent : "🏷️";
+    const icon = iconBtn.innerHTML !== "Icon" ? iconBtn.innerHTML : `<span class="icon-content">🏷️</span>`;
     const name = nameInput.value.trim();
     if (!name) {
       showStatusMessage("The input name must not be empty.", "error")
@@ -2716,11 +2715,6 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   inputRow.appendChild(tickBtn);
   inputRow.appendChild(cancelBtn);
 
-  const inputHeight = nameInput.offsetHeight;
-  console.log(inputHeight)
-  tickBtn.style.height = inputHeight + "px";
-  cancelBtn.style.height = inputHeight + "px";
-
   return inputRow;
 }
 
@@ -2868,7 +2862,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
 
   // main button
   const btn = document.createElement("button");
-  btn.textContent = `${icon} ${name}`.trim();
+  btn.innerHTML = `${icon} ${name.trim()}`;
   btn.classList.add(isSecondary ? "secondary-category" : "primary-category");
 
   // Add identifiers 
@@ -4581,43 +4575,31 @@ function createList(col, values) {
     if (v && typeof v === "object") {
       const hasNote = "note" in v;
 
-      // If note exists → create two-line structure
       const valueDiv = document.createElement("div");
-      valueDiv.className = hasNote ? "value" : "";
+      valueDiv.className = "selector-item";
 
-      // ICON (if any)
-      if (v.icon) {
-        const iconSpan = document.createElement("span");
-        iconSpan.className = "icon";
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "icon";
+      iconSpan.innerHTML = v.icon;
+      valueDiv.appendChild(iconSpan);
 
-        if (isUrl(v.icon)) {
-          const img = document.createElement("img");
-          img.src = v.icon;
-          img.alt = "";
-          img.className = "icon-img";
-          iconSpan.appendChild(img);
-        } else {
-          iconSpan.textContent = v.icon;
-        }
+      const textBlock = document.createElement("div");
+      textBlock.className = "text-block";
 
-        valueDiv.appendChild(iconSpan);
-      }
-
-      // LABEL (name or value)
       const labelSpan = document.createElement("span");
       labelSpan.className = "label";
       labelSpan.textContent = v.name || v.value || "";
-      valueDiv.appendChild(labelSpan);
+      textBlock.appendChild(labelSpan);
 
-      div.appendChild(valueDiv);
-
-      // NOTE (if exists)
       if (hasNote) {
-        const notesDiv = document.createElement("div");
-        notesDiv.className = "notes";
-        notesDiv.textContent = v.note;
-        div.appendChild(notesDiv);
+        const notesSpan = document.createElement("span");
+        notesSpan.className = "notes";
+        notesSpan.textContent = v.note;
+        textBlock.appendChild(notesSpan);
       }
+
+      valueDiv.appendChild(textBlock);
+      div.appendChild(valueDiv);
 
       col.appendChild(div);
     }

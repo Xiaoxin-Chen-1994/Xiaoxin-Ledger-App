@@ -763,6 +763,31 @@ input[type="password"], input[type="url"],
   background: var(--primary);
 }
 
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  flex-shrink: 0;
+}
+
+.icon .icon-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-content img.icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
 .dt-col {
   flex: 1;
   height: 100%;
@@ -1445,21 +1470,41 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 .labels-icon-btn {
   flex: 0 0 auto;
-  width: 2.5rem;              /* fixed size for icons */
+  width: 2.5rem;
   height: 2.5rem;
-  border-radius: 50%;       /* round icon button */
-  background: var(--bg);
-  background-size: cover;   /* make image fill the circle */
-  background-position: center;
-  background-repeat: no-repeat;
+  border-radius: 50%;
+  background: var(--primary);
 
-  display: flex;            /* ensure emoji stays centered */
+  display: flex;
   align-items: center;
   justify-content: center;
 
-  font-size: 20px;          /* for emoji mode */
   cursor: pointer;
-  overflow: hidden;         /* ensure image stays clipped */
+  overflow: hidden;
+
+  padding: 0;
+  line-height: 0;
+  border: none;
+}
+
+/* Wrapper that restores font size for emoji */
+.labels-icon-btn .icon-content {
+  font-size: 1.4rem;   /* emoji size */
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Image styling */
+.labels-icon-btn img.icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .icon-picker-grid {
@@ -1500,6 +1545,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   transform: translateY(-5px); /* slight slide up */
   transition: opacity 0.1s ease, transform 0.1s ease;
   background: var(--btnBg);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
 }
 
 .icon-picker-wrapper.show {
@@ -1519,6 +1566,7 @@ emoji-picker {
   display: flex;
   flex: 0 0 auto;   /* do not grow, do not shrink, size to content */
   min-width: 2rem;
+  height: 2.5rem;
   padding: 0 1rem;   /* keep it tight */
   align-items: center;
   justify-content: center;
@@ -1572,6 +1620,9 @@ emoji-picker {
 }
 
 .primary-category, .primary-category:hover {
+  display: flex; 
+  align-items: 
+  center; gap: 0.5rem; /* space between icon and text */
   text-align: left;
   color: var(--text);
   font-weight: bold;
@@ -1582,7 +1633,28 @@ emoji-picker {
   transition: flex 0.3s ease;
 }
 
+.primary-category .icon-content,
+.secondary-category .icon-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  flex-shrink: 0;     /* prevents icon from shrinking */
+}
+
+.icon-content img.icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
 .secondary-category, .secondary-category:hover {
+  display: flex; 
+  align-items: 
+  center; gap: 0.5rem; /* space between icon and text */
   text-align: left;
   color: var(--text);
   background: none;
