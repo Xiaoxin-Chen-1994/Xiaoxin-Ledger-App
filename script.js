@@ -1097,17 +1097,19 @@ function setCurrentTime(button, subWorkspace) {
   const dd = String(now.getDate()).padStart(2, "0");
   const hh = String(now.getHours()).padStart(2, "0");
   const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
 
   const prefix = getDatePrefix(now);
 
   if (!subWorkspace.inputTransactionTimeRaw) {
     subWorkspace.inputTransactionTimeRaw = {};
   }
-  subWorkspace.inputTransactionTimeRaw.yyyy = yyyy;
-  subWorkspace.inputTransactionTimeRaw.mm = mm;
-  subWorkspace.inputTransactionTimeRaw.dd = dd;
-  subWorkspace.inputTransactionTimeRaw.hh = hh;
-  subWorkspace.inputTransactionTimeRaw.min = min;
+  subWorkspace.inputTransactionTimeRaw.yyyy = Number(yyyy);
+  subWorkspace.inputTransactionTimeRaw.mm = Number(mm);
+  subWorkspace.inputTransactionTimeRaw.dd = Number(dd);
+  subWorkspace.inputTransactionTimeRaw.hh = Number(hh);
+  subWorkspace.inputTransactionTimeRaw.min = Number(min);
+  subWorkspace.inputTransactionTimeRaw.ss = Number(ss);
 
   subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
 
@@ -1930,8 +1932,7 @@ document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
 // --- Ledger add entry ---
 async function saveEntry() {
   if (!currentUser) return;
-
-  let subWorkspace = null;
+let subWorkspace = null;
   let nav = true;
 
   if (latestNavBtn === "nav-transaction") { // when creating an entry
@@ -1942,6 +1943,9 @@ async function saveEntry() {
 
   subWorkspace = workspace[nav];
 
+  subWorkspace.inputTransactionTime = subWorkspace.inputTransactionTime + `:${String(subWorkspace.inputTransactionTimeRaw.ss).padStart(2, "0")}`;
+  console.log(subWorkspace)
+  
   const inputType = subWorkspace.inputType;
 
   const householdId = subWorkspace[inputType].householdId; // regardless of household name
@@ -1966,6 +1970,7 @@ async function saveEntry() {
         primaryCategory: subWorkspace[inputType].primaryCategory,
         secondaryCategory: subWorkspace[inputType].secondaryCategory,
         account: subWorkspace[inputType].accountInfo.account.name,
+        currency: subWorkspace[inputType].accountInfo.account.currency,
         transactionTime: subWorkspace.inputTransactionTime,
         subject: subWorkspace[inputType].subject,
         collection: subWorkspace[inputType].collection,
@@ -1986,7 +1991,9 @@ async function saveEntry() {
         sameCurrency: subWorkspace[inputType].sameCurrency,
         householdId,
         fromAccount: subWorkspace[inputType].fromAccountInfo.account.name,
+        fromCurrency: subWorkspace[inputType].fromAccountInfo.account.currency,
         toAccount: subWorkspace[inputType].fromAccountInfo.account.name,
+        toCurrency: subWorkspace[inputType].toAccountInfo.account.currency,
         transactionTime: subWorkspace.inputTransactionTime,
         tags: subWorkspace.tags ?? [],
         notes: subWorkspace.notes ?? "",
@@ -2040,11 +2047,11 @@ async function saveEntry() {
     // 5. Reset UI 
     if (nav === 'create') {
       resetCreate();
+      showPage('home', 'nav-home');
     } else { // for other base pages
       history.back();
     }
     updateHomeKanban(householdId);
-    showPage('home', 'nav-home');
 
   } catch (err) {
     console.error("Error adding transaction:", err);
@@ -2052,6 +2059,32 @@ async function saveEntry() {
   }
 }
 window.saveEntry = saveEntry;
+
+function importFromCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const rows = text.split(/\r?\n/).map(r => r.split(","));
+
+    console.log("Parsed CSV:", rows);
+
+    document.getElementById("import-data-feedback").textContent =
+      "CSV 文件已成功加载，共 " + rows.length + " 行";
+  };
+
+  reader.onerror = function() {
+    document.getElementById("import-data-feedback").textContent =
+      "读取 CSV 文件失败";
+  };
+
+  reader.readAsText(file);
+}
+window.importFromCSV = importFromCSV;
+
 
 function diffEntries(original, updated) {
   // this function is used to find out the modifications made to an existing entry
@@ -2252,7 +2285,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         setDefaultCollection(collectionBtn, workspace.create);
 
         const amountEl = document.querySelector(`#${activeForm} .amount-button`);
-        amountEl.textContent = workspace.create.amount;
+        amountEl.textContent = workspace.create.amount.toFixed(2);
         const calculationEl = document.querySelector(`#${activeForm} .calculation`);
         calculationEl.textContent = workspace.create.calculation;
         const tagInputEl = document.querySelector(`#${activeForm} .tag-input`);
@@ -4916,22 +4949,28 @@ function updateSelectorPreview(updatedCol) {
 
     if (!yEl || !mEl || !dEl || !hEl || !minEl) return;
 
-    const yyyy = Number(yEl.textContent);
-    const mm = Number(mEl.textContent);
-    const dd = Number(dEl.textContent);
-    const hh = Number(hEl.textContent);
-    const min = Number(minEl.textContent);
+    let yyyy = Number(yEl.textContent);
+    let mm = Number(mEl.textContent);
+    let dd = Number(dEl.textContent);
+    let hh = Number(hEl.textContent);
+    let min = Number(minEl.textContent);
 
     const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
     const prefix = getDatePrefix(dateObj);
 
     subWorkspace.inputTransactionTimeRaw.yyyy = yyyy;
-    subWorkspace.inputTransactionTimeRaw.mm = String(mm).padStart(2, "0");
-    subWorkspace.inputTransactionTimeRaw.dd = String(dd).padStart(2, "0");
-    subWorkspace.inputTransactionTimeRaw.hh = String(hh).padStart(2, "0");
-    subWorkspace.inputTransactionTimeRaw.min = String(min).padStart(2, "0");
+    subWorkspace.inputTransactionTimeRaw.mm = mm;
+    subWorkspace.inputTransactionTimeRaw.dd = dd;
+    subWorkspace.inputTransactionTimeRaw.hh = hh;
+    subWorkspace.inputTransactionTimeRaw.min = min;
 
-    subWorkspace.inputTransactionTime = `${subWorkspace.inputTransactionTimeRaw.yyyy}-${subWorkspace.inputTransactionTimeRaw.mm}-${subWorkspace.inputTransactionTimeRaw.dd} ${subWorkspace.inputTransactionTimeRaw.hh}:${subWorkspace.inputTransactionTimeRaw.min}`;
+    yyyy = yyyy;
+    mm = String(mm).padStart(2, "0");
+    dd = String(dd).padStart(2, "0");
+    hh = String(hh).padStart(2, "0");
+    min = String(min).padStart(2, "0");
+
+    subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
 
     lastButton.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
     lastButton.dataset.value = dateObj.toISOString();

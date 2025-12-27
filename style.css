@@ -1059,7 +1059,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 .settings-section.fontsize-change,
 .settings-section.theme-color-change,
 .settings-section.color-switch,
-.settings-section.defaults {
+.settings-section.defaults,
+.settings-section.bulk-data {
   display: flex;
   align-items: center;   /* vertical alignment */
   gap: 0.5rem;

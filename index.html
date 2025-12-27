@@ -529,6 +529,13 @@
           </div>
         </section>
 
+        <!-- Bulk data -->
+        <section class="settings-section bulk-data">
+          <p id="bulk-data-title">批量操作</p>
+          <button id="open-bulk-data" class="settings-button"
+            onclick="showPage('bulk-data', 'nav-settings')">进入批量操作</button>
+        </section>
+
         <!-- Household -->
         <section class="settings-section household-row">
           <p id="households-title">我的家庭</p>
@@ -658,6 +665,22 @@
       <div class="scroll">
         <div id="order-labels-household-tabs" class="transaction-tabs"></div>
         <div id="order-labels-labels-container"></div>
+      </div>
+    </div>
+
+    <div class="page" id="bulk-data-page">
+      <div class="scroll">
+        <div class="settings-header">
+          <h2 id="bulk-data-header">批量操作</h2>
+        </div>
+
+        <!-- Import -->
+        <section class="settings-section import-data">
+          <p id="import-data-title">导入数据</p>
+          <button class="settings-button" onclick="document.getElementById('csv-input').click()">从CSV文件导入数据</button>
+          <div id="import-data-feedback"></div>
+        </section>
+        <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="importFromCSV(event)">
       </div>
     </div>
 
