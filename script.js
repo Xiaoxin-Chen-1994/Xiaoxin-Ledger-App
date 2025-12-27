@@ -4449,6 +4449,7 @@ const selectorList = [
 ];
 
 let lastButton = null;
+let prevLastButton = null;
 
 function isUrl(string) {
   if (!string) return false;
@@ -5083,11 +5084,16 @@ let openSelector = null;
 let keypadOpen = false;
 
 function showSelector(selName) {
+  if (prevLastButton !== lastButton) { // when switching to a different button
+    if (openSelector === 'amount') { // if previously was an amount-row
+      prevLastButton.style.borderWidth = "1px";
+    } else {
+      lastButton.style.background = "var(--card)";
+    }
+  }
+
   // Case 1: same selector already open → do nothing
   if (openSelector === selName) {
-    if (openSelector === 'amount') {
-      lastButton.style.borderWidth = "1px";
-    }
     return;
   }
 
@@ -5376,6 +5382,7 @@ function handleAmountKey(key) {
 document.querySelectorAll(".amount-row").forEach(btn => {
   btn.onclick = e => {
     e.stopPropagation();
+    prevLastButton = lastButton; // keep track of the previous button pressed
     lastButton = btn;
 
     // Show the desired selector
@@ -5453,6 +5460,7 @@ document.querySelectorAll('#amount-selector .keys button').forEach(key => {
 document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn => {
   btn.onclick = e => {
     e.stopPropagation();
+    prevLastButton = lastButton; // keep track of the previous button pressed
     lastButton = btn;
 
     // Show the desired selector
@@ -5464,6 +5472,7 @@ document.querySelectorAll(".selector-button[data-type='household']")
   .forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
       showSelector('household')
@@ -5476,6 +5485,7 @@ document.querySelectorAll(".selector-button[data-type='category']")
   .forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
       const sel = showSelector('category')
@@ -5512,6 +5522,7 @@ document.querySelectorAll(
 ).forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
       showSelector('account')
@@ -5544,6 +5555,7 @@ document.querySelectorAll(".selector-button[data-type='subject']")
   .forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
       const sel = showSelector('subject')
@@ -5565,6 +5577,7 @@ document.querySelectorAll(".selector-button[data-type='collection']")
   .forEach(btn => {
     btn.onclick = e => {
       e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
       const sel = showSelector('collection')
