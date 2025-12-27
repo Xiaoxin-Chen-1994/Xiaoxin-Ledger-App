@@ -5089,8 +5089,10 @@ function showSelector(selName) {
       prevLastButton.style.borderWidth = "1px"; 
     } else {
       if (prevLastButton) {
-        if (['transfer-from-account', 'transfer-to-account'].includes(prevLastButton)) {
+        if (['transfer-from-account', 'transfer-to-account'].includes(prevLastButton.id)) {
           document.getElementById("transfer-accounts").style.background = "var(--bg)";
+          document.getElementById("transfer-from-account").style.background = "var(--bg)";
+          document.getElementById("transfer-to-account").style.background = "var(--bg)";
         } else {
           prevLastButton.style.background = "var(--bg)";
         }
@@ -5101,6 +5103,8 @@ function showSelector(selName) {
   if (selName !== 'amount') { // if currently not an amount-selector
     if (['transfer-from-account', 'transfer-to-account'].includes(lastButton.id)) {
       document.getElementById("transfer-accounts").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+      document.getElementById("transfer-from-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+      document.getElementById("transfer-to-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
     } else {
       lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
     }
@@ -5151,8 +5155,11 @@ function closeSelector() {
   if (openSelector === 'amount') {
     lastButton.style.borderWidth = "1px";
   } else {
-    if (['transfer-from-account', 'transfer-to-account'].includes(openSelector)) {
+    if (['transfer-from-account', 'transfer-to-account'].includes(lastButton.id)) {
       document.getElementById("transfer-accounts").style.background = "var(--bg)";
+      document.getElementById("transfer-from-account").style.background = "var(--bg)";
+      document.getElementById("transfer-to-account").style.background = "var(--bg)";
+    
     } else {
       lastButton.style.background = "var(--bg)";
     }

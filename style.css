@@ -403,6 +403,7 @@ input[type="password"], input[type="url"],
   flex-direction: row;       /* horizontal layout */
   align-items: flex-start;   /* align tops of columns */
   margin-bottom: 0.25rem;
+  border-radius: 0.5rem;
 }
 
 /* Each account block: label on top, button below */
