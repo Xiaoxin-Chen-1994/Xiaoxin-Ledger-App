@@ -5545,6 +5545,7 @@ document.querySelectorAll(".selector-button[data-type='category']")
 document.querySelectorAll( 
   ".selector-button[data-type='account']"
 ).forEach(btn => {
+  console.log(btn)
     btn.onclick = e => {
       e.stopPropagation();
       prevLastButton = lastButton; // keep track of the previous button pressed
