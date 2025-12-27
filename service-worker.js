@@ -61,24 +61,20 @@ self.addEventListener('message', async event => {
 
 // ❗ NEW: Cache-first fetch handler (no auto-updating)
 self.addEventListener('fetch', event => {
-  const req = event.request;
-
-  // Skip handling file uploads
-  if (req.method === "POST" || req.method === "PUT") {
-    return;
-  }
-
-  // Skip non-GET requests entirely
-  if (req.method !== "GET") {
-    return;
-  }
-
-  // Skip requests with bodies (file uploads)
-  if (req.bodyUsed) {
-    return;
-  }
-
-  const url = new URL(event.request.url);
+  
+  const req = event.request; 
+  
+  // Skip non-GET requests 
+  if (req.method !== "GET") return; 
+  
+  // Skip invalid URLs (e.g., CSV content accidentally treated as URL) 
+  try { 
+    new URL(req.url); 
+  } catch { 
+    return; 
+  } 
+  
+  const url = new URL(req.url);
 
   if (url.origin !== location.origin) return;
 
