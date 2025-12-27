@@ -415,17 +415,14 @@ input[type="password"], input[type="url"],
   position: relative;
   padding-top: calc(var(--font-size) * 1.5); /* space for absolute label */
 }
-.transfer-label, #transfer-from-account, #transfer-to-account {
- padding-left: 0.75rem; 
- padding-right: 0.75rem; 
-}
+
 /* Centered ⇌ indicator between blocks */
 #tranfer-between-indicator {
+  width: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: calc(var(--font-size) * 1.1);
-  width: 2rem;
   height: 2rem;
   align-self: center;         /* center vertically in row */
 }
@@ -550,6 +547,10 @@ input[type="password"], input[type="url"],
 .cat-part {
   flex: 1;                    /* each part takes equal width */
   text-align: center;         /* center text inside its half */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .cat-separator {
@@ -790,6 +791,7 @@ input[type="password"], input[type="url"],
 /* Items */
 .dt-item {
   display: flex;
+  justify-content: center; /* center horizontally */
   align-items: center;     /* vertically center the whole selector-item */
   padding: 0.3rem 0;
   min-height: 40px;        /* instead of fixed height */
@@ -804,30 +806,12 @@ input[type="password"], input[type="url"],
   font-size: calc(var(--font-size) * 1.2); /* a percentage of the base font size */
 }
 
-.selector-item-icon {
-  width: 1.8rem;
-  height: 1.8rem;
-  flex-shrink: 0;
-
+.selector-item {
   display: flex;
-  align-items: center;
+  align-items: center;      /* icon vertically centered relative to text block */
   justify-content: center;
-}
-
-.selector-item-icon .icon-content {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-content img.icon-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  display: block;
+  text-align: center; /* affects text inside text-block */
+  gap: 0.6rem;
 }
 
 .text-block {
@@ -835,15 +819,6 @@ input[type="password"], input[type="url"],
   flex-direction: column;   /* label above notes */
   justify-content: center;  /* center the whole block vertically */
   min-width: 0;             /* allows text to wrap properly */
-}
-
-.selector-item {
-  display: flex;
-  align-items: center;      /* icon vertically centered relative to text block */
-  justify-content: center;
-  text-align: center; /* affects text inside text-block */
-  gap: 0.6rem;
-  padding: 0.4rem 0;
 }
 
 .selector-item-label {
@@ -859,6 +834,38 @@ input[type="password"], input[type="url"],
   opacity: 0.8;
   margin-top: 0.15rem;
   color: var(--text-secondary);
+}
+
+.selector-item-icon {
+  width: calc(var(--font-size)*1.5);
+  height: calc(var(--font-size)*1.5);
+  
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selector-item-icon .icon-content, 
+.cat-icon .icon-content {
+  width: 100%;
+  height: 100%;
+  font-size: calc(var(--font-size)*1.2);   /* emoji size */
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-content img.icon-img, 
+.cat-icon img.icon-img,
+.icon img.icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1503,8 +1510,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 
 .icon {
   flex: 0 0 auto;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: calc(var(--font-size)*1.5);
+  height: calc(var(--font-size)*1.5);
   border-radius: 50%;
   background: var(--primary);
 
@@ -1518,26 +1525,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   padding: 0;
   line-height: 0;
   border: none;
+  
+  font-size: calc(var(--font-size)*1.2);  /* emoji size */
+}
+
+.icon.selected {
+  background: none;
 }
 
 /* Wrapper that restores font size for emoji */
-.icon .icon-content {
-  font-size: 1.4rem;   /* emoji size */
+.icon .icon-content {  
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-}
-
-/* Image styling */
-.icon img.icon-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  display: block;
 }
 
 .icon-picker-grid {
@@ -1671,8 +1674,9 @@ emoji-picker {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.8rem;
-  height: 1.8rem;
+  font-size: calc(var(--font-size)*1.2);   /* emoji size */
+  width: calc(var(--font-size)*1.5);
+  height: calc(var(--font-size)*1.5);
   flex-shrink: 0;     /* prevents icon from shrinking */
 }
 

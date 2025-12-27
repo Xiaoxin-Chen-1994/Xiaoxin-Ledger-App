@@ -1143,11 +1143,17 @@ function setDefaultCategory(button, subWorkspace) {
         subWorkspace[type].primaryCategoryIcon = userDoc.defaults[type].primaryIcon;
         subWorkspace[type].secondaryCategory = userDoc.defaults[type].secondary;
         subWorkspace[type].secondaryCategoryIcon = userDoc.defaults[type].secondaryIcon;
-      
+
         subWorkspace[type].catInnerHTML = `
-          <span class="cat-part">${subWorkspace[type].primaryCategoryIcon} ${subWorkspace[type].primaryCategory}</span>
+          <span class="cat-part">
+            <span class="icon selected">${subWorkspace[type].primaryCategoryIcon}</span>
+            <span class="cat-label">${subWorkspace[type].primaryCategory}</span>
+          </span>
           <span class="cat-separator">&gt;</span>
-          <span class="cat-part">${subWorkspace[type].secondaryCategoryIcon} ${subWorkspace[type].secondaryCategory}</span>
+          <span class="cat-part">
+            <span class="icon selected">${subWorkspace[type].secondaryCategoryIcon}</span>
+            <span class="cat-label">${subWorkspace[type].secondaryCategory}</span>
+          </span>
         `;
       }
     }
@@ -1207,10 +1213,17 @@ function setDefaultCategory(button, subWorkspace) {
 
       // Update HTML
       subWorkspace[inputType].catInnerHTML = `
-        <span class="cat-part">${subWorkspace[inputType].primaryCategoryIcon} ${subWorkspace[inputType].primaryCategory}</span>
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
+          <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
+        </span>
         <span class="cat-separator">&gt;</span>
-        <span class="cat-part">${subWorkspace[inputType].secondaryCategoryIcon} ${subWorkspace[inputType].secondaryCategory}</span>
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
+          <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
+        </span>
       `;
+
     }
 
     button.innerHTML = subWorkspace[inputType].catInnerHTML;
@@ -1292,11 +1305,12 @@ function setDefaultAccount(button, subWorkspace) {
         const accountIcon = subWorkspace[type].accountInfo.account.icon;
         const accountCurrency = subWorkspace[type].accountInfo.account.currency;
         
-        if (isUrl(accountIcon)) { // render <img>
-          subWorkspace[type].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
-        } else { // render text directly
-          subWorkspace[type].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
-        }
+        subWorkspace[type].accountInnerHTML = `
+          <span class="cat-part">
+            <span class="icon selected">${accountIcon}</span>
+            <span class="cat-label">${accountName} (${accountCurrency})</span>
+          </span>
+        `;
       }
     }
 
@@ -1314,11 +1328,12 @@ function setDefaultAccount(button, subWorkspace) {
         const fromName = from.name;
         fromCurrency = from.currency;
 
-        if (isUrl(fromIcon)) { // render <img>
-          subWorkspace.transfer.fromAccountInnerHTML = `<img src="${fromIcon}" class="account-icon"> ${fromName} (${fromCurrency})`;
-        } else { // render text directly
-          subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
-        }
+        subWorkspace.transfer.fromAccountInnerHTML = `
+          <span class="cat-part">
+            <span class="icon selected">${fromIcon}</span>
+            <span class="cat-label">${fromName} (${fromCurrency})</span>
+          </span>
+        `;
       }
 
       // TO ACCOUNT
@@ -1329,11 +1344,12 @@ function setDefaultAccount(button, subWorkspace) {
         const toName = to.name;
         toCurrency = to.currency;
 
-        if (isUrl(toIcon)) { // render <img>
-          subWorkspace.transfer.toAccountInnerHTML = `<img src="${toIcon}" class="account-icon"> ${toName} (${toCurrency})`;
-        } else { // render text directly
-          subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
-        }
+        subWorkspace.transfer.toAccountInnerHTML = `
+          <span class="cat-part">
+            <span class="icon selected">${toIcon}</span>
+            <span class="cat-label">${toName} (${toCurrency})</span>
+          </span>
+        `;
       }
 
       if (fromCurrency === toCurrency) {
@@ -1365,11 +1381,12 @@ function setDefaultAccount(button, subWorkspace) {
       const accountIcon = accountObj.icon || "";
       const accountCurrency = accountObj.currency;
 
-      if (isUrl(accountIcon)) { // render <img>
-        subWorkspace[inputType].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
-      } else { // render text directly
-        subWorkspace[inputType].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
-      }
+      subWorkspace[inputType].accountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${accountIcon}</span>
+          <span class="cat-label">${accountName} (${accountCurrency})</span>
+        </span>
+      `;
     }
 
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
@@ -1438,7 +1455,12 @@ function setDefaultSubject(button, subWorkspace) {
         subWorkspace[type].subject = userDoc.defaults[type].subject;
         subWorkspace[type].subjectIcon = userDoc.defaults[type].subjectIcon;
 
-        subWorkspace[type].subjectInnerHTML = `${subWorkspace[type].subjectIcon} ${subWorkspace[type].subject}`;
+        subWorkspace[type].subjectInnerHTML = `
+          <span class="cat-part">
+            <span class="icon selected">${subWorkspace[type].subjectIcon}</span>
+            <span class="cat-label">${subWorkspace[type].subject}</span>
+          </span>
+        `;
       }
     }
   });
@@ -1469,8 +1491,12 @@ function setDefaultSubject(button, subWorkspace) {
         subWorkspace[inputType].subjectIcon = first.icon;
       }
 
-      // Update HTML
-      subWorkspace[inputType].subjectInnerHTML = `${subWorkspace[inputType].subjectIcon} ${subWorkspace[inputType].subject}`;
+      subWorkspace[inputType].subjectInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
+          <span class="cat-label">${subWorkspace[inputType].subject}</span>
+        </span>
+      `;
     }
 
     // Update button
@@ -1497,8 +1523,12 @@ function setDefaultCollection(button, subWorkspace) {
         subWorkspace[type].collection = userDoc.defaults[type].collection;
         subWorkspace[type].collectionIcon = userDoc.defaults[type].collectionIcon;
 
-        subWorkspace[type].collectionInnerHTML =
-          `${subWorkspace[type].collectionIcon} ${subWorkspace[type].collection}`;
+        subWorkspace[type].collectionInnerHTML = `
+          <span class="cat-part">
+            <span class="icon selected">${subWorkspace[type].collectionIcon}</span>
+            <span class="cat-label">${subWorkspace[type].collection}</span>
+          </span>
+        `;
       }
     }
   });
@@ -1529,9 +1559,12 @@ function setDefaultCollection(button, subWorkspace) {
         subWorkspace[inputType].collectionIcon = first.icon;
       }
 
-      // Update HTML
-      subWorkspace[inputType].collectionInnerHTML =
-        `${subWorkspace[inputType].collectionIcon} ${subWorkspace[inputType].collection}`;
+      subWorkspace[inputType].collectionInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
+          <span class="cat-label">${subWorkspace[inputType].collection}</span>
+        </span>
+      `;
     }
 
     // Update button
@@ -1648,11 +1681,11 @@ function switchTab(index) {
   // subject
   if (["expense", "income"].includes(inputType)) {
     const subjectEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
-    subjectEl.textContent = subWorkspace[inputType].subjectInnerHTML;
+    subjectEl.innerHTML = subWorkspace[inputType].subjectInnerHTML;
 
     // collection
     const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
-    collectionEl.textContent = subWorkspace[inputType].collectionInnerHTML;
+    collectionEl.innerHTML = subWorkspace[inputType].collectionInnerHTML;
   }
 
   if (!Array.isArray(subWorkspace.tags)) {
@@ -2454,7 +2487,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
     const emojiPicker  = document.createElement("emoji-picker");
     emojiPicker.addEventListener("emoji-click", event => {
       iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
-      iconBtn.style.background = "var(--bg)";
+      iconBtn.classList.add("selected");
       hideWrapper(wrapper);
     });
 
@@ -2476,7 +2509,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
           
           item.addEventListener("click", () => { 
             iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
-            iconBtn.style.backgroundColor = "var(--bg)";
+            iconBtn.classList.add("selected");
             hideWrapper(wrapper); 
           }); 
           
@@ -4578,10 +4611,12 @@ function createList(col, values) {
       const valueDiv = document.createElement("div");
       valueDiv.className = "selector-item";
 
-      const iconSpan = document.createElement("span");
-      iconSpan.className = "selector-item-icon";
-      iconSpan.innerHTML = v.icon;
-      valueDiv.appendChild(iconSpan);
+      if ("icon" in v) {
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "selector-item-icon";
+        iconSpan.innerHTML = v.icon;
+        valueDiv.appendChild(iconSpan);
+      }
 
       const textBlock = document.createElement("div");
       textBlock.className = "text-block";
@@ -4618,21 +4653,27 @@ function ScrollToSelectItem(col, value = null) {
 
   // If a value was passed in, find the matching item
   const items = [...col.querySelectorAll(".dt-item")];
-  console.log(items)
+
   let target;
 
   if (typeof value === "number") {
     target = items.find(i => {
-      const labelEl = i.querySelector(".label");
-      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
-      return parseInt(text, 10) === value;
+
+      const labelEl = i.querySelector(".selector-item-label"); // look for this class
+
+      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim(); // if not found, take i.textContent
+      return parseInt(text, 10) === value; // compare it to the target value
     });
     if (!target) target = items[items.length - 1];
+
   } else {
     target = items.find(i => {
-      const labelEl = i.querySelector(".label");
-      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim();
-      return text === String(value).trim();
+
+      const labelEl = i.querySelector(".selector-item-label"); // look for this class
+
+      const text = labelEl ? labelEl.textContent.trim() : i.textContent.trim(); // if not found, take i.textContent
+
+      return text === String(value).trim(); // compare it to the target value
     });
     if (!target) target = items[0];
   }
@@ -4830,9 +4871,15 @@ function updateSelectorPreview(updatedCol) {
     subWorkspace[inputType].secondaryCategoryIcon = sIcon;
 
     subWorkspace[inputType].catInnerHTML = `
-      <span class="cat-part">${subWorkspace[inputType].primaryCategoryIcon} ${subWorkspace[inputType].primaryCategory}</span>
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
+      </span>
       <span class="cat-separator">&gt;</span>
-      <span class="cat-part">${subWorkspace[inputType].secondaryCategoryIcon} ${subWorkspace[inputType].secondaryCategory}</span>
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
+      </span>
     `;
 
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
@@ -4862,11 +4909,12 @@ function updateSelectorPreview(updatedCol) {
       const accountIcon = accountObj.icon || "";
       const accountCurrency = accountObj.currency;
 
-      if (isUrl(accountIcon)) { // render <img>
-        subWorkspace[inputType].accountInnerHTML = `<img src="${accountIcon}" class="account-icon"> ${accountName} (${accountCurrency})`;
-      } else { // render text directly
-        subWorkspace[inputType].accountInnerHTML = `${accountIcon} ${accountName} (${accountCurrency})`;
-      }
+      subWorkspace[inputType].accountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${accountIcon}</span>
+          <span class="cat-label">${accountName} (${accountCurrency})</span>
+        </span>
+      `;
 
       lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
     } else { // for transfer
@@ -4886,22 +4934,24 @@ function updateSelectorPreview(updatedCol) {
       const fromName = from.name;
       const fromCurrency = from.currency;
 
-      if (isUrl(fromIcon)) { // render <img>
-          subWorkspace.transfer.fromAccountInnerHTML = `<img src="${fromIcon}" class="account-icon"> ${fromName} (${fromCurrency})`;
-        } else { // render text directly
-          subWorkspace.transfer.fromAccountInnerHTML = `${fromIcon} ${fromName} (${fromCurrency})`;
-        }
-
+      subWorkspace.transfer.fromAccountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${fromIcon}</span>
+          <span class="cat-label">${fromName} (${fromCurrency})</span>
+        </span>
+      `;
+      
       const to = subWorkspace.transfer.toAccountInfo.account;
       const toIcon = to.icon || "";
       const toName = to.name;
       const toCurrency = to.currency;
 
-      if (isUrl(toIcon)) { // render <img>
-        subWorkspace.transfer.toAccountInnerHTML = `<img src="${toIcon}" class="account-icon"> ${toName} (${toCurrency})`;
-      } else { // render text directly
-        subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
-      }
+      subWorkspace.transfer.toAccountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${toIcon}</span>
+          <span class="cat-label">${toName} (${toCurrency})</span>
+        </span>
+      `;
 
       let fromAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
       let toAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
@@ -5102,23 +5152,13 @@ function getSelectedValue(selector, colName, strip = false) {
   // If strip=true, return structured parts from separate elements
   if (strip) {
     let icon;
-    let isUrlIcon = false;
 
-    const iconEl  = selectedItem.querySelector(".icon"); // <img class="icon">
+    const iconEl  = selectedItem.querySelector(".selector-item-icon");
     if (iconEl) {
-      const img = iconEl.querySelector("img");
-
-      if (img) {
-        // URL icon
-        isUrlIcon = true;
-        icon = img.getAttribute("src");
-      } else {
-        // Emoji icon
-        icon = iconEl.textContent.trim();
-      }
+      icon = iconEl.innerHTML;
     }
 
-    const labelEl = selectedItem.querySelector(".label") || selectedItem;
+    const labelEl = selectedItem.querySelector(".selector-item-label");
     const name  = labelEl.textContent.trim();
 
     return { icon, name };
