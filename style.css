@@ -301,7 +301,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
 }
 
 input[list], input[type="text"], 
-input[type="password"], input[type="url"], .selector-button,
+input[type="password"], input[type="url"],
 #rename-household, #invite-email {
   width: 98%;
   margin: 1%;
@@ -509,6 +509,16 @@ input[type="password"], input[type="url"], .selector-button,
   box-sizing: border-box;
 }
 
+.selector-button {
+  width: 98%;
+  margin: 1%;
+  padding: 0.75rem;
+  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */;
+  background: var(--card);
+  color: var(--text);
+  box-sizing: border-box;        /* include padding + border in width */
+}
+
 .form-row textarea {
   resize: vertical;       /* allow vertical resizing */
   line-height: 1.4;
@@ -551,14 +561,14 @@ input[type="password"], input[type="url"], .selector-button,
 .tag-input-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+
 }
 
 /* Row 1: input + button + suggestions */
 .tag-input-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+
 }
 
 /* Input stays visible and flexible */
@@ -566,14 +576,19 @@ input[type="password"], input[type="url"], .selector-button,
   flex: 1 1 auto;
   min-width: 0; /* prevents disappearing when suggestions grow */
   padding: 0.5rem;
+  margin: 0rem !important;
   border-radius: 0.25rem;
-  border: 1px solid #ccc;
+  border: none !important;
+}
+.tag-input:focus {
+  outline: 0.0625rem solid var(--border);
 }
 
 /* Button stays small */
 .add-tag-btn {
   flex: 0 0 auto;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.5rem;
+  gap: 0rem;
   border: none;
   border-radius: 0.25rem;
   background: var(--primary);
@@ -586,8 +601,6 @@ input[type="password"], input[type="url"], .selector-button,
   flex: 0 1 auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  max-width: 40%; /* prevents pushing input away */
 }
 
 /* Row 2: tags */
