@@ -1700,6 +1700,17 @@ wrapper.addEventListener("touchstart", e => {
 
 wrapper.addEventListener("touchend", e => {
   if (e.target.closest("input, textarea, [contenteditable]")) return;
+  
+  let subWorkspace;
+  
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    subWorkspace = workspace.create;
+  } else {
+    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+  }
+
+  const inputType = subWorkspace.inputType;
+  const inputTypeIndex = transactionTypes.indexOf(inputType);
 
   // do not add preventDefault otherwise the selectors won't show!
   // e.preventDefault();   // stop the browser from scrolling the page
@@ -2057,7 +2068,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
 
   const current = getComputedStyle(target).transform;
   // If it's not already at translateX(0), move it there
-  if (current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0")) {
+  if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0")) && !basePages.includes(latestPage)) {
     target.style.transform = "translateX(0%)";
     enablePageSwipe(target);
   }
@@ -2408,28 +2419,99 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
     e.stopPropagation();
 
     // Always remove any existing wrapper before creating a new one
-    const existingWrapper = document.querySelector(".emoji-picker-wrapper");
+    const existingWrapper = document.querySelector(".icon-picker-wrapper");
     if (existingWrapper) existingWrapper.remove();
 
     const wrapper = document.createElement("div");
-    wrapper.classList.add("emoji-picker-wrapper");
+    wrapper.classList.add("icon-picker-wrapper");
 
-    const picker = document.createElement("emoji-picker");
-    picker.addEventListener("emoji-click", event => {
+    // --- TAB BUTTONS ---
+    const tabRow = document.createElement("div"); 
+    tabRow.style.display = "flex"; 
+    tabRow.style.gap = "0.5rem"; 
+    tabRow.style.marginBottom = "0.5rem";
+
+    const emojiTab = document.createElement("button"); 
+    emojiTab.textContent = "Emoji"; 
+    emojiTab.classList.add("glass-popup-btn", "primary");
+
+    const iconTab = document.createElement("button"); 
+    iconTab.textContent = "Icon"; 
+    iconTab.classList.add("glass-popup-btn"); 
+    
+    // --- CANCEL BUTTON --- 
+    const cancelBtn = document.createElement("button"); 
+    cancelBtn.textContent = t.cancel; 
+    cancelBtn.addEventListener("click", () => hideWrapper(wrapper));
+
+    tabRow.appendChild(emojiTab); 
+    tabRow.appendChild(iconTab);
+    tabRow.appendChild(cancelBtn);
+
+    // --- CONTENT AREA --- 
+    const contentArea = document.createElement("div");
+
+    const emojiPicker  = document.createElement("emoji-picker");
+    emojiPicker.addEventListener("emoji-click", event => {
       iconBtn.textContent = event.detail.unicode;
       hideWrapper(wrapper);
     });
 
-    const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.addEventListener("click", () => hideWrapper(wrapper));
+    // --- ICON PICKER --- 
+    const iconGrid = document.createElement("div"); 
+    iconGrid.classList.add("icon-picker-grid");
 
-    wrapper.appendChild(picker);
-    wrapper.appendChild(cancelBtn);
+    fetch("/icons/manifest.json") 
+      .then(res => res.json()) 
+      .then(files => { 
+        files.forEach(file => {
+          const item = document.createElement("div"); 
+          item.classList.add("icon-picker-item"); 
+          
+          const img = document.createElement("img"); 
+          img.src = `/icons/${file}`; 
+          console.log(file)
+          item.appendChild(img); 
+          
+          item.addEventListener("click", () => { 
+            iconBtn.textContent = ""; // clear emoji 
+            iconBtn.style.backgroundImage = `url('/icons/${file}')`; 
+            iconBtn.style.backgroundSize = "cover"; 
+            iconBtn.style.backgroundPosition = "center"; 
+            hideWrapper(wrapper); 
+          }); 
+          
+          iconGrid.appendChild(item); 
+        }); 
+    });
 
+    
+    // --- INITIAL CONTENT ---
+    contentArea.appendChild(emojiPicker);
+
+    // --- TAB SWITCHING ---
+    emojiTab.addEventListener("click", () => { 
+      emojiTab.classList.add("primary"); 
+      iconTab.classList.remove("primary"); 
+      contentArea.innerHTML = ""; 
+      contentArea.appendChild(emojiPicker); 
+    });
+
+    iconTab.addEventListener("click", () => { 
+      iconTab.classList.add("primary"); 
+      emojiTab.classList.remove("primary"); 
+      contentArea.innerHTML = ""; 
+      contentArea.appendChild(iconGrid); 
+    });
+
+    // --- BUILD WRAPPER ---
+    wrapper.appendChild(tabRow); 
+    wrapper.appendChild(contentArea); 
+    
     inputRow.insertAdjacentElement("afterend", wrapper);
     requestAnimationFrame(() => wrapper.classList.add("show"));
 
+    // --- OUTSIDE CLICK ---
     const outsideClickHandler = (ev) => {
       if (!wrapper.contains(ev.target) && ev.target !== iconBtn) {
         hideWrapper(wrapper);
@@ -2633,6 +2715,11 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   inputRow.appendChild(nameInput);
   inputRow.appendChild(tickBtn);
   inputRow.appendChild(cancelBtn);
+
+  const inputHeight = nameInput.offsetHeight;
+  console.log(inputHeight)
+  tickBtn.style.height = inputHeight + "px";
+  cancelBtn.style.height = inputHeight + "px";
 
   return inputRow;
 }
@@ -4863,7 +4950,7 @@ function updateSelectorPreview(updatedCol) {
         document.getElementById("transfer-to-currency").textContent = toCurrency;
         
         document.getElementById("simple-transfer-amount-row").style.display = "none";
-        document.getElementById("exchange-transfer-amount-row").style.display = "block";
+        document.getElementById("exchange-transfer-amount-row").style.display = "grid";
 
         // make sure exchange amount is updated
         let fromAmountBtn = document.getElementById('transfer-from-amount');
