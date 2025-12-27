@@ -764,12 +764,13 @@ input[type="password"], input[type="url"],
 }
 
 .icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 1.8rem;
   height: 1.8rem;
   flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon .icon-content {
@@ -786,6 +787,37 @@ input[type="password"], input[type="url"],
   object-fit: cover;
   border-radius: 50%;
   display: block;
+}
+
+.text-block {
+  display: flex;
+  flex-direction: column;   /* label above notes */
+  justify-content: center;  /* center the whole block vertically */
+  min-width: 0;             /* allows text to wrap properly */
+}
+
+.selector-item {
+  display: flex;
+  align-items: center;      /* icon vertically centered relative to text block */
+  justify-content: center;
+  text-align: center; /* affects text inside text-block */
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+}
+
+.selector-item-label {
+  font-size: var(--font-size);
+  line-height: 1.2;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.selector-item-notes {
+  font-size: calc(var(--font-size)*0.8);
+  line-height: 1.2;
+  opacity: 0.8;
+  margin-top: 0.15rem;
+  color: var(--text-secondary);
 }
 
 .dt-col {
@@ -814,11 +846,12 @@ input[type="password"], input[type="url"],
 
 /* Items */
 .dt-item {
-  height: 40px;
+  display: flex;
+  align-items: center;     /* vertically center the whole selector-item */
+  padding: 0.3rem 0;
+  min-height: 40px;        /* instead of fixed height */
   color: #5e5e5e;
-  line-height: 40px;
-  text-align: center;
-  font-size: calc(var(--font-size) * 1); /* a percentage of the base font size */
+  font-size: calc(var(--font-size) * 1);
 }
 
 .dt-item.selected {

@@ -4576,7 +4576,7 @@ function createList(col, values) {
       const hasNote = "note" in v;
 
       const valueDiv = document.createElement("div");
-      valueDiv.className = "selector-item";
+      valueDiv.className = "dt-item";
 
       const iconSpan = document.createElement("span");
       iconSpan.className = "icon";
@@ -4587,13 +4587,13 @@ function createList(col, values) {
       textBlock.className = "text-block";
 
       const labelSpan = document.createElement("span");
-      labelSpan.className = "label";
+      labelSpan.className = "selector-item-label";
       labelSpan.textContent = v.name || v.value || "";
       textBlock.appendChild(labelSpan);
 
       if (hasNote) {
         const notesSpan = document.createElement("span");
-        notesSpan.className = "notes";
+        notesSpan.className = "selector-item-notes";
         notesSpan.textContent = v.note;
         textBlock.appendChild(notesSpan);
       }
@@ -4618,6 +4618,7 @@ function ScrollToSelectItem(col, value = null) {
 
   // If a value was passed in, find the matching item
   const items = [...col.querySelectorAll(".dt-item")];
+  console.log(items)
   let target;
 
   if (typeof value === "number") {
