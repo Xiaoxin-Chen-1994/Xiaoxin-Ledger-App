@@ -1334,6 +1334,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
     outline: none;
   }
 
+  /* Hover/focus states */
+  .settings-section button:hover, select:hover {
+    background: var(--primary-category-bg); 
+    border-color: #ccc;
+    outline: none;
+  }
+
   .actions button {
     background: var(--primary);
   }
@@ -1349,7 +1356,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
     font-size: calc(var(--font-size) * 0.8); /* a percentage of the base font size */;
   }
 
-  .settings-section button:hover, .actions button:hover {
+  .actions button:hover {
     background: var(--primary-hover);
     border-color: #ccc;
     outline: none;

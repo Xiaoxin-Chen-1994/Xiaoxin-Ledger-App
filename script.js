@@ -524,6 +524,10 @@ enableIndexedDbPersistence(db)
 //   });
 // });
 
+if (navigator.serviceWorker.controller) {
+  navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+}
+
 // --- Authentication ---
 async function signup() {
   const email = document.getElementById("username").value;
@@ -5089,8 +5093,8 @@ function showSelector(selName) {
       prevLastButton.style.borderWidth = "1px"; 
     } else {
       if (prevLastButton) {
-        if (['transfer-from-account', 'transfer-to-account'].includes(prevLastButton.id)) {
-          document.getElementById("transfer-accounts").style.background = "var(--bg)";
+        if (prevLastButton.id === "transfer-accounts") {
+          prevLastButton.style.background = "var(--bg)";
           document.getElementById("transfer-from-account").style.background = "var(--bg)";
           document.getElementById("transfer-to-account").style.background = "var(--bg)";
         } else {
@@ -5099,10 +5103,10 @@ function showSelector(selName) {
       }
     }
   }
-  console.log(lastButton)
+
   if (selName !== 'amount') { // if currently not an amount-selector
-    if (['transfer-from-account', 'transfer-to-account'].includes(lastButton.id)) {
-      document.getElementById("transfer-accounts").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+    if (lastButton.id === "transfer-accounts") {
+      lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
       document.getElementById("transfer-from-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
       document.getElementById("transfer-to-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
     } else {
@@ -5155,8 +5159,8 @@ function closeSelector() {
   if (openSelector === 'amount') {
     lastButton.style.borderWidth = "1px";
   } else {
-    if (['transfer-from-account', 'transfer-to-account'].includes(lastButton.id)) {
-      document.getElementById("transfer-accounts").style.background = "var(--bg)";
+    if (lastButton.id === "transfer-accounts") {
+      lastButton.style.background = "var(--bg)";
       document.getElementById("transfer-from-account").style.background = "var(--bg)";
       document.getElementById("transfer-to-account").style.background = "var(--bg)";
     
@@ -5545,7 +5549,6 @@ document.querySelectorAll(".selector-button[data-type='category']")
 document.querySelectorAll( 
   ".selector-button[data-type='account']"
 ).forEach(btn => {
-  console.log(btn)
     btn.onclick = e => {
       e.stopPropagation();
       prevLastButton = lastButton; // keep track of the previous button pressed
@@ -5633,24 +5636,68 @@ document.addEventListener("click", e => {
 });
 
 const updateBtn = document.getElementById("update-cached-code");
-const updateStatus = document.getElementById("update-status");
-console.log("SW controller:", navigator.serviceWorker.controller);
 
 updateBtn.addEventListener("click", () => {
-  if (navigator.serviceWorker.controller) {
-    updateStatus.textContent = "正在更新程序，请稍候…";
-    navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
-  }
-});
+  const title = {
+    en: "Update App or Reset Service Worker",
+    zh: "更新应用或重置Service Worker"
+  }[currentLang];
 
-navigator.serviceWorker.addEventListener("message", (event) => {
-  if (event.data.updated) {
-    updateStatus.innerHTML = `
-      更新完成！<button id="reload-app">重新加载</button>
-    `;
+  const message = {
+    en: `If the app behaves unexpectedly, you can try <strong>updating</strong> the app or <strong>unregistering</strong> the Service Worker.<br><br>
+        The Service Worker enables offline access. Once the device is online, the app will automatically re-register the Service Worker and recache the required resources.<br><br>
+        The app will restart after <strong>updating</strong> or <strong>unregistering</strong>.`,
 
-    document.getElementById("reload-app").addEventListener("click", () => {
-      location.reload();
-    });
-  }
+    zh: `如果应用出现异常行为，你可以尝试<strong>更新</strong>应用或<strong>注销</strong> Service Worker。<br><br>
+        Service Worker 提供离线访问功能。设备联网后，应用会自动重新注册 Service Worker 并重新缓存所需资源。<br><br>
+        应用在<strong>更新</strong>或<strong>注销</strong>后会自动重新启动。`
+  }[currentLang];
+
+  showPopupWindow({
+    title,
+    message,
+    buttons: [
+      {
+        text: {
+          en: "Update",
+          zh: "更新"
+        }[currentLang],
+        onClick: () => {
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+            alert({
+              en: "Update finished. Restarting the app…",
+              zh: "更新完成，应用将重新启动…"
+            }[currentLang]);
+            location.reload();
+          }
+        }
+      },
+      {
+        text: {
+          en: "Unregister SW",
+          zh: "注销 Service Worker"
+        }[currentLang],
+        onClick: () => {
+          window.location.href = "/sw-kill.html";
+          window.location.href = "/";
+          alert({
+            en: "Service Worker removed. Restarting the app…",
+            zh: "Service Worker 已注销，应用将重新启动…"
+          }[currentLang]);
+          location.reload();
+        }
+      },
+      {
+        text: {
+          en: "Cancel",
+          zh: "取消"
+        }[currentLang],
+        primary: true,
+        onClick: () => {
+          /* popup auto closes */
+        }
+      }
+    ]
+  });
 });
