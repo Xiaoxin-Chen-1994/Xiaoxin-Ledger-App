@@ -4331,6 +4331,7 @@ function showPopupWindow({ title, message, buttons = [] }) {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       overlay.remove();
+      popup.classList.remove("show"); 
     }
   });
 
@@ -4357,6 +4358,7 @@ function showPopupWindow({ title, message, buttons = [] }) {
 
     b.addEventListener("click", () => {
       overlay.remove();
+      popup.classList.remove("show"); 
       btn.onClick && btn.onClick();
     });
 
@@ -4369,6 +4371,10 @@ function showPopupWindow({ title, message, buttons = [] }) {
 
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
+
+  requestAnimationFrame(() => { 
+    popup.classList.add("show"); 
+  });
 }
 
 function showStatusMessage(message, type = 'info', duration = 2000) {
