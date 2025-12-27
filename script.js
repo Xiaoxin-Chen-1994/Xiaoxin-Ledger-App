@@ -1299,13 +1299,16 @@ function setDefaultAccount(button, subWorkspace) {
     if (type === "transfer") {
       // this type has two accounts
 
+      let fromCurrency;
+      let toCurrency;
+
       // FROM ACCOUNT
       if (!subWorkspace.transfer.fromAccountInfo) {
         subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
         const from = subWorkspace.transfer.fromAccountInfo.account;
         const fromIcon = from.icon || "";
         const fromName = from.name;
-        const fromCurrency = from.currency;
+        fromCurrency = from.currency;
 
         if (isUrl(fromIcon)) { // render <img>
           subWorkspace.transfer.fromAccountInnerHTML = `<img src="${fromIcon}" class="account-icon"> ${fromName} (${fromCurrency})`;
@@ -1320,13 +1323,17 @@ function setDefaultAccount(button, subWorkspace) {
         const to = subWorkspace.transfer.toAccountInfo.account;
         const toIcon = to.icon || "";
         const toName = to.name;
-        const toCurrency = to.currency;
+        toCurrency = to.currency;
 
         if (isUrl(toIcon)) { // render <img>
           subWorkspace.transfer.toAccountInnerHTML = `<img src="${toIcon}" class="account-icon"> ${toName} (${toCurrency})`;
         } else { // render text directly
           subWorkspace.transfer.toAccountInnerHTML = `${toIcon} ${toName} (${toCurrency})`;
         }
+      }
+
+      if (fromCurrency === toCurrency) {
+        subWorkspace.transfer.sameCurrency = true;
       }
     }
   });
@@ -1619,6 +1626,12 @@ function switchTab(index) {
     }
     toAmountBtn.textContent = subWorkspace.transfer.toAmount;
     toCalculationBtn.textContent = subWorkspace.transfer.toCalculation;
+
+    const fromLabel = document.getElementById("exchange-rate-from-label");
+    const toLabel   = document.getElementById("exchange-rate-to-label");
+    fromLabel.textContent = subWorkspace.transfer.fromExchangeRate;
+    toLabel.textContent   = subWorkspace.transfer.toExchangeRate;
+
   }
 
   // datetime
@@ -3387,8 +3400,6 @@ async function setLanguage(lang, showMessage = false, upload = true) {
     .forEach(el => el.textContent = t.subject);
   document.querySelectorAll('.transaction-collection-title')
     .forEach(el => el.textContent = t.collection);
-  document.getElementById("exchange-rate-from-label").textContent = `⇂ ${t.exchangeRate}: ${5.10}`;
-  document.getElementById("exchange-rate-to-label").textContent = `↿ ${t.exchangeRate}: ${0.20}`;
   document.getElementById("transfer-from-title").textContent = t.transferFrom;
   document.getElementById("transfer-to-title").textContent = t.transferTo;
   document.querySelectorAll('.transaction-tags-title')
@@ -4818,9 +4829,11 @@ function updateSelectorPreview(updatedCol) {
       toAccountBtn.innerHTML = subWorkspace.transfer.toAccountInnerHTML;
 
       if (fromCurrency === toCurrency) {
+        subWorkspace.transfer.sameCurrency = true;
+        
         document.getElementById("simple-transfer-amount-row").style.display = "block";
         document.getElementById("exchange-transfer-amount-row").style.display = "none";
-
+        
         // make sure simple amount is updated
         let amountBtn = document.querySelector(`#${activeForm} .amount-button`);
         let calculationBtn = document.querySelector(`#${activeForm} .calculation`);
@@ -4833,6 +4846,7 @@ function updateSelectorPreview(updatedCol) {
         calculationBtn.textContent = subWorkspace.calculation;
     
       } else {
+        subWorkspace.transfer.sameCurrency = false;
 
         document.getElementById("transfer-from-currency").textContent = fromCurrency;
         document.getElementById("transfer-to-currency").textContent = toCurrency;
@@ -5215,6 +5229,8 @@ function getAmountColor(amountButton) {
 }
 
 function tryUpdateAmount(expr, amountButton) {
+  const t = translations[currentLang];
+
   const calcLabel = amountButton.closest('.amount-row').querySelector('.calculation');
 
   let subWorkspace = null;
@@ -5229,9 +5245,23 @@ function tryUpdateAmount(expr, amountButton) {
 
   if (!expr) {
     amountButton.textContent = "0.00";
-    if (inputType === 'transfer' && amountButton.id === 'transfer-to-amount') {
-      subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
-      subWorkspace.transfer.toCalculation = expr;                 // raw expression
+    if (inputType === 'transfer') {
+      if (amountButton.id === 'transfer-to-amount') {
+        subWorkspace.transfer.toAmount = "0.00";
+        subWorkspace.transfer.toCalculation = "";
+      }
+
+      if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
+        // Update labels
+        const fromLabel = document.getElementById("exchange-rate-from-label");
+        const toLabel   = document.getElementById("exchange-rate-to-label");
+
+        fromLabel.textContent = ``;
+        toLabel.textContent   = ``;
+        subWorkspace.transfer.fromExchangeRate = 0;
+        subWorkspace.transfer.toExchangeRate = 0;
+      }
+
     } else {
       subWorkspace.amount = result.toFixed(2);             // numeric
       subWorkspace.calculation = expr;                            // raw expression
@@ -5247,13 +5277,38 @@ function tryUpdateAmount(expr, amountButton) {
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
-
+    
     if (typeof result === 'number' && isFinite(result)) {
       // VALID expression
       amountButton.textContent = result.toFixed(2);
-      if (inputType === 'transfer' && amountButton.id === 'transfer-to-amount') {
-        subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
-        subWorkspace.transfer.toCalculation = expr;                 // raw expression
+      if (inputType === 'transfer') {
+        if (amountButton.id === 'transfer-to-amount') {
+          subWorkspace.transfer.toAmount = result.toFixed(2);  // numeric
+          subWorkspace.transfer.toCalculation = expr;                 // raw expression
+        }
+
+        if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
+          const fromBtn = document.getElementById("transfer-from-amount");
+          const toBtn   = document.getElementById("transfer-to-amount");
+
+          const fromVal = parseFloat(fromBtn.textContent) || 0;
+          const toVal   = parseFloat(toBtn.textContent) || 0;
+
+          // Avoid division by zero
+          const ratio = fromVal > 0 ? (toVal / fromVal) : 0;
+          const reverseRatio = toVal > 0 ? (fromVal / toVal) : 0;
+
+          // Update labels
+          const fromLabel = document.getElementById("exchange-rate-from-label");
+          const toLabel   = document.getElementById("exchange-rate-to-label");
+
+          fromLabel.textContent = `⇂ ${t.exchangeRate}: ${ratio.toFixed(4)}`;
+          toLabel.textContent   = `↿ ${t.exchangeRate}: ${reverseRatio.toFixed(4)}`;
+
+          subWorkspace.transfer.fromExchangeRate = ratio;
+          subWorkspace.transfer.toExchangeRate = reverseRatio;
+        }
+
       } else {
         subWorkspace.amount = result.toFixed(2);             // numeric
         subWorkspace.calculation = expr;                           // raw expression
@@ -5268,6 +5323,7 @@ function tryUpdateAmount(expr, amountButton) {
     }
 
   } catch (e) {
+    console.log(e)
     // INVALID expression → error
     calcLabel.style.color = 'red';
     amountButton.style.color = 'red';
@@ -5317,6 +5373,8 @@ document.querySelectorAll(".amount-row").forEach(btn => {
 
     // Show the desired selector
     showSelector('amount')
+
+    lastButton.style.borderWidth = "3px";
   };
 });
 
@@ -5392,7 +5450,6 @@ document.querySelectorAll(".selector-button[data-type='datetime']").forEach(btn 
 
     // Show the desired selector
     showSelector('datetime')
-
   };
 });
 

@@ -322,7 +322,7 @@ input[type="password"], input[type="url"],
   border-top: none;
   border-left: none;
   border-right: none;
-  border-bottom: 3px solid var(--primary);
+  border-bottom: 1px solid var(--primary);
   background-color: var(--bg);
   display: flex;
   align-items: center;             /* keep button vertically centered */
