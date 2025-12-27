@@ -882,6 +882,8 @@ async function syncData(userId) {
     localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
   }
 
+  populateHouseholdDropdown(userDoc, householdDocs); // prepare the dropdown list for households
+
   return { userDoc, householdDocs };
 }
 
@@ -2060,31 +2062,6 @@ let subWorkspace = null;
 }
 window.saveEntry = saveEntry;
 
-const dfd = window.dfd;
-
-async function importFromCSV(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // Read raw text from the file
-  const text = await file.text();
-
-  // Remove the first line (metadata: 随手记导出文件(...))
-  const cleanedText = text
-    .split(/\r?\n/)
-    .slice(1) // drop line 0
-    .join("\n");
-
-  // Now let Danfo parse the cleaned CSV
-  const df = await dfd.readCSV(cleanedText);
-
-  df.print();
-}
-
-
-window.importFromCSV = importFromCSV;
-
-
 function diffEntries(original, updated) {
   // this function is used to find out the modifications made to an existing entry
   const changes = {};
@@ -2126,6 +2103,57 @@ function diffEntries(original, updated) {
 //   notes: { before: "", after: "Lunch" }
 // }
 
+}
+
+const dfd = window.dfd;
+
+async function importFromSuiCSV(event) { // import CSV data from 随手记
+
+  const householdId = document.getElementById("household-select").value; 
+  console.log(householdId)
+  if (!householdId) { 
+    document.getElementById("import-data-feedback").textContent = 
+      currentLang === "en" 
+        ? "Please choose a household first." 
+        : "请先选择一个家庭账本。"; 
+    return; 
+  }
+
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Read raw text from the file
+  const text = await file.text();
+
+  // Remove the first line (metadata)
+  const cleanedText = text
+    .split(/\r?\n/)
+    .slice(1)
+    .join("\n");
+
+  // Convert cleaned text back into a Blob so Danfo treats it as a file
+  const blob = new Blob([cleanedText], { type: "text/csv" });
+
+  // Now Danfo will read it correctly
+  const df = await dfd.readCSV(blob);
+}
+window.importFromCSV = importFromSuiCSV;
+
+function populateHouseholdDropdown(userDoc, householdDocs) {
+  const select = document.getElementById("household-select");
+
+  // Clear everything except the placeholder
+  select.innerHTML = `<option value="" disabled selected>${{
+    en: "Choose a household to import data into",
+    zh: "选择要导入数据的家庭账本"
+  }[currentLang]}</option>`;
+
+  userDoc.households.forEach(householdId => {
+    const option = document.createElement("option");
+    option.value = householdId;
+    option.textContent = householdDocs[householdId].name;
+    select.appendChild(option);
+  });
 }
 
 // define base pages
