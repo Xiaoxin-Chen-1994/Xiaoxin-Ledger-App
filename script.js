@@ -5123,8 +5123,12 @@ function showSelector(selName) {
 function closeSelector() {
   if (!openSelector) return;
   
-  keypadOpen = false;
+  keypadOpen = false; // keep it false regardless of what selector is open, in case of unexpected interception of keys
 
+  if (openSelector === 'amount') {
+    lastButton.style.borderWidth = "1px";
+  }
+  
   const sel = document.getElementById(openSelector + '-selector');
   if (sel) {
     sel.style.transform = 'translateY(120%)';
