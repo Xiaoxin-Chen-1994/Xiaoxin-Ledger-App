@@ -5085,11 +5085,18 @@ let keypadOpen = false;
 
 function showSelector(selName) {
   if (prevLastButton !== lastButton) { // when switching to a different button
-    if (openSelector === 'amount') { // if previously was an amount-row
-      prevLastButton.style.borderWidth = "1px";
+    console.log(selName)
+    if (openSelector === 'amount') { // if previously was an amount-selector
+      prevLastButton.style.borderWidth = "1px"; 
     } else {
-      lastButton.style.background = "var(--card)";
+      if (prevLastButton) {
+        prevLastButton.style.background = "var(--bg)";
+      }
     }
+  }
+  
+  if (selName !== 'amount') { // if currently not an amount-selector
+    lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
   }
 
   // Case 1: same selector already open → do nothing
@@ -5136,6 +5143,8 @@ function closeSelector() {
 
   if (openSelector === 'amount') {
     lastButton.style.borderWidth = "1px";
+  } else {
+    lastButton.style.background = "var(--bg)";
   }
   
   const sel = document.getElementById(openSelector + '-selector');
