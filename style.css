@@ -1874,35 +1874,174 @@ emoji-picker {
 
 .fe-header {
   padding: 16px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
 }
 
 .fe-title {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: calc(var(--font-size) * 1.3);
+  font-weight: 700;
 }
 
 .fe-sub {
-  font-size: 14px;
-  color: #666;
+  font-size: calc(var(--font-size) * 0.9);
+  color: var(--text-secondary, #666);
 }
 
-.fe-entry {
+.fe-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: calc(var(--font-size) * 1);
+}
+
+/* Container for each date group */
+.fe-date-group {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
+}
+
+/* Big date or "Today" */
+.fe-date-header {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 16px 8px 16px;
+}
+
+.fe-date-big {
+  font-size: calc(var(--font-size) * 1.5);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fe-date-sub {
+  font-size: calc(var(--font-size) * 0.9);
+  color: var(--text-secondary, #666);
+}
+
+.fe-entry-block {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   padding: 12px 16px;
-  border-bottom: 1px solid #eee;
+  gap: 12px;
 }
 
-.fe-entry-amount.income {
-  color: #2e8b57;
+/* Left column: icon */
+.fe-entry-icon {
+  width: 40px; /* fixed width for alignment */
+  min-width: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-size: calc(var(--font-size) * 1.4);
 }
 
-.fe-entry-amount.expense {
-  color: #c0392b;
+/* Middle column: main content */
+.fe-entry-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Right column: amount */
+.fe-entry-amount-right {
+  min-width: 80px;
+  text-align: right;
+  font-size: calc(var(--font-size) * 1.1);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.fe-entry-title {
+  font-size: calc(var(--font-size) * 1);
+  font-weight: 600;
 }
 
 .fe-entry-notes {
-  font-size: 12px;
-  color: #777;
+  margin-top: 2px;
+}
+
+/* Make textarea look like plain multi-line text */
+.fe-notes-textarea {
+  width: 100%;                 /* expand fully */
+  resize: none;                /* no resize handle */
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+
+  font: inherit;
+  font-size: calc(var(--font-size) * 0.8);
+  color: var(--text-secondary, #666);
+  line-height: 1.4;
+
+  overflow: hidden;            /* hide scrollbars */
+  pointer-events: none;        /* non-interactive */
+  display: block;              /* ensures width behaves predictably */
+  box-sizing: border-box;      /* prevents overflow */
+}
+
+/* Optional: prevent pointer cursor so it feels non-interactive */
+.fe-notes-textarea {
+  pointer-events: none;
+}
+
+.fe-entry-meta {
+  font-size: calc(var(--font-size) * 0.7);
+  color: var(--text-tertiary, #999);
+  margin-top: 2px;
+}
+
+.fe-entry-household {
+  font-size: calc(var(--font-size) * 0.7);
+  color: var(--text-tertiary, #999);
+  margin-top: 2px;
+}
+
+/* Colors for amounts */
+.fe-entry-amount-right.income {
+  color: var(--income-color, #2e8b57);
+}
+
+.fe-entry-amount-right.expense {
+  color: var(--expense-color, #c0392b);
+}
+
+/* Transfer icon already handled by .fe-entry-icon */
+
+.fe-entry-title.transfer {
+  font-size: calc(var(--font-size) * 1);
+  font-weight: 600;
+}
+
+.fe-entry-notes.transfer {
+  font-size: calc(var(--font-size) * 0.9);
+  color: var(--text-secondary, #666);
+}
+
+.fe-entry-meta.transfer {
+  font-size: calc(var(--font-size) * 0.8);
+  color: var(--text-tertiary, #999);
+}
+
+/* Balance icon handled by .fe-entry-icon */
+
+.fe-entry-title.balance {
+  font-size: calc(var(--font-size) * 1);
+  font-weight: 600;
+}
+
+.fe-entry-notes.balance {
+  font-size: calc(var(--font-size) * 0.9);
+  color: var(--text-secondary, #666);
+}
+
+.fe-entry-meta.balance {
+  font-size: calc(var(--font-size) * 0.8);
+  color: var(--text-tertiary, #999);
 }

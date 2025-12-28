@@ -2145,6 +2145,26 @@ function diffEntries(original, updated) {
 
 }
 
+function convertUTC8ToLocal(dateStr) {
+  // dateStr = "YYYY-MM-DD HH:mm:ss"
+  const [datePart, timePart] = dateStr.split(" ");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh, mm, ss] = timePart.split(":").map(Number);
+
+  // Create a Date object as if the input is UTC+8
+  const utcDate = new Date(Date.UTC(y, m - 1, d, hh - 8, mm, ss));
+
+  // Now convert to local time by formatting the Date object
+  const localY = utcDate.getFullYear();
+  const localM = String(utcDate.getMonth() + 1).padStart(2, "0");
+  const localD = String(utcDate.getDate()).padStart(2, "0");
+  const localH = String(utcDate.getHours()).padStart(2, "0");
+  const localMin = String(utcDate.getMinutes()).padStart(2, "0");
+  const localS = String(utcDate.getSeconds()).padStart(2, "0");
+
+  return `${localY}-${localM}-${localD} ${localH}:${localMin}:${localS}`;
+}
+
 function triggerFilePicker(inputFieldId) {
   const householdId = document.getElementById("household-select").value;
 
@@ -2252,7 +2272,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
         secondaryCategory: subcategory,
         account: resolvedAccount.name,
         currency,
-        transactionTime: date,
+        transactionTime: convertUTC8ToLocal(date),
         subject: member,
         collection: project,
         tags: [],
@@ -2315,7 +2335,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       fromCurrency: val(outRow, "账户币种"),
       toAccount: val(inRow, "账户"),
       toCurrency: val(inRow, "账户币种"),
-      transactionTime: val(inRow, "日期"),
+      transactionTime: convertUTC8ToLocal(val(inRow, "日期")),
       tags: [],
       notes: val(inRow, "备注"),
 
@@ -2339,7 +2359,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       householdId,
       account: val(row, "账户"),
       currency: val(row, "账户币种"),
-      transactionTime: val(row, "日期"),
+      transactionTime: convertUTC8ToLocal(val(row, "日期")),
       tags: [],
       notes: val(row, "备注"),
       createdBy: currentUser.uid,
@@ -4660,12 +4680,7 @@ function showFilteredEntries(entries, title, dateRangeStr) {
   const page = document.getElementById("filtered-entries-page");
   const scroll = page.querySelector(".scroll");
 
-  scroll.innerHTML = `
-    <div class="fe-header">
-      <div class="fe-title">${title}</div>
-      <div class="fe-sub">${dateRangeStr}</div>
-    </div>
-  `;
+  scroll.innerHTML = ``;
 
   if (entries.length === 0) {
     scroll.innerHTML += `
@@ -4676,29 +4691,31 @@ function showFilteredEntries(entries, title, dateRangeStr) {
     return;
   }
 
+  // --- SORT newest first ---
+  entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
+
+  // --- GROUP BY DATE ---
+  const groups = {};
   for (const e of entries) {
-    scroll.innerHTML += renderEntry(e);
+    const day = e.transactionTime.split(" ")[0]; // YYYY-MM-DD
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(e);
+  }
+
+  const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
+
+  // --- RENDER ALL GROUPS (no batching) ---
+  for (const day of groupKeys) {
+    const dayEntries = groups[day];
+    scroll.innerHTML += renderEntryGroup(day, dayEntries);
+
+    requestAnimationFrame(() => {
+      const textareas = scroll.querySelectorAll(".fe-notes-textarea");
+      textareas.forEach(autoResizeTextarea);
+    });
   }
 
   showPage("filtered-entries", latestNavBtn, title);
-}
-
-function renderEntry(e) {
-  return `
-    <div class="fe-entry">
-      <div class="fe-entry-left">
-        <div class="fe-entry-amount ${e.type}">
-          ${e.type === "income" ? "+" : "-"}${Number(e.amount).toFixed(2)}
-        </div>
-        <div class="fe-entry-collection">${e.collection || ""}</div>
-        <div class="fe-entry-notes">${e.notes || ""}</div>
-      </div>
-      <div class="fe-entry-right">
-        <div class="fe-entry-date">${e.transactionTime}</div>
-        <div class="fe-entry-account">${e.account || e.fromAccount || e.toAccount}</div>
-      </div>
-    </div>
-  `;
 }
 
 function showFilteredEntriesToday(entries, date, dateRangeStr) {
@@ -4707,12 +4724,7 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
 
   const displayTitle = (currentLang === "zh" ? "今天 " : "Today ") + date;
 
-  scroll.innerHTML = `
-    <div class="fe-header">
-      <div class="fe-title">${displayTitle}</div>
-      <div class="fe-sub">${dateRangeStr}</div>
-    </div>
-  `;
+  scroll.innerHTML = ``;
 
   if (entries.length === 0) {
     scroll.innerHTML += `
@@ -4723,33 +4735,44 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
     return;
   }
 
-  // --- SORT ENTRIES BY transactionTime DESC (newest first) --- 
-  entries.sort((a, b) => { 
-    if (a.transactionTime < b.transactionTime) return 1; 
-    if (a.transactionTime > b.transactionTime) return -1; 
-    return 0; 
-  });
+  // Sort newest first
+  entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
-  const BATCH_SIZE = 20;
+  // --- GROUP BY DATE ---
+  const groups = {};
+  for (const e of entries) {
+    const day = e.transactionTime.split(" ")[0]; // YYYY-MM-DD
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(e);
+  }
+
+  const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
+
+  const BATCH_SIZE = 1; // 1 date group per batch
   let index = 0;
 
   function renderBatch() {
-    const end = Math.min(index + BATCH_SIZE, entries.length);
+    const end = Math.min(index + BATCH_SIZE, groupKeys.length);
     for (let i = index; i < end; i++) {
-      scroll.innerHTML += renderEntry(entries[i]);
+      const day = groupKeys[i];
+      const dayEntries = groups[day];
+      scroll.innerHTML += renderEntryGroup(day, dayEntries);
     }
     index = end;
+
+    requestAnimationFrame(() => {
+      const textareas = scroll.querySelectorAll(".fe-notes-textarea");
+      textareas.forEach(autoResizeTextarea);
+    });
   }
 
-  // First batch
   renderBatch();
 
-  // Infinite scroll
   scroll.onscroll = () => {
     const nearBottom =
       scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 200;
 
-    if (nearBottom && index < entries.length) {
+    if (nearBottom && index < groupKeys.length) {
       renderBatch();
     }
   };
@@ -4757,6 +4780,150 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
   showPage("filtered-entries", latestNavBtn, displayTitle);
 }
 
+function renderEntryGroup(day, entries) {
+  const isToday = day === getTodayYYYYMMDD();
+  const d = new Date(day + "T00:00:00");
+
+  const weekday = d.toLocaleDateString(currentLang === "zh" ? "zh-CN" : "en-US", {
+    weekday: "long"
+  });
+
+  const monthYear = d.toLocaleDateString(currentLang === "zh" ? "zh-CN" : "en-US", {
+    month: "long",
+    year: "numeric"
+  });
+
+  const dayNumber = d.getDate();
+
+  const dateHeader = isToday
+    ? `
+      <div class="fe-date-header">
+        <div class="fe-date-big">${currentLang === "zh" ? "今天" : "Today"}</div>
+        <div class="fe-date-sub">${weekday}</div>
+      </div>
+    `
+    : `
+      <div class="fe-date-header">
+        <div class="fe-date-big">${dayNumber}</div>
+        <div class="fe-date-sub">${monthYear} · ${weekday}</div>
+      </div>
+    `;
+
+  let html = `<div class="fe-date-group">${dateHeader}`;
+
+  for (const e of entries) {
+    html += renderEntryByType(e);
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderEntryByType(e) {
+  const householdId = e.householdId;
+  const multipleHouseholds = userDoc.households.length > 1;
+  const householdName = multipleHouseholds
+    ? `<div class="fe-entry-household">${householdDocs[householdId].name}</div>`
+    : "";
+
+  const time = e.transactionTime.split(" ")[1];
+  const account = e.account || e.fromAccount || e.toAccount || "";
+  const subject = e.subject || "";
+  const collection = e.collection || "";
+  const notes = e.notes || "";
+
+  // --- Income / Expense ---
+  if (e.type === "income" || e.type === "expense") {
+    const icon = getCategoryIcon(householdId, e.type, e.primaryCategory, e.secondaryCategory);
+    
+    return `
+      <div class="fe-entry-block">
+        <div class="fe-entry-icon">${icon}</div>
+
+        <div class="fe-entry-main">
+          <div class="fe-entry-title">${e.secondaryCategory}</div>
+          ${renderNotes(e.notes)}
+          <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
+          ${householdName}
+        </div>
+
+        <div class="fe-entry-amount-right ${e.type}">${Number(e.amount).toFixed(2)}</div>
+      </div>
+    `;
+  }
+
+  // --- Transfer ---
+  if (e.type === "transfer") {
+    return `
+      <div class="fe-entry-block">
+        <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
+
+        <div class="fe-entry-main">
+          <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
+          ${renderNotes(e.notes)}
+          <div class="fe-entry-meta">${time}</div>
+          ${householdName}
+        </div>
+
+        <div class="fe-entry-amount-right">
+          ${Number(e.amount).toFixed(2)}
+        </div>
+      </div>
+    `;
+  }
+
+  // --- Balance ---
+  if (e.type === "balance") {
+    return `
+      <div class="fe-entry-block">
+        <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
+
+        <div class="fe-entry-main">
+          <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
+          ${renderNotes(e.notes)}
+          <div class="fe-entry-meta">${time}</div>
+          ${householdName}
+        </div>
+
+        <div class="fe-entry-amount-right">
+          ${Number(e.amount).toFixed(2)}
+        </div>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function renderNotes(notes) {
+  if (!notes || notes.trim() === "") return "";
+  return `
+    <div class="fe-entry-notes">
+      <textarea class="fe-notes-textarea" readonly>${notes}</textarea>
+    </div>
+  `;
+}
+
+function autoResizeTextarea(el) {
+  el.style.height = "auto";          // reset
+  el.style.height = el.scrollHeight + "px"; // fit content
+}
+
+function getCategoryIcon(householdId, type, primary, secondary) {
+  const dict = householdDocs[householdId][`${type}-categories`];
+  if (!dict || !dict.primary || !dict.primary[primary]) return "";
+
+  const sec = dict.primary[primary].secondaries[secondary];
+  return sec?.icon || "";
+}
+
+function getTodayYYYYMMDD() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // --- Color Scheme ---
 async function setColorScheme(scheme, showMessage = false, upload = true) {
