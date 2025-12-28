@@ -693,10 +693,8 @@ async function signup() {
         { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
       ],
       tags: [],
+      entriesThisYear: {} // this document will only store entries of this month to reduce reading and writing of individual documents
     });
-
-    
-
 
     // Profile doc
     await setDoc(profileRef, { email });
@@ -836,6 +834,26 @@ function logout() {
 }
 window.logout = logout;
 
+function mergeEntriesThisYear(doc) {
+  const merged = {};
+
+  for (const key of Object.keys(doc)) {
+    if (key.startsWith("entriesThisYear_part")) {
+      Object.assign(merged, doc[key]);
+    }
+  }
+
+  return merged;
+}
+
+function removeYearParts(doc) {
+  for (const key of Object.keys(doc)) {
+    if (key.startsWith("entriesThisYear_part")) {
+      delete doc[key];
+    }
+  }
+}
+
 async function syncData(userId) {
   let lastSyncStatus = {};
 
@@ -868,26 +886,21 @@ async function syncData(userId) {
 
       householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
 
-      // --- Fetch entries subcollection ---
-      const entriesRef = collection(db, "households", hid, "entries");
-      const entriesSnap = await getDocs(entriesRef);
+      // In this local variable, merge entriesThisYear into one, and remove parts
+      householdDocs[hid].entriesThisYear = mergeEntriesThisYear(householdDocs[hid]);
+      removeYearParts(householdDocs[hid]);
 
-      const entries = {};
-      entriesSnap.forEach((docSnap) => {
-        entries[docSnap.id] = {
-          entryId: docSnap.id,   // store ID inside the object
-          ...docSnap.data()
-        };
-      });
-
-      // Attach to householdDocs
-      householdDocs[hid].entries = entries;
+      // subcollection entries will not synced at this time
+      // individual entries will only be accessed ad hoc
 
       // If a household doc came from server, mark it as fresh
       if (hSnap.metadata.fromCache === false) {
         freshFromServer = true;
         if (freshFromServer) {
-          lastSyncStatus[householdDocs[hid].name] = householdDocs[hid].lastSynced
+          if (!lastSyncStatus[householdDocs[hid].name]) {
+            lastSyncStatus[householdDocs[hid].name] = {};
+          }
+          lastSyncStatus[householdDocs[hid].name] = {[{en:"Household Settings", zh:"账本设置"}[currentLang]]: householdDocs[hid].lastSynced}
         }
       }
     })
@@ -1131,9 +1144,9 @@ function setCurrentTime(button, subWorkspace) {
   subWorkspace.inputTransactionTimeRaw.min = Number(min);
   subWorkspace.inputTransactionTimeRaw.ss = Number(ss);
 
-  subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 
-  button.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
+  button.textContent = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`;
   button.dataset.value = now.toISOString();
 }
 
@@ -1156,7 +1169,10 @@ function setDefaultHouseholds(button, subWorkspace) {
 }
 
 function setDefaultCategory(button, subWorkspace) {
-  // Set default if workspace is empty
+  const inputType = subWorkspace.inputType;
+  const householdId = subWorkspace[inputType].householdId;
+
+  // Set default if workspace is empty, or loading values and look for icons
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
       // transfer and balance types do not have a category
@@ -1170,25 +1186,27 @@ function setDefaultCategory(button, subWorkspace) {
         subWorkspace[type].primaryCategoryIcon = userDoc.defaults[type].primaryIcon;
         subWorkspace[type].secondaryCategory = userDoc.defaults[type].secondary;
         subWorkspace[type].secondaryCategoryIcon = userDoc.defaults[type].secondaryIcon;
-
-        subWorkspace[type].catInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${subWorkspace[type].primaryCategoryIcon}</span>
-            <span class="cat-label">${subWorkspace[type].primaryCategory}</span>
-          </span>
-          <span class="cat-separator">&gt;</span>
-          <span class="cat-part">
-            <span class="icon selected">${subWorkspace[type].secondaryCategoryIcon}</span>
-            <span class="cat-label">${subWorkspace[type].secondaryCategory}</span>
-          </span>
-        `;
+      } else {
+        const { primaryIcon, secondaryIcon } = getCategoryIcon(householdId, inputType, subWorkspace[type].primaryCategory, subWorkspace[type].secondaryCategory);
+        subWorkspace[type].primaryCategoryIcon = primaryIcon;
+        subWorkspace[type].secondaryCategoryIcon = secondaryIcon;
       }
+      
+      subWorkspace[type].catInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[type].primaryCategoryIcon}</span>
+          <span class="cat-label">${subWorkspace[type].primaryCategory}</span>
+        </span>
+        <span class="cat-separator">&gt;</span>
+        <span class="cat-part">
+          <span class="icon selected">${subWorkspace[type].secondaryCategoryIcon}</span>
+          <span class="cat-label">${subWorkspace[type].secondaryCategory}</span>
+        </span>
+      `;
     }
   });
 
-  const inputType = subWorkspace.inputType;
-  const householdId = subWorkspace[inputType].householdId;
-
+  
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
@@ -1697,13 +1715,23 @@ function switchTab(index) {
     toLabel.textContent   = subWorkspace.transfer.toExchangeRate;
 
   }
-
   // datetime
   const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-  const [yyyy, mm, dd, hh, min] = parseDateFromString(subWorkspace.inputTransactionTime);
+  const [yyyy, mm, dd, hh, min, ss] = parseDateFromString(subWorkspace.inputTransactionTime);
+  
+  if (!subWorkspace.inputTransactionTimeRaw) {
+    subWorkspace.inputTransactionTimeRaw = {};
+  }
+  subWorkspace.inputTransactionTimeRaw.yyyy = Number(yyyy);
+  subWorkspace.inputTransactionTimeRaw.mm = Number(mm);
+  subWorkspace.inputTransactionTimeRaw.dd = Number(dd);
+  subWorkspace.inputTransactionTimeRaw.hh = Number(hh);
+  subWorkspace.inputTransactionTimeRaw.min = Number(min);
+  subWorkspace.inputTransactionTimeRaw.ss = Number(ss);
+  
   const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
   const prefix = getDatePrefix(dateObj);
-  datetimeEl.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
+  datetimeEl.textContent = `${prefix}${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")} ${String(hh).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 
   // subject
   if (["expense", "income"].includes(inputType)) {
@@ -1734,9 +1762,9 @@ function parseDateFromString(string) {
 
   const [datePart, timePart] = text.split(" ");
   const [y, m, d] = datePart.split("-").map(Number);
-  const [h, min] = timePart.split(":").map(Number);
+  const [h, min, ss] = timePart.split(":").map(Number);
 
-  return [y, m, d, h, min ];
+  return [y, m, d, h, min, ss];
 }
 
 // Button click
@@ -1949,11 +1977,63 @@ document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
   });
 });
 
+function determineTransactionIsThisYear(transactionTime) {
+  // Determine if a date belongs in this month
+  // Extract YYYY
+  const entryYear = transactionTime.slice(0, 4);
+
+  // Current YYYY
+  const now = new Date();
+  const currentYear = String(now.getFullYear());
+
+  const isThisYear = entryYear === currentYear;
+
+  return isThisYear
+}
+
+function estimateSize(obj) {
+  return new Blob([JSON.stringify(obj)]).size;
+}
+
+const MAX_SAFE_SIZE = 900 * 1024; // 900 KB buffer
+
+function splitIntoParts(entriesThisYear) {
+  const parts = [];
+  let current = {};
+  
+  for (const [entryId, entryData] of Object.entries(entriesThisYear)) {
+    // Try adding to current part
+    current[entryId] = entryData;
+
+    if (estimateSize(current) > MAX_SAFE_SIZE) {
+      // Remove the last added entry
+      delete current[entryId];
+
+      // Save the full part
+      parts.push(current);
+
+      // Start a new part with the entry that didn't fit
+      current = { [entryId]: entryData };
+    }
+  }
+
+  // Push the final part
+  if (Object.keys(current).length > 0) {
+    parts.push(current);
+  }
+
+  return parts;
+}
+
 // --- Ledger add entry ---
 async function saveEntry() {
   if (!currentUser) return;
-let subWorkspace = null;
+
+  let subWorkspace = null;
   let nav = true;
+  let entryId = null;
+  let entryId_original = null;
+  let writeMode = null;
 
   if (latestNavBtn === "nav-transaction") { // when creating an entry
     nav = 'create';
@@ -1963,7 +2043,6 @@ let subWorkspace = null;
 
   subWorkspace = workspace[nav];
 
-  subWorkspace.inputTransactionTime = subWorkspace.inputTransactionTime + `:${String(subWorkspace.inputTransactionTimeRaw.ss).padStart(2, "0")}`;
   console.log(subWorkspace)
   
   const inputType = subWorkspace.inputType;
@@ -1975,18 +2054,34 @@ let subWorkspace = null;
     // 1. Reference the household document
     const householdRef = doc(db, "households", householdId);
 
-    // 2. Generate a unique entry ID
-    
-    // **********************************
-    // **********************************
-    // **********************************
-    // note: if you are modifying an existing entry, entryId must be provided!
+    // 2. Generate a unique entry ID if entry date has changed    
+
+    if (nav === 'create') {
+      entryId = subWorkspace.inputTransactionTime.replace(/[- :]/g, "") +
+           Math.floor(Math.random() * 1_000_000)
+             .toString()
+             .padStart(6, "0");
+      writeMode = 'create'
+
+    } else if (entryData_original[nav].transactionTime !== subWorkspace.inputTransactionTime) {
+      entryId = subWorkspace.inputTransactionTime.replace(/[- :]/g, "") +
+           Math.floor(Math.random() * 1_000_000)
+             .toString()
+             .padStart(6, "0");
+      entryId_original = entryData_original[nav].entryId;
+      writeMode = 'overwriteWithNewDate'
+
+    } else {
+      entryId = entryData_original[nav].entryId;
+      writeMode = 'overwriteSimple'
+    }
 
     let entryData;
     
     // 3. Build the entry object
     if (["expense", "income"].includes(inputType)) {
       entryData = {
+        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         householdId,
@@ -2007,6 +2102,7 @@ let subWorkspace = null;
       };
     } else if (["transfer"].includes(inputType)) {
       entryData = {
+        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         toAmount: subWorkspace.toAmount ?? 0,
@@ -2027,6 +2123,7 @@ let subWorkspace = null;
       };
     } else if (["balance"].includes(inputType)) {
       entryData = {
+        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         householdId,
@@ -2044,21 +2141,50 @@ let subWorkspace = null;
     }
 
     // 4. entries is now a subcollection under the household
-    if (nav === "create") {
-      const entriesRef = collection(db, "households", householdId, "entries"); 
-      await addDoc(entriesRef, entryData); // create a doc
+    const entryRef = doc(db, "households", householdId, "entries", entryId);
+    await setDoc(entryRef, entryData, { merge: true }); // create or update a doc by entryId
+    
+    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
+    const isThisYear_Original = determineTransactionIsThisYear(entryData_original.transactionTime);
 
-    } else {
-      const entryRef = doc(db, "households", householdId, "entries", entryId);
-      await setDoc(entryRef, entryData, { merge: true }); // update a doc by entryId
+    if (isThisYear) {
+      householdDocs[householdId].entriesThisYear ??= {};
+      householdDocs[householdId].entriesThisYear[entryId] = entryData; // add it to entriesThisYear
+    }
+    
+    if (writeMode === 'overwriteWithNewDate') { // the old entry needs to be deleted
+      const entryRef_Original = doc(db, "households", householdId, "entries", entryId_original); 
+      await deleteDoc(entryRef_Original);
+
+      if (isThisYear_Original) {
+        delete householdDocs[householdId].entriesThisYear[entryId_original];
+      }
     }
 
-    await updateDoc(householdRef, {
+    const parts = splitIntoParts(householdDocs[householdId].entriesThisYear);
+
+    const updatePayload = {
       lastSynced: getFormattedTime()
+    };
+
+    // add parts for this year // these will go into entriesThisYear_part1, _part2, etc.
+    parts.forEach((part, index) => {
+      const key = `entriesThisYear_part${index + 1}`;
+      updatePayload[key] = part;
     });
 
+    // remove extra parts that are no longer needed
+    for (let i = parts.length + 1; i <= 20; i++) {
+      const key = `entriesThisYear_part${i}`;
+      updatePayload[key] = deleteField();
+    }
+
+    await updateDoc(householdRef, updatePayload);
+
+    console.log("saveEntry: total number of entriesThisYear parts:", parts.length)
+
     if (nav !== "create") {
-      const changes = diffEntries(entryData_original[inputType], entryData);
+      const changes = diffEntries(entryData_original[nav], entryData);
 
       // Read the current log
       const log = householdDocs[householdId].entryChangeLog || [];
@@ -2252,6 +2378,12 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     const project = val(row, "项目");
     const notes = val(row, "备注");
 
+    const entryId =
+      convertUTC8ToLocal(date).replace(/[- :]/g, "") +
+      Math.floor(Math.random() * 1_000_000)
+        .toString()
+        .padStart(6, "0");
+
     // --- 1. 收入 / 支出: check required fields ---
     if (type === "收入" || type === "支出") {
       if (category === "" || subcategory === "" || accountName === "") {
@@ -2265,6 +2397,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       const resolvedAccount = handleAccount(householdId, accountName, currency);
 
       const entryData = {
+        entryId,
         type: transactionType,
         amount,
         householdId,
@@ -2283,6 +2416,12 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
         lastModifiedTimestamp: getFormattedTime(),
       };
 
+      const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
+      if (isThisYear) { 
+        householdDocs[householdId].entriesThisYear ??= {}; 
+        householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+      }
+      
       // Collect the promise — do NOT await here 
       writePromises.push(addDoc(entriesRef, entryData));
       addDocCount[transactionType] += 1;
@@ -2326,6 +2465,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     const inRow = pair.in.row;
 
     const entryData = {
+      entryId,
       type: "transfer",
       amount: val(outRow, "金额"),
       toAmount: val(inRow, "金额"),
@@ -2345,6 +2485,12 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       lastModifiedTimestamp: getFormattedTime(),
     };
 
+    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
+    if (isThisYear) { 
+      householdDocs[householdId].entriesThisYear ??= {}; 
+      householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+    }
+
     // Collect the promise — do NOT await here 
     writePromises.push(addDoc(entriesRef, entryData));
     addDocCount.transfer += 1;
@@ -2354,6 +2500,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     const row = obj.row;
 
     const entryData = {
+      entryId,
       type: "balance",
       amount: val(row, "金额"),
       householdId,
@@ -2368,6 +2515,11 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       lastModifiedTimestamp: getFormattedTime(),
     };
 
+    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
+    if (isThisYear) { 
+      householdDocs[householdId].entriesThisYear ??= {}; 
+      householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+    }
     // Collect the promise — do NOT await here 
     writePromises.push(addDoc(entriesRef, entryData));
     addDocCount.balance += 1;
@@ -2383,6 +2535,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   // write data to firebase in batches to avoid write‑stream exhaustion (massive writing at once)
   await runInBatches(writePromises, 20); 
 
+  
   let changes = {};
   changes.summary = {added: addDocCount};
 
@@ -2398,14 +2551,33 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     ? log.slice(log.length - MAX_LOG)   // keep last 1000
     : log;
 
-  const householdRef = doc(db, "households", householdId);
-  await updateDoc(householdRef, {
+  const parts = splitIntoParts(householdDocs[householdId].entriesThisYear);
+
+  const updatePayload = {
     "income-categories": householdDocs[householdId]["income-categories"],
     "expense-categories": householdDocs[householdId]["expense-categories"],
     accounts: householdDocs[householdId].accounts,
     entryChangeLog: trimmed,
     lastSynced: getFormattedTime()
+  };
+
+  // add parts for this year // these will go into entriesThisYear_part1, _part2, etc.
+  parts.forEach((part, index) => {
+    const key = `entriesThisYear_part${index + 1}`;
+    updatePayload[key] = part;
   });
+
+  // remove extra parts that are no longer needed
+  for (let i = parts.length + 1; i <= 20; i++) {
+    const key = `entriesThisYear_part${i}`;
+    updatePayload[key] = deleteField();
+  }
+
+  const householdRef = doc(db, "households", householdId);
+
+  await updateDoc(householdRef, updatePayload);
+
+  console.log("saveEntry: total number of entriesThisYear parts:", parts.length)
 
   const div = document.getElementById("sui-import-feedback");
 
@@ -2614,7 +2786,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     latestPage = name;
     latestTitle = title;
     latestOptions = options;
-    
+
     // push a new history entry for this new page
     history.pushState({ page: latestPage, base: currentBase }, "", location.href);
     historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
@@ -2624,14 +2796,18 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   target = document.getElementById(latestPage + "-page");
   target.style.display = "block";
   target.zIndex = stack.length;
+  console.log(target)
 
   if (!target) return;
 
   const current = getComputedStyle(target).transform;
+  console.log(current)
   // If it's not already at translateX(0), move it there
-  if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0")) && !basePages.includes(latestPage)) {
+  if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
     target.style.transform = "translateX(0%)";
-    enablePageSwipe(target);
+    if (!(basePages.includes(latestPage) && latestPage === latestNavBtn)) {
+      enablePageSwipe(target);
+    }
   }
   
   if (name === "home" && navBtn === "nav-home" && stack.length < 3) {
@@ -2715,14 +2891,12 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     } else { // when loading an existing entry
       document.getElementById("app-title").textContent = t.transaction;
 
-      // here there should be a line that reads inputType from record
-
-      const type = transactionTypes[inputTypeIndex];
-      const activeForm = type + "-form";
-      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-      switchTab(inputTypeIndex);
-
       subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+
+      const activeForm = subWorkspace.inputType + "-form";
+      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+      console.log("going to swtich tab")
+      switchTab(subWorkspace.inputTypeIndex);
     }
 
     // prepare date time selector columns in advance
@@ -2749,6 +2923,20 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   } else if (latestPage === "order-labels") {
     const deleteBtn = document.getElementById("delete-btn-headerbar");
     deleteBtn.style.display = 'block';
+
+  } else if (latestPage === "filtered-entries") {
+
+    target.addEventListener("click", (e) => {
+        const block = e.target.closest(".fe-entry-block");
+        if (!block) return;
+
+        const entryId = block.dataset.entryId;    
+        const entryType = block.dataset.entryType;
+        const entry = options.allEntriesMap[entryId];
+        if (!entry) return;
+
+        loadEntryIntoWorkspace(entry);
+      });
 
   } else { // for all other pages
 
@@ -2784,6 +2972,104 @@ function goBack() {
 
     showPage(prevPage, prevNavBtn, prevTitle, prevOptions);
   }
+}
+
+function loadEntryIntoWorkspace(e) {
+  let nav = null;
+
+  if (latestNavBtn === "nav-transaction") { // when creating an entry
+    nav = 'create';
+  } else {
+    nav = latestNavBtn.replace("nav-", "");
+  }
+
+  workspace[nav] = {};
+  const ws = workspace[nav];
+
+  entryData_original[nav] = e;
+
+  ws.amount = Number(e.amount) || 0;
+  ws.notes = e.notes || "";
+  ws.tags = e.tags || [];
+  ws.inputTransactionTime = e.transactionTime;
+  ws.householdId = e.householdId;
+
+  if (e.type === "income" || e.type === "expense") {
+    ws.inputType = e.type;
+    ws.inputTypeIndex = transactionTypes.indexOf(e.type);
+    ws[e.type] = {};
+
+    ws[e.type].primaryCategory = e.primaryCategory;
+    ws[e.type].secondaryCategory = e.secondaryCategory;
+
+    ws[e.type].accountInfo = {
+      account: {
+        name: e.account,
+        currency: e.currency
+      }
+    };
+
+    ws[e.type].subject = e.subject || "";
+    ws[e.type].collection = e.collection || "";
+  }
+
+  else if (e.type === "transfer") {
+    ws.inputType = e.type;
+    ws.inputTypeIndex = transactionTypes.indexOf(e.type);
+    ws.transfer = {};
+
+    ws.transfer.sameCurrency = e.sameCurrency;
+
+    ws.transfer.fromAccountInfo = {
+      account: {
+        name: e.fromAccount,
+        currency: e.fromCurrency
+      }
+    };
+
+    ws.transfer.toAccountInfo = {
+      account: {
+        name: e.toAccount,
+        currency: e.toCurrency
+      }
+    };
+
+    ws.fromAmount = Number(e.amount) || 0;
+    ws.toAmount = Number(e.toAmount) || 0;
+  }
+
+  else if (e.type === "balance") {
+    ws.inputType = e.type;
+    ws.inputTypeIndex = transactionTypes.indexOf(e.type);
+    ws.balance = {};
+
+    ws.balance.accountInfo = {
+      account: {
+        name: e.account,
+        currency: e.currency
+      }
+    };
+  }
+
+  showPage("transaction", latestNavBtn, getEditTitle(e.type))
+}
+
+function getEditTitle(type) {
+  const titleMap = {
+    zh: {
+      expense: "编辑支出",
+      income: "编辑收入",
+      transfer: "编辑转账",
+      balance: "编辑余额"
+    },
+    en: {
+      expense: "Edit Expense",
+      income: "Edit Income",
+      transfer: "Edit Transfer",
+      balance: "Edit Balance"
+    }
+  };
+  return titleMap[currentLang]?.[type] || "";
 }
 
 function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.orderedHouseholds[0]) {
@@ -3971,32 +4257,29 @@ function handleSwipe() {
 }
 
 function enablePageSwipe(pageEl) {
-  if (pageEl._swipeEnabled) return; // prevent duplicates 
+  if (pageEl._swipeEnabled) return;
   pageEl._swipeEnabled = true;
 
   let startX = 0, currentX = 0, isDragging = false;
 
-  pageEl.addEventListener("touchstart", e => {
+  const onStart = e => {
     if (e.target.closest("input, textarea, [contenteditable]")) return;
-
     e.stopPropagation();
     startX = e.touches[0].clientX;
     isDragging = true;
     pageEl.style.transition = "none";
-  });
+  };
 
-  pageEl.addEventListener("touchmove", e => {
-
+  const onMove = e => {
     e.stopPropagation();
     if (!isDragging) return;
     currentX = e.touches[0].clientX - startX;
     if (currentX > 0) {
       pageEl.style.transform = `translateX(${currentX}px)`;
     }
-  });
+  };
 
-  pageEl.addEventListener("touchend", () => {
-
+  const onEnd = () => {
     if (!isDragging) return;
     isDragging = false;
     const threshold = 100;
@@ -4008,8 +4291,28 @@ function enablePageSwipe(pageEl) {
     } else {
       pageEl.style.transform = "translateX(0)";
     }
-    currentX = 0; // reset here
-  });
+    currentX = 0;
+  };
+
+  // Save handlers so we can remove them later
+  pageEl._swipeHandlers = { onStart, onMove, onEnd };
+
+  pageEl.addEventListener("touchstart", onStart);
+  pageEl.addEventListener("touchmove", onMove);
+  pageEl.addEventListener("touchend", onEnd);
+}
+
+function disablePageSwipe(pageEl) {
+  if (!pageEl._swipeEnabled) return;
+
+  const { onStart, onMove, onEnd } = pageEl._swipeHandlers || {};
+
+  pageEl.removeEventListener("touchstart", onStart);
+  pageEl.removeEventListener("touchmove", onMove);
+  pageEl.removeEventListener("touchend", onEnd);
+
+  pageEl._swipeEnabled = false;
+  pageEl._swipeHandlers = null;
 }
 
 // --- Language Switcher ---
@@ -4404,62 +4707,145 @@ async function saveHomeImages() {
   }
 }
 
-function getFilteredEntries({
-  dateFrom = null,
-  dateTo = null,
-  types = null,            // ["income", "expense", "transfer", "balance"]
-  collections = null,      // ["Food", "Travel", ...]
-  accounts = null,         // ["Cash", "Bank", ...]
-  tags = null,             // ["Work", "Family", ...]
-  notesKeyword = null,     // "coffee"
-  households = null        // override userDoc.householdIds if needed
-} = {}) {
+async function queryFirestoreForRange({
+  dateFrom,
+  dateTo,
+  types,
+  collections,
+  accounts,
+  tags,
+  notesKeyword,
+  householdIds
+}) {
+  const results = [];
 
-  const merged = {};
-  const householdIds = households || userDoc.households;
-
-  // 1. Merge entries across households
   for (const hid of householdIds) {
-    const entries = householdDocs[hid].entries || {};
-    Object.assign(merged, entries);
+    const entriesRef = collection(db, "households", hid, "entries");
+
+    let q = entriesRef;
+
+    // --- Date filters ---
+    if (dateFrom) q = query(q, where("transactionTime", ">=", dateFrom + " 00:00:00"));
+    if (dateTo)   q = query(q, where("transactionTime", "<=", dateTo   + " 23:59:59"));
+
+    // --- Type filter (only if single) ---
+    if (types?.length === 1) {
+      q = query(q, where("type", "==", types[0]));
+    }
+
+    // --- Collection filter (only if single AND acceptable) ---
+    if (collections?.length === 1) {
+      q = query(q, where("collection", "==", collections[0]));
+    }
+
+    const snap = await getDocs(q);
+
+    snap.forEach(doc => {
+      results.push(doc.data());
+    });
   }
 
-  // 2. Convert dictionary → array
-  const list = Object.values(merged);
+  return results;
+}
+
+
+async function getFilteredEntries({
+  dateFrom = null,
+  dateTo = null,
+  types = null,
+  collections = null,
+  accounts = null,
+  tags = null,
+  notesKeyword = null,
+  households = null
+} = {}) {
+
+  const householdIds = households || userDoc.households;
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
   const to   = dateTo   ? dateTo   + " 23:59:59" : null;
 
-  // 3. Apply filters
-  return list.filter(e => {
+  const fromIsThisYear = from && determineTransactionIsThisYear(from);
+  const toIsThisYear   = to   && determineTransactionIsThisYear(to);
 
-    // --- date range ---
-    if (from && e.transactionTime < from) return false;
-    if (to && e.transactionTime > to) return false;
+  // ------------------------------------------------------------
+  // CASE A: Entire range is inside this year → LOCAL ONLY
+  // ------------------------------------------------------------
+  if (fromIsThisYear && toIsThisYear) {
+    const merged = getLocalThisYearEntries(householdIds);
+    return applyFilters(merged);
+  }
 
-    // --- type filter ---
-    if (types && !types.includes(e.type)) return false;
+  // ------------------------------------------------------------
+  // CASE B: Entire range is BEFORE this year → FIRESTORE ONLY
+  // ------------------------------------------------------------
+  if (!fromIsThisYear && !toIsThisYear) {
+    return await queryFirestoreForRange({
+      dateFrom,
+      dateTo,
+      types,
+      collections,
+      accounts,
+      tags,
+      notesKeyword,
+      householdIds
+    });
+  }
 
-    // --- collection filter ---
-    if (collections && e.collection && !collections.includes(e.collection)) return false;
+  // ------------------------------------------------------------
+  // CASE C: Mixed range → combine Firestore (past) + local (this year)
+  // ------------------------------------------------------------
+  const localMerged = getLocalThisYearEntries(householdIds);
 
-    // --- account filter ---
-    if (accounts) {
-      const acc = e.account || e.fromAccount || e.toAccount;
-      if (!accounts.includes(acc)) return false;
-    }
-
-    // --- tag filter ---
-    if (tags && !tags.every(t => e.tags?.includes(t))) return false;
-
-    // --- notes keyword filter (case-insensitive) ---
-    if (notesKeyword) {
-      const notes = e.notes || "";
-      if (!notes.toLowerCase().includes(notesKeyword.toLowerCase())) return false;
-    }
-
-    return true;
+  const past = await queryFirestoreForRange({
+    dateFrom,
+    dateTo: `${new Date().getFullYear() - 1}-12-31`,
+    types,
+    collections,
+    accounts,
+    tags,
+    notesKeyword,
+    householdIds
   });
+
+  return applyFilters([...past, ...localMerged]);
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  function getLocalThisYearEntries(hids) {
+    const merged = {};
+    for (const hid of hids) {
+      const entries = householdDocs[hid].entriesThisYear || {};
+      Object.assign(merged, entries);
+    }
+    return Object.values(merged);
+  }
+
+  function applyFilters(list) {
+    return list.filter(e => {
+      if (from && e.transactionTime < from) return false;
+      if (to && e.transactionTime > to) return false;
+
+      if (types && !types.includes(e.type)) return false;
+
+      if (collections && e.collection && !collections.includes(e.collection)) return false;
+
+      if (accounts) {
+        const acc = e.account || e.fromAccount || e.toAccount;
+        if (!accounts.includes(acc)) return false;
+      }
+
+      if (tags && !tags.every(t => e.tags?.includes(t))) return false;
+
+      if (notesKeyword) {
+        const notes = e.notes || "";
+        if (!notes.toLowerCase().includes(notesKeyword.toLowerCase())) return false;
+      }
+
+      return true;
+    });
+  }
 }
 
 function summarizeIncomeExpense(entries) {
@@ -4513,42 +4899,42 @@ function getDateRange(type) {
   }
 
   // --- Build localized date range text ---
-  function buildDateRangeText(fromDate, toDate, showYear) {
+  function buildDateRangeText(dateFrom, dateTo, showYear) {
     const f = (d, forceYear = false) => formatDateLocalized(d, forceYear || showYear);
 
     // No dates
-    if (!fromDate && !toDate)
+    if (!dateFrom && !dateTo)
       return currentLang === "zh" ? "全部时间" : "All time";
 
-    // Only toDate
-    if (!fromDate && toDate)
-      return currentLang === "zh" ? `${f(toDate)} 之前` : `Before ${f(toDate)}`;
+    // Only dateTo
+    if (!dateFrom && dateTo)
+      return currentLang === "zh" ? `${f(dateTo)} 之前` : `Before ${f(dateTo)}`;
 
-    // Only fromDate
-    if (fromDate && !toDate)
-      return currentLang === "zh" ? `${f(fromDate)} 之后` : `After ${f(fromDate)}`;
+    // Only dateFrom
+    if (dateFrom && !dateTo)
+      return currentLang === "zh" ? `${f(dateFrom)} 之后` : `After ${f(dateFrom)}`;
 
     // Both dates exist
-    const y1 = new Date(fromDate).getFullYear();
-    const y2 = new Date(toDate).getFullYear();
+    const y1 = new Date(dateFrom).getFullYear();
+    const y2 = new Date(dateTo).getFullYear();
 
     // If same year → show year only once
     if (y1 === y2 && !showYear) {
       if (currentLang === "zh") {
         // Chinese: show year only on the first date
-        const f1 = formatDateLocalized(fromDate, true);   // include year
-        const f2 = formatDateLocalized(toDate, false);    // hide year
+        const f1 = formatDateLocalized(dateFrom, true);   // include year
+        const f2 = formatDateLocalized(dateTo, false);    // hide year
         return `${f1} - ${f2}`;
       } else {
         // English: show year only on the second date
-        const f1 = formatDateLocalized(fromDate, false);  // hide year
-        const f2 = formatDateLocalized(toDate, true);     // include year
+        const f1 = formatDateLocalized(dateFrom, false);  // hide year
+        const f2 = formatDateLocalized(dateTo, true);     // include year
         return `${f1} - ${f2}`;
       }
     }
 
     // Different years → show both
-    return `${f(fromDate)} - ${f(toDate)}`;
+    return `${f(dateFrom)} - ${f(dateTo)}`;
   }
 
   // --- Date calculations ---
@@ -4714,8 +5100,10 @@ function showFilteredEntries(entries, title, dateRangeStr) {
       textareas.forEach(autoResizeTextarea);
     });
   }
-
-  showPage("filtered-entries", latestNavBtn, title);
+  const allEntriesMap = {};
+  entries.forEach(e => allEntriesMap[e.entryId] = e);
+  
+  showPage("filtered-entries", latestNavBtn, title, {allEntriesMap});
 }
 
 function showFilteredEntriesToday(entries, date, dateRangeStr) {
@@ -4777,7 +5165,10 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
     }
   };
 
-  showPage("filtered-entries", latestNavBtn, displayTitle);
+  const allEntriesMap = {};
+  entries.forEach(e => allEntriesMap[e.id] = e);
+
+  showPage("filtered-entries", latestNavBtn, displayTitle, {allEntriesMap});
 }
 
 function renderEntryGroup(day, entries) {
@@ -4811,9 +5202,14 @@ function renderEntryGroup(day, entries) {
 
   let html = `<div class="fe-date-group">${dateHeader}`;
 
-  for (const e of entries) {
-    html += renderEntryByType(e);
-  }
+  entries.forEach((e, i) => { 
+    html += renderEntryByType(e); 
+    
+    // Add <hr> between entries, but not after the last one 
+    if (i < entries.length - 1) { 
+      html += `<hr class="fe-entry-divider">`; 
+    } 
+  });
 
   html += `</div>`;
   return html;
@@ -4834,11 +5230,11 @@ function renderEntryByType(e) {
 
   // --- Income / Expense ---
   if (e.type === "income" || e.type === "expense") {
-    const icon = getCategoryIcon(householdId, e.type, e.primaryCategory, e.secondaryCategory);
-    
+    const { primaryIcon, secondaryIcon } = getCategoryIcon(householdId, e.type, e.primaryCategory, e.secondaryCategory);
+
     return `
-      <div class="fe-entry-block">
-        <div class="fe-entry-icon">${icon}</div>
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
+        <div class="fe-entry-icon">${secondaryIcon}</div>
 
         <div class="fe-entry-main">
           <div class="fe-entry-title">${e.secondaryCategory}</div>
@@ -4855,7 +5251,7 @@ function renderEntryByType(e) {
   // --- Transfer ---
   if (e.type === "transfer") {
     return `
-      <div class="fe-entry-block">
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
         <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
 
         <div class="fe-entry-main">
@@ -4875,7 +5271,7 @@ function renderEntryByType(e) {
   // --- Balance ---
   if (e.type === "balance") {
     return `
-      <div class="fe-entry-block">
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
         <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
 
         <div class="fe-entry-main">
@@ -4910,12 +5306,28 @@ function autoResizeTextarea(el) {
 }
 
 function getCategoryIcon(householdId, type, primary, secondary) {
-  const dict = householdDocs[householdId][`${type}-categories`];
-  if (!dict || !dict.primary || !dict.primary[primary]) return "";
+  const dict = householdDocs[householdId]?.[`${type}-categories`];
+  if (!Array.isArray(dict)) {
+    return { primaryIcon: "", secondaryIcon: "" };
+  }
 
-  const sec = dict.primary[primary].secondaries[secondary];
-  return sec?.icon || "";
+  // Find the primary category object in the array
+  const primaryObj = dict.find(c => c.primary === primary);
+  if (!primaryObj) {
+    return { primaryIcon: "", secondaryIcon: "" };
+  }
+
+  const primaryIcon = primaryObj.icon || "";
+
+  let secondaryIcon = "";
+  if (secondary && Array.isArray(primaryObj.secondaries)) {
+    const secondaryObj = primaryObj.secondaries.find(s => s.name === secondary);
+    secondaryIcon = secondaryObj?.icon || "";
+  }
+
+  return { primaryIcon, secondaryIcon };
 }
+
 
 function getTodayYYYYMMDD() {
   const d = new Date();
@@ -5842,9 +6254,9 @@ function updateSelectorPreview(updatedCol) {
     hh = String(hh).padStart(2, "0");
     min = String(min).padStart(2, "0");
 
-    subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+    subWorkspace.inputTransactionTime = `${yyyy}-${mm}-${dd} ${hh}:${min}:${String(subWorkspace.inputTransactionTimeRaw.ss).padStart(2, "0")}`;
 
-    lastButton.textContent = `${prefix}` + subWorkspace.inputTransactionTime;
+    lastButton.textContent = `${prefix}${yyyy}-${mm}-${dd} ${hh}:${min}`;
     lastButton.dataset.value = dateObj.toISOString();
 
   } else if (lastButton.dataset.type === "household") {

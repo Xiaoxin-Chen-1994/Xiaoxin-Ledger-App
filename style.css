@@ -1896,8 +1896,17 @@ emoji-picker {
 
 /* Container for each date group */
 .fe-date-group {
-  padding: 16px 0;
+  padding: 15px 0 10px 0; /* top + bottom spacing */
+  margin-bottom: 10px;    /* extra gap between dates */
+  border-bottom: 3px solid var(--border-color, #e5e5e5);
+}
+
+/* Entry divider */
+.fe-entry-divider {
+  border: none;
   border-bottom: 1px solid var(--border-color, #e5e5e5);
+  margin: 10px 0;
+  opacity: 0.6;
 }
 
 /* Big date or "Today" */
@@ -1923,8 +1932,6 @@ emoji-picker {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  padding: 12px 16px;
-  gap: 12px;
 }
 
 /* Left column: icon */
@@ -1975,8 +1982,8 @@ emoji-picker {
   margin: 0;
 
   font: inherit;
-  font-size: calc(var(--font-size) * 0.8);
-  color: var(--text-secondary, #666);
+  font-size: calc(var(--font-size) * 0.65);
+  color: color-mix(in srgb, var(--text) 60%, var(--bg));
   line-height: 1.4;
 
   overflow: hidden;            /* hide scrollbars */
@@ -1991,14 +1998,14 @@ emoji-picker {
 }
 
 .fe-entry-meta {
-  font-size: calc(var(--font-size) * 0.7);
-  color: var(--text-tertiary, #999);
+  font-size: calc(var(--font-size) * 0.6);
+  color: color-mix(in srgb, var(--text) 40%, var(--bg));
   margin-top: 2px;
 }
 
 .fe-entry-household {
-  font-size: calc(var(--font-size) * 0.7);
-  color: var(--text-tertiary, #999);
+  font-size: calc(var(--font-size) * 0.5);
+  color: color-mix(in srgb, var(--text) 40%, var(--bg));
   margin-top: 2px;
 }
 
