@@ -1929,7 +1929,7 @@ emoji-picker {
 
 /* Left column: icon */
 .fe-entry-icon {
-  width: 5%; /* fixed width for alignment */
+  width: 1.8rem; /* fixed width for alignment */
   display: flex;
   justify-content: center;
   align-items: flex-start;
