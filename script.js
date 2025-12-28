@@ -480,6 +480,7 @@ import {
 import { 
   getFirestore, 
   doc, 
+  addDoc,
   setDoc, 
   getDoc, 
   getDocs,
@@ -692,8 +693,10 @@ async function signup() {
         { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
       ],
       tags: [],
-      entries: [],
     });
+
+    
+
 
     // Profile doc
     await setDoc(profileRef, { email });
@@ -865,6 +868,21 @@ async function syncData(userId) {
 
       householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
 
+      // --- Fetch entries subcollection ---
+      const entriesRef = collection(db, "households", hid, "entries");
+      const entriesSnap = await getDocs(entriesRef);
+
+      const entries = {};
+      entriesSnap.forEach((docSnap) => {
+        entries[docSnap.id] = {
+          entryId: docSnap.id,   // store ID inside the object
+          ...docSnap.data()
+        };
+      });
+
+      // Attach to householdDocs
+      householdDocs[hid].entries = entries;
+
       // If a household doc came from server, mark it as fresh
       if (hSnap.metadata.fromCache === false) {
         freshFromServer = true;
@@ -933,7 +951,7 @@ onAuthStateChanged(auth, async (user) => {
 
     // ✅ Load main app
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
-    updateHomeKanban();
+    
   } else {
     window.scrollTo(0, 0);
   }
@@ -1958,14 +1976,17 @@ let subWorkspace = null;
     const householdRef = doc(db, "households", householdId);
 
     // 2. Generate a unique entry ID
-    const entryId = crypto.randomUUID();
+    
+    // **********************************
+    // **********************************
+    // **********************************
+    // note: if you are modifying an existing entry, entryId must be provided!
+
     let entryData;
-    let changes;
     
     // 3. Build the entry object
     if (["expense", "income"].includes(inputType)) {
       entryData = {
-        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         householdId,
@@ -1986,7 +2007,6 @@ let subWorkspace = null;
       };
     } else if (["transfer"].includes(inputType)) {
       entryData = {
-        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         toAmount: subWorkspace.toAmount ?? 0,
@@ -2007,11 +2027,11 @@ let subWorkspace = null;
       };
     } else if (["balance"].includes(inputType)) {
       entryData = {
-        entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
         householdId,
         account: subWorkspace[inputType].accountInfo.account.name,
+        currency: subWorkspace[inputType].accountInfo.account.currency,
         transactionTime: subWorkspace.inputTransactionTime,
         tags: subWorkspace.tags ?? [],
         notes: subWorkspace.notes ?? "",
@@ -2023,17 +2043,38 @@ let subWorkspace = null;
       };
     }
 
-    // 4. Write it under households.householdId.entries.entryId
+    // 4. entries is now a subcollection under the household
+    if (nav === "create") {
+      const entriesRef = collection(db, "households", householdId, "entries"); 
+      await addDoc(entriesRef, entryData); // create a doc
+
+    } else {
+      const entryRef = doc(db, "households", householdId, "entries", entryId);
+      await setDoc(entryRef, entryData, { merge: true }); // update a doc by entryId
+    }
+
     await updateDoc(householdRef, {
-      [`entries.${entryId}`]: entryData,
       lastSynced: getFormattedTime()
     });
 
-    if (nav !== 'create') { // modifying an existing entry
-      changes = diffEntries(entryData_original[inputType], entryData);
+    if (nav !== "create") {
+      const changes = diffEntries(entryData_original[inputType], entryData);
 
-      await updateDoc(householdRef, { 
-        entryChangeLog: arrayUnion(changes) 
+      // Read the current log
+      const log = householdDocs[householdId].entryChangeLog || [];
+
+      // Append the new change
+      log.push(changes);
+
+      // If too long, trim the oldest entries
+      const MAX_LOG = 1000;
+      const trimmed = log.length > MAX_LOG
+        ? log.slice(log.length - MAX_LOG)   // keep last 1000
+        : log;
+
+      // Write back the trimmed log
+      await updateDoc(householdRef, {
+        entryChangeLog: trimmed
       });
     }
 
@@ -2053,10 +2094,9 @@ let subWorkspace = null;
     } else { // for other base pages
       history.back();
     }
-    updateHomeKanban(householdId);
 
   } catch (err) {
-    console.error("Error adding transaction:", err);
+    console.error("Error saving transaction:", err);
     showStatusMessage("添加交易失败", 'error');
   }
 }
@@ -2064,7 +2104,7 @@ window.saveEntry = saveEntry;
 
 function diffEntries(original, updated) {
   // this function is used to find out the modifications made to an existing entry
-  const changes = {};
+  let changes = {};
 
   // Fields we want to ignore when comparing
   const ignore = new Set([
@@ -2105,22 +2145,33 @@ function diffEntries(original, updated) {
 
 }
 
+function triggerFilePicker(inputFieldId) {
+  const householdId = document.getElementById("household-select").value;
+
+  if (!householdId) {
+    document.getElementById("household-select-feedback").textContent =
+      currentLang === "en"
+        ? "Please choose a household first."
+        : "请先选择一个家庭账本。";
+    return;
+  } else {
+    document.getElementById("household-select-feedback").textContent = "";
+  }
+
+  document.getElementById(inputFieldId).click();
+}
+window.triggerFilePicker = triggerFilePicker;
+
 const dfd = window.dfd;
 
 async function importFromSuiCSV(event) { // import CSV data from 随手记
-
-  const householdId = document.getElementById("household-select").value; 
-  console.log(householdId)
-  if (!householdId) { 
-    document.getElementById("import-data-feedback").textContent = 
-      currentLang === "en" 
-        ? "Please choose a household first." 
-        : "请先选择一个家庭账本。"; 
-    return; 
-  }
-
   const file = event.target.files[0];
   if (!file) return;
+
+  document.getElementById("sui-import-feedback").innerHTML = {
+    en: "Reading selected file ... ",
+    zh: "正在读取所选文件 ..."
+  }[currentLang];
 
   // Read raw text from the file
   const text = await file.text();
@@ -2134,10 +2185,313 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   // Convert cleaned text back into a Blob so Danfo treats it as a file
   const blob = new Blob([cleanedText], { type: "text/csv" });
 
-  // Now Danfo will read it correctly
   const df = await dfd.readCSV(blob);
+
+  // Convert all null values to empty strings
+  df.columns.forEach(col => {
+    df[col] = df[col].apply(v => (v === null ? "" : v));
+  });
+
+  const householdId = document.getElementById("household-select").value;
+  
+  // entries is now a subcollection under households
+  const entriesRef = collection(db, "households", householdId, "entries"); 
+
+  // Build a map: columnName → index
+  const colIndex = {};
+  df.columns.forEach((name, idx) => colIndex[name] = idx);
+
+  function val(row, colName) {
+    return row[colIndex[colName]];
+  }
+
+  const missingRequired = [];          // rows with empty 类别 / 子类别 / 账户
+  const otherEntries = [];             // array of entries with incompatible types
+  const pendingTransfers = {};         // keyed by 关联Id
+  const pendingBalance = [];           // array of balance entries
+
+  let writePromises = [];
+
+  let addDocCount = {
+    "expense": 0,
+    "income": 0,
+    "transfer": 0,
+    "balance": 0,
+  };
+
+  df.values.forEach((row, i) => {
+    const type = val(row, "交易类型");
+    const category = val(row, "类别");
+    const subcategory = val(row, "子类别");
+    const accountName = val(row, "账户");
+    const currency = val(row, "账户币种");
+    const linkId = val(row, "关联Id") || "";
+    const amount = val(row, "金额");
+    const date = val(row, "日期");
+    const member = val(row, "成员");
+    const project = val(row, "项目");
+    const notes = val(row, "备注");
+
+    // --- 1. 收入 / 支出: check required fields ---
+    if (type === "收入" || type === "支出") {
+      if (category === "" || subcategory === "" || accountName === "") {
+        missingRequired.push({ index: i, row });
+        return;
+      }
+
+      const transactionType = type === "收入" ? "income" : "expense";
+
+      handleCategory(householdId, type, category, subcategory);
+      const resolvedAccount = handleAccount(householdId, accountName, currency);
+
+      const entryData = {
+        type: transactionType,
+        amount,
+        householdId,
+        primaryCategory: category,
+        secondaryCategory: subcategory,
+        account: resolvedAccount.name,
+        currency,
+        transactionTime: date,
+        subject: member,
+        collection: project,
+        tags: [],
+        notes,
+        createdBy: currentUser.uid,
+        createdTimestamp: getFormattedTime(),
+        lastModifiedBy: currentUser.uid,
+        lastModifiedTimestamp: getFormattedTime(),
+      };
+
+      // Collect the promise — do NOT await here 
+      writePromises.push(addDoc(entriesRef, entryData));
+      addDocCount[transactionType] += 1;
+      return;
+    }
+
+    // --- 2. 转出: store temporarily ---
+    if (type === "转出") {
+      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      pendingTransfers[linkId] = {
+        out: { row, resolvedAccount }
+      };
+      return;
+    }
+
+    // --- 3. 转入: pair with 转出 ---
+    if (type === "转入") {
+      if (!pendingTransfers[linkId]) {
+        pendingTransfers[linkId] = {};
+      }
+      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      pendingTransfers[linkId].in = { row, resolvedAccount };
+      return;
+    }
+
+    // --- 4. 余额变更 ---
+    if (type === "余额变更") {
+      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      pendingBalance[linkId] = { row, resolvedAccount };
+      return;
+    }
+
+    // --- 5. Other types: store for later output ---
+    otherEntries.push({ rawRow: row });
+  });
+
+  Object.entries(pendingTransfers).forEach(([linkId, pair]) => {
+    if (!pair.out || !pair.in) return;
+
+    const outRow = pair.out.row;
+    const inRow = pair.in.row;
+
+    const entryData = {
+      type: "transfer",
+      amount: val(outRow, "金额"),
+      toAmount: val(inRow, "金额"),
+      sameCurrency: val(outRow, "账户币种") === val(inRow, "账户币种"),
+      householdId,
+      fromAccount: val(outRow, "账户"),
+      fromCurrency: val(outRow, "账户币种"),
+      toAccount: val(inRow, "账户"),
+      toCurrency: val(inRow, "账户币种"),
+      transactionTime: val(inRow, "日期"),
+      tags: [],
+      notes: val(inRow, "备注"),
+
+      createdBy: currentUser.uid,
+      createdTimestamp: getFormattedTime(),
+      lastModifiedBy: currentUser.uid,
+      lastModifiedTimestamp: getFormattedTime(),
+    };
+
+    // Collect the promise — do NOT await here 
+    writePromises.push(addDoc(entriesRef, entryData));
+    addDocCount.transfer += 1;
+  });
+
+  Object.entries(pendingBalance).forEach((obj) => {
+    const row = obj.row;
+
+    const entryData = {
+      type: "balance",
+      amount: val(row, "金额"),
+      householdId,
+      account: val(row, "账户"),
+      currency: val(row, "账户币种"),
+      transactionTime: val(row, "日期"),
+      tags: [],
+      notes: val(row, "备注"),
+      createdBy: currentUser.uid,
+      createdTimestamp: getFormattedTime(),
+      lastModifiedBy: currentUser.uid,
+      lastModifiedTimestamp: getFormattedTime(),
+    };
+
+    // Collect the promise — do NOT await here 
+    writePromises.push(addDoc(entriesRef, entryData));
+    addDocCount.balance += 1;
+  });
+
+  async function runInBatches(promises, batchSize = 20) {
+    for (let i = 0; i < promises.length; i += batchSize) {
+      const batch = promises.slice(i, i + batchSize);
+      await Promise.all(batch);
+    }
+  }
+
+  // write data to firebase in batches to avoid write‑stream exhaustion (massive writing at once)
+  await runInBatches(writePromises, 20); 
+
+  let changes = {};
+  changes.summary = {added: addDocCount};
+
+  // Read the current log
+  const log = householdDocs[householdId].entryChangeLog || [];
+
+  // Append the new change
+  log.push(changes);
+
+  // If too long, trim the oldest entries
+  const MAX_LOG = 1000;
+  const trimmed = log.length > MAX_LOG
+    ? log.slice(log.length - MAX_LOG)   // keep last 1000
+    : log;
+
+  const householdRef = doc(db, "households", householdId);
+  await updateDoc(householdRef, {
+    "income-categories": householdDocs[householdId]["income-categories"],
+    "expense-categories": householdDocs[householdId]["expense-categories"],
+    accounts: householdDocs[householdId].accounts,
+    entryChangeLog: trimmed,
+    lastSynced: getFormattedTime()
+  });
+
+  const div = document.getElementById("sui-import-feedback");
+
+  if (missingRequired.length === 0) {
+    div.textContent = {
+      en: "No missing required fields detected.",
+      zh: "未发现缺少必填字段的记录。"
+    }[currentLang];
+    return;
+  }
+
+  let html = `
+    <div style="color:#b00020; font-weight:600; margin-bottom:8px;">
+      ${{
+        en: "Some entries were NOT imported because required fields are missing:",
+        zh: "以下条目因缺少必填字段而未被导入："
+      }[currentLang]}
+    </div>
+    <ul style="padding-left:18px; line-height:1.5;">`;
+
+  missingRequired.forEach(item => {
+    const row = item.row;
+
+    html += `
+      <li style="margin-bottom:6px;">
+        <strong>#${item.index}</strong> — 
+        ${{
+          en: "Missing:",
+          zh: "缺少："
+        }[currentLang]}
+        ${missingFieldsInRow(row).join(", ")}
+        <br>
+        <span style="font-size:12px; color:#555;">
+          ${JSON.stringify(row)}
+        </span>
+      </li>
+    `;
+  });
+
+  html += "</ul>";
+
+  div.innerHTML = html;
 }
-window.importFromCSV = importFromSuiCSV;
+window.importFromSuiCSV = importFromSuiCSV;
+
+function handleCategory(householdId, type, primary, secondary) {
+  const key = type === "收入" ? "income-categories" : "expense-categories";
+  const list = householdDocs[householdId][key];
+
+  let primaryObj = list.find(c => c.primary === primary);
+
+  if (!primaryObj) {
+    primaryObj = {
+      primary,
+      icon: "🏷️",
+      secondaries: [{ name: secondary, icon: "🏷️" }]
+    };
+    list.push(primaryObj);
+    return;
+  }
+
+  if (!primaryObj.secondaries.some(s => s.name === secondary)) {
+    primaryObj.secondaries.push({ name: secondary, icon: "🏷️" });
+  }
+}
+
+function handleAccount(householdId, name, currency) {
+  const result = findSelectedAccount(householdId, null, name);
+
+  // Not found → create new top-level account
+  if (!result) {
+    const newAcc = {
+      name,
+      icon: "💰",
+      currency,
+      exclude: false,
+      notes: "",
+      "sub-accounts": []
+    };
+    householdDocs[householdId].accounts.cashAccounts[name] = newAcc;
+    return newAcc;
+  }
+
+  const acc = result.account;
+
+  // If currency mismatch OR has sub-accounts → create imported version
+  if ((acc["sub-accounts"] && acc["sub-accounts"].length > 0) ||
+      acc.currency !== currency) {
+
+    const importedName = name + ({ en: " imported", zh: " 导入" }[currentLang]);
+
+    const newAcc = {
+      name: importedName,
+      icon: "💰",
+      currency,
+      exclude: false,
+      notes: "",
+      "sub-accounts": []
+    };
+
+    householdDocs[householdId].accounts[result.type][importedName] = newAcc;
+    return newAcc;
+  }
+
+  return acc;
+}
 
 function populateHouseholdDropdown(userDoc, householdDocs) {
   const select = document.getElementById("household-select");
@@ -2154,6 +2508,13 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
     option.textContent = householdDocs[householdId].name;
     select.appendChild(option);
   });
+
+  if (userDoc.households.length <= 1) {
+    select.value = userDoc.households[0];
+    document.getElementById("household-select-section").style.display = "none";
+  } else {
+    document.getElementById("household-select-section").style.display = "flex";
+  }
 }
 
 // define base pages
@@ -2256,6 +2617,10 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   if (name === "home" && navBtn === "nav-home" && stack.length < 3) {
     // at home page (base page and the first page)
     document.getElementById("search-btn-headerbar").style.display = "block";
+
+    updateKanbanRow({en: "Today", zh: "今天"}[currentLang], 0, getDateRange('today'));
+    updateKanbanRow({en: "This Month", zh: "本月"}[currentLang], 1, getDateRange('thisMonth'));
+    updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
 
   if (stack.length > 1) { // if not at base
@@ -3649,10 +4014,6 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("home-balance").textContent = t.incomeMinusExpense;
   document.getElementById("home-summary").textContent = t.monthlySummary;
 
-  document.getElementById("kanban-today-title").textContent = t.today;
-  document.getElementById("kanban-month-title").textContent = t.thisMonth;
-  document.getElementById("kanban-year-title").textContent = t.thisYear;
-
   // Transaction page
   document.getElementById("save-btn-expense").textContent = t.save;
   document.getElementById("save-btn-income").textContent = t.save;
@@ -4023,61 +4384,310 @@ async function saveHomeImages() {
   }
 }
 
-// --- Home: Kanban summaries ---
-async function updateHomeKanban() {
-  const entries = Object.values(householdDocs)
-  .flatMap(h => Object.values(h.entries || {}));
+function getFilteredEntries({
+  dateFrom = null,
+  dateTo = null,
+  types = null,            // ["income", "expense", "transfer", "balance"]
+  collections = null,      // ["Food", "Travel", ...]
+  accounts = null,         // ["Cash", "Bank", ...]
+  tags = null,             // ["Work", "Family", ...]
+  notesKeyword = null,     // "coffee"
+  households = null        // override userDoc.householdIds if needed
+} = {}) {
 
-  const sumBy = (filterFn) => {
-    let income = 0, expense = 0;
+  const merged = {};
+  const householdIds = households || userDoc.households;
 
-    entries.filter(filterFn).forEach(e => {
-      const total = (e.items || [])
-        .map(i => parseFloat(i.totalPrice))
-        .filter(v => !isNaN(v))
-        .reduce((a, b) => a + b, 0);
+  // 1. Merge entries across households
+  for (const hid of householdIds) {
+    const entries = householdDocs[hid].entries || {};
+    Object.assign(merged, entries);
+  }
 
-      if (e.type === "incoming") income += total;
-      if (e.type === "outgoing") expense += total;
-    });
+  // 2. Convert dictionary → array
+  const list = Object.values(merged);
+
+  const from = dateFrom ? dateFrom + " 00:00:00" : null;
+  const to   = dateTo   ? dateTo   + " 23:59:59" : null;
+
+  // 3. Apply filters
+  return list.filter(e => {
+
+    // --- date range ---
+    if (from && e.transactionTime < from) return false;
+    if (to && e.transactionTime > to) return false;
+
+    // --- type filter ---
+    if (types && !types.includes(e.type)) return false;
+
+    // --- collection filter ---
+    if (collections && e.collection && !collections.includes(e.collection)) return false;
+
+    // --- account filter ---
+    if (accounts) {
+      const acc = e.account || e.fromAccount || e.toAccount;
+      if (!accounts.includes(acc)) return false;
+    }
+
+    // --- tag filter ---
+    if (tags && !tags.every(t => e.tags?.includes(t))) return false;
+
+    // --- notes keyword filter (case-insensitive) ---
+    if (notesKeyword) {
+      const notes = e.notes || "";
+      if (!notes.toLowerCase().includes(notesKeyword.toLowerCase())) return false;
+    }
+
+    return true;
+  });
+}
+
+function summarizeIncomeExpense(entries) {
+  let income = 0;
+  let expense = 0;
+
+  for (const e of entries) {
+    if (e.type === "income") {
+      income += Number(e.amount) || 0;
+    }
+    if (e.type === "expense") {
+      expense += Number(e.amount) || 0;
+    }
+  }
+
+  return { income, expense };
+}
+
+function getDateRange(type) {
+  // --- Localized formatter with optional year ---
+  function formatDateLocalized(dateStr, showYear = true) {
+    if (!dateStr) return "";
+
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d); // local, no timezone shift
+
+    const year  = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day   = date.getDate();
+
+    if (currentLang === "zh") {
+      return showYear
+        ? `${year}年${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`
+        : `${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`;
+    }
+
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    return showYear
+      ? `${months[date.getMonth()]} ${String(day).padStart(2, "0")}, ${year}`
+      : `${months[date.getMonth()]} ${String(day).padStart(2, "0")}`;
+  }
+
+  // --- YYYY-MM-DD formatter for filtering ---
+  function formatDate(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // --- Build localized date range text ---
+  function buildDateRangeText(fromDate, toDate, showYear) {
+    const f = (d, forceYear = false) => formatDateLocalized(d, forceYear || showYear);
+
+    // No dates
+    if (!fromDate && !toDate)
+      return currentLang === "zh" ? "全部时间" : "All time";
+
+    // Only toDate
+    if (!fromDate && toDate)
+      return currentLang === "zh" ? `${f(toDate)} 之前` : `Before ${f(toDate)}`;
+
+    // Only fromDate
+    if (fromDate && !toDate)
+      return currentLang === "zh" ? `${f(fromDate)} 之后` : `After ${f(fromDate)}`;
+
+    // Both dates exist
+    const y1 = new Date(fromDate).getFullYear();
+    const y2 = new Date(toDate).getFullYear();
+
+    // If same year → show year only once
+    if (y1 === y2 && !showYear) {
+      if (currentLang === "zh") {
+        // Chinese: show year only on the first date
+        const f1 = formatDateLocalized(fromDate, true);   // include year
+        const f2 = formatDateLocalized(toDate, false);    // hide year
+        return `${f1} - ${f2}`;
+      } else {
+        // English: show year only on the second date
+        const f1 = formatDateLocalized(fromDate, false);  // hide year
+        const f2 = formatDateLocalized(toDate, true);     // include year
+        return `${f1} - ${f2}`;
+      }
+    }
+
+    // Different years → show both
+    return `${f(fromDate)} - ${f(toDate)}`;
+  }
+
+  // --- Date calculations ---
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // --- Week (Sunday start) ---
+  const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+  const endOfWeek = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate() + 6);
+
+  // --- Month ---
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  // --- Last Month ---
+  const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+
+  // --- Quarter ---
+  const quarter = Math.floor(today.getMonth() / 3);
+  const startOfQuarter = new Date(today.getFullYear(), quarter * 3, 1);
+  const endOfQuarter = new Date(today.getFullYear(), quarter * 3 + 3, 0);
+
+  // --- Last Quarter ---
+  const startOfLastQuarter = new Date(today.getFullYear(), (quarter - 1) * 3, 1);
+  const endOfLastQuarter = new Date(today.getFullYear(), quarter * 3, 0);
+
+  // --- Year ---
+  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  const endOfYear = new Date(today.getFullYear(), 11, 31);
+
+  // --- Last Year ---
+  const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
+  const endOfLastYear = new Date(today.getFullYear() - 1, 11, 31);
+
+  // --- Helper to finalize output ---
+  function pack(from, to, showYear = false) {
+    const dateFrom = from ? formatDate(from) : null;
+    const dateTo = to ? formatDate(to) : null;
+    return {
+      dateFrom,
+      dateTo,
+      dateRangeStr: buildDateRangeText(dateFrom, dateTo, showYear)
+    };
+  }
+
+  // --- Switch logic ---
+  switch (type) {
+    case "today":       return pack(today, today);
+    case "yesterday":   const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
+    case "last7":       const d7 = new Date(today); d7.setDate(today.getDate() - 6); return pack(d7, today);
+    case "last30":      const d30 = new Date(today); d30.setDate(today.getDate() - 29); return pack(d30, today);
+    case "thisWeek":    return pack(startOfWeek, endOfWeek);
+    case "lastWeek":    const lwS = new Date(startOfWeek); lwS.setDate(lwS.getDate() - 7);
+                        const lwE = new Date(endOfWeek);   lwE.setDate(lwE.getDate() - 7);
+                        return pack(lwS, lwE);
+    case "thisMonth":   return pack(startOfMonth, endOfMonth);
+    case "lastMonth":   return pack(startOfLastMonth, endOfLastMonth);
+    case "thisQuarter": return pack(startOfQuarter, endOfQuarter);
+    case "lastQuarter": return pack(startOfLastQuarter, endOfLastQuarter);
+
+    // Long ranges → show year
+    case "thisYear":    return pack(startOfYear, endOfYear, true);
+    case "lastYear":    return pack(startOfLastYear, endOfLastYear, true);
+
+    default:            return pack(null, null, true);
+  }
+}
+
+function updateKanbanRow(title, kanbanIndex, filters) {
+  const t = translations[currentLang];
+
+  // apply filters to all entries
+  const filteredEntries = getFilteredEntries(filters);
+
+  const { income, expense } = summarizeIncomeExpense(filteredEntries);
+
+  const dateRangeStr = filters.dateRangeStr;
+
+  // create kanban div
+  const list = document.getElementById("home-kanban-list");
+  if (!list) return;
+
+  // Try to find existing row 
+  let row = list.querySelector(`.kanban-row[data-kanban-index="${kanbanIndex}"]`); 
+  if (!row) { 
+    // Create new row if not found 
+    row = document.createElement("div"); 
+    row.className = "kanban-row"; 
+    row.dataset.kanbanIndex = kanbanIndex; 
     
-    return { income, expense };
+    // Append row + hr 
+    list.appendChild(row); 
+    list.appendChild(document.createElement("hr"));
+  }
+
+  // Build inner HTML
+  row.innerHTML = `
+    <div class="kanban-left">
+      <div class="kanban-title">${title}</div>
+      <div class="kanban-sub">${dateRangeStr}</div>
+    </div>
+    <div class="kanban-right">
+      <div class="kanban-income">${t.income} ${income.toFixed(2)}</div>
+      <div class="kanban-expense">${t.expense} ${expense.toFixed(2)}</div>
+    </div>
+  `;
+
+  row.onclick = () => {
+    showFilteredEntries(filteredEntries, title, dateRangeStr);
   };
 
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const startOfDay = new Date(y, m, now.getDate(), 0, 0, 0);
-  const endOfDay = new Date(y, m, now.getDate(), 23, 59, 59);
-  const startOfMonth = new Date(y, m, 1, 0, 0, 0);
-  const endOfMonth = new Date(y, m + 1, 0, 23, 59, 59);
-  const startOfYear = new Date(y, 0, 1, 0, 0, 0);
-  const endOfYear = new Date(y, 11, 31, 23, 59, 59);
+}
 
-  const parseEntryDate = (e) => e.datetime ? new Date(e.datetime) : null;
-  const inRange = (date, start, end) => date && date >= start && date <= end;
+function showFilteredEntries(entries, title, dateRangeStr) {
+  const page = document.getElementById("filtered-entries-page");
+  const scroll = page.querySelector(".scroll");
 
-  const todaySums = sumBy(e => inRange(parseEntryDate(e), startOfDay, endOfDay));
-  const monthSums = sumBy(e => inRange(parseEntryDate(e), startOfMonth, endOfMonth));
-  const yearSums = sumBy(e => inRange(parseEntryDate(e), startOfYear, endOfYear));
+  // Clear previous content
+  scroll.innerHTML = "";
 
-  const monthLabel = `${m + 1}月·结余`;
-  document.getElementById("home-month").textContent = monthLabel;
-  document.getElementById("home-summary").textContent =
-    `本月收入 ${monthSums.income.toFixed(2)} | 本月支出 ${monthSums.expense.toFixed(2)}`;
-  document.getElementById("home-balance").textContent =
-    `${(monthSums.income - monthSums.expense).toFixed(2)}`;
+  // Header
+  scroll.innerHTML += `
+    <div class="fe-header">
+      <div class="fe-title">${title}</div>
+      <div class="fe-sub">${dateRangeStr}</div>
+    </div>
+  `;
 
-  document.getElementById("month-sub").textContent =
-    `${m + 1}月 1日–${new Date(y, m + 1, 0).getDate()}日`;
-  document.getElementById("year-sub").textContent = `${y}`;
+  // No entries
+  if (entries.length === 0) {
+    scroll.innerHTML += `
+      <div class="fe-empty">
+        ${currentLang === "zh" ? "没有记录" : "No entries"}
+      </div>
+    `;
+    return;
+  }
 
-  document.getElementById("today-income").textContent = `收入 ${todaySums.income.toFixed(2)}`;
-  document.getElementById("today-expense").textContent = `支出 ${todaySums.expense.toFixed(2)}`;
-  document.getElementById("month-income").textContent = `收入 ${monthSums.income.toFixed(2)}`;
-  document.getElementById("month-expense").textContent = `支出 ${monthSums.expense.toFixed(2)}`;
-  document.getElementById("year-income").textContent = `收入 ${yearSums.income.toFixed(2)}`;
-  document.getElementById("year-expense").textContent = `支出 ${yearSums.expense.toFixed(2)}`;
+  // List entries
+  for (const e of entries) {
+    scroll.innerHTML += `
+      <div class="fe-entry">
+        <div class="fe-entry-left">
+          <div class="fe-entry-amount ${e.type}">
+            ${e.type === "income" ? "+" : "-"}${Number(e.amount).toFixed(2)}
+          </div>
+          <div class="fe-entry-collection">${e.collection || ""}</div>
+          <div class="fe-entry-notes">${e.notes || ""}</div>
+        </div>
+        <div class="fe-entry-right">
+          <div class="fe-entry-date">${e.transactionTime}</div>
+          <div class="fe-entry-account">${e.account || e.fromAccount || e.toAccount}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  showPage("filtered-entries", latestNavBtn, title)
 }
 
 // --- Color Scheme ---
@@ -6003,6 +6613,91 @@ updateBtn.addEventListener("click", () => {
         onClick: () => {
           /* popup auto closes */
         }
+      }
+    ]
+  });
+});
+
+document.getElementById("delete-entry-data-button").addEventListener("click", async () => {
+  const householdId = document.getElementById("household-select").value;
+  if (!householdId) return;
+
+  const isOwner = currentUser.uid === householdId;
+  const ownerUid = householdDocs[householdId].admin;
+
+  let ownerEmail = "";
+  if (!isOwner) {
+    const profileRef = doc(db, "profiles", ownerUid);
+    const profileSnap = await getDoc(profileRef);
+    ownerEmail = profileSnap.exists() ? profileSnap.data().email : "";
+  }
+
+  const title = {
+    en: "Delete All Transaction Data",
+    zh: "删除所有交易数据"
+  }[currentLang];
+
+  let message = "";
+
+  if (isOwner) {
+    // Household owner
+    message = {
+      en: `
+        You are the owner of this household.<br><br>
+        To delete <strong>all transaction data</strong>, you must delete your entire account.<br><br>
+        To delete your account:<br>
+        1. Return to the main Settings page<br>
+        2. Tap <strong>Personal Settings</strong><br>
+        3. Scroll to the bottom and tap the <strong>Delete Account</strong> button (grey)<br><br>
+        After deleting your account, you may sign up again and rejoin and share households if needed.
+      `,
+      zh: `
+        您是此家庭账本的所有者。<br><br>
+        若要删除<strong>所有交易数据</strong>，您必须删除整个账户。<br><br>
+        删除账户的步骤：<br>
+        1. 返回设置主页面<br>
+        2. 点击<strong>个人偏好</strong><br>
+        3. 滑动到底部，点击<strong>删除账户</strong>（灰色按钮）<br><br>
+        删除账户后，您可以重新注册并根据需要重新加入或共享家庭账本。
+      `
+    }[currentLang];
+  } else {
+    // Not the owner
+    message = {
+      en: `
+        You are <strong>not</strong> the owner of this household.<br><br>
+        Only the household owner can delete all transaction data.<br><br>
+        Please ask the owner (<strong>${ownerEmail}</strong>) to delete their entire account.<br><br>
+        To delete their account, the owner must:<br>
+        1. Return to the main Settings page<br>
+        2. Tap <strong>Personal Settings</strong><br>
+        3. Scroll to the bottom and tap the <strong>Delete Account</strong> button (grey)<br><br>
+        After deleting their account, they may sign up again and rejoin and share households if needed.
+      `,
+      zh: `
+        您<strong>不是</strong>此家庭账本的所有者。<br><br>
+        只有家庭账本的所有者才能删除所有交易数据。<br><br>
+        请联系该用户（<strong>${ownerEmail}</strong>）删除其整个账户。<br><br>
+        删除账户的步骤（由所有者执行）：<br>
+        1. 返回设置主页面<br>
+        2. 点击<strong>个人偏好</strong><br>
+        3. 滑动到底部，点击<strong>删除账户</strong>（灰色按钮）<br><br>
+        删除账户后，该用户可以重新注册并根据需要重新加入或共享家庭账本。
+      `
+    }[currentLang];
+  }
+
+  showPopupWindow({
+    title,
+    message,
+    buttons: [
+      {
+        text: {
+          en: "OK",
+          zh: "确定"
+        }[currentLang],
+        primary: true,
+        onClick: () => { /* popup auto closes */ }
       }
     ]
   });

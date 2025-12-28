@@ -1871,3 +1871,38 @@ emoji-picker {
 .glass-popup-btn.primary:hover {
   background: var(--primary-hover);
 }
+
+.fe-header {
+  padding: 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.fe-title {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.fe-sub {
+  font-size: 14px;
+  color: #666;
+}
+
+.fe-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.fe-entry-amount.income {
+  color: #2e8b57;
+}
+
+.fe-entry-amount.expense {
+  color: #c0392b;
+}
+
+.fe-entry-notes {
+  font-size: 12px;
+  color: #777;
+}

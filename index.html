@@ -72,40 +72,14 @@
             </div>
           </div>
         </div>
-        <div class="kanban">
-          <div class="kanban-row">
-            <div class="kanban-left">
-              <div class="kanban-title" id="kanban-today-title">今天</div>
-              <div class="kanban-sub" id="today-sub">最新交易</div>
-            </div>
-            <div class="kanban-right">
-              <div id="today-income" class="kanban-income">收入 0.00</div>
-              <div id="today-expense" class="kanban-expense">支出 0.00</div>
-            </div>
-          </div>
-          <hr>
-          <div class="kanban-row">
-            <div class="kanban-left">
-              <div class="kanban-title" id="kanban-month-title">本月</div>
-              <div class="kanban-sub" id="month-sub">11月 1日–30日</div>
-            </div>
-            <div class="kanban-right">
-              <div id="month-income" class="kanban-income">收入 0.00</div>
-              <div id="month-expense" class="kanban-expense">支出 0.00</div>
-            </div>
-          </div>
-          <hr>
-          <div class="kanban-row">
-            <div class="kanban-left">
-              <div class="kanban-title" id="kanban-year-title">本年</div>
-              <div class="kanban-sub" id="year-sub">2025</div>
-            </div>
-            <div class="kanban-right">
-              <div id="year-income" class="kanban-income">收入 0.00</div>
-              <div id="year-expense" class="kanban-expense">支出 0.00</div>
-            </div>
-          </div>
+        <div id=home-kanban-list class="kanban">
         </div>
+      </div>
+    </div>
+
+    <div class="page" id="filtered-entries-page">
+      <div class="scroll">
+
       </div>
     </div>
 
@@ -674,19 +648,27 @@
           <h2 id="bulk-data-header">批量操作</h2>
         </div>
 
-        <section class="settings-section household-select">
+        <section id="household-select-section" class="settings-section household-select">
           <p id="bulk-data-household-select-title">选择账本</p>
-          <select id="household-select"></select>
+          <div>
+            <select id="household-select" onchange="document.getElementById('household-select-feedback').textContent = ''"></select>
+            <div id="household-select-feedback"></div>
+          </div>
         </section>
 
         <!-- Import -->
         <section class="settings-section import-data">
           <p id="import-data-title">导入数据</p>
           <div>
-            <button class="settings-button" onclick="document.getElementById('sui-csv-input').click()">从随手记导入数据（CSV）</button>
+            <button class="settings-button" onclick="triggerFilePicker('sui-csv-input')">从随手记导入数据（CSV）</button>
             <input type="file" id="sui-csv-input" accept=".csv" style="display:none" onchange="importFromSuiCSV(event)">
-            <div id="import-data-feedback"></div>
+            <div id="sui-import-feedback"></div>
           </div>
+        </section>
+
+        <section class="settings-section danger-zone">
+          <p id="danger-zone-title">危险区域</p>
+          <button id="delete-entry-data-button" class="settings-button">删除所有交易数据</button>
         </section>
       </div>
     </div>
