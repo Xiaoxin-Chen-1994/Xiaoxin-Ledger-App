@@ -2618,7 +2618,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     // at home page (base page and the first page)
     document.getElementById("search-btn-headerbar").style.display = "block";
 
-    updateKanbanRow({en: "Today", zh: "今天"}[currentLang], 0, getDateRange('today'));
+    updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({en: "This Month", zh: "本月"}[currentLang], 1, getDateRange('thisMonth'));
     updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
@@ -4602,11 +4602,15 @@ function updateKanbanRow(title, kanbanIndex, filters) {
   const t = translations[currentLang];
 
   // apply filters to all entries
-  const filteredEntries = getFilteredEntries(filters);
+  let filteredEntries = getFilteredEntries(filters);
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
 
   const dateRangeStr = filters.dateRangeStr;
+
+  const displayTitle = (title === "presetToday")
+    ? (currentLang === "zh" ? "今天" : "Today")
+    : title;
 
   // create kanban div
   const list = document.getElementById("home-kanban-list");
@@ -4628,7 +4632,7 @@ function updateKanbanRow(title, kanbanIndex, filters) {
   // Build inner HTML
   row.innerHTML = `
     <div class="kanban-left">
-      <div class="kanban-title">${title}</div>
+      <div class="kanban-title">${displayTitle}</div>
       <div class="kanban-sub">${dateRangeStr}</div>
     </div>
     <div class="kanban-right">
@@ -4638,7 +4642,16 @@ function updateKanbanRow(title, kanbanIndex, filters) {
   `;
 
   row.onclick = () => {
-    showFilteredEntries(filteredEntries, title, dateRangeStr);
+    // Special case: presetToday loads all entries up to today 
+    if (title === "presetToday") { 
+      const dateTo = filters.dateTo; 
+      filteredEntries = getFilteredEntries({ dateTo }); 
+      const dateRangeStr = filters.dateRangeStr;
+      showFilteredEntriesToday(filteredEntries, dateTo, dateRangeStr)
+
+    } else {
+      showFilteredEntries(filteredEntries, title, dateRangeStr);
+    }
   };
 
 }
@@ -4647,18 +4660,13 @@ function showFilteredEntries(entries, title, dateRangeStr) {
   const page = document.getElementById("filtered-entries-page");
   const scroll = page.querySelector(".scroll");
 
-  // Clear previous content
-  scroll.innerHTML = "";
-
-  // Header
-  scroll.innerHTML += `
+  scroll.innerHTML = `
     <div class="fe-header">
       <div class="fe-title">${title}</div>
       <div class="fe-sub">${dateRangeStr}</div>
     </div>
   `;
 
-  // No entries
   if (entries.length === 0) {
     scroll.innerHTML += `
       <div class="fe-empty">
@@ -4668,27 +4676,87 @@ function showFilteredEntries(entries, title, dateRangeStr) {
     return;
   }
 
-  // List entries
   for (const e of entries) {
-    scroll.innerHTML += `
-      <div class="fe-entry">
-        <div class="fe-entry-left">
-          <div class="fe-entry-amount ${e.type}">
-            ${e.type === "income" ? "+" : "-"}${Number(e.amount).toFixed(2)}
-          </div>
-          <div class="fe-entry-collection">${e.collection || ""}</div>
-          <div class="fe-entry-notes">${e.notes || ""}</div>
-        </div>
-        <div class="fe-entry-right">
-          <div class="fe-entry-date">${e.transactionTime}</div>
-          <div class="fe-entry-account">${e.account || e.fromAccount || e.toAccount}</div>
-        </div>
-      </div>
-    `;
+    scroll.innerHTML += renderEntry(e);
   }
 
-  showPage("filtered-entries", latestNavBtn, title)
+  showPage("filtered-entries", latestNavBtn, title);
 }
+
+function renderEntry(e) {
+  return `
+    <div class="fe-entry">
+      <div class="fe-entry-left">
+        <div class="fe-entry-amount ${e.type}">
+          ${e.type === "income" ? "+" : "-"}${Number(e.amount).toFixed(2)}
+        </div>
+        <div class="fe-entry-collection">${e.collection || ""}</div>
+        <div class="fe-entry-notes">${e.notes || ""}</div>
+      </div>
+      <div class="fe-entry-right">
+        <div class="fe-entry-date">${e.transactionTime}</div>
+        <div class="fe-entry-account">${e.account || e.fromAccount || e.toAccount}</div>
+      </div>
+    </div>
+  `;
+}
+
+function showFilteredEntriesToday(entries, date, dateRangeStr) {
+  const page = document.getElementById("filtered-entries-page");
+  const scroll = page.querySelector(".scroll");
+
+  const displayTitle = (currentLang === "zh" ? "今天 " : "Today ") + date;
+
+  scroll.innerHTML = `
+    <div class="fe-header">
+      <div class="fe-title">${displayTitle}</div>
+      <div class="fe-sub">${dateRangeStr}</div>
+    </div>
+  `;
+
+  if (entries.length === 0) {
+    scroll.innerHTML += `
+      <div class="fe-empty">
+        ${currentLang === "zh" ? "没有记录" : "No entries"}
+      </div>
+    `;
+    return;
+  }
+
+  // --- SORT ENTRIES BY transactionTime DESC (newest first) --- 
+  entries.sort((a, b) => { 
+    if (a.transactionTime < b.transactionTime) return 1; 
+    if (a.transactionTime > b.transactionTime) return -1; 
+    return 0; 
+  });
+
+  const BATCH_SIZE = 20;
+  let index = 0;
+
+  function renderBatch() {
+    const end = Math.min(index + BATCH_SIZE, entries.length);
+    for (let i = index; i < end; i++) {
+      scroll.innerHTML += renderEntry(entries[i]);
+    }
+    index = end;
+  }
+
+  // First batch
+  renderBatch();
+
+  // Infinite scroll
+  scroll.onscroll = () => {
+    const nearBottom =
+      scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 200;
+
+    if (nearBottom && index < entries.length) {
+      renderBatch();
+    }
+  };
+
+  showPage("filtered-entries", latestNavBtn, displayTitle);
+}
+
 
 // --- Color Scheme ---
 async function setColorScheme(scheme, showMessage = false, upload = true) {
