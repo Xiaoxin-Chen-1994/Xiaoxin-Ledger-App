@@ -452,11 +452,61 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
 
-const supabase = window.supabase.createClient(
-  "https://mrxymlxjbvqyixblnlaj.supabase.co",
-  "sb_publishable_WsOjL6vx-jNTNUjNrY5kxw_IRYTyara"
-);
+// --- Firebase Initialization ---
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyChPQagMV5rQ9CmHA2vJZ8BUw8sojAbFDo",
+  authDomain: "xiaoxin-s-ledger-app-ed5ea.firebaseapp.com",
+  projectId: "xiaoxin-s-ledger-app-ed5ea",
+  storageBucket: "xiaoxin-s-ledger-app-ed5ea.firebasestorage.app",
+  messagingSenderId: "571079523490",
+  appId: "1:571079523490:web:039d2d334230a764f2abfb",
+  measurementId: "G-RXX64YWRZX"
+};
 
+// import functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signOut, 
+  onAuthStateChanged,
+  EmailAuthProvider, 
+  reauthenticateWithCredential
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  addDoc,
+  setDoc, 
+  getDoc, 
+  getDocs,
+  updateDoc,
+  serverTimestamp,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  arrayUnion,
+  arrayRemove,
+  enableIndexedDbPersistence 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Get references to services
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Enable offline persistence
+enableIndexedDbPersistence(db)
+  .catch(err => {
+    console.error("Persistence error:", err);
+  });
 
 // navigator.serviceWorker.ready.then(() => {
 //   navigator.serviceWorker.addEventListener('message', event => {
@@ -488,177 +538,169 @@ async function signup() {
 
   try {
     // ✅ Create user
-    const { data: signupData, error: signupError } =
-      await supabase.auth.signUp({ email, password });
-
-    if (signupError) throw signupError;
-
-    const user = signupData.user;
-    const myHouseholdId = user.id;
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
+    const myHouseholdId = user.uid;
 
     // Localized household name
     const householdName = currentLang === "en"
       ? `${email}'s Ledger`
       : `${email}的账本`;
 
+    // Document references
+    const householdRef = doc(db, "households", myHouseholdId);
+    const userRef = doc(db, "users", user.uid);
+    const profileRef = doc(db, "profiles", user.uid);
+
     // Household doc
-    const { error: householdError } = await supabase 
-      .from("households") 
-      .insert([{ 
-        id: myHouseholdId, 
-        name: householdName, 
-        admin: user.id, 
-        members: [user.id], 
-        last_synced: new Date().toISOString(),
+    await setDoc(householdRef, {
+      name: householdName,
+      admin: user.uid,
+      members: [user.uid],
+      lastSynced: getFormattedTime(),
 
-        accounts: {
-          cashAccounts: [
-            { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          creditCards: [
-            { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          depositoryAccounts: [
-            { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          storedValueCards: [
-            { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          investmentAccounts: [
-            { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ]
-        },
-        "expense-categories": [
-          { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
-            { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
-            { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
-          ]},
-
-          { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
-            { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
-            { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
-            { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
-            { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
-            { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
-            { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
-            { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
-            { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
-            { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
-          ]},
-
-          { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
-            { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
-            { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
-            { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-            { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
-          ]},
-
-          { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
-            { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
-            { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
-            { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
-            { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
-            { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
-            { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
-            { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
-            { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
-            { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
-            { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
-            { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
-          ]},
-
-          { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
-            { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
-            { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
-          ]},
-
-          { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
-            { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-            { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-            { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
-            { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
-            { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
-          ]}
+      accounts: {
+        cashAccounts: [
+          { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
         ],
-        "income-categories": [
-          { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
-            { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-            { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
-          ]},
-
-          { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
-            { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
-            { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
-            { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
-          ]},
-
-          { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
-            { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
-            { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
-            { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
-          ]},
-
-          { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
-            { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
-          ]}
+        creditCards: [
+          { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
         ],
-        collections: [
-          { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
-          { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
-          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
-          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
-          { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-          { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
-          { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
-          { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
-          { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+        depositoryAccounts: [
+          { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+        ],
+        storedValueCards: [
+          { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+        ],
+        investmentAccounts: [
+          { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+        ]
+      },
+      "expense-categories": [
+        { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+          { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+          { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
+        ]},
+
+        { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+          { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+          { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+          { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+          { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+          { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+          { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+          { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+          { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+          { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
+        ]},
+
+        { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+          { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+          { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
           { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-          { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
-          { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
-          { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
-          { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
-          { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
-          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
-          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-          { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
-          { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
-        ],
-        subjects: [
-          { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
-          { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
-          { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
-          { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
-          { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
-          { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
-          { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
-        ],
-        tags: [],
-        entriesThisYear: {} // this document will only store entries of this month to reduce reading and writing of individual documents
-      }]);
+          { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
+        ]},
 
-    if (householdError) throw householdError;
+        { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+          { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+          { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+          { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+          { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+          { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+          { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+          { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+          { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+          { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+          { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
+        ]},
+
+        { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+          { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+          { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
+        ]},
+
+        { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
+          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+          { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+          { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+          { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+        ]}
+      ],
+      "income-categories": [
+        { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
+        ]},
+
+        { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+          { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+          { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+          { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
+        ]},
+
+        { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+          { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+          { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+          { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
+        ]},
+
+        { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+        ]}
+      ],
+      collections: [
+        { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
+        { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
+        { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
+        { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+        { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
+        { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
+        { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
+        { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+        { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
+        { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
+        { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
+        { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+        { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+        { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
+        { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
+        { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
+        { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
+        { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
+        { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+        { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+        { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
+        { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
+      ],
+      subjects: [
+        { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
+        { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
+        { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
+        { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
+        { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
+        { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
+        { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
+      ],
+      tags: [],
+      entriesThisYear: {} // this document will only store entries of this month to reduce reading and writing of individual documents
+    });
 
     // Profile doc
-    await supabase.from("profiles").insert([{ id: user.id, email }]);
+    await setDoc(profileRef, { email });
 
-    const { data: household, error: householdFetchError } = await supabase
-      .from("households")
-      .select("*")
-      .eq("id", myHouseholdId)
-      .single();
-
+    const householdSnap = await getDoc(householdRef);
+    const household = householdSnap.data();
     const firstExpensePrimary = household["expense-categories"][0];
     const firstIncomePrimary = household["income-categories"][0];
     
@@ -718,9 +760,7 @@ async function signup() {
     };
 
     // User doc
-    await supabase.from("users").insert([{
-      id: user.id,
-
+    await setDoc(userRef, {
       profile: {
         email,
         language: currentLang,
@@ -730,13 +770,11 @@ async function signup() {
         settings: {},
         lastSynced: getFormattedTime(),
       },
-
       personalHouseholdId: myHouseholdId,
       households: [myHouseholdId],
       orderedHouseholds: [myHouseholdId],
       defaults: defaults
-    }]);
-
+    })
 
   } catch (error) {
     showStatusMessage(error.message, "error");
@@ -744,85 +782,57 @@ async function signup() {
 }
 window.signup = signup;
 
-async function login() {
+function login() {
   const email = document.getElementById("username").value;
   const password = document.getElementById("password").value;
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
+  signInWithEmailAndPassword(auth, email, password)
+    .catch(error => {
       let message;
 
-      switch (error.message) {
-        case 'Invalid login credentials':
+      switch (error.code) {
+        case 'auth/user-not-found':
+          message = 'No account exists with this email.';
+          break;
+        case 'auth/invalid-login-credentials':
           message = 'Incorrect password. Please try again.';
           break;
-
-        case 'Email not confirmed':
-          message = 'Please verify your email before logging in.';
+        case 'auth/invalid-email':
+          message = 'The email address is not valid.';
           break;
-
-        case 'Invalid email or password':
-          message = 'Incorrect email or password.';
+        case 'auth/user-disabled':
+          message = 'This account has been disabled. Contact support.';
           break;
-
         default:
           message = error.message;
           console.log(error);
       }
 
       showStatusMessage(message, 'error');
-      return;
-    }
-
-    // Successful login → data.user is available
-    // You can redirect or load user data here
-
-  } catch (err) {
-    console.error(err);
-    showStatusMessage("An unexpected error occurred.", "error");
-  }
+    });
 }
 window.login = login;
 
-async function resetPassword() {
+function resetPassword() {
   const email = document.getElementById("username").value;
 
-  try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
-
-    if (error) {
-      console.error(error.message);
+  sendPasswordResetEmail(auth, email)
+    .then(() => {
+      alert("Password reset email sent!");
+    })
+    .catch((error) => {
+      console.error(error.code, error.message);
       alert("Error: " + error.message);
-      return;
-    }
-
-    alert("Password reset email sent!");
-  } catch (err) {
-    console.error(err);
-    alert("Error: " + err.message);
-  }
+    });
 }
 window.resetPassword = resetPassword;
 
-async function logout() {
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    console.error(error.message);
-    showStatusMessage("Error logging out: " + error.message, "error");
-    return;
-  }
-
-  // Same behavior as your Firebase version
-  window.location.reload();
+function logout() {
+  signOut(auth).then(() => {
+    window.location.reload();
+  });
 }
 window.logout = logout;
-
 
 function mergeEntriesThisYear(doc) {
   const merged = {};
@@ -847,78 +857,73 @@ function removeYearParts(doc) {
 async function syncData(userId) {
   let lastSyncStatus = {};
 
-  console.time("Retrieve data from Supabase");
+  console.time("Retrieve data from Firebase");
 
-  // --- Fetch user row ---
-  let { data: userDoc, error: userError } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", userId)
-    .single();
+  // --- Fetch user doc ---
+  const userRef = doc(db, "users", userId);
+  let userSnap; 
+  do { 
+    userSnap = await getDoc(userRef); 
+  } while (!userSnap.exists()); // make sure userSnap is ready. This is useful after signup.
+  const userDoc = userSnap.data();
 
-  // Supabase returns null if row doesn't exist yet (rare but possible right after signup)
-  while (!userDoc) {
-    await new Promise(r => setTimeout(r, 50));
-    ({ data: userDoc } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single());
+  // Track whether the user document came from server
+  let freshFromServer = userSnap.metadata.fromCache === false;
+  if (freshFromServer) {
+    lastSyncStatus["个人偏好"] = userDoc.profile.lastSynced
   }
 
-  // Supabase has no fromCache metadata → treat all fetched rows as fresh
-  lastSyncStatus["个人偏好"] = userDoc.profile?.lastSynced;
+  const householdIds = userDoc.households
 
-  const householdIds = userDoc.households || [];
-
-  // --- Fetch household rows in parallel ---
-  const { data: householdRows, error: householdError } = await supabase
-    .from("households")
-    .select("*")
-    .in("id", householdIds);
-
+  // --- Fetch household docs ---
   const householdDocs = {};
+  await Promise.all(
+    householdIds.map(async (hid) => {
+      freshFromServer = false; // initialize this variable for every household
 
-  for (const h of householdRows) {
-    householdDocs[h.id] = h;
+      const hRef = doc(db, "households", hid);
+      const hSnap = await getDoc(hRef);
 
-    // Merge entriesThisYear (your existing helper)
-    householdDocs[h.id].entriesThisYear = mergeEntriesThisYear(h);
+      householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
 
-    // Remove year parts (your existing helper)
-    removeYearParts(h);
+      // In this local variable, merge entriesThisYear into one, and remove parts
+      householdDocs[hid].entriesThisYear = mergeEntriesThisYear(householdDocs[hid]);
+      removeYearParts(householdDocs[hid]);
 
-    // Mark fresh sync time
-    if (!lastSyncStatus[h.name]) {
-      lastSyncStatus[h.name] = {};
-    }
+      // subcollection entries will not synced at this time
+      // individual entries will only be accessed ad hoc
 
-    lastSyncStatus[h.name] = {
-      [{ en: "Household Settings", zh: "账本设置" }[currentLang]]: h.last_synced
-    };
-  }
+      // If a household doc came from server, mark it as fresh
+      if (hSnap.metadata.fromCache === false) {
+        freshFromServer = true;
+        if (freshFromServer) {
+          if (!lastSyncStatus[householdDocs[hid].name]) {
+            lastSyncStatus[householdDocs[hid].name] = {};
+          }
+          lastSyncStatus[householdDocs[hid].name] = {[{en:"Household Settings", zh:"账本设置"}[currentLang]]: householdDocs[hid].lastSynced}
+        }
+      }
+    })
+  );
 
-  console.timeEnd("Retrieve data from Supabase");
+  console.timeEnd("Retrieve data from Firebase");
 
-  // Save sync status locally
-  if (Object.keys(lastSyncStatus).length > 0) {
+  // assuming userDoc and householdDocs will always face the same online/offline connection
+  if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
     localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
   }
 
-  // Same UI behavior as before
-  populateHouseholdDropdown(userDoc, householdDocs);
+  populateHouseholdDropdown(userDoc, householdDocs); // prepare the dropdown list for households
 
   return { userDoc, householdDocs };
 }
 
-supabase.auth.onAuthStateChange(async (event, session) => {
-  const user = session?.user;
-
+// --- Persistent login state ---
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
 
-    // Load user + household data from Supabase
-    ({ userDoc, householdDocs } = await syncData(user.id));
+    ({ userDoc, householdDocs } = await syncData(user.uid));
 
     // Initialize household selector
     initHouseholdSelector();
@@ -931,7 +936,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     document.querySelector(".bottom-nav").style.display = "flex";
 
     // Apply profile settings
-    displayHomeImage();
+    displayHomeImage()
 
     if (userDoc.profile.language) {
       currentLang = userDoc.profile.language;
@@ -940,35 +945,27 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
     if (isMobileBrowser()) {
       if (userDoc.profile.fontsizeMobile) {
-        document.documentElement.style.setProperty(
-          "--font-size",
-          userDoc.profile.fontsizeMobile
-        );
+        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeMobile);
       }
     } else {
       if (userDoc.profile.fontsizeDesktop) {
-        document.documentElement.style.setProperty(
-          "--font-size",
-          userDoc.profile.fontsizeDesktop
-        );
+        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeDesktop);
       }
     }
 
     if (userDoc.profile.themeColor) {
-      applyThemeColor(userDoc.profile.themeColor, false);
+      applyThemeColor(userDoc.profile.themeColor, false)
     }
 
     if (userDoc.profile.colorScheme) {
       setColorScheme(userDoc.profile.colorScheme, false, false);
-      document.getElementById("color-scheme-select").value =
-        userDoc.profile.colorScheme;
+      document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
     }
 
-    // Load main app
+    // ✅ Load main app
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
-
+    
   } else {
-    // No session → show login UI
     window.scrollTo(0, 0);
   }
 });
