@@ -467,11 +467,6 @@ async function getToken() {
 const token = await getToken();
 console.log("Token:", token);
 
-async function logout() {
-  await del("github_token");
-  window.location.href = "/";
-}
-
 async function listPrivateRepos() {
   const token = localStorage.getItem("github_token");
 
@@ -812,10 +807,10 @@ function resetPassword() {
 }
 window.resetPassword = resetPassword;
 
-function logout() {
-  signOut(auth).then(() => {
-    window.location.reload();
-  });
+async function logout() {
+  await del("github_token");
+  window.location.href = "/";
+  window.location.reload();
 }
 window.logout = logout;
 
