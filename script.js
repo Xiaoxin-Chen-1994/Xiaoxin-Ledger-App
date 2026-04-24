@@ -452,25 +452,12 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
 
-import { get } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
-import { del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
+import initSqlJs from "https://sql.js.org/dist/sql-wasm.js";
+import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 document.getElementById("githubLogin").onclick = () => {
   window.location.href = "/api/auth/login";
 };
-
-async function init() {
-  const token = await get("github_token");
-
-  if (token) {
-    console.log("Logged in, loading repos…");
-    listPrivateRepos();
-  } else {
-    console.log("Not logged in");
-  }
-}
-
-window.addEventListener("DOMContentLoaded", init);
 
 async function listPrivateRepos() {
   const token = await get("github_token");
@@ -516,35 +503,108 @@ async function listPrivateRepos() {
   });
 }
 
-async function uploadLedger(owner, repo, path, data) {
-  const token = localStorage.getItem("github_token");
+const SQL = await initSqlJs({
+  locateFile: file => `https://sql.js.org/dist/${file}`
+});
 
-  // Check if file exists (to get SHA)
-  const existing = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+async function downloadDbFromGitHub(repo, token) {
+  const path = "ledger.db";
+
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/contents/${path}`,
     { headers: { Authorization: `token ${token}` } }
   );
 
-  let sha = null;
-  if (existing.status === 200) {
-    const json = await existing.json();
-    sha = json.sha;
+  if (res.status === 404) return null;
+
+  const file = await res.json();
+  const binary = atob(file.content);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
 
-  // Upload
-  await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `token ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: "Sync ledger",
-      content: btoa(JSON.stringify(data)),
-      sha
-    })
-  });
+  return bytes;
 }
+
+async function uploadDbToGitHub(repo, token, dbBytes) {
+  const path = "ledger.db";
+  const content = btoa(String.fromCharCode(...dbBytes));
+
+  const existing = await fetch(
+    `https://api.github.com/repos/${repo}/contents/${path}`,
+    { headers: { Authorization: `token ${token}` } }
+  ).then(r => r.json());
+
+  const body = {
+    message: "Update ledger database",
+    content,
+    sha: existing.sha
+  };
+
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/contents/${path}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+
+  return res.json();
+}
+
+async function smartLoadDb(repo, token) {
+  // 1. Try GitHub
+  const remote = await downloadDbFromGitHub(repo, token);
+
+  if (remote) {
+    console.log("Loaded DB from GitHub");
+    await set("ledger_db", remote);
+    return new SQL.Database(remote);
+  }
+
+  // 2. Try local IndexedDB
+  const local = await get("ledger_db");
+
+  if (local) {
+    console.log("Loaded DB from local IndexedDB");
+    return new SQL.Database(local);
+  }
+
+  // 3. Create new DB
+  console.log("No DB found, creating new one");
+  const db = new SQL.Database();
+  const emptyBytes = db.export();
+  await set("ledger_db", emptyBytes);
+  return db;
+}
+
+async function init() {
+  const token = await get("github_token");
+
+  if (!token) {
+    console.log("Not logged in");
+    return;
+  }
+
+  console.log("Logged in, loading DB…");
+
+  const repo = await get("selected_repo"); // if you store this
+  if (!repo) {
+    console.log("No repo selected yet");
+    return;
+  }
+
+  const db = await smartLoadDb(repo, token);
+  console.log("DB ready:", db);
+}
+
+window.addEventListener("DOMContentLoaded", init);
 
 if (navigator.serviceWorker.controller) {
   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
