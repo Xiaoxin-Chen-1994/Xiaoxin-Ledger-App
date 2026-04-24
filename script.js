@@ -501,11 +501,11 @@ async function listPrivateRepos() {
     };
   });
 }
-console.log("initSqlJs:", typeof initSqlJs);
 
 const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
+console.log("SQL init finished");
 
 async function downloadDbFromGitHub(repo, token) {
   const path = "ledger.db";
