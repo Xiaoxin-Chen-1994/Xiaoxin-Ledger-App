@@ -457,6 +457,21 @@ document.getElementById("githubLogin").onclick = () => {
   window.location.href = "/api/auth/login";
 };
 
+import { get } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
+import { del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
+
+async function getToken() {
+  return await get("github_token");
+}
+
+const token = await getToken();
+console.log("Token:", token);
+
+async function logout() {
+  await del("github_token");
+  window.location.href = "/";
+}
+
 async function listPrivateRepos() {
   const token = localStorage.getItem("github_token");
 
