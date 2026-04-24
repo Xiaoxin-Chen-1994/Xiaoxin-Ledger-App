@@ -474,14 +474,46 @@ window.addEventListener("DOMContentLoaded", init);
 
 async function listPrivateRepos() {
   const token = await get("github_token");
-
-  console.log("Token:", token); // check this
+  console.log("Token:", token);
 
   const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
     headers: { Authorization: `token ${token}` }
   }).then(r => r.json());
 
   console.log(repos);
+
+  // Render UI
+  const container = document.getElementById("repoList");
+
+  if (!repos || repos.length === 0) {
+    container.innerHTML = "<p>No private repos found.</p>";
+    return;
+  }
+
+  container.innerHTML = `
+    <h3>Select a repository</h3>
+    <ul>
+      ${repos
+        .map(
+          repo => `
+            <li>
+              <button class="repo-select" data-name="${repo.full_name}">
+                ${repo.full_name}
+              </button>
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
+  `;
+
+  // Add click handlers
+  document.querySelectorAll(".repo-select").forEach(btn => {
+    btn.onclick = () => {
+      console.log("Selected repo:", btn.dataset.name);
+      // You can store this in IndexedDB or proceed to sync
+    };
+  });
 }
 
 async function uploadLedger(owner, repo, path, data) {
