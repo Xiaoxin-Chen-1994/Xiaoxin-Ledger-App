@@ -452,35 +452,6 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
 
-export default function handler(req, res) {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirect = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo`;
-  res.redirect(redirect);
-  console.log(clientId)
-}
-
-export default async function handler(req, res) {
-  const code = req.query.code;
-
-  const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify({
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
-      code
-    })
-  });
-
-  const data = await tokenRes.json();
-
-  // Redirect back to your app with the token
-  res.redirect(`/auth-success.html?token=${data.access_token}`);
-}
-
 document.getElementById("githubLogin").onclick = () => {
   console.log("1")
   window.location.href = "/api/auth/login";
