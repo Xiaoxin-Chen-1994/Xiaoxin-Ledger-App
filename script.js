@@ -451,7 +451,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   // Set it back with unit
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
-console.log("script.js loaded");
+
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 document.getElementById("githubLogin").onclick = () => {
@@ -584,7 +584,11 @@ async function smartLoadDb(repo, token) {
 }
 
 async function init() {
+  console.log("init() reached");
+
   const token = await get("github_token");
+  console.log("Token from IndexedDB:", token);
+
 
   if (!token) {
     console.log("Not logged in");
