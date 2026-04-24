@@ -505,6 +505,8 @@ async function listPrivateRepos() {
       const db = await smartLoadDb(repo, token);
 
       console.log("DB loaded:", db);
+
+      showPage("home", "nav-home", "Xiaoxin's Ledger App");
     };
   });
 }
@@ -596,15 +598,33 @@ async function init() {
   const token = await get("github_token");
   console.log("Token from IndexedDB:", token);
 
-
   if (!token) {
     console.log("Not logged in");
+    // show login UI only
+    showPage("login", "nav-login", "Login to GitHub");
     return;
   }
 
-  console.log("Logged in, loading repos…");
-  listPrivateRepos();
+  console.log("Logged in");
+
+  const selectedRepo = await get("selected_repo");
+  console.log("Selected repo:", selectedRepo);
+
+  if (!selectedRepo) {
+    console.log("No repo selected, showing repo picker");
+    showPage("repo-picker", "nav-repos", "Select a Repository");
+    listPrivateRepos();
+    return;
+  }
+
+  console.log("Repo already selected, loading DB…");
+
+  const db = await smartLoadDb(selectedRepo, token);
+  console.log("DB loaded:", db);
+
+  showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
+
 console.log("going to init");
 init();
 
