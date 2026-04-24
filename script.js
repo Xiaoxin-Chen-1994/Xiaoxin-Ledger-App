@@ -807,7 +807,12 @@ function resetPassword() {
 }
 window.resetPassword = resetPassword;
 
-
+async function logout() {
+  await del("github_token");
+  window.location.href = "/";
+  window.location.reload();
+}
+window.logout = logout;
 
 function mergeEntriesThisYear(doc) {
   const merged = {};
