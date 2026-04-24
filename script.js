@@ -606,7 +606,7 @@ async function init() {
   listPrivateRepos();
 }
 console.log("going to init");
-document.addEventListener("DOMContentLoaded", init);
+init();
 
 if (navigator.serviceWorker.controller) {
   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
