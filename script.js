@@ -452,80 +452,79 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
 
-// --- Firebase Initialization ---
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyChPQagMV5rQ9CmHA2vJZ8BUw8sojAbFDo",
-  authDomain: "xiaoxin-s-ledger-app-ed5ea.firebaseapp.com",
-  projectId: "xiaoxin-s-ledger-app-ed5ea",
-  storageBucket: "xiaoxin-s-ledger-app-ed5ea.firebasestorage.app",
-  messagingSenderId: "571079523490",
-  appId: "1:571079523490:web:039d2d334230a764f2abfb",
-  measurementId: "G-RXX64YWRZX"
-};
+export default function handler(req, res) {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const redirect = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo`;
+  res.redirect(redirect);
+  console.log(clientId)
+}
 
-// import functions
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  sendPasswordResetEmail, 
-  signOut, 
-  onAuthStateChanged,
-  EmailAuthProvider, 
-  reauthenticateWithCredential
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+export default async function handler(req, res) {
+  const code = req.query.code;
 
-import { 
-  getFirestore, 
-  doc, 
-  addDoc,
-  setDoc, 
-  getDoc, 
-  getDocs,
-  updateDoc,
-  serverTimestamp,
-  deleteDoc,
-  collection,
-  query,
-  where,
-  arrayUnion,
-  arrayRemove,
-  enableIndexedDbPersistence 
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Get references to services
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Enable offline persistence
-enableIndexedDbPersistence(db)
-  .catch(err => {
-    console.error("Persistence error:", err);
+  const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+      code
+    })
   });
 
-// navigator.serviceWorker.ready.then(() => {
-//   navigator.serviceWorker.addEventListener('message', event => {
-//     const banner = document.getElementById('offline-banner');
-//     const data = event.data;
+  const data = await tokenRes.json();
 
-//     if (data.offline) {
-//       banner.textContent = `You may be offline. Check the data version you are using in Settings. New data will be uploaded when the internet becomes available.`;
+  // Redirect back to your app with the token
+  res.redirect(`/auth-success.html?token=${data.access_token}`);
+}
 
-//       banner.style.display = 'block';
-//       const h = banner.offsetHeight; 
-//       document.documentElement.style.setProperty("--banner-height", h + "px")
-//     } else {
-//       banner.textContent = "";
-//       banner.style.display = 'none';
-//       document.documentElement.style.setProperty("--banner-height", "0px")
-//       }
-//   });
-// });
+document.getElementById("githubLogin").onclick = () => {
+  console.log("1")
+  window.location.href = "/api/auth/login";
+};
+
+async function listPrivateRepos() {
+  const token = localStorage.getItem("github_token");
+
+  const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
+    headers: { Authorization: `token ${token}` }
+  }).then(r => r.json());
+
+  console.log(repos);
+}
+
+async function uploadLedger(owner, repo, path, data) {
+  const token = localStorage.getItem("github_token");
+
+  // Check if file exists (to get SHA)
+  const existing = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    { headers: { Authorization: `token ${token}` } }
+  );
+
+  let sha = null;
+  if (existing.status === 200) {
+    const json = await existing.json();
+    sha = json.sha;
+  }
+
+  // Upload
+  await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: "Sync ledger",
+      content: btoa(JSON.stringify(data)),
+      sha
+    })
+  });
+}
 
 if (navigator.serviceWorker.controller) {
   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
@@ -7198,7 +7197,7 @@ document.addEventListener("click", e => {
   }
 });
 
-const updateBtn = document.getElementById("update-cached-code");
+const updateBtn = document.querySelector(".update-code-button");
 
 updateBtn.addEventListener("click", () => {
   const title = {
