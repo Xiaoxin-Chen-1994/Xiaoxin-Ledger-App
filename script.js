@@ -889,7 +889,7 @@ async function syncData(userId) {
 }
 
 // --- Persistent login state ---
-onAuthStateChanged(auth, async (user) => {
+function onAuthStateChanged(auth, user) {
   if (user) {
     currentUser = user;
 
