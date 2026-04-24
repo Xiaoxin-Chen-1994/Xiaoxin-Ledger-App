@@ -605,7 +605,7 @@ async function init() {
   console.log("Logged in, loading repos…");
   listPrivateRepos();
 }
-
+console.log("going to init");
 document.addEventListener("DOMContentLoaded", init);
 
 if (navigator.serviceWorker.controller) {
