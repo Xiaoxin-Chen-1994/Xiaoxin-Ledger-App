@@ -452,23 +452,30 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
 }
 
-document.getElementById("githubLogin").onclick = () => {
-  console.log("1")
-  window.location.href = "/api/auth/login";
-};
-
 import { get } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 import { del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
-async function getToken() {
-  return await get("github_token");
+document.getElementById("githubLogin").onclick = () => {
+  window.location.href = "/api/auth/login";
+};
+
+async function init() {
+  const token = await get("github_token");
+
+  if (token) {
+    console.log("Logged in, loading repos…");
+    listPrivateRepos();
+  } else {
+    console.log("Not logged in");
+  }
 }
 
-const token = await getToken();
-console.log("Token:", token);
+window.addEventListener("DOMContentLoaded", init);
 
 async function listPrivateRepos() {
-  const token = localStorage.getItem("github_token");
+  const token = await get("github_token");
+
+  console.log("Token:", token); // check this
 
   const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
     headers: { Authorization: `token ${token}` }
