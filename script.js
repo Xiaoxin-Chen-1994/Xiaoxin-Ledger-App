@@ -591,16 +591,8 @@ async function init() {
     return;
   }
 
-  console.log("Logged in, loading DB…");
-
-  const repo = await get("selected_repo"); // if you store this
-  if (!repo) {
-    console.log("No repo selected yet");
-    return;
-  }
-
-  const db = await smartLoadDb(repo, token);
-  console.log("DB ready:", db);
+  console.log("Logged in, loading repos…");
+  listPrivateRepos();
 }
 
 window.addEventListener("DOMContentLoaded", init);
