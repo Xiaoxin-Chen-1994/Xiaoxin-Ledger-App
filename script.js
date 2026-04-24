@@ -938,7 +938,7 @@ async function onAuthStateChanged(auth, user) {
   } else {
     window.scrollTo(0, 0);
   }
-});
+};
 
 function toggleHouseholdFormRows() {
   // Hide the form row if only one household
