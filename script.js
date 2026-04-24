@@ -584,6 +584,7 @@ async function smartLoadDb(repo, token) {
 }
 
 async function init() {
+  console.log("1")
   const token = await get("github_token");
 
   if (!token) {
