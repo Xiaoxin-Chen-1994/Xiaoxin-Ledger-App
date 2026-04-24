@@ -600,8 +600,6 @@ async function init() {
 
   if (!token) {
     console.log("Not logged in");
-    // show login UI only
-    showPage("login", "nav-login", "Login to GitHub");
     return;
   }
 
@@ -612,7 +610,6 @@ async function init() {
 
   if (!selectedRepo) {
     console.log("No repo selected, showing repo picker");
-    showPage("repo-picker", "nav-repos", "Select a Repository");
     listPrivateRepos();
     return;
   }
