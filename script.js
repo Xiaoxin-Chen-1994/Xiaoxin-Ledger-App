@@ -606,7 +606,7 @@ async function init() {
   listPrivateRepos();
 }
 
-window.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", init);
 
 if (navigator.serviceWorker.controller) {
   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
@@ -4679,9 +4679,9 @@ async function applyThemeColor(color, upload = true) {
 }
 
 // Ensure this runs after DOM is ready
-// document.addEventListener("DOMContentLoaded", () => {
-//   wireHomeImageSettings();
-// });
+document.addEventListener("DOMContentLoaded", () => {
+  wireHomeImageSettings();
+});
 
 let homeImages = []; // start empty; load later
 
