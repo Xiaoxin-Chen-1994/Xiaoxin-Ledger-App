@@ -69,6 +69,7 @@
 //       createdBy: string          // userId
 //       lastModifiedBy: string     // userId
 
+let db = null;
 let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
@@ -502,9 +503,7 @@ async function listPrivateRepos() {
       await set("selected_repo", repo);
 
       const token = await get("github_token");
-      const db = await smartLoadDb(repo, token);
-
-      console.log("DB loaded:", db);
+      db = await smartLoadDb(repo, token);
 
       showPage("home", "nav-home", "Xiaoxin's Ledger App");
     };
@@ -586,27 +585,21 @@ async function smartLoadDb(repo, token) {
 
   // 3. Create new DB
   console.log("No DB found, creating new one");
-  const db = new SQL.Database();
+  db = new SQL.Database();
   const emptyBytes = db.export();
   await set("ledger_db", emptyBytes);
   return db;
 }
 
 async function init() {
-  console.log("init() reached");
-
   const token = await get("github_token");
-  console.log("Token from IndexedDB:", token);
 
   if (!token) {
     console.log("Not logged in");
     return;
   }
 
-  console.log("Logged in");
-
   const selectedRepo = await get("selected_repo");
-  console.log("Selected repo:", selectedRepo);
 
   if (!selectedRepo) {
     console.log("No repo selected, showing repo picker");
@@ -614,15 +607,11 @@ async function init() {
     return;
   }
 
-  console.log("Repo already selected, loading DB…");
-
-  const db = await smartLoadDb(selectedRepo, token);
-  console.log("DB loaded:", db);
+  db = await smartLoadDb(selectedRepo, token);
 
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
 
-console.log("going to init");
 init();
 
 if (navigator.serviceWorker.controller) {
