@@ -495,9 +495,16 @@ async function listPrivateRepos() {
 
   // Add click handlers
   document.querySelectorAll(".repo-select").forEach(btn => {
-    btn.onclick = () => {
-      console.log("Selected repo:", btn.dataset.name);
-      // You can store this in IndexedDB or proceed to sync
+    btn.onclick = async () => {
+      const repo = btn.dataset.name;
+      console.log("Selected repo:", repo);
+
+      await set("selected_repo", repo);
+
+      const token = await get("github_token");
+      const db = await smartLoadDb(repo, token);
+
+      console.log("DB loaded:", db);
     };
   });
 }
@@ -505,7 +512,6 @@ async function listPrivateRepos() {
 const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
-console.log("SQL init finished");
 
 async function downloadDbFromGitHub(repo, token) {
   const path = "ledger.db";
@@ -4673,9 +4679,9 @@ async function applyThemeColor(color, upload = true) {
 }
 
 // Ensure this runs after DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  wireHomeImageSettings();
-});
+// document.addEventListener("DOMContentLoaded", () => {
+//   wireHomeImageSettings();
+// });
 
 let homeImages = []; // start empty; load later
 
