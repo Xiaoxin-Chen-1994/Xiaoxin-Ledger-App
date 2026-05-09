@@ -462,65 +462,98 @@ document.getElementById("githubLogin").onclick = () => {
 
 async function listPrivateRepos() {
   const token = await get("github_token");
-  console.log("Token:", token);
 
+  // Get current user login
+  const user = await fetch("https://api.github.com/user", {
+    headers: { Authorization: `token ${token}` }
+  }).then(r => r.json());
+
+  const currentUserLogin = user.login;
+
+  // 2. Get all private repos
   const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
     headers: { Authorization: `token ${token}` }
   }).then(r => r.json());
 
-  console.log(repos);
+  // 3. Filter personal repos (owned by user)
+  const personalRepos = repos.filter(r => r.owner.login === currentUserLogin);
 
-  // Render UI
-  const container = document.getElementById("repoList");
+  // 4. Filter ledger repos (any repo user can push to)
+  const ledgerRepos = repos.filter(r => r.permissions.push);
 
-  if (!repos || repos.length === 0) {
-    container.innerHTML = "<p>No private repos found.</p>";
-    return;
-  }
-
+  // 5. Render UI
   container.innerHTML = `
-    <h3>Select a repository</h3>
+    <h3>Select Personal Settings Repo</h3>
+    <select id="personalRepoSelect">
+      <option value="">-- Select one --</option>
+      ${personalRepos
+        .map(r => `<option value="${r.full_name}" data-id="${r.id}">${r.full_name}</option>`)
+        .join("")}
+    </select>
+
+    <h3>Select Ledger Repos</h3>
     <ul>
-      ${repos
+      ${ledgerRepos
         .map(
-          repo => `
+          r => `
             <li>
-              <button class="repo-select" data-name="${repo.full_name}" data-id="${repo.id}">>
-                ${repo.full_name}
-              </button>
+              <label>
+                <input type="checkbox" class="ledger-repo" value="${r.full_name}" data-id="${r.id}">
+                ${r.full_name}
+              </label>
             </li>
           `
         )
         .join("")}
     </ul>
+
+    <button id="confirmRepoSelection">Confirm</button>
   `;
 
-  // Add click handlers
-  document.querySelectorAll(".repo-select").forEach(btn => {
-    btn.onclick = async () => {
-      const repoName = btn.dataset.name;
-    const repoId = btn.dataset.id;
+  // 6. Handle confirmation
+  document.getElementById("confirmRepoSelection").onclick = async () => {
+    const personalSelect = document.getElementById("personalRepoSelect");
+    const personalName = personalSelect.value;
+    const personalId = personalSelect.selectedOptions[0]?.dataset.id;
 
-    await set("selected_repo", repoName);
-    await set("selected_repo_id", repoId);
+    const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
+      .filter(cb => cb.checked)
+      .map(cb => ({ name: cb.value, id: cb.dataset.id }));
+
+    if (!personalName) {
+      alert("Please select a personal settings repo.");
+      return;
+    }
+
+    if (ledgerSelections.length === 0) {
+      alert("Please select at least one ledger repo.");
+      return;
+    }
+
+    const selectedRepos = {
+      personalSettingsRepo: { name: personalName, id: personalId },
+      ledgerRepos: ledgerSelections,
+      activeLedgerRepo: ledgerSelections[0]
+    };
+
+    await set("selectedRepos", selectedRepos);
 
     const token = await get("github_token");
-    db = await smartLoadDb(repoName, repoId, token);
+    db = await smartLoadDb(ledgerSelections[0].name, ledgerSelections[0].id, token);
 
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
-    };
-  });
+  };
 }
 
 const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
 
-async function downloadDbFromGitHub(repo, token) {
+async function downloadDbFromGitHub(repoName, token) {
   const path = "ledger.db";
 
   const res = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}`,
+    `https://api.github.com/repos/${repoName}/contents/${path}`,
     { headers: { Authorization: `token ${token}` } }
   );
   
@@ -579,11 +612,10 @@ async function uploadDbToGitHub(repo, token, dbBytes) {
 
 async function smartLoadDb(repoName, repoId, token) {
   const key = `ledger_db_${repoId}`; // key for the selected db
-    console.log("token received by smartLoadDb", token)
+
   // 1. Fetch both versions (but do not decide yet)
   const remote = await downloadDbFromGitHub(repoName, token);
   const local = await get(key);
-  console.log(local)
 
   // 2. Placeholder for future timestamp comparison
   // -------------------------------------------------
@@ -614,6 +646,8 @@ async function smartLoadDb(repoName, repoId, token) {
 }
 
 async function init() {
+
+  // 1. Load token
   const token = await get("github_token");
 
   if (!token) {
@@ -621,17 +655,39 @@ async function init() {
     return;
   }
 
-  const selectedRepoName = await get("selected_repo");
-  const selectedRepoId = await get("selected_repo_id");
+  // 2. Load repo selections
+  const selectedRepos = await get("selectedRepos");
 
-  if (!selectedRepoName) {
-    console.log("No repo selected, showing repo picker");
+  // 3. If user has not selected repos → show repo picker
+  if (!selectedRepos || !selectedRepos.personalSettingsRepo) {
+    console.log("No personal settings repo selected → show repo picker");
     listPrivateRepos();
     return;
   }
-    console.log("token in init(): ", token)
-  db = await smartLoadDb(selectedRepoName, selectedRepoId, token);
 
+  // 4. Ensure at least one ledger repo exists
+  if (!selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
+    console.log("No ledger repos selected → show repo picker");
+    listPrivateRepos();
+    return;
+  }
+
+  // 5. Determine active ledger repo
+  let activeRepo = selectedRepos.activeLedgerRepo;
+
+  if (!activeRepo) {
+    // Default to first ledger repo
+    activeRepo = selectedRepos.ledgerRepos[0];
+    selectedRepos.activeLedgerRepo = activeRepo;
+    await set("selectedRepos", selectedRepos);
+  }
+
+  console.log("Active ledger repo:", activeRepo);
+
+  // 6. Load ledger DB + settings using repoName + repoId
+  db = await smartLoadDb(activeRepo.name, activeRepo.id, token);
+
+  // 7. Show home page
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
 
