@@ -555,6 +555,7 @@ async function smartSync(selectedRepos, token) {
   for (const repo of selectedRepos.ledgerRepos) {
     const repoId = repo.id;
     const repoName = repo.name;
+    console.log('reponame', repoName)
 
     const localDbBytes = localDbMap[repoId] || null;
     const localLog = localLogMap[repoId] || [];
