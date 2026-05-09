@@ -579,7 +579,7 @@ async function uploadDbToGitHub(repo, token, dbBytes) {
 
 async function smartLoadDb(repoName, repoId, token) {
   const key = `ledger_db_${repoId}`; // key for the selected db
-
+    console.log(token)
   // 1. Fetch both versions (but do not decide yet)
   const remote = await downloadDbFromGitHub(repoName, token);
   const local = await get(key);
