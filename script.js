@@ -463,20 +463,13 @@ document.getElementById("githubLogin").onclick = () => {
 async function listPrivateRepos() {
   const token = await get("github_token");
 
-  // Get current user login
-  const user = await fetch("https://api.github.com/user", {
-    headers: { Authorization: `token ${token}` }
-  }).then(r => r.json());
-
-  const currentUserLogin = user.login;
-
   // 2. Get all private repos
   const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
     headers: { Authorization: `token ${token}` }
   }).then(r => r.json());
 
   // 3. Filter personal repos (owned by user)
-  const personalRepos = repos.filter(r => r.owner.login === currentUserLogin);
+  const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
 
   // 4. Filter ledger repos (any repo user can push to)
   const ledgerRepos = repos.filter(r => r.permissions.push);
@@ -570,7 +563,7 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
-    const repoHasData = await githubFileExists(`${repoName}/entries`, token);
+    const repoHasData = await githubFileExists(repoName, "entries", token);
     const localHasData = !!localDbBytes;
 
     // ------------------------------------------------------------
@@ -592,10 +585,10 @@ async function smartSync(selectedRepos, token) {
       console.log(`[${repoName}] Only repo has data → pulling all entries`);
 
       const db = new SQL.Database();
-      const entryIds = await githubListFiles(`${repoName}/entries`, token);
+      const entryIds = await githubListFiles(repoName, "entries", token);
 
       for (const id of entryIds) {
-        const entry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        const entry = await githubReadJson(repoName, `entries/${id}`, token);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
       }
 
@@ -616,7 +609,7 @@ async function smartSync(selectedRepos, token) {
 
       for (const row of rows) {
         const entry = JSON.parse(row[0]);
-        await githubWriteJson(`${repoName}/entries/${entry.uuid}`, entry, token);
+        await githubWriteJson(repoName, `entries/${entry.uuid}`, entry, token);
       }
 
       for (const logEntry of localLog) {
@@ -636,13 +629,13 @@ async function smartSync(selectedRepos, token) {
     const db = new SQL.Database(localDbBytes);
 
     // 5a. Load cloud change logs since last sync
-    const cloudLogFiles = await githubListFiles(`${repoName}/changelog`, token);
+    const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
     const cloudChanges = [];
 
     for (const file of cloudLogFiles) {
       const ts = Number(file.replace(".json", ""));
       if (ts > lastSynced) {
-        const change = await githubReadJson(`${repoName}/changelog/${file}`, token);
+        const change = await githubReadJson(repoName, `changelog/${file}`, token);
         cloudChanges.push(change);
       }
     }
@@ -659,7 +652,7 @@ async function smartSync(selectedRepos, token) {
 
       // Only cloud changed
       if (cloudChange && !localChange) {
-        const cloudEntry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        const cloudEntry = await githubReadJson(repoName, `entries/${id}`, token);
         console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
         continue;
@@ -669,13 +662,13 @@ async function smartSync(selectedRepos, token) {
       if (!cloudChange && localChange) {
         const localEntry = localChange.new;
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
-        await githubWriteJson(`${repoName}/entries/${id}`, localEntry, token);
+        await githubWriteJson(repoName, `entries/${id}`, localEntry, token);
         continue;
       }
 
       // Both changed → conflict resolution
       if (cloudChange && localChange) {
-        const cloudEntry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        const cloudEntry = await githubReadJson(repoName, `entries/${id}`, token);
         const localOriginal = localChange.original;
         const localNew = localChange.new;
 
@@ -684,7 +677,7 @@ async function smartSync(selectedRepos, token) {
 
         if (sameAsOriginal) {
           console.log(`[${repoName}] ${id} both changed, but cloud matches original → cloud is old → use local`);
-          await githubWriteJson(`${repoName}/entries/${id}`, localNew, token);
+          await githubWriteJson(repoName, `entries/${id}`, localNew, token);
           db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
           continue;
         }
@@ -694,7 +687,7 @@ async function smartSync(selectedRepos, token) {
           console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
           console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
           console.log(`Newer local: ${JSON.stringify(localNew)}`);
-          await githubWriteJson(`${repoName}/entries/${id}`, localNew, token);
+          await githubWriteJson(repoName,`entries/${id}`, localNew, token);
           db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
         } else {
           console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
@@ -723,9 +716,9 @@ async function smartSync(selectedRepos, token) {
   await set(LAST_SYNC_KEY, lastSyncedMap);
 }
 
-async function githubFileExists(path, token) {
+async function githubFileExists(repoName, path, token) {
   const res = await fetch(
-    `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`,
+    `https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`,
     {
       headers: {
         Authorization: `token ${token}`
@@ -736,8 +729,8 @@ async function githubFileExists(path, token) {
   return res.ok; // true if exists, false if not
 }
 
-async function githubListFiles(path, token) {
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+async function githubListFiles(repoName, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
     headers: { Authorization: `token ${token}` }
   });
 
@@ -749,8 +742,8 @@ async function githubListFiles(path, token) {
     .map(item => item.name);
 }
 
-async function githubReadJson(path, token) {
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+async function githubReadJson(repoName, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
     headers: { Authorization: `token ${token}` }
   });
 
@@ -761,10 +754,10 @@ async function githubReadJson(path, token) {
   return JSON.parse(decoded);
 }
 
-async function githubWriteJson(path, obj, token) {
+async function githubWriteJson(repoName, path, obj, token) {
   const content = btoa(JSON.stringify(obj, null, 2));
 
-  await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+  await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
     method: "PUT",
     headers: { Authorization: `token ${token}` },
     body: JSON.stringify({
@@ -776,11 +769,11 @@ async function githubWriteJson(path, obj, token) {
 
 async function githubAppendChangeLog(repoName, change, token) {
   const ts = change.updatedAt; // use updatedAt as filename
-  const path = `${repoName}/changelog/${ts}.json`;
+  const path = `/changelog/${ts}.json`;
 
   const content = btoa(JSON.stringify(change, null, 2));
 
-  await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+  await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
     method: "PUT",
     headers: {
       Authorization: `token ${token}`,
@@ -802,6 +795,13 @@ async function init() {
     console.log("Not logged in");
     return;
   }
+
+  // Get current user login
+  const user = await fetch("https://api.github.com/user", {
+    headers: { Authorization: `token ${token}` }
+  }).then(r => r.json());
+
+  window.currentUserLogin = user.login;
 
   // 2. Load repo selections
   const selectedRepos = await get("selectedRepos");
