@@ -579,7 +579,7 @@ async function uploadDbToGitHub(repo, token, dbBytes) {
 
 async function smartLoadDb(repoName, repoId, token) {
   const key = `ledger_db_${repoId}`; // key for the selected db
-    console.log(token)
+    console.log("token received by smartLoadDb", token)
   // 1. Fetch both versions (but do not decide yet)
   const remote = await downloadDbFromGitHub(repoName, token);
   const local = await get(key);
@@ -628,7 +628,7 @@ async function init() {
     listPrivateRepos();
     return;
   }
-    console.log(token)
+    console.log("token in init(): ", token)
   db = await smartLoadDb(selectedRepo, token);
 
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
