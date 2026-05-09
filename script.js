@@ -723,6 +723,19 @@ async function smartSync(selectedRepos, token) {
   await set(LAST_SYNC_KEY, lastSyncedMap);
 }
 
+async function githubFileExists(path, token) {
+  const res = await fetch(
+    `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`,
+    {
+      headers: {
+        Authorization: `token ${token}`
+      }
+    }
+  );
+
+  return res.ok; // true if exists, false if not
+}
+
 async function githubListFiles(path, token) {
   const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
     headers: { Authorization: `token ${token}` }
