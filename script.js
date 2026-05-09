@@ -753,7 +753,7 @@ async function smartSync(selectedRepos, token) {
       { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
       { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
       { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
-    ],
+    ];
 
     const firstAccountType = Object.keys(accounts)[0];
     const firstAccount = accounts[firstAccountType][0];
