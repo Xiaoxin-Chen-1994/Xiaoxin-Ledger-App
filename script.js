@@ -539,7 +539,8 @@ async function listPrivateRepos() {
     await set("selectedRepos", selectedRepos);
 
     const token = await get("github_token");
-    db = await smartLoadDb(ledgerSelections[0].name, ledgerSelections[0].id, token);
+    window.ledgerDbs = await smartSync(selectedRepos, token);
+    console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
 
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
   };
@@ -549,100 +550,234 @@ const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
 
-async function downloadDbFromGitHub(repoName, token) {
-  const path = "ledger.db";
+async function smartSync(selectedRepos, token) {
+  const LOCAL_DB_KEY = "ledger_dbs";
+  const LOCAL_LOG_KEY = "ledger_logs";
+  const LAST_SYNC_KEY = "ledger_lastSynced";
 
-  const res = await fetch(
-    `https://api.github.com/repos/${repoName}/contents/${path}`,
-    { headers: { Authorization: `token ${token}` } }
-  );
-  
-  // If token is invalid → force re-auth
-  if (res.status === 401) {
-    console.log("GitHub token unauthorized → forcing re-auth");
+  let localDbMap = await get(LOCAL_DB_KEY) || {};
+  let localLogMap = await get(LOCAL_LOG_KEY) || {};
+  let lastSyncedMap = await get(LAST_SYNC_KEY) || {};
 
-    throw new Error("Unauthorized token — stopping execution");
-  }
+  for (const repo of selectedRepos.ledgerRepos) {
+    const repoId = repo.id;
+    const repoName = repo.name;
 
-  if (res.status === 404) {
-    console.log(path, " does not exist on the selected repository.");
-    return null
-  };
+    const localDbBytes = localDbMap[repoId] || null;
+    const localLog = localLogMap[repoId] || [];
+    const lastSynced = lastSyncedMap[repoId] || 0;
 
-  const file = await res.json();
-  const binary = atob(file.content);
-  const bytes = new Uint8Array(binary.length);
+    // ------------------------------------------------------------
+    // 1. Detect if repo has data
+    // ------------------------------------------------------------
+    const repoHasData = await githubFileExists(`${repoName}/entries`, token);
+    const localHasData = !!localDbBytes;
 
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return bytes;
-}
-
-async function uploadDbToGitHub(repo, token, dbBytes) {
-  const path = "ledger.db";
-  const content = btoa(String.fromCharCode(...dbBytes));
-
-  const existing = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}`,
-    { headers: { Authorization: `token ${token}` } }
-  ).then(r => r.json());
-
-  const body = {
-    message: "Update ledger database",
-    content,
-    sha: existing.sha
-  };
-
-  const res = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `token ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
+    // ------------------------------------------------------------
+    // 2. No data anywhere → create empty
+    // ------------------------------------------------------------
+    if (!repoHasData && !localHasData) {
+      console.log(`[${repoName}] No data anywhere → create empty`);
+      const db = new SQL.Database();
+      localDbMap[repoId] = db.export();
+      localLogMap[repoId] = [];
+      lastSyncedMap[repoId] = Date.now();
+      continue;
     }
-  );
 
-  return res.json();
+    // ------------------------------------------------------------
+    // 3. Only repo has data → pull everything
+    // ------------------------------------------------------------
+    if (repoHasData && !localHasData) {
+      console.log(`[${repoName}] Only repo has data → pulling all entries`);
+
+      const db = new SQL.Database();
+      const entryIds = await githubListFiles(`${repoName}/entries`, token);
+
+      for (const id of entryIds) {
+        const entry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
+      }
+
+      localDbMap[repoId] = db.export();
+      localLogMap[repoId] = [];
+      lastSyncedMap[repoId] = Date.now();
+      continue;
+    }
+
+    // ------------------------------------------------------------
+    // 4. Only local has data → push everything
+    // ------------------------------------------------------------
+    if (!repoHasData && localHasData) {
+      console.log(`[${repoName}] Only local has data → pushing all entries`);
+
+      const db = new SQL.Database(localDbBytes);
+      const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
+
+      for (const row of rows) {
+        const entry = JSON.parse(row[0]);
+        await githubWriteJson(`${repoName}/entries/${entry.uuid}`, entry, token);
+      }
+
+      for (const logEntry of localLog) {
+        await githubAppendChangeLog(repoName, logEntry, token);
+      }
+
+      localLogMap[repoId] = [];
+      lastSyncedMap[repoId] = Date.now();
+      continue;
+    }
+
+    // ------------------------------------------------------------
+    // 5. Both have data → MERGE
+    // ------------------------------------------------------------
+    console.log(`[${repoName}] Both sides have data → merging`);
+
+    const db = new SQL.Database(localDbBytes);
+
+    // 5a. Load cloud change logs since last sync
+    const cloudLogFiles = await githubListFiles(`${repoName}/changelog`, token);
+    const cloudChanges = [];
+
+    for (const file of cloudLogFiles) {
+      const ts = Number(file.replace(".json", ""));
+      if (ts > lastSynced) {
+        const change = await githubReadJson(`${repoName}/changelog/${file}`, token);
+        cloudChanges.push(change);
+      }
+    }
+
+    // 5b. Summarize changed IDs
+    const changedIds = new Set();
+    for (const c of cloudChanges) changedIds.add(c.id);
+    for (const c of localLog) changedIds.add(c.id);
+
+    // 5c. For each changed ID, merge
+    for (const id of changedIds) {
+      const cloudChange = cloudChanges.find(c => c.id === id) || null;
+      const localChange = localLog.find(c => c.id === id) || null;
+
+      // Only cloud changed
+      if (cloudChange && !localChange) {
+        const cloudEntry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
+        db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+        continue;
+      }
+
+      // Only local changed
+      if (!cloudChange && localChange) {
+        const localEntry = localChange.new;
+        console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
+        await githubWriteJson(`${repoName}/entries/${id}`, localEntry, token);
+        continue;
+      }
+
+      // Both changed → conflict resolution
+      if (cloudChange && localChange) {
+        const cloudEntry = await githubReadJson(`${repoName}/entries/${id}`, token);
+        const localOriginal = localChange.original;
+        const localNew = localChange.new;
+
+        const sameAsOriginal =
+          JSON.stringify(localOriginal) === JSON.stringify(cloudEntry);
+
+        if (sameAsOriginal) {
+          console.log(`[${repoName}] ${id} both changed, but cloud matches original → cloud is old → use local`);
+          await githubWriteJson(`${repoName}/entries/${id}`, localNew, token);
+          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
+          continue;
+        }
+
+        // True conflict → compare timestamps
+        if (localChange.updatedAt > cloudChange.updatedAt) {
+          console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
+          console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
+          console.log(`Newer local: ${JSON.stringify(localNew)}`);
+          await githubWriteJson(`${repoName}/entries/${id}`, localNew, token);
+          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
+        } else {
+          console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
+          console.log(`Older local: ${JSON.stringify(localNew)}`);
+          console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
+          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+        }
+      }
+    }
+
+    // 5d. Save merged DB
+    localDbMap[repoId] = db.export();
+
+    // 5e. Clear local change log
+    localLogMap[repoId] = [];
+
+    // 5f. Update lastSynced
+    lastSyncedMap[repoId] = Date.now();
+  }
+
+  // ------------------------------------------------------------
+  // Save everything
+  // ------------------------------------------------------------
+  await set(LOCAL_DB_KEY, localDbMap);
+  await set(LOCAL_LOG_KEY, localLogMap);
+  await set(LAST_SYNC_KEY, lastSyncedMap);
 }
 
-async function smartLoadDb(repoName, repoId, token) {
-  const key = `ledger_db_${repoId}`; // key for the selected db
+async function githubListFiles(path, token) {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+    headers: { Authorization: `token ${token}` }
+  });
 
-  // 1. Fetch both versions (but do not decide yet)
-  const remote = await downloadDbFromGitHub(repoName, token);
-  const local = await get(key);
+  if (!res.ok) return [];
+  const data = await res.json();
 
-  // 2. Placeholder for future timestamp comparison
-  // -------------------------------------------------
-  // if (local && remote) {
-  //   compare timestamps here
-  //   merge versions
-  // }
-  // -------------------------------------------------
+  return data
+    .filter(item => item.type === "file")
+    .map(item => item.name);
+}
 
-  // 3. If local exists → use it for now
-  if (local) {
-    console.log("Loaded DB from local IndexedDB");
-    return new SQL.Database(local);
-  }
+async function githubReadJson(path, token) {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+    headers: { Authorization: `token ${token}` }
+  });
 
-  if (remote) {
-    console.log("Loaded DB from GitHub");
-    await set(key, remote);
-    return new SQL.Database(remote);
-  }
+  if (!res.ok) return null;
 
- // 4. Neither exists → create new DB
-  console.log("No DB found, creating new one");
-  const db = new SQL.Database();
-  const emptyBytes = db.export();
-  await set(key, emptyBytes);
-  return db;
+  const data = await res.json();
+  const decoded = atob(data.content);
+  return JSON.parse(decoded);
+}
+
+async function githubWriteJson(path, obj, token) {
+  const content = btoa(JSON.stringify(obj, null, 2));
+
+  await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: { Authorization: `token ${token}` },
+    body: JSON.stringify({
+      message: `update ${path}`,
+      content
+    })
+  });
+}
+
+async function githubAppendChangeLog(repoName, change, token) {
+  const ts = change.updatedAt; // use updatedAt as filename
+  const path = `${repoName}/changelog/${ts}.json`;
+
+  const content = btoa(JSON.stringify(change, null, 2));
+
+  await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `token ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: `append change log ${ts}`,
+      content
+    })
+  });
 }
 
 async function init() {
@@ -672,22 +807,11 @@ async function init() {
     return;
   }
 
-  // 5. Determine active ledger repo
-  let activeRepo = selectedRepos.activeLedgerRepo;
+  // 5. Load ALL ledger DBs
+  window.ledgerDbs = await smartSync(selectedRepos, token); // smartSync returns a map: { repoId: SQL.Database }
+  console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
 
-  if (!activeRepo) {
-    // Default to first ledger repo
-    activeRepo = selectedRepos.ledgerRepos[0];
-    selectedRepos.activeLedgerRepo = activeRepo;
-    await set("selectedRepos", selectedRepos);
-  }
-
-  console.log("Active ledger repo:", activeRepo);
-
-  // 6. Load ledger DB + settings using repoName + repoId
-  db = await smartLoadDb(activeRepo.name, activeRepo.id, token);
-
-  // 7. Show home page
+  // 6. Show home page
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
 
