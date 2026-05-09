@@ -523,10 +523,8 @@ async function downloadDbFromGitHub(repo, token) {
   );
 
   if (res.status === 404) {
-    console.log("No DB on GitHub → creating empty local DB");
-    const db = new SQL.Database();        // brand‑new SQLite DB
-    const emptyBytes = db.export();       // Uint8Array
-    return emptyBytes;
+    console.log(path, " does not exist on the selected repository.");
+    return null
   };
 
   const file = await res.json();
@@ -597,8 +595,7 @@ async function smartLoadDb(repo, token) {
 }
 
 async function init() {
-  const token = await get("github_token")
-  console.log('token', token)
+  const token = await get("github_token");
 
   if (!token) {
     console.log("Not logged in");
