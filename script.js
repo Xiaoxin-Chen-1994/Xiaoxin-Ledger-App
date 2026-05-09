@@ -522,7 +522,12 @@ async function downloadDbFromGitHub(repo, token) {
     { headers: { Authorization: `token ${token}` } }
   );
 
-  if (res.status === 404) return null;
+  if (res.status === 404) {
+    console.log("No DB on GitHub → creating empty local DB");
+    const db = new SQL.Database();        // brand‑new SQLite DB
+    const emptyBytes = db.export();       // Uint8Array
+    return emptyBytes;
+  };
 
   const file = await res.json();
   const binary = atob(file.content);
@@ -592,7 +597,8 @@ async function smartLoadDb(repo, token) {
 }
 
 async function init() {
-  const token = await get("github_token");
+  const token = await get("github_token")
+  console.log('token', token)
 
   if (!token) {
     console.log("Not logged in");
