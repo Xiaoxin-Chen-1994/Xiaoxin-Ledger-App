@@ -527,14 +527,15 @@ async function downloadDbFromGitHub(repo, token) {
   // If token is invalid → force re-auth
   if (res.status === 401) {
     console.log("GitHub token unauthorized → forcing re-auth");
+    alert("GitHub token unauthorized → forcing re-auth")
 
     await set("github_token", null);
     await set("selected_repo", null);
 
     // Hard stop: prevent the rest of the app from running
-    setTimeout(() => {
-      window.location.href = "/api/auth/login";
-    }, 0);
+    // setTimeout(() => {
+    //   window.location.href = "/api/auth/login";
+    // }, 0);
 
     throw new Error("Unauthorized token — stopping execution");
   }
