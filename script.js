@@ -621,7 +621,8 @@ async function init() {
     return;
   }
 
-  const selectedRepo = await get("selected_repo");
+  const selectedRepoName = await get("selected_repo");
+  const selectedRepoId = await get("selected_repo_id");
 
   if (!selectedRepo) {
     console.log("No repo selected, showing repo picker");
@@ -629,7 +630,7 @@ async function init() {
     return;
   }
     console.log("token in init(): ", token)
-  db = await smartLoadDb(selectedRepo, token);
+  db = await smartLoadDb(selectedRepoName, selectedRepoId, token);
 
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
