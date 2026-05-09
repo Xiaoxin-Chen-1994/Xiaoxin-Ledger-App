@@ -484,7 +484,7 @@ async function listPrivateRepos() {
         .map(
           repo => `
             <li>
-              <button class="repo-select" data-name="${repo.full_name}">
+              <button class="repo-select" data-name="${repo.full_name}" data-id="${repo.id}">>
                 ${repo.full_name}
               </button>
             </li>
@@ -497,15 +497,16 @@ async function listPrivateRepos() {
   // Add click handlers
   document.querySelectorAll(".repo-select").forEach(btn => {
     btn.onclick = async () => {
-      const repo = btn.dataset.name;
-      console.log("Selected repo:", repo);
+      const repoName = btn.dataset.name;
+    const repoId = btn.dataset.id;
 
-      await set("selected_repo", repo);
+    await set("selected_repo", repoName);
+    await set("selected_repo_id", repoId);
 
-      const token = await get("github_token");
-      db = await smartLoadDb(repo, token);
+    const token = await get("github_token");
+    db = await smartLoadDb(repoName, repoId, token);
 
-      showPage("home", "nav-home", "Xiaoxin's Ledger App");
+    showPage("home", "nav-home", "Xiaoxin's Ledger App");
     };
   });
 }
@@ -568,29 +569,39 @@ async function uploadDbToGitHub(repo, token, dbBytes) {
   return res.json();
 }
 
-async function smartLoadDb(repo, token) {
-  // 1. Try GitHub
-  const remote = await downloadDbFromGitHub(repo, token);
+async function smartLoadDb(repoName, repoId, token) {
+  const key = `ledger_db_${repoId}`; // key for the selected db
 
-  if (remote) {
-    console.log("Loaded DB from GitHub");
-    await set("ledger_db", remote);
-    return new SQL.Database(remote);
-  }
+  // 1. Fetch both versions (but do not decide yet)
+  const remote = await downloadDbFromGitHub(repoName, token);
+  const local = await get(key);
+  console.log(local)
 
-  // 2. Try local IndexedDB
-  const local = await get("ledger_db");
+  // 2. Placeholder for future timestamp comparison
+  // -------------------------------------------------
+  // if (local && remote) {
+  //   compare timestamps here
+  //   merge versions
+  // }
+  // -------------------------------------------------
 
+  // 3. If local exists → use it for now
   if (local) {
     console.log("Loaded DB from local IndexedDB");
     return new SQL.Database(local);
   }
 
-  // 3. Create new DB
+  if (remote) {
+    console.log("Loaded DB from GitHub");
+    await set(key, remote);
+    return new SQL.Database(remote);
+  }
+
+ // 4. Neither exists → create new DB
   console.log("No DB found, creating new one");
-  db = new SQL.Database();
+  const db = new SQL.Database();
   const emptyBytes = db.export();
-  await set("ledger_db", emptyBytes);
+  await set(key, emptyBytes);
   return db;
 }
 
