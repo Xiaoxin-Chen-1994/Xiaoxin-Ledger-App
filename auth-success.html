@@ -3,10 +3,9 @@
 
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
-
+alert(token)
   // Save token in IndexedDB
   await set("github_token", token);
-  console.log('success token', token)
 
   // Redirect back to your app
   window.location.href = "/";
