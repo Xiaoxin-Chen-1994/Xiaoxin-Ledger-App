@@ -531,7 +531,6 @@ async function downloadDbFromGitHub(repo, token) {
     alert("GitHub token unauthorized → forcing re-auth")
 
     await set("github_token", null);
-    await set("selected_repo", null);
 
     // Hard stop: prevent the rest of the app from running
     // setTimeout(() => {

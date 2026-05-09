@@ -6,6 +6,7 @@
 
   // Save token in IndexedDB
   await set("github_token", token);
+  console.log('success token', token)
 
   // Redirect back to your app
   window.location.href = "/";
