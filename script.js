@@ -505,6 +505,8 @@ async function listPrivateRepos() {
     await set("selected_repo_id", repoId);
 
     const token = await get("github_token");
+    console.log("TOKEN RIGHT AFTER REPO SELECT:", token);
+
     db = await smartLoadDb(repoName, repoId, token);
 
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
@@ -624,7 +626,7 @@ async function smartLoadDb(repoName, repoId, token) {
 
 async function init() {
   const token = await get("github_token");
-
+console.log("TOKEN LOADED ON REFRESH:", token);
   if (!token) {
     console.log("Not logged in");
     return;
