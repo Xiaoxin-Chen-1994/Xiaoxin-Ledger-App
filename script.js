@@ -519,6 +519,8 @@ const SQL = await initSqlJs({
 async function downloadDbFromGitHub(repo, token) {
   const path = "ledger.db";
   console.log("download token", token)
+console.log("TOKEN AT FETCH TIME:", token);
+console.log("HEADERS SENT:", { Authorization: `token ${token}` });
 
   const res = await fetch(
     `https://api.github.com/repos/${repo}/contents/${path}`,
