@@ -614,16 +614,222 @@ async function smartSync(selectedRepos, token) {
     const localHasData = !!localDbBytes;
 
     // ------------------------------------------------------------
-    // 2. No data anywhere → create empty
-    // ------------------------------------------------------------
-    if (!repoHasData && !localHasData) {
-      console.log(`[${repoName}] No data anywhere → create empty`);
-      const db = new SQL.Database();
-      localDbMap[repoId] = db.export();
-      localLogMap[repoId] = [];
-      lastSyncedMap[repoId] = Date.now();
-      continue;
-    }
+  // 2. No data anywhere → create empty
+  // ------------------------------------------------------------
+  if (!repoHasData && !localHasData) {
+    console.log(`[${repoName}] No data anywhere → create empty`);
+
+    // 1. Create DB + ledger table
+    const db = new SQL.Database();
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ledger (
+        json TEXT
+      );
+    `);
+
+    // 2. Initialize ledger-level settings
+    const accounts = {
+      cashAccounts: [
+        { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      ],
+      creditCards: [
+        { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
+      ],
+      depositoryAccounts: [
+        { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      ],
+      storedValueCards: [
+        { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+      ],
+      investmentAccounts: [
+        { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      ]
+    };
+
+    const expenseCategories = [
+      { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+        { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+        { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
+      ]},
+      { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+        { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+        { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+        { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+        { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+        { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+        { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+        { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+        { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+        { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
+      ]},
+      { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+        { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+        { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
+      ]},
+      { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
+        { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+        { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
+      ]},
+      { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+        { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+        { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+        { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+        { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
+      ]},
+      { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+        { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+        { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+        { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
+      ]},
+      { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+        { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+        { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+        { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+        { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
+      ]},
+      { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+        { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+        { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
+      ]},
+      { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
+        { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+        { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+        { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+        { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+        { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+      ]}
+    ];
+
+    const incomeCategories = [
+      { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+        { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+        { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
+      ]},
+      { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+        { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+        { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+        { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
+      ]},
+      { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+        { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+        { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+        { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
+      ]},
+      { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+        { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+      ]}
+    ]; 
+
+    const collections = [
+      { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
+      { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
+      { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
+      { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+      { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
+      { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
+      { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
+      { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+      { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
+      { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
+      { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
+      { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+      { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+      { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
+      { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
+      { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
+      { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
+      { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
+      { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+      { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+      { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
+      { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
+    ];
+
+    const subjects = [
+      { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
+      { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
+      { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
+      { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
+      { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
+      { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
+      { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
+    ],
+
+    const firstAccountType = Object.keys(accounts)[0];
+    const firstAccount = accounts[firstAccountType][0];
+
+    const firstExpensePrimary = expenseCategories[0];
+    const firstIncomePrimary = incomeCategories[0];
+
+    // For transfer defaults, pick the second account type if available
+    const secondAccountType = Object.keys(accounts)[1] || firstAccountType;
+    const secondAccount = accounts[secondAccountType][0] || firstAccount;
+
+    const defaults = {
+      expense: {
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon,
+        primary: firstExpensePrimary.primary,
+        primaryIcon: firstExpensePrimary.icon,
+        secondary: firstExpensePrimary.secondaries[0].name,
+        secondaryIcon: firstExpensePrimary.secondaries[0].icon,
+        subject: subjects[0].name,
+        subjectIcon: subjects[0].icon,
+        collection: collections[0].name,
+        collectionIcon: collections[0].icon
+      },
+
+      income: {
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon,
+        primary: firstIncomePrimary.primary,
+        primaryIcon: firstIncomePrimary.icon,
+        secondary: firstIncomePrimary.secondaries[0].name,
+        secondaryIcon: firstIncomePrimary.secondaries[0].icon,
+        subject: subjects[0].name,
+        subjectIcon: subjects[0].icon,
+        collection: collections[0].name,
+        collectionIcon: collections[0].icon
+      },
+
+      transfer: {
+        fromType: firstAccountType,
+        fromAccount: firstAccount.name,
+        fromAccountIcon: firstAccount.icon,
+        toType: secondAccountType,
+        toAccount: secondAccount.name,
+        toAccountIcon: secondAccount.icon
+      },
+
+      balance: {
+        accountType: firstAccountType,
+        account: firstAccount.name,
+        accountIcon: firstAccount.icon
+      }
+    };
+
+    const ledgerSettings = {
+      updatedAt: Date.now(),
+      accounts,
+      "expense-categories": expenseCategories,
+      "income-categories": incomeCategories,
+      collections,
+      subjects,
+      defaults
+    };
+
+    // Save DB + settings
+    localDbMap[repoId] = db.export();
+    localLogMap[repoId] = [];
+    lastSyncedMap[repoId] = Date.now();
+
+    // Upload ledger settings to cloud
+    await githubWriteJson(repoName, "ledger-settings.json", ledgerSettings, token);
+
+    continue;
+  }
 
     // ------------------------------------------------------------
     // 3. Only repo has data → pull everything
