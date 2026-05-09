@@ -523,6 +523,7 @@ async function downloadDbFromGitHub(repo, token) {
     `https://api.github.com/repos/${repo}/contents/${path}`,
     { headers: { Authorization: `token ${token}` } }
   );
+  console.log(Authorization, `token ${token}`)
 console.log("Scopes:", res.headers.get("x-oauth-scopes"));
   // If token is invalid → force re-auth
   if (res.status === 401) {
