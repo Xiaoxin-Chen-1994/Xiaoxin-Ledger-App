@@ -5419,12 +5419,14 @@ function summarizeIncomeExpense(entries) {
   let income = 0;
   let expense = 0;
 
-  for (const e of entries) {
-    if (e.type === "income") {
-      income += Number(e.amount) || 0;
-    }
-    if (e.type === "expense") {
-      expense += Number(e.amount) || 0;
+  if (Array.isArray(entries)) {
+    for (const e of entries) {
+      if (e.type === "income") {
+        income += Number(e.amount) || 0;
+      }
+      if (e.type === "expense") {
+        expense += Number(e.amount) || 0;
+      }
     }
   }
 
