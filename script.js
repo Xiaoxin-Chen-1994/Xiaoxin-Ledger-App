@@ -505,6 +505,7 @@ async function listPrivateRepos() {
     await set("selected_repo_id", repoId);
 
     const token = await get("github_token");
+    console.log(github_token)
     db = await smartLoadDb(repoName, repoId, token);
 
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
@@ -518,13 +519,12 @@ const SQL = await initSqlJs({
 
 async function downloadDbFromGitHub(repo, token) {
   const path = "ledger.db";
-console.log(`token ${token}`)
+
   const res = await fetch(
     `https://api.github.com/repos/${repo}/contents/${path}`,
     { headers: { Authorization: `token ${token}` } }
   );
   
-console.log("Scopes:", res.headers.get("x-oauth-scopes"));
   // If token is invalid → force re-auth
   if (res.status === 401) {
     console.log("GitHub token unauthorized → forcing re-auth");
