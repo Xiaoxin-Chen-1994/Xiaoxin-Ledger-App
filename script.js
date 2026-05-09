@@ -518,24 +518,16 @@ const SQL = await initSqlJs({
 
 async function downloadDbFromGitHub(repo, token) {
   const path = "ledger.db";
-
+console.log(`token ${token}`)
   const res = await fetch(
     `https://api.github.com/repos/${repo}/contents/${path}`,
     { headers: { Authorization: `token ${token}` } }
   );
-  console.log(`Authorization: token ${token}`)
+  
 console.log("Scopes:", res.headers.get("x-oauth-scopes"));
   // If token is invalid → force re-auth
   if (res.status === 401) {
     console.log("GitHub token unauthorized → forcing re-auth");
-    alert("GitHub token unauthorized → forcing re-auth")
-
-    await set("selected_repo", null);
-
-    // Hard stop: prevent the rest of the app from running
-    // setTimeout(() => {
-    //   window.location.href = "/api/auth/login";
-    // }, 0);
 
     throw new Error("Unauthorized token — stopping execution");
   }
