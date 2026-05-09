@@ -544,6 +544,62 @@ const SQL = await initSqlJs({
 });
 
 async function smartSync(selectedRepos, token) {
+  // Sync personal settings
+  if (selectedRepos.personalSettingsRepo) {
+    const repoName = selectedRepos.personalSettingsRepo.name;
+
+    // Load local
+    const local = await get("personal_settings"); // may be null
+
+    // Load cloud
+    const cloudExists = await githubFileExists(repoName, "personal.json", token);
+    const cloud = cloudExists
+      ? await githubReadJson(repoName, "personal.json", token)
+      : null;
+
+    // Case A — neither exists → create defaults
+    if (!local && !cloud) {
+      const personalSettings = {
+        updatedAt: Date.now(),
+        email: "",
+        language: currentLang,
+        homeImages: [],
+        fontsize: "",
+        themeColor: "",
+      };
+
+      personalSettings.updatedAt = Date.now();
+      await githubWriteJson(repoName, "personal.json", personalSettings, token);
+      await set("personal_settings", personalSettings);
+      return;
+    }
+
+    // Case B — cloud exists, local missing → pull
+    if (!local && cloud) {
+      await set("personal_settings", cloud);
+      return;
+    }
+
+    // Case C — local exists, cloud missing → push
+    if (local && !cloud) {
+      await githubWriteJson(repoName, "personal.json", local, token);
+      return;
+    }
+
+    // Case D — both exist → newer timestamp wins
+    if (local && cloud) {
+      if (local.updatedAt > cloud.updatedAt) {
+        // local newer → push
+        await githubWriteJson(repoName, "personal.json", local, token);
+      } else if (cloud.updatedAt > local.updatedAt) {
+        // cloud newer → pull
+        await set("personal_settings", cloud);
+      }
+      return;
+    }
+  }
+
+  // Sync ledger data
   const LOCAL_DB_KEY = "ledger_dbs";
   const LOCAL_LOG_KEY = "ledger_logs";
   const LAST_SYNC_KEY = "ledger_lastSynced";
