@@ -571,23 +571,14 @@ async function smartSync(selectedRepos, token) {
       personalSettings.updatedAt = Date.now();
       await githubWriteJson(repoName, "personal.json", personalSettings, token);
       await set("personal_settings", personalSettings);
-      return;
-    }
 
-    // Case B — cloud exists, local missing → pull
-    if (!local && cloud) {
+    } else if (!local && cloud) { // Case B — cloud exists, local missing → pull
       await set("personal_settings", cloud);
-      return;
-    }
 
-    // Case C — local exists, cloud missing → push
-    if (local && !cloud) {
+    } else if  (local && !cloud) { // Case C — local exists, cloud missing → push
       await githubWriteJson(repoName, "personal.json", local, token);
-      return;
-    }
 
-    // Case D — both exist → newer timestamp wins
-    if (local && cloud) {
+    } else { // Case D — both exist → newer timestamp wins
       if (local.updatedAt > cloud.updatedAt) {
         // local newer → push
         await githubWriteJson(repoName, "personal.json", local, token);
@@ -595,7 +586,6 @@ async function smartSync(selectedRepos, token) {
         // cloud newer → pull
         await set("personal_settings", cloud);
       }
-      return;
     }
   }
 
