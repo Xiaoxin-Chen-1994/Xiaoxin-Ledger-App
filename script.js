@@ -523,6 +523,14 @@ async function downloadDbFromGitHub(repo, token) {
     { headers: { Authorization: `token ${token}` } }
   );
 
+  // If token is invalid → force re-auth
+  if (res.status === 401) {
+    console.log("GitHub token unauthorized → forcing re-auth");
+    await set("github_token", null);
+    window.location.href = "/api/auth/login";   // re-login
+    return null;
+  }
+
   if (res.status === 404) {
     console.log(path, " does not exist on the selected repository.");
     return null
