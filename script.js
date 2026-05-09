@@ -505,7 +505,6 @@ async function listPrivateRepos() {
     await set("selected_repo_id", repoId);
 
     const token = await get("github_token");
-    console.log(github_token)
     db = await smartLoadDb(repoName, repoId, token);
 
     showPage("home", "nav-home", "Xiaoxin's Ledger App");
@@ -629,7 +628,7 @@ async function init() {
     listPrivateRepos();
     return;
   }
-
+    console.log(token)
   db = await smartLoadDb(selectedRepo, token);
 
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
