@@ -719,7 +719,7 @@ async function smartSync(selectedRepos, token) {
 
 async function githubFileExists(repoName, path, token) {
   const res = await fetch(
-    `https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`,
+    `https://api.github.com/repos/${repoName}/contents/${path}`,
     {
       headers: {
         Authorization: `token ${token}`
@@ -731,7 +731,7 @@ async function githubFileExists(repoName, path, token) {
 }
 
 async function githubListFiles(repoName, path, token) {
-  const res = await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
+  const res = await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     headers: { Authorization: `token ${token}` }
   });
 
@@ -744,7 +744,7 @@ async function githubListFiles(repoName, path, token) {
 }
 
 async function githubReadJson(repoName, path, token) {
-  const res = await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
+  const res = await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     headers: { Authorization: `token ${token}` }
   });
 
@@ -758,7 +758,7 @@ async function githubReadJson(repoName, path, token) {
 async function githubWriteJson(repoName, path, obj, token) {
   const content = btoa(JSON.stringify(obj, null, 2));
 
-  await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
+  await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "PUT",
     headers: { Authorization: `token ${token}` },
     body: JSON.stringify({
@@ -774,7 +774,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
   const content = btoa(JSON.stringify(change, null, 2));
 
-  await fetch(`https://api.github.com/repos/${window.currentUserLogin}/${repoName}/contents/${path}`, {
+  await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "PUT",
     headers: {
       Authorization: `token ${token}`,
