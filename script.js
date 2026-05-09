@@ -106,6 +106,7 @@ let workspace = {} // use this variable to store temporary transaction data befo
 const transactionTypes = ["expense", "income", "transfer", "balance"];
 const accountTypes = ["cashAccounts", "creditCards", "depositoryAccounts", "storedValueCards", "investmentAccounts"];
 
+let selectedRepo = null;
 let currentBase = "home";
 let latestPage = null;
 let latestNavBtn = null;
@@ -526,9 +527,16 @@ async function downloadDbFromGitHub(repo, token) {
   // If token is invalid → force re-auth
   if (res.status === 401) {
     console.log("GitHub token unauthorized → forcing re-auth");
+
     await set("github_token", null);
-    window.location.href = "/api/auth/login";   // re-login
-    return null;
+    await set("selected_repo", null);
+
+    // Hard stop: prevent the rest of the app from running
+    setTimeout(() => {
+      window.location.href = "/api/auth/login";
+    }, 0);
+
+    throw new Error("Unauthorized token — stopping execution");
   }
 
   if (res.status === 404) {
