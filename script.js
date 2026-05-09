@@ -715,6 +715,17 @@ async function smartSync(selectedRepos, token) {
   await set(LOCAL_DB_KEY, localDbMap);
   await set(LOCAL_LOG_KEY, localLogMap);
   await set(LAST_SYNC_KEY, lastSyncedMap);
+
+  // now create SQL live DBs based on the indexDB bytes data
+  const dbMap = {};
+
+  for (const repo of selectedRepos.ledgerRepos) {
+    const repoId = repo.id;
+    const bytes = localDbMap[repoId];
+    dbMap[repoId] = new SQL.Database(bytes);
+  }
+
+  return dbMap;
 }
 
 async function githubFileExists(repoName, path, token) {
