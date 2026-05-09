@@ -624,7 +624,7 @@ async function init() {
   const selectedRepoName = await get("selected_repo");
   const selectedRepoId = await get("selected_repo_id");
 
-  if (!selectedRepo) {
+  if (!selectedRepoName) {
     console.log("No repo selected, showing repo picker");
     listPrivateRepos();
     return;
