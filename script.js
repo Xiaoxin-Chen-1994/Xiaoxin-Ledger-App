@@ -3318,7 +3318,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
 
   let switchedBase = false;
 
-  if (latestNavBtn !==navBtn) { // when switching base nav, look for the latest stack
+  if (latestNavBtn !== navBtn) { // when switching base nav, look for the latest stack
     switchedBase = true;
 
     if (latestPage != null) {
@@ -5322,10 +5322,9 @@ async function getFilteredEntries({
   accounts = null,
   tags = null,
   notesKeyword = null,
-  households = null
 } = {}) {
 
-  const householdIds = households || userDoc.households;
+  const repoIds = Object.keys(window.ledgerDbs);
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
   const to   = dateTo   ? dateTo   + " 23:59:59" : null;
@@ -5337,7 +5336,7 @@ async function getFilteredEntries({
   // CASE A: Entire range is inside this year → LOCAL ONLY
   // ------------------------------------------------------------
   if (fromIsThisYear && toIsThisYear) {
-    const merged = getLocalThisYearEntries(householdIds);
+    const merged = getLocalThisYearEntries(repoIds);
     return applyFilters(merged);
   }
 
@@ -5353,14 +5352,14 @@ async function getFilteredEntries({
       accounts,
       tags,
       notesKeyword,
-      householdIds
+      repoIds
     });
   }
 
   // ------------------------------------------------------------
   // CASE C: Mixed range → combine Firestore (past) + local (this year)
   // ------------------------------------------------------------
-  const localMerged = getLocalThisYearEntries(householdIds);
+  const localMerged = getLocalThisYearEntries(repoIds);
 
   const past = await queryFirestoreForRange({
     dateFrom,
@@ -5370,7 +5369,7 @@ async function getFilteredEntries({
     accounts,
     tags,
     notesKeyword,
-    householdIds
+    repoIds
   });
 
   return applyFilters([...past, ...localMerged]);
@@ -5378,10 +5377,13 @@ async function getFilteredEntries({
   // ------------------------------------------------------------
   // Helpers
   // ------------------------------------------------------------
-  function getLocalThisYearEntries(hids) {
+  function getLocalThisYearEntries(rids) {
     const merged = {};
-    for (const hid of hids) {
-      const entries = householdDocs[hid].entriesThisYear || {};
+    for (const rid of rids) {
+      const repoDb = window.ledgerDbs[rid];
+      if (!repoDb) continue;
+
+      const entries = repoDb.entriesThisYear || {};
       Object.assign(merged, entries);
     }
     return Object.values(merged);
