@@ -482,7 +482,7 @@ async function listPrivateRepos() {
   const ledgerRepos = repos.filter(r => r.permissions.push);
 
   // 5. Render UI
-  container.innerHTML = `
+  document.getElementById("repoList").innerHTML = `
     <h3>Select Personal Settings Repo</h3>
     <select id="personalRepoSelect">
       <option value="">-- Select one --</option>
