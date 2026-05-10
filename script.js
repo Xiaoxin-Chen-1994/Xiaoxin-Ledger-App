@@ -605,8 +605,8 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
-    const repoHasData = false;
-    const localHasData = false;
+    const repoHasData = await githubFileExists(repoName, "entries", token);
+    const localHasData = !!localDbBytes;
 
     // ------------------------------------------------------------
     // 2. No data anywhere → create empty
@@ -1917,16 +1917,23 @@ function findSelectedAccount(repoId, accountType, accountName) {
 function setDefaultAccount(button, subWorkspace) {
   const t = translations[currentLang];
 
+  const inputType = subWorkspace.inputType;
+  const repoId = subWorkspace[inputType].repoId;
+
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+
   // Set default if workspace is empty
   transactionTypes.forEach(type => {
     if (!subWorkspace[type]) {
       subWorkspace[type] = {};
     }
 
+    const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
+
     if (["expense", "income", "balance"].includes(type)) {
       // these types have one account
       if (!subWorkspace[type].accountInfo) {
-        subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].repoId, userDoc.defaults[type].accountType, userDoc.defaults[type].account)
+        subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].repoId, def.accountType, def.account)
         const accountType = subWorkspace[type].accountInfo.type;
         const accountName = subWorkspace[type].accountInfo.account.name;
         const accountIcon = subWorkspace[type].accountInfo.account.icon;
@@ -1946,7 +1953,7 @@ function setDefaultAccount(button, subWorkspace) {
 
       // FROM ACCOUNT
       if (!subWorkspace.transfer.fromAccountInfo) {
-        subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
+        subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, def.fromType, def.fromAccount);
         const from = subWorkspace.transfer.fromAccountInfo.account;
         const fromIcon = from.icon || "";
         const fromName = from.name;
@@ -1962,7 +1969,7 @@ function setDefaultAccount(button, subWorkspace) {
 
       // TO ACCOUNT
       if (!subWorkspace.transfer.toAccountInfo) {
-        subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, userDoc.defaults.transfer.toType, userDoc.defaults.transfer.toAccount);
+        subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, def.toType, def.toAccount);
         const to = subWorkspace.transfer.toAccountInfo.account;
         const toIcon = to.icon || "";
         const toName = to.name;
@@ -1983,9 +1990,6 @@ function setDefaultAccount(button, subWorkspace) {
       }
     }
   });
-
-  const inputType = subWorkspace.inputType;
-  const repoId = subWorkspace[inputType].repoId;
 
   // Prepare account column
   const accountTypeCol = accountSelector.querySelector(".primary-col");
