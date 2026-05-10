@@ -525,7 +525,7 @@ async function listPrivateRepos() {
       return;
     }
 
-    const selectedRepos = {
+    selectedRepos = {
       personalSettingsRepo: { name: personalName, id: personalId },
       ledgerRepos: ledgerSelections,
       activeLedgerRepo: ledgerSelections[0]
@@ -1064,7 +1064,6 @@ async function init() {
 
   // 2. Load repo selections
   selectedRepos = await get("selectedRepos");
-  selectedRepos = null;
 
   // 3. If user has not selected repos → show repo picker
   if (!selectedRepos || !selectedRepos.personalSettingsRepo || !selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
