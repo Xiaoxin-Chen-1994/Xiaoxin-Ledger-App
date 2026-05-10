@@ -1030,7 +1030,8 @@ async function githubReadJson(repoName, path, token) {
 }
 
 async function githubWriteJson(repoName, path, obj, token) {
-  const content = btoa(JSON.stringify(obj, null, 2));
+  const json = JSON.stringify(obj, null, 2);
+  const content = encodeBase64Utf8(json);
 
   await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "PUT",
@@ -1040,6 +1041,15 @@ async function githubWriteJson(repoName, path, obj, token) {
       content
     })
   });
+}
+
+function encodeBase64Utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 async function githubAppendChangeLog(repoName, change, token) {
