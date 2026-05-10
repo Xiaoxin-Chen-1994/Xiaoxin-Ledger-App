@@ -1087,7 +1087,7 @@ async function init() {
   const personal = await get("personal_settings");
   if (personal.language) {
     currentLang = personal.language;
-    setLanguage(currentLang, false, false);
+    setLanguage(currentLang);
   }
 
   if (isMobileBrowser()) {
@@ -1101,11 +1101,11 @@ async function init() {
   }
 
   if (personal.themeColor) {
-    applyThemeColor(personal.themeColor, false)
+    applyThemeColor(personal.themeColor)
   }
 
   if (personal.colorScheme) {
-    setColorScheme(personal.colorScheme, false, false);
+    setColorScheme(personal.colorScheme);
     document.getElementById("color-scheme-select").value = personal.colorScheme;
   }
 
@@ -4907,7 +4907,7 @@ function disablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-async function setLanguage(lang, showMessage = false, upload = true) {
+async function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -5028,29 +5028,6 @@ async function setLanguage(lang, showMessage = false, upload = true) {
   document.getElementById("nav-utilities").textContent = t.navUtilities;
   document.getElementById("nav-settings").textContent = t.settings;
 
-  if (upload) {
-    if (currentUser) {
-      try {
-        const userRef = doc(db, "users", currentUser.uid);
-
-        // Update nested field
-        await updateDoc(userRef, {
-          "profile.language": lang, 
-          "profile.lastSynced": getFormattedTime()
-        });
-
-        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-
-        if (showMessage) {
-          showStatusMessage(t.languageSwitched, "success");
-        }
-
-      } catch (err) {
-        console.error("Error saving language:", err);
-        showStatusMessage(t.languageSwitchFailed, "error");
-      }
-    }
-  }
 }
 window.setLanguage = setLanguage;
 
@@ -5151,7 +5128,7 @@ function resetThemeColor() {
 }
 window.resetThemeColor = resetThemeColor;
 
-async function applyThemeColor(color, upload = true) {
+async function applyThemeColor(color) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
@@ -5164,27 +5141,6 @@ async function applyThemeColor(color, upload = true) {
     metaThemeColor.name = "theme-color";
     metaThemeColor.content = color;
     document.head.appendChild(metaThemeColor);
-  }
-
-  if (upload) {
-    if (currentUser) {
-      try { // Save to Firestore
-        const userRef = doc(db, "users", currentUser.uid);
-
-        // Update nested field
-        await updateDoc(userRef, {
-          "profile.themeColor": color, 
-          "profile.lastSynced": getFormattedTime()
-        });
-
-        // Refresh local cache
-        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-
-      } catch (err) {
-        console.error("Error changing theme color:", err);
-        showStatusMessage(t.themeColorChangeFailed, "error");
-      }
-    }
   }
 }
 
@@ -5933,37 +5889,13 @@ function getTodayYYYYMMDD() {
 }
 
 // --- Color Scheme ---
-async function setColorScheme(scheme, showMessage = false, upload = true) {
+async function setColorScheme(scheme) {
   const t = translations[currentLang];
 
   if (scheme === "alt") {
     document.documentElement.classList.add("alt-scheme");
   } else {
     document.documentElement.classList.remove("alt-scheme");
-  }
-
-  if (upload) {
-    if (currentUser) {
-      try { // Save to Firestore
-        const userRef = doc(db, "users", currentUser.uid);
-
-        // Update nested field
-        await updateDoc(userRef, {
-          "profile.colorScheme": scheme, 
-          "profile.lastSynced": getFormattedTime()
-        });
-
-        // Refresh local cache
-        ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-        if (showMessage) {
-          showStatusMessage(t.colorSchemeSwitched, "success");
-        }
-
-      } catch (err) {
-        console.error("Error changing color scheme:", err);
-        showStatusMessage(t.colorSchemeSwitchFailed, "error");
-      }
-    }
   }
 }
 window.setColorScheme = setColorScheme;
