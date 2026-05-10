@@ -2022,13 +2022,13 @@ function setDefaultAccount(button, subWorkspace) {
   const accountTypeCol = accountSelector.querySelector(".primary-col");
   const accountCol = accountSelector.querySelector(".secondary-col");
 
+  const def = settings.defaults[inputType];    // defaults for expense/income/transfer/balance
+
   if (["expense", "income", "balance"].includes(inputType)) {
     const accountTypeList = accountTypes.map(type => t[type]);
 
     // If accountInfo is missing, initialize it using defaults
     if (!subWorkspace[inputType].accountInfo) {
-      const def = userDoc.defaults[inputType];
-
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
 
       // Extract account info
@@ -2059,7 +2059,7 @@ function setDefaultAccount(button, subWorkspace) {
     const allAccounts = [];
 
     accountTypes.forEach(typeKey => {
-      const accountsOfType = householdDocs[repoId].accounts[typeKey] || [];
+      const accountsOfType = settings.accounts[typeKey] || [];
 
       accountsOfType.forEach(acc => {
         const subs = acc["sub-accounts"] || [];
@@ -2100,6 +2100,11 @@ function setDefaultAccount(button, subWorkspace) {
 }
 
 function setDefaultSubject(button, subWorkspace) {
+  const inputType = subWorkspace.inputType;
+  const repoId = subWorkspace[inputType].repoId;
+
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+  
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -2107,10 +2112,12 @@ function setDefaultSubject(button, subWorkspace) {
         subWorkspace[type] = {};
       }
 
+      const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
+
       // Set default subject if missing
       if (!subWorkspace[type].subject) {
-        subWorkspace[type].subject = userDoc.defaults[type].subject;
-        subWorkspace[type].subjectIcon = userDoc.defaults[type].subjectIcon;
+        subWorkspace[type].subject = def.subject;
+        subWorkspace[type].subjectIcon = def.subjectIcon;
 
         subWorkspace[type].subjectInnerHTML = `
           <span class="cat-part">
@@ -2122,31 +2129,18 @@ function setDefaultSubject(button, subWorkspace) {
     }
   });
 
-  const inputType = subWorkspace.inputType;
-  const repoId = subWorkspace[inputType].repoId;
+  const def = settings.defaults[inputType]; 
 
   if (["expense", "income"].includes(inputType)) {
-    const subjects = householdDocs[repoId].subjects;
+    const subjects = settings.subjects;
 
     const currentSubject = subWorkspace[inputType].subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
     if (!subjectExists) {
-      const def = userDoc.defaults[inputType];
-      const sameHouseholdAsDefault = repoId === def.repoId;
-
-      if (sameHouseholdAsDefault) {
-        // Restore defaults
-        subWorkspace[inputType].subject = def.subject;
-        subWorkspace[inputType].subjectIcon = def.subjectIcon;
-
-      } else {
-        // Use first available subject
-        const first = subjects[0] || { name: "", icon: "" };
-
-        subWorkspace[inputType].subject = first.name;
-        subWorkspace[inputType].subjectIcon = first.icon;
-      }
+      // Restore defaults
+      subWorkspace[inputType].subject = def.subject;
+      subWorkspace[inputType].subjectIcon = def.subjectIcon;
 
       subWorkspace[inputType].subjectInnerHTML = `
         <span class="cat-part">
@@ -2168,6 +2162,12 @@ function setDefaultSubject(button, subWorkspace) {
 }
 
 function setDefaultCollection(button, subWorkspace) {
+  const inputType = subWorkspace.inputType;
+  const repoId = subWorkspace[inputType].repoId;
+
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+  
+  
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -2175,10 +2175,12 @@ function setDefaultCollection(button, subWorkspace) {
         subWorkspace[type] = {};
       }
 
+      const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
+
       // Set default collection if missing
       if (!subWorkspace[type].collection) {
-        subWorkspace[type].collection = userDoc.defaults[type].collection;
-        subWorkspace[type].collectionIcon = userDoc.defaults[type].collectionIcon;
+        subWorkspace[type].collection = def.collection;
+        subWorkspace[type].collectionIcon = def.collectionIcon;
 
         subWorkspace[type].collectionInnerHTML = `
           <span class="cat-part">
@@ -2190,31 +2192,18 @@ function setDefaultCollection(button, subWorkspace) {
     }
   });
 
-  const inputType = subWorkspace.inputType;
-  const repoId = subWorkspace[inputType].repoId;
+  const def = settings.defaults[inputType]; 
 
   if (["expense", "income"].includes(inputType)) {
-    const collections = householdDocs[repoId].collections;
+    const collections = settings.collections;
 
     const currentCollection = subWorkspace[inputType].collection;
     const collectionExists = collections.some(c => c.name === currentCollection);
 
     if (!collectionExists) {
-      const def = userDoc.defaults[inputType];
-      const sameHouseholdAsDefault = repoId === def.repoId;
-
-      if (sameHouseholdAsDefault) {
-        // Restore defaults
-        subWorkspace[inputType].collection = def.collection;
-        subWorkspace[inputType].collectionIcon = def.collectionIcon;
-
-      } else {
-        // Use first available collection
-        const first = collections[0] || { name: "", icon: "" };
-
-        subWorkspace[inputType].collection = first.name;
-        subWorkspace[inputType].collectionIcon = first.icon;
-      }
+      // Restore defaults
+      subWorkspace[inputType].collection = def.collection;
+      subWorkspace[inputType].collectionIcon = def.collectionIcon;
 
       subWorkspace[inputType].collectionInnerHTML = `
         <span class="cat-part">
