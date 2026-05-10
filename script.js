@@ -1894,7 +1894,8 @@ function setDefaultCategory(button, subWorkspace) {
 }
 
 function findSelectedAccount(repoId, accountType, accountName) {
-  const accountsRoot = householdDocs[repoId].accounts;
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+  const accountsRoot = settings.accounts;
 
   // -----------------------------------------------------
   // If accountType is null → search ALL account types
