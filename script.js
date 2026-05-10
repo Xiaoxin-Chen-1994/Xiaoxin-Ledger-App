@@ -509,11 +509,11 @@ async function listPrivateRepos() {
   document.getElementById("confirmRepoSelection").onclick = async () => {
     const personalSelect = document.getElementById("personalRepoSelect");
     const personalName = personalSelect.value;
-    const personalId = personalSelect.selectedOptions[0]?.dataset.id;
+    const personalId = Number(personalSelect.selectedOptions[0]?.dataset.id);
 
     const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
       .filter(cb => cb.checked)
-      .map(cb => ({ name: cb.value, id: cb.dataset.id }));
+      .map(cb => ({ name: cb.value, id: Number(cb.dataset.id) }));
 
     if (!personalName) {
       alert("Please select a personal settings repo.");
@@ -1064,6 +1064,7 @@ async function init() {
 
   // 2. Load repo selections
   selectedRepos = await get("selectedRepos");
+  selectedRepos = null;
 
   // 3. If user has not selected repos → show repo picker
   if (!selectedRepos || !selectedRepos.personalSettingsRepo || !selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
@@ -1802,7 +1803,7 @@ function setDefaultCategory(button, subWorkspace) {
       `;
     }
   });
-debugger
+
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
