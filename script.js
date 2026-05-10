@@ -1764,7 +1764,8 @@ function setDefaultLedger(button, subWorkspace) {
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
   const repoId = subWorkspace[inputType].repoId;
-
+console.log(subWorkspace[inputType])
+  console.log(settingsMap)
   const settings = settingsMap[repoId];   // ledger settings for this repo
   
   // Set default if workspace is empty, or loading values and look for icons
