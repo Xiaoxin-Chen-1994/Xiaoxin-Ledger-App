@@ -3377,7 +3377,11 @@ function showPage(name, title = latestTitle, options={}) {
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
 
-  target = document.getElementById(latestPage + "-page");
+  if (latestPage.includes("create")) { // when creating an entry
+    target = document.getElementById("transaction-page");
+  } else {
+    target = document.getElementById(latestPage + "-page");
+  }
   target.style.display = "block";
   target.zIndex = historyStack.length;
   console.log(target)
