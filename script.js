@@ -2236,10 +2236,10 @@ function vibrate(ms) {
 function switchTab(index) {
   let subWorkspace = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   const inputType = transactionTypes[index];
@@ -2393,10 +2393,10 @@ wrapper.addEventListener("touchend", e => {
   
   let subWorkspace;
   
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   const inputType = subWorkspace.inputType;
@@ -2465,10 +2465,10 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     
     let subWorkspace = null;
 
-    if (latestNavBtn === "nav-transaction") { // when creating an entry
+    if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+      subWorkspace = workspace.transaction;
     }
     const inputType = subWorkspace.inputType;
     const repoId = subWorkspace[inputType].repoId;
@@ -2494,10 +2494,10 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     
     let subWorkspace = null;
 
-    if (latestNavBtn === "nav-transaction") { // when creating an entry
+    if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+      subWorkspace = workspace.transaction;
     }
     
     if (!Array.isArray(subWorkspace.tags)) {
@@ -2569,10 +2569,10 @@ document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
 
     let subWorkspace = null;
 
-    if (latestNavBtn === "nav-transaction") { // when creating an entry
+    if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+      subWorkspace = workspace.transaction;
     }
 
     subWorkspace.inputNotes = this.value; // copy content into inputNotes
@@ -2640,7 +2640,7 @@ async function saveEntry() {
   if (latestNavBtn === "nav-transaction") { // when creating an entry
     nav = 'create';
   } else {
-    nav = latestNavBtn.replace("nav-", "");
+    nav = 'transaction';
   }
 
   subWorkspace = workspace[nav];
@@ -2816,12 +2816,7 @@ async function saveEntry() {
     delete entryData_original[nav];
 
     // 5. Reset UI 
-    if (nav === 'create') {
-      resetCreate();
-      showPage('home');
-    } else { // for other base pages
-      history.back();
-    }
+    history.back();
 
   } catch (err) {
     console.error("Error saving transaction:", err);
@@ -3427,10 +3422,10 @@ function showPage(name, title = latestTitle, options={}) {
   let dateTimeBtn = null;
 
   // transaction page special handling
-  if (latestPage.includes("transaction")) {     
+  if (latestPage.includes("transaction") || latestPage.includes("create")) {     
     let subWorkspace = null;
 
-    if (latestNavBtn === "nav-transaction") { // when creating an entry
+    if (latestPage.includes("create")) { // when creating an entry
       document.getElementById("app-title").textContent = t.navTransaction;
 
       document.getElementById("cancel-btn").style.display = "block";
@@ -3479,7 +3474,7 @@ function showPage(name, title = latestTitle, options={}) {
     } else { // when loading an existing entry
       document.getElementById("app-title").textContent = t.transaction;
 
-      subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+      subWorkspace = workspace.transaction;
 
       const activeForm = subWorkspace.inputType + "-form";
       dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
@@ -3564,10 +3559,10 @@ function goBack() {
 function loadEntryIntoWorkspace(e) {
   let nav = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     nav = 'create';
   } else {
-    nav = latestNavBtn.replace("nav-", "");
+    nav = 'transaction';
   }
 
   workspace[nav] = {};
@@ -6726,10 +6721,10 @@ function updateSelectorPreview(updatedCol) {
 
   let subWorkspace = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   const inputType = subWorkspace.inputType;
@@ -7004,10 +6999,10 @@ function initLedgerSelector() {
 function updateDayColumn() {
   let subWorkspace = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   subWorkspace.inputTransactionTimeRaw.yyyy = getSelectedValue(datetimeSelector, ".year-col");
@@ -7126,10 +7121,10 @@ function daysInMonth(year, month) {
 function clickToSetNow() {
   let subWorkspace = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   const inputType = subWorkspace.inputType;
@@ -7342,10 +7337,10 @@ function tryUpdateAmount(expr, amountButton) {
 
   let subWorkspace = null;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
+  if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+    subWorkspace = workspace.transaction;
   }
 
   const inputType = subWorkspace.inputType;
@@ -7610,10 +7605,10 @@ document.querySelectorAll(".selector-button[data-type='category']")
 
       let subWorkspace = null;
 
-      if (latestNavBtn === "nav-transaction") { // when creating an entry
+      if (latestPage.includes("create")) { // when creating an entry
         subWorkspace = workspace.create;
       } else {
-        subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+        subWorkspace = workspace.transaction;
       }
 
       const inputType = subWorkspace.inputType;
@@ -7645,10 +7640,10 @@ document.querySelectorAll(
 
       let subWorkspace = null;
 
-      if (latestNavBtn === "nav-transaction") { // when creating an entry
+      if (latestPage.includes("create")) { // when creating an entry
         subWorkspace = workspace.create;
       } else {
-        subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
+        subWorkspace = workspace.transaction;
       }
 
       const inputType = subWorkspace.inputType;
