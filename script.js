@@ -3332,7 +3332,6 @@ function showPage(name, title = latestTitle, options={}) {
   document.getElementById("manage-btn-headerbar").style.display = "none";
   document.getElementById("delete-btn-headerbar").style.display = "none";
 
-  let historyStack = null;
   let target = null;
   let latest = null;
 
