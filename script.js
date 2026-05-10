@@ -125,7 +125,7 @@ const translations = {
     login: "Login",
     forgotBtn: "Reset password",
     resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
-    back: "< Back",
+    back: "Back",
     search: "🔍Search",
     welcome: "Welcome, ",
     homeTitle: "Home",
@@ -284,7 +284,7 @@ const translations = {
     login: "登录",
     forgotBtn: "重置密码",
     resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
-    back: "< 返回",
+    back: "返回",
     search: "🔍搜索",
     welcome: "欢迎，",
     homeTitle: "首页",
@@ -3321,7 +3321,7 @@ function showPage(name, title = latestTitle, options={}) {
   //   }
   // });
   document.getElementById("return-btn").style.display = "none";
-  document.getElementById("cancel-btn").style.display = "none";
+  document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
@@ -3438,7 +3438,7 @@ function showPage(name, title = latestTitle, options={}) {
     if (latestPage.includes("create")) { // when creating an entry
       document.getElementById("app-title").textContent = t.navTransaction;
 
-      document.getElementById("cancel-btn").style.display = "block";
+      document.getElementById("return-btn").textContent = "< " + t.cancel;
 
       const inProgress = !!workspace.create;
       if (!inProgress) { // reset button texts when creating a new entry
@@ -4925,7 +4925,7 @@ async function setLanguage(lang) {
   document.getElementById("login-btn").textContent = t.login;
   document.getElementById("forgot-btn").textContent = t.forgotBtn;
   document.getElementById("reset-hint").textContent = t.resetHint;
-  document.getElementById("return-btn").textContent = t.back;
+  document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
 
