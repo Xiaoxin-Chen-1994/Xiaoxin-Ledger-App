@@ -3545,7 +3545,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   }
 
   if (latestPage === "settings") {
-    document.getElementById("settings-welcome").textContent = `${t.welcome}${userEmail}`;
+    document.getElementById("settings-welcome").textContent = `${t.welcome}${window.currentUserLogin}`;
   }
 }
 window.showPage = showPage;
