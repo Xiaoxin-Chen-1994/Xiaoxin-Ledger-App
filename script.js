@@ -3396,19 +3396,20 @@ function showPage(name, title = latestTitle, options={}) {
       enablePageSwipe(target);
     }
   }
-  
-  if (name === "home") {
-    // at home page
+
+  if (historyStack.length > 1) { // if not at base
+    document.getElementById("return-btn").style.display = "block";
+    document.querySelector(".bottom-nav").style.display = "none";
+
+  } else { // at home page
     document.getElementById("search-btn-headerbar").style.display = "block";
+    document.querySelector(".bottom-nav").style.display = "flex";
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({en: "This Month", zh: "本月"}[currentLang], 1, getDateRange('thisMonth'));
     updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
 
-  if (historyStack.length > 1) { // if not at base
-    document.getElementById("return-btn").style.display = "block";
-  };
   document.getElementById("app-title").textContent = latestTitle;
   // document.getElementById(navBtn).style.background = "var(--primary)";
   // document.getElementById(navBtn).classList.add("active");
