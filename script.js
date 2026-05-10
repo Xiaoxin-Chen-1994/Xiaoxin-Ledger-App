@@ -70,6 +70,7 @@
 //       lastModifiedBy: string     // userId
 
 let db = null;
+let selectedRepos = null;
 let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
@@ -530,12 +531,6 @@ async function listPrivateRepos() {
     };
 
     await set("selectedRepos", selectedRepos);
-
-    const token = await get("github_token");
-    window.ledgerDbs = await smartSync(selectedRepos, token);
-    console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
-
-    showPage("home", "nav-home", "Xiaoxin's Ledger App");
   };
 }
 
@@ -1066,27 +1061,55 @@ async function init() {
   window.currentUserLogin = user.login;
 
   // 2. Load repo selections
-  const selectedRepos = await get("selectedRepos");
+  selectedRepos = await get("selectedRepos");
 
   // 3. If user has not selected repos → show repo picker
-  if (!selectedRepos || !selectedRepos.personalSettingsRepo) {
+  if (!selectedRepos || !selectedRepos.personalSettingsRepo || !selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
     console.log("No personal settings repo selected → show repo picker");
-    listPrivateRepos();
-    return;
+    await listPrivateRepos();
   }
 
-  // 4. Ensure at least one ledger repo exists
-  if (!selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
-    console.log("No ledger repos selected → show repo picker");
-    listPrivateRepos();
-    return;
-  }
-
-  // 5. Load ALL ledger DBs
+  // 4. Load ALL ledger DBs
   window.ledgerDbs = await smartSync(selectedRepos, token); // smartSync returns a map: { repoId: SQL.Database }
   console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
 
-  // 6. Show home page
+  // Initialize household selector
+  initLedgerSelector();
+  toggleLedgerFormRows();
+
+  // UI updates
+  document.getElementById("login-section").style.display = "none";
+  document.querySelector(".bottom-nav").style.display = "flex";
+
+  // Apply profile settings
+  displayHomeImage();
+
+  const personal = await get("personal_settings");
+  if (personal.language) {
+    currentLang = personal.language;
+    setLanguage(currentLang, false, false);
+  }
+
+  if (isMobileBrowser()) {
+    if (personal.fontsizeMobile) {
+      document.documentElement.style.setProperty("--font-size", personal.fontsizeMobile);
+    }
+  } else {
+    if (personal.fontsizeDesktop) {
+      document.documentElement.style.setProperty("--font-size", personal.fontsizeDesktop);
+    }
+  }
+
+  if (personal.themeColor) {
+    applyThemeColor(personal.themeColor, false)
+  }
+
+  if (personal.colorScheme) {
+    setColorScheme(personal.colorScheme, false, false);
+    document.getElementById("color-scheme-select").value = personal.colorScheme;
+  }
+
+  // ✅ Load main app
   showPage("home", "nav-home", "Xiaoxin's Ledger App");
 }
 
@@ -1491,8 +1514,8 @@ async function onAuthStateChanged(auth, user) {
     ({ userDoc, householdDocs } = await syncData(user.uid));
 
     // Initialize household selector
-    initHouseholdSelector();
-    toggleHouseholdFormRows();
+    initLedgerSelector();
+    toggleLedgerFormRows();
 
     userEmail = userDoc.profile.email;
 
@@ -1535,10 +1558,10 @@ async function onAuthStateChanged(auth, user) {
   }
 };
 
-function toggleHouseholdFormRows() {
-  // Hide the form row if only one household
-  const householdCount = Object.keys(householdDocs).length;
-  if (householdCount === 1) {
+function toggleLedgerFormRows() {
+  // Hide the form row if only one ledger
+  const repoCount = selectedRepos.ledgerRepos.length;
+  if (repoCount === 1) {
     document.querySelectorAll('[id$="-household-form-row"]').forEach(row => {
       row.style.display = "none";
     });
@@ -1549,12 +1572,16 @@ function toggleHouseholdFormRows() {
   }
 }
 
-function displayHomeImage() {
-  if (Array.isArray(userDoc.profile.homeImages) && userDoc.profile.homeImages.length > 0) {
-      const img = document.getElementById("home-image");
+async function displayHomeImage() {
+  const personal = await get("personal_settings");
+  const images = personal.homeImages;
 
-      const randomIndex = Math.floor(Math.random() * userDoc.profile.homeImages.length);
-      const randomUrl = userDoc.profile.homeImages[randomIndex].trim();
+  const img = document.getElementById("home-image"); 
+
+  if (Array.isArray(images) && images.length > 0) {
+      
+      const randomIndex = Math.floor(Math.random() * images.length);
+      const randomUrl = images[randomIndex].trim();
 
       if (randomUrl !== "") {
         // Create a new Image object to preload
@@ -1575,7 +1602,6 @@ function displayHomeImage() {
         img.style.display = "none";
       }
     } else {
-      const img = document.getElementById("home-image");
       img.style.display = "none";
     }
 }
@@ -6309,7 +6335,7 @@ async function confirmLeaveHousehold(hid) {
     "profile.lastSynced": getFormattedTime()
   });
 
-  toggleHouseholdFormRows();
+  toggleLedgerFormRows();
 
   alert("已退出该家庭");
   ({ userDoc, householdDocs } = await syncData(currentUser.uid));
@@ -7036,16 +7062,15 @@ function removeDatePrefix(text) {
   createList(minuteCol, Array.from({ length: 60 }, (_, i) => i));
 })();
 
-function initHouseholdSelector() {
+function initLedgerSelector() {
   const col = document.querySelector("#household-selector .household-col");
 
   // Get names for display
-  const householdNames = userDoc.orderedHouseholds
-    .map(id => householdDocs[id])     // get the doc for each id
-    .filter(doc => doc)               // remove null/undefined
-    .map(doc => doc.name);            // extract the name
+  const repoNames = selectedRepos.ledgerRepos
+    .map(r => r.full_name)   // "user/repo"
+    .filter(Boolean);
 
-  createList(col, householdNames);
+  createList(col, repoNames);
 }
 
 function updateDayColumn() {
