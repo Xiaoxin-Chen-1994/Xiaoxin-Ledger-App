@@ -607,7 +607,8 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     const repoHasData = await githubFileExists(repoName, "entries", token);
     const localHasData = !!localDbBytes;
-
+repoHasData = false
+localHasData = false
     // ------------------------------------------------------------
     // 2. No data anywhere → create empty
     // ------------------------------------------------------------
