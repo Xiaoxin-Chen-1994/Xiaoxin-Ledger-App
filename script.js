@@ -839,7 +839,7 @@ async function smartSync(selectedRepos, token) {
       }
 
       const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-      let settingsMap = await get("ledger_settings") || {};
+      settingsMap = await get("ledger_settings") || {};
       settingsMap[repoId] = remoteSettings;
       await set("ledger_settings", settingsMap);
 
@@ -868,7 +868,7 @@ async function smartSync(selectedRepos, token) {
         await githubAppendChangeLog(repoName, logEntry, token);
       }
 
-      let settingsMap = await get("ledger_settings");
+      settingsMap = await get("ledger_settings");
       await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
       localLogMap[repoId] = [];
@@ -964,7 +964,7 @@ async function smartSync(selectedRepos, token) {
     lastSyncedMap[repoId] = Date.now();
 
     const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-    let settingsMap = await get("ledger_settings");
+    settingsMap = await get("ledger_settings");
     localSettings = settingsMap[repoId];
     settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
     await set("ledger_settings", settingsMap);
