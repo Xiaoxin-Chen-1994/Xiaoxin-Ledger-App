@@ -3393,7 +3393,7 @@ function showPage(name, title = latestTitle, options={}) {
   // If it's not already at translateX(0), move it there
   if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
     target.style.transform = "translateX(0%)";
-    if (!(basePages.includes(latestPage) && latestPage === latestNavBtn)) {
+    if (!(name === "home")) {
       enablePageSwipe(target);
     }
   }
