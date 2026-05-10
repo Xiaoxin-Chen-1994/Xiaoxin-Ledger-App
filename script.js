@@ -1138,7 +1138,7 @@ async function init() {
   }
 
   // ✅ Load main app
-  showPage("home", "nav-home", "Xiaoxin's Ledger App");
+  showPage("home", "Xiaoxin's Ledger App");
 }
 
 init();
@@ -1579,7 +1579,7 @@ async function onAuthStateChanged(auth, user) {
     }
 
     // ✅ Load main app
-    showPage("home", "nav-home", "Xiaoxin's Ledger App");
+    showPage("home", "Xiaoxin's Ledger App");
     
   } else {
     window.scrollTo(0, 0);
@@ -2818,7 +2818,7 @@ async function saveEntry() {
     // 5. Reset UI 
     if (nav === 'create') {
       resetCreate();
-      showPage('home', 'nav-home');
+      showPage('home');
     } else { // for other base pages
       history.back();
     }
@@ -3311,29 +3311,20 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
   }
 }
 
-// define base pages
-const basePages = ["home", "accounts", "transaction", "utilities", "settings"];
+// history stacks
+let historyStack = [["home", "nav-home", "Xiaoxin's Ledger App"]]
 
-// history stacks for each base page
-let historyStacks = {
-  home: [["home", "nav-home", "Xiaoxin's Ledger App"]],
-  accounts: [["accounts", "nav-accounts", translations[currentLang].navAccounts]],
-  transaction: [["transaction", "nav-transaction", translations[currentLang].navTransaction]],
-  utilities: [["utilities", "nav-utilities", translations[currentLang].navUtilities]],
-  settings: [["settings", "nav-settings", "Xiaoxin's Ledger App"]]
-};
-
-function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
+function showPage(name, title = latestTitle, options={}) {
   const t = translations[currentLang];
 
   // hide all pages
   document.getElementById("login-section").style.display = "none";
-  document.querySelectorAll('.base-page').forEach(p => {
-    if (p.id !== currentBase + "-page") {
-      p.style.display = "none";
-      p.classList.remove("active");
-    }
-  });
+  // document.querySelectorAll('.base-page').forEach(p => {
+  //   if (p.id !== currentBase + "-page") {
+  //     p.style.display = "none";
+  //     p.classList.remove("active");
+  //   }
+  // });
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("cancel-btn").style.display = "none";
   document.getElementById("save-btn-headerbar").style.display = "none";
@@ -3341,69 +3332,65 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
   document.getElementById("manage-btn-headerbar").style.display = "none";
   document.getElementById("delete-btn-headerbar").style.display = "none";
 
-  let stack = null;
+  let historyStack = null;
   let target = null;
   let latest = null;
 
-  // reset nav button colors
-  basePages.forEach(page => {
-    document.getElementById(`nav-${page}`).style.background = "";
-    document.getElementById(`nav-${page}`).classList.remove("active");
-  });
+  // // reset nav button colors
+  // basePages.forEach(page => {
+  //   document.getElementById(`nav-${page}`).style.background = "";
+  //   document.getElementById(`nav-${page}`).classList.remove("active");
+  // });
 
   vibrate(30); // milliseconds
 
-  let switchedBase = false;
+  // let switchedBase = false;
 
-  if (latestNavBtn !== navBtn) { // when switching base nav, look for the latest stack
-    switchedBase = true;
+  // if (latestNavBtn !== navBtn) { // when switching base nav, look for the latest historyStack
+  //   // switchedBase = true;
 
-    if (latestPage != null) {
-      stack = historyStacks[latestNavBtn.replace("nav-", "")];
+  //   if (latestPage != null) {
+  //     // if a page was shown, hide all pages at the old base page
+  //     historyStack.forEach(entry => {
+  //       const el = document.getElementById(entry[0] + "-page");
+  //       if (el) el.style.display = "none";
+  //     });
+  //   }
 
-      // if a page was shown, hide all pages at the old base page
-      stack.forEach(entry => {
-        const el = document.getElementById(entry[0] + "-page");
-        if (el) el.style.display = "none";
-      });
-    }
+  //   historyStack = historyStack[navBtn.replace("nav-", "")];
 
-    stack = historyStacks[navBtn.replace("nav-", "")];
+  //   // if a page was shown, hide all pages at the old base page
+  //   historyStack.forEach(entry => {
+  //     const el = document.getElementById(entry[0] + "-page");
+  //     if (el) el.style.display = "block";
+  //   });
+  // }
 
-    // if a page was shown, hide all pages at the old base page
-    stack.forEach(entry => {
-      const el = document.getElementById(entry[0] + "-page");
-      if (el) el.style.display = "block";
-    });
-  }
+  // currentBase = navBtn.replace("nav-", "");
 
-  currentBase = navBtn.replace("nav-", "");
+  // historyStack = historyStack[currentBase];
+  latest = historyStack[historyStack.length - 1]; // there should always be at least one historyStack for each base page
+  [latestPage, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
 
-  stack = historyStacks[currentBase];
-  latest = stack[stack.length - 1]; // there should always be at least one stack for each base page
-  [latestPage, latestNavBtn, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
-
-  if (name !== latestPage && name !== currentBase) {
-    // if the target page is not latest page, and is not base page, display this page
+  if (name !== latestPage) {
+    // if the target page is not latest page, display this page
     latestPage = name;
     latestTitle = title;
     latestOptions = options;
 
     // push a new history entry for this new page
-    history.pushState({ page: latestPage, base: currentBase }, "", location.href);
-    historyStacks[currentBase].push([latestPage, navBtn, latestTitle, options]); // add to the history stacks
-    stack = historyStacks[currentBase]; // update stack
+    history.pushState({ page: latestPage }, "", location.href);
+    historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
 
   target = document.getElementById(latestPage + "-page");
   target.style.display = "block";
-  target.zIndex = stack.length;
+  target.zIndex = historyStack.length;
   console.log(target)
 
   if (!target) return;
 
   const current = getComputedStyle(target).transform;
-  console.log(current)
   // If it's not already at translateX(0), move it there
   if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
     target.style.transform = "translateX(0%)";
@@ -3412,8 +3399,8 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     }
   }
   
-  if (name === "home" && navBtn === "nav-home" && stack.length < 3) {
-    // at home page (base page and the first page)
+  if (name === "home") {
+    // at home page
     document.getElementById("search-btn-headerbar").style.display = "block";
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
@@ -3421,12 +3408,12 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
     updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
 
-  if (stack.length > 1) { // if not at base
+  if (historyStack.length > 1) { // if not at base
     document.getElementById("return-btn").style.display = "block";
   };
   document.getElementById("app-title").textContent = latestTitle;
-  document.getElementById(navBtn).style.background = "var(--primary)";
-  document.getElementById(navBtn).classList.add("active");
+  // document.getElementById(navBtn).style.background = "var(--primary)";
+  // document.getElementById(navBtn).classList.add("active");
 
   // Get the nav element
   const nav = document.querySelector(".bottom-nav"); 
@@ -3553,26 +3540,25 @@ window.showPage = showPage;
 function resetCreate() {
   delete workspace.create;
   closeSelector();
-  showPage('transaction', 'nav-transaction');
+  showPage('transaction');
 }
 window.resetCreate = resetCreate;
 
 function goBack() {
   closeSelector();
   
-  const stack = historyStacks[currentBase];
-  if (stack.length > 1) {
+  if (historyStack.length > 1) {
     const target = document.getElementById(latestPage + "-page");
     target.style.transform = "translateX(110%)";
-    stack.pop(); // remove current page
+    historyStack.pop(); // remove current page
 
-    const [prevPage, prevNavBtn, prevTitle, prevOptions] = stack[stack.length - 1]; // get the previous entry
+    const [prevPage, prevTitle, prevOptions] = historyStack[historyStack.length - 1]; // get the previous entry
 
-    if (stack.length > 1) {
-      stack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
+    if (historyStack.length > 1) {
+      historyStack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
     }
 
-    showPage(prevPage, prevNavBtn, prevTitle, prevOptions);
+    showPage(prevPage, prevTitle, prevOptions);
   }
 }
 
@@ -3653,7 +3639,7 @@ function loadEntryIntoWorkspace(e) {
     };
   }
 
-  showPage("transaction", latestNavBtn, getEditTitle(e.type))
+  showPage("transaction", getEditTitle(e.type))
 }
 
 function getEditTitle(type) {
@@ -3716,7 +3702,7 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
 
   if (task === "manage-labels" || task === "order-labels") {
     loadLabels(activeHouseholdId, task, type, title);
-    showPage(task, 'nav-settings', title, { type, title });
+    showPage(task, title, { type, title });
   }
 
 }
@@ -5665,7 +5651,7 @@ function showFilteredEntries(entries, title, dateRangeStr) {
   const allEntriesMap = {};
   entries.forEach(e => allEntriesMap[e.entryId] = e);
   
-  showPage("filtered-entries", latestNavBtn, title, {allEntriesMap});
+  showPage("filtered-entries", title, {allEntriesMap});
 }
 
 function showFilteredEntriesToday(entries, date, dateRangeStr) {
@@ -5730,7 +5716,7 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
   const allEntriesMap = {};
   entries.forEach(e => allEntriesMap[e.id] = e);
 
-  showPage("filtered-entries", latestNavBtn, displayTitle, {allEntriesMap});
+  showPage("filtered-entries", displayTitle, {allEntriesMap});
 }
 
 function renderEntryGroup(day, entries) {
@@ -7266,9 +7252,9 @@ window.addEventListener('popstate', (e) => {
     return;
   }
 
-  const stack = historyStacks[currentBase];
+  const historyStack = historyStack[currentBase];
 
-  if (stack.length > 1) {
+  if (historyStack.length > 1) {
     goBack();
     return;
   }

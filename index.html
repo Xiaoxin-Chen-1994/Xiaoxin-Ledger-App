@@ -407,7 +407,7 @@
     </div>
 
     <div id="account-selector" class="selector">
-      <button id="selector-manage-account-btn" type="button" class="datetime-now" onclick="showPage('manage-labels', 'nav-settings', translations[currentLang].manageAccounts)">管理</button>
+      <button id="selector-manage-account-btn" type="button" class="datetime-now" onclick="showPage('manage-labels', translations[currentLang].manageAccounts)">管理</button>
       <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col primary-col">
@@ -470,7 +470,7 @@
         <section class="settings-section basic-settings">
           <p id="basic-settings-title">个人偏好</p>
           <button id="open-basic-settings" class="settings-button"
-            onclick="showPage('basic-settings', 'nav-settings')">打开个人偏好</button>
+            onclick="showPage('basic-settings')">打开个人偏好</button>
         </section>
 
         <section class="settings-section last-synced">
@@ -511,7 +511,7 @@
         <section class="settings-section bulk-data">
           <p id="bulk-data-title">批量操作</p>
           <button id="open-bulk-data" class="settings-button"
-            onclick="showPage('bulk-data', 'nav-settings')">进入批量操作</button>
+            onclick="showPage('bulk-data')">进入批量操作</button>
         </section>
 
         <!-- Household -->
@@ -552,11 +552,11 @@
               <button id="update-cached-code" class="update-code-button">更新程序</button>
             </div>
             <button id="open-help" class="help-button"
-              onclick="showPage('help', 'nav-settings', translations[currentLang].help)">使用帮助</button>
+              onclick="showPage('help', translations[currentLang].help)">使用帮助</button>
             <button id="open-acknowledgements" class="settings-button"
-              onclick="showPage('acknowledgements', 'nav-settings', translations[currentLang].acknowledgements)">致谢</button>
+              onclick="showPage('acknowledgements', translations[currentLang].acknowledgements)">致谢</button>
             <button id="open-privacy" class="privacy-button"
-              onclick="showPage('privacy', 'nav-settings', translations[currentLang].privacy)">隐私声明</button>
+              onclick="showPage('privacy', translations[currentLang].privacy)">隐私声明</button>
           </div>
         </section>
       </div>
@@ -698,11 +698,11 @@
 
   <!-- Bottom Navigation Bar -->
   <nav class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home', 'nav-home')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts', 'nav-accounts')">账户</button>
-    <button id="nav-transaction" onclick="showPage('transaction', 'nav-transaction')">记一笔</button>
-    <button id="nav-utilities" onclick="showPage('utilities', 'nav-utilities')">工具</button>
-    <button id="nav-settings" onclick="showPage('settings', 'nav-settings')">设置</button>
+    <button id="nav-home" onclick="showPage('home')">首页</button>
+    <button id="nav-accounts" onclick="showPage('accounts')">账户</button>
+    <button id="nav-transaction" onclick="showPage('transaction')">记一笔</button>
+    <button id="nav-utilities" onclick="showPage('utilities')">工具</button>
+    <button id="nav-settings" onclick="showPage('settings')">设置</button>
   </nav>
 
   <div id="statusMessage"></div>
