@@ -3418,15 +3418,15 @@ function showPage(name, title = latestTitle, options={}) {
 
   const rect = nav.getBoundingClientRect();
 
-  const navHeight = rect.height;
-  const navBottom = getComputedStyle(nav).bottom;
-  let  targetScroll = null;
-  if (latestPage.includes("create")) { // when creating an entry
-    targetScroll = document.querySelector("transaction-page .scroll");
-  } else {
-    targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
-  }
-  targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
+  // const navHeight = rect.height;
+  // const navBottom = getComputedStyle(nav).bottom;
+  // let  targetScroll = null;
+  // if (latestPage.includes("create")) { // when creating an entry
+  //   targetScroll = document.querySelector("transaction-page .scroll");
+  // } else {
+  //   targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
+  // }
+  // targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
   
   let dateTimeBtn = null;
 
