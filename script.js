@@ -3420,7 +3420,11 @@ function showPage(name, title = latestTitle, options={}) {
 
   const navHeight = rect.height;
   const navBottom = getComputedStyle(nav).bottom;
-  const targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
+  if (latestPage.includes("create")) { // when creating an entry
+    const targetScroll = document.querySelector("transaction-page .scroll");
+  } else {
+    const targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
+  }
   targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
   
   let dateTimeBtn = null;
