@@ -1763,9 +1763,6 @@ function setDefaultLedger(button, subWorkspace) {
 
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
-  console.log("CHECK BEFORE", inputType, subWorkspace[inputType]);
-debugger;
-
   const repoId = subWorkspace[inputType].repoId;
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
@@ -1805,7 +1802,7 @@ debugger;
       `;
     }
   });
-
+debugger
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
