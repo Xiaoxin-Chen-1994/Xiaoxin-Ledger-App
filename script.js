@@ -3551,8 +3551,13 @@ function goBack() {
   closeSelector();
   
   if (historyStack.length > 1) {
-    const target = document.getElementById(latestPage + "-page");
-    target.style.transform = "translateX(110%)";
+    if (latestPage.includes("create")) { // when creating an entry
+      const target = document.getElementById("transaction-page");
+      target.style.transform = "translateX(110%)";
+    } else {
+      const target = document.getElementById(latestPage + "-page");
+      target.style.transform = "translateX(110%)";
+    }
     historyStack.pop(); // remove current page
 
     const [prevPage, prevTitle, prevOptions] = historyStack[historyStack.length - 1]; // get the previous entry
