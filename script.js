@@ -1763,7 +1763,8 @@ function setDefaultLedger(button, subWorkspace) {
 
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
-  console.log("subWorkspace snapshot", JSON.parse(JSON.stringify(subWorkspace[inputType])));
+  console.log("CHECK BEFORE", inputType, subWorkspace[inputType]);
+debugger;
 
   const repoId = subWorkspace[inputType].repoId;
 
