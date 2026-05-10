@@ -3420,10 +3420,11 @@ function showPage(name, title = latestTitle, options={}) {
 
   const navHeight = rect.height;
   const navBottom = getComputedStyle(nav).bottom;
+  let  targetScroll = null;
   if (latestPage.includes("create")) { // when creating an entry
-    const targetScroll = document.querySelector("transaction-page .scroll");
+    targetScroll = document.querySelector("transaction-page .scroll");
   } else {
-    const targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
+    targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
   }
   targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
   
