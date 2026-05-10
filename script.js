@@ -838,6 +838,11 @@ async function smartSync(selectedRepos, token) {
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
       }
 
+      const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+      let settingsMap = await get("ledger_settings") || {};
+      settingsMap[repoId] = remoteSettings;
+      await set("ledger_settings", settingsMap);
+
       localDbMap[repoId] = db.export();
       localLogMap[repoId] = [];
       lastSyncedMap[repoId] = Date.now();
@@ -862,6 +867,9 @@ async function smartSync(selectedRepos, token) {
       for (const logEntry of localLog) {
         await githubAppendChangeLog(repoName, logEntry, token);
       }
+
+      let settingsMap = await get("ledger_settings");
+      await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
       localLogMap[repoId] = [];
       lastSyncedMap[repoId] = Date.now();
@@ -954,6 +962,14 @@ async function smartSync(selectedRepos, token) {
 
     // 5f. Update lastSynced
     lastSyncedMap[repoId] = Date.now();
+
+    const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+    let settingsMap = await get("ledger_settings");
+    localSettings = settingsMap[repoId];
+    settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
+    await set("ledger_settings", settingsMap);
+    await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
+    
   }
 
   // ------------------------------------------------------------
@@ -1764,8 +1780,7 @@ function setDefaultLedger(button, subWorkspace) {
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
   const repoId = subWorkspace[inputType].repoId;
-console.log(subWorkspace[inputType])
-  console.log(settingsMap)
+
   const settings = settingsMap[repoId];   // ledger settings for this repo
   
   // Set default if workspace is empty, or loading values and look for icons
