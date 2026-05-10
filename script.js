@@ -8,17 +8,17 @@
 //       language: string
 //       homeImages: string
 //       fontsize: string
-//   - households: [householdId]   // membership links
+//   - households: [repoId]   // membership links
 
 //   - defaults
 //       /expense
-//          householdId: string
+//          repoId: string
 //          categoryId: string
 //          collectionId: string
 //          accountId: string
 //          personId: string
 //       /income
-//          householdId: string
+//          repoId: string
 //          categoryId: string
 //          collectionId: string
 //          accountId: string
@@ -28,7 +28,7 @@
 //          toAccountId: string
 //          personId: string
 
-// households/{householdId} // accessible to all users in the current household
+// households/{repoId} // accessible to all users in the current household
 //   - name: string
 //   - members: [userId]           // array of user IDs
 
@@ -89,7 +89,7 @@ let workspace = {} // use this variable to store temporary transaction data befo
 //     inputNotes: notes,
 //     tags: array, 
 //     expense: {
-//        householdId, 
+//        repoId, 
 //        primaryCategory, 
 //        secondaryCategory, 
 //        primaryAccount, 
@@ -1302,7 +1302,7 @@ async function signup() {
 
     const defaults = {
       expense: {
-        householdId: myHouseholdId,
+        repoId: myHouseholdId,
         accountType: firstAccountType,
         account: firstAccount.name,
         accountIcon: firstAccount.icon,
@@ -1317,7 +1317,7 @@ async function signup() {
       },
 
       income: {
-        householdId: myHouseholdId,
+        repoId: myHouseholdId,
         accountType: firstAccountType,
         account: firstAccount.name,
         accountIcon: firstAccount.icon,
@@ -1332,7 +1332,7 @@ async function signup() {
       },
 
       transfer: {
-        householdId: myHouseholdId,
+        repoId: myHouseholdId,
         fromType: firstAccountType,
         fromAccount: firstAccount.name,
         fromAccountIcon: firstAccount.icon,
@@ -1342,7 +1342,7 @@ async function signup() {
       },
 
       balance: {
-        householdId: myHouseholdId,
+        repoId: myHouseholdId,
         accountType: firstAccountType,
         account: firstAccount.name,
         accountIcon: firstAccount.icon
@@ -1750,21 +1750,23 @@ function setDefaultLedger(button, subWorkspace) {
       subWorkspace[type] = {};
     }
     
-    if (!subWorkspace[type].householdId) {
-      subWorkspace[type].householdId = selectedRepos.ledgerRepos[0]?.id;
+    if (!subWorkspace[type].repoId) {
+      subWorkspace[type].repoId = selectedRepos.ledgerRepos[0]?.id;
     }
   });
 
-  let inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
+  let inputRepoId = subWorkspace[subWorkspace.inputType].repoId;
 
   button.textContent = selectedRepos.ledgerRepos[0]?.name;
-  button.dataset.value = inputHouseholdId;
+  button.dataset.value = inputRepoId;
 }
 
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
-  const householdId = subWorkspace[inputType].householdId;
+  const repoId = subWorkspace[inputType].repoId;
 
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+  
   // Set default if workspace is empty, or loading values and look for icons
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -1775,12 +1777,14 @@ function setDefaultCategory(button, subWorkspace) {
       }
 
       if (!subWorkspace[type].primaryCategory) {
-        subWorkspace[type].primaryCategory = userDoc.defaults[type].primary;
-        subWorkspace[type].primaryCategoryIcon = userDoc.defaults[type].primaryIcon;
-        subWorkspace[type].secondaryCategory = userDoc.defaults[type].secondary;
-        subWorkspace[type].secondaryCategoryIcon = userDoc.defaults[type].secondaryIcon;
+        const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
+
+        subWorkspace[type].primaryCategory = def.primary;
+        subWorkspace[type].primaryCategoryIcon = def.primaryIcon;
+        subWorkspace[type].secondaryCategory = def.secondary;
+        subWorkspace[type].secondaryCategoryIcon = def.secondaryIcon;
       } else {
-        const { primaryIcon, secondaryIcon } = getCategoryIcon(householdId, inputType, subWorkspace[type].primaryCategory, subWorkspace[type].secondaryCategory);
+        const { primaryIcon, secondaryIcon } = getCategoryIcon(repoId, inputType, subWorkspace[type].primaryCategory, subWorkspace[type].secondaryCategory);
         subWorkspace[type].primaryCategoryIcon = primaryIcon;
         subWorkspace[type].secondaryCategoryIcon = secondaryIcon;
       }
@@ -1799,11 +1803,10 @@ function setDefaultCategory(button, subWorkspace) {
     }
   });
 
-  
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
-    const cats = householdDocs[householdId][inputType + "-categories"]; 
+    const cats = settings[inputType + "-categories"]; 
 
     // Build primary list
     const primaryList = cats.map(cat => ({
@@ -1826,28 +1829,14 @@ function setDefaultCategory(button, subWorkspace) {
     const primaryExists = primaryList.some(p => p.name === currentPrimary);
 
     if (!primaryExists) {
-      const def = userDoc.defaults[inputType];
-      const sameHouseholdAsDefault = householdId === def.householdId;
+      const def = settings.defaults[inputType];
 
-      if (sameHouseholdAsDefault) {
-        // Restore defaults
-        subWorkspace[inputType].primaryCategory = def.primary;
-        subWorkspace[inputType].primaryCategoryIcon = def.primaryIcon;
+      // Restore defaults
+      subWorkspace[inputType].primaryCategory = def.primary;
+      subWorkspace[inputType].primaryCategoryIcon = def.primaryIcon;
 
-        subWorkspace[inputType].secondaryCategory = def.secondary;
-        subWorkspace[inputType].secondaryCategoryIcon = def.secondaryIcon;
-
-      } else {
-        // Use first available primary + its first secondary
-        const firstPrimary = primaryList[0].name;
-        const firstSecondaryObj = secondaryMap[firstPrimary]?.[0] || { name: "", icon: "" };
-
-        subWorkspace[inputType].primaryCategory = firstPrimary;
-        subWorkspace[inputType].primaryCategoryIcon = primaryList[0].icon;
-
-        subWorkspace[inputType].secondaryCategory = firstSecondaryObj.name;
-        subWorkspace[inputType].secondaryCategoryIcon = firstSecondaryObj.icon;
-      }
+      subWorkspace[inputType].secondaryCategory = def.secondary;
+      subWorkspace[inputType].secondaryCategoryIcon = def.secondaryIcon;
 
       // Update HTML
       subWorkspace[inputType].catInnerHTML = `
@@ -1878,15 +1867,15 @@ function setDefaultCategory(button, subWorkspace) {
   }
 }
 
-function findSelectedAccount(householdId, accountType, accountName) {
-  const accountsRoot = householdDocs[householdId].accounts;
+function findSelectedAccount(repoId, accountType, accountName) {
+  const accountsRoot = householdDocs[repoId].accounts;
 
   // -----------------------------------------------------
   // If accountType is null → search ALL account types
   // -----------------------------------------------------
   if (!accountType) {
     for (const typeKey of accountTypes) {
-      const result = findSelectedAccount(householdId, typeKey, accountName);
+      const result = findSelectedAccount(repoId, typeKey, accountName);
       if (result) return result;
     }
     return null; // not found anywhere
@@ -1937,7 +1926,7 @@ function setDefaultAccount(button, subWorkspace) {
     if (["expense", "income", "balance"].includes(type)) {
       // these types have one account
       if (!subWorkspace[type].accountInfo) {
-        subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].householdId, userDoc.defaults[type].accountType, userDoc.defaults[type].account)
+        subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].repoId, userDoc.defaults[type].accountType, userDoc.defaults[type].account)
         const accountType = subWorkspace[type].accountInfo.type;
         const accountName = subWorkspace[type].accountInfo.account.name;
         const accountIcon = subWorkspace[type].accountInfo.account.icon;
@@ -1957,7 +1946,7 @@ function setDefaultAccount(button, subWorkspace) {
 
       // FROM ACCOUNT
       if (!subWorkspace.transfer.fromAccountInfo) {
-        subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
+        subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, userDoc.defaults.transfer.fromType, userDoc.defaults.transfer.fromAccount);
         const from = subWorkspace.transfer.fromAccountInfo.account;
         const fromIcon = from.icon || "";
         const fromName = from.name;
@@ -1973,7 +1962,7 @@ function setDefaultAccount(button, subWorkspace) {
 
       // TO ACCOUNT
       if (!subWorkspace.transfer.toAccountInfo) {
-        subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.householdId, userDoc.defaults.transfer.toType, userDoc.defaults.transfer.toAccount);
+        subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, userDoc.defaults.transfer.toType, userDoc.defaults.transfer.toAccount);
         const to = subWorkspace.transfer.toAccountInfo.account;
         const toIcon = to.icon || "";
         const toName = to.name;
@@ -1996,7 +1985,7 @@ function setDefaultAccount(button, subWorkspace) {
   });
 
   const inputType = subWorkspace.inputType;
-  const householdId = subWorkspace[inputType].householdId;
+  const repoId = subWorkspace[inputType].repoId;
 
   // Prepare account column
   const accountTypeCol = accountSelector.querySelector(".primary-col");
@@ -2009,7 +1998,7 @@ function setDefaultAccount(button, subWorkspace) {
     if (!subWorkspace[inputType].accountInfo) {
       const def = userDoc.defaults[inputType];
 
-      subWorkspace[inputType].accountInfo = findSelectedAccount(householdId, def.accountType, def.account);
+      subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
 
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
@@ -2039,7 +2028,7 @@ function setDefaultAccount(button, subWorkspace) {
     const allAccounts = [];
 
     accountTypes.forEach(typeKey => {
-      const accountsOfType = householdDocs[householdId].accounts[typeKey] || [];
+      const accountsOfType = householdDocs[repoId].accounts[typeKey] || [];
 
       accountsOfType.forEach(acc => {
         const subs = acc["sub-accounts"] || [];
@@ -2103,17 +2092,17 @@ function setDefaultSubject(button, subWorkspace) {
   });
 
   const inputType = subWorkspace.inputType;
-  const householdId = subWorkspace[inputType].householdId;
+  const repoId = subWorkspace[inputType].repoId;
 
   if (["expense", "income"].includes(inputType)) {
-    const subjects = householdDocs[householdId].subjects;
+    const subjects = householdDocs[repoId].subjects;
 
     const currentSubject = subWorkspace[inputType].subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
     if (!subjectExists) {
       const def = userDoc.defaults[inputType];
-      const sameHouseholdAsDefault = householdId === def.householdId;
+      const sameHouseholdAsDefault = repoId === def.repoId;
 
       if (sameHouseholdAsDefault) {
         // Restore defaults
@@ -2171,17 +2160,17 @@ function setDefaultCollection(button, subWorkspace) {
   });
 
   const inputType = subWorkspace.inputType;
-  const householdId = subWorkspace[inputType].householdId;
+  const repoId = subWorkspace[inputType].repoId;
 
   if (["expense", "income"].includes(inputType)) {
-    const collections = householdDocs[householdId].collections;
+    const collections = householdDocs[repoId].collections;
 
     const currentCollection = subWorkspace[inputType].collection;
     const collectionExists = collections.some(c => c.name === currentCollection);
 
     if (!collectionExists) {
       const def = userDoc.defaults[inputType];
-      const sameHouseholdAsDefault = householdId === def.householdId;
+      const sameHouseholdAsDefault = repoId === def.repoId;
 
       if (sameHouseholdAsDefault) {
         // Restore defaults
@@ -2462,9 +2451,9 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
       subWorkspace = workspace[latestNavBtn.replace("nav-", "")];
     }
     const inputType = subWorkspace.inputType;
-    const householdId = subWorkspace[inputType].householdId;
+    const repoId = subWorkspace[inputType].repoId;
 
-    const tags = householdDocs[householdId].tags
+    const tags = householdDocs[repoId].tags
 
     tags.forEach(tag => {
       if (tag && tag.includes(text)) {
@@ -2640,12 +2629,12 @@ async function saveEntry() {
   
   const inputType = subWorkspace.inputType;
 
-  const householdId = subWorkspace[inputType].householdId; // regardless of household name
+  const repoId = subWorkspace[inputType].repoId; // regardless of household name
 
   // 🔑 Store transaction under selected household
   try {
     // 1. Reference the household document
-    const householdRef = doc(db, "households", householdId);
+    const householdRef = doc(db, "households", repoId);
 
     // 2. Generate a unique entry ID if entry date has changed    
 
@@ -2677,7 +2666,7 @@ async function saveEntry() {
         entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
-        householdId,
+        repoId,
         primaryCategory: subWorkspace[inputType].primaryCategory,
         secondaryCategory: subWorkspace[inputType].secondaryCategory,
         account: subWorkspace[inputType].accountInfo.account.name,
@@ -2700,7 +2689,7 @@ async function saveEntry() {
         amount: subWorkspace.amount ?? 0,
         toAmount: subWorkspace.toAmount ?? 0,
         sameCurrency: subWorkspace[inputType].sameCurrency,
-        householdId,
+        repoId,
         fromAccount: subWorkspace[inputType].fromAccountInfo.account.name,
         fromCurrency: subWorkspace[inputType].fromAccountInfo.account.currency,
         toAccount: subWorkspace[inputType].fromAccountInfo.account.name,
@@ -2719,7 +2708,7 @@ async function saveEntry() {
         entryId,
         type: inputType,
         amount: subWorkspace.amount ?? 0,
-        householdId,
+        repoId,
         account: subWorkspace[inputType].accountInfo.account.name,
         currency: subWorkspace[inputType].accountInfo.account.currency,
         transactionTime: subWorkspace.inputTransactionTime,
@@ -2734,27 +2723,27 @@ async function saveEntry() {
     }
 
     // 4. entries is now a subcollection under the household
-    const entryRef = doc(db, "households", householdId, "entries", entryId);
+    const entryRef = doc(db, "households", repoId, "entries", entryId);
     await setDoc(entryRef, entryData, { merge: true }); // create or update a doc by entryId
     
     const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
     const isThisYear_Original = determineTransactionIsThisYear(entryData_original.transactionTime);
 
     if (isThisYear) {
-      householdDocs[householdId].entriesThisYear ??= {};
-      householdDocs[householdId].entriesThisYear[entryId] = entryData; // add it to entriesThisYear
+      householdDocs[repoId].entriesThisYear ??= {};
+      householdDocs[repoId].entriesThisYear[entryId] = entryData; // add it to entriesThisYear
     }
     
     if (writeMode === 'overwriteWithNewDate') { // the old entry needs to be deleted
-      const entryRef_Original = doc(db, "households", householdId, "entries", entryId_original); 
+      const entryRef_Original = doc(db, "households", repoId, "entries", entryId_original); 
       await deleteDoc(entryRef_Original);
 
       if (isThisYear_Original) {
-        delete householdDocs[householdId].entriesThisYear[entryId_original];
+        delete householdDocs[repoId].entriesThisYear[entryId_original];
       }
     }
 
-    const parts = splitIntoParts(householdDocs[householdId].entriesThisYear);
+    const parts = splitIntoParts(householdDocs[repoId].entriesThisYear);
 
     const updatePayload = {
       lastSynced: getFormattedTime()
@@ -2780,7 +2769,7 @@ async function saveEntry() {
       const changes = diffEntries(entryData_original[nav], entryData);
 
       // Read the current log
-      const log = householdDocs[householdId].entryChangeLog || [];
+      const log = householdDocs[repoId].entryChangeLog || [];
 
       // Append the new change
       log.push(changes);
@@ -2885,9 +2874,9 @@ function convertUTC8ToLocal(dateStr) {
 }
 
 function triggerFilePicker(inputFieldId) {
-  const householdId = document.getElementById("household-select").value;
+  const repoId = document.getElementById("household-select").value;
 
-  if (!householdId) {
+  if (!repoId) {
     document.getElementById("household-select-feedback").textContent =
       currentLang === "en"
         ? "Please choose a household first."
@@ -2931,10 +2920,10 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     df[col] = df[col].apply(v => (v === null ? "" : v));
   });
 
-  const householdId = document.getElementById("household-select").value;
+  const repoId = document.getElementById("household-select").value;
   
   // entries is now a subcollection under households
-  const entriesRef = collection(db, "households", householdId, "entries"); 
+  const entriesRef = collection(db, "households", repoId, "entries"); 
 
   // Build a map: columnName → index
   const colIndex = {};
@@ -2986,14 +2975,14 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 
       const transactionType = type === "收入" ? "income" : "expense";
 
-      handleCategory(householdId, type, category, subcategory);
-      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      handleCategory(repoId, type, category, subcategory);
+      const resolvedAccount = handleAccount(repoId, accountName, currency);
 
       const entryData = {
         entryId,
         type: transactionType,
         amount,
-        householdId,
+        repoId,
         primaryCategory: category,
         secondaryCategory: subcategory,
         account: resolvedAccount.name,
@@ -3011,8 +3000,8 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 
       const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
       if (isThisYear) { 
-        householdDocs[householdId].entriesThisYear ??= {}; 
-        householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+        householdDocs[repoId].entriesThisYear ??= {}; 
+        householdDocs[repoId].entriesThisYear[entryId] = entryData; 
       }
       
       // Collect the promise — do NOT await here 
@@ -3023,7 +3012,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 
     // --- 2. 转出: store temporarily ---
     if (type === "转出") {
-      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      const resolvedAccount = handleAccount(repoId, accountName, currency);
       pendingTransfers[linkId] = {
         out: { row, resolvedAccount }
       };
@@ -3035,14 +3024,14 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       if (!pendingTransfers[linkId]) {
         pendingTransfers[linkId] = {};
       }
-      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      const resolvedAccount = handleAccount(repoId, accountName, currency);
       pendingTransfers[linkId].in = { row, resolvedAccount };
       return;
     }
 
     // --- 4. 余额变更 ---
     if (type === "余额变更") {
-      const resolvedAccount = handleAccount(householdId, accountName, currency);
+      const resolvedAccount = handleAccount(repoId, accountName, currency);
       pendingBalance[linkId] = { row, resolvedAccount };
       return;
     }
@@ -3063,7 +3052,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       amount: val(outRow, "金额"),
       toAmount: val(inRow, "金额"),
       sameCurrency: val(outRow, "账户币种") === val(inRow, "账户币种"),
-      householdId,
+      repoId,
       fromAccount: val(outRow, "账户"),
       fromCurrency: val(outRow, "账户币种"),
       toAccount: val(inRow, "账户"),
@@ -3080,8 +3069,8 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 
     const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
     if (isThisYear) { 
-      householdDocs[householdId].entriesThisYear ??= {}; 
-      householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+      householdDocs[repoId].entriesThisYear ??= {}; 
+      householdDocs[repoId].entriesThisYear[entryId] = entryData; 
     }
 
     // Collect the promise — do NOT await here 
@@ -3096,7 +3085,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       entryId,
       type: "balance",
       amount: val(row, "金额"),
-      householdId,
+      repoId,
       account: val(row, "账户"),
       currency: val(row, "账户币种"),
       transactionTime: convertUTC8ToLocal(val(row, "日期")),
@@ -3110,8 +3099,8 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 
     const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
     if (isThisYear) { 
-      householdDocs[householdId].entriesThisYear ??= {}; 
-      householdDocs[householdId].entriesThisYear[entryId] = entryData; 
+      householdDocs[repoId].entriesThisYear ??= {}; 
+      householdDocs[repoId].entriesThisYear[entryId] = entryData; 
     }
     // Collect the promise — do NOT await here 
     writePromises.push(addDoc(entriesRef, entryData));
@@ -3133,7 +3122,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   changes.summary = {added: addDocCount};
 
   // Read the current log
-  const log = householdDocs[householdId].entryChangeLog || [];
+  const log = householdDocs[repoId].entryChangeLog || [];
 
   // Append the new change
   log.push(changes);
@@ -3144,12 +3133,12 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     ? log.slice(log.length - MAX_LOG)   // keep last 1000
     : log;
 
-  const parts = splitIntoParts(householdDocs[householdId].entriesThisYear);
+  const parts = splitIntoParts(householdDocs[repoId].entriesThisYear);
 
   const updatePayload = {
-    "income-categories": householdDocs[householdId]["income-categories"],
-    "expense-categories": householdDocs[householdId]["expense-categories"],
-    accounts: householdDocs[householdId].accounts,
+    "income-categories": householdDocs[repoId]["income-categories"],
+    "expense-categories": householdDocs[repoId]["expense-categories"],
+    accounts: householdDocs[repoId].accounts,
     entryChangeLog: trimmed,
     lastSynced: getFormattedTime()
   };
@@ -3166,7 +3155,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
     updatePayload[key] = deleteField();
   }
 
-  const householdRef = doc(db, "households", householdId);
+  const householdRef = doc(db, "households", repoId);
 
   await updateDoc(householdRef, updatePayload);
 
@@ -3216,9 +3205,9 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
 }
 window.importFromSuiCSV = importFromSuiCSV;
 
-function handleCategory(householdId, type, primary, secondary) {
+function handleCategory(repoId, type, primary, secondary) {
   const key = type === "收入" ? "income-categories" : "expense-categories";
-  const list = householdDocs[householdId][key];
+  const list = householdDocs[repoId][key];
 
   let primaryObj = list.find(c => c.primary === primary);
 
@@ -3237,8 +3226,8 @@ function handleCategory(householdId, type, primary, secondary) {
   }
 }
 
-function handleAccount(householdId, name, currency) {
-  const result = findSelectedAccount(householdId, null, name);
+function handleAccount(repoId, name, currency) {
+  const result = findSelectedAccount(repoId, null, name);
 
   // Not found → create new top-level account
   if (!result) {
@@ -3250,7 +3239,7 @@ function handleAccount(householdId, name, currency) {
       notes: "",
       "sub-accounts": []
     };
-    householdDocs[householdId].accounts.cashAccounts[name] = newAcc;
+    householdDocs[repoId].accounts.cashAccounts[name] = newAcc;
     return newAcc;
   }
 
@@ -3271,7 +3260,7 @@ function handleAccount(householdId, name, currency) {
       "sub-accounts": []
     };
 
-    householdDocs[householdId].accounts[result.type][importedName] = newAcc;
+    householdDocs[repoId].accounts[result.type][importedName] = newAcc;
     return newAcc;
   }
 
@@ -3287,10 +3276,10 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
     zh: "选择要导入数据的家庭账本"
   }[currentLang]}</option>`;
 
-  userDoc.households.forEach(householdId => {
+  userDoc.households.forEach(repoId => {
     const option = document.createElement("option");
-    option.value = householdId;
-    option.textContent = householdDocs[householdId].name;
+    option.value = repoId;
+    option.textContent = householdDocs[repoId].name;
     select.appendChild(option);
   });
 
@@ -3585,7 +3574,7 @@ function loadEntryIntoWorkspace(e) {
   ws.notes = e.notes || "";
   ws.tags = e.tags || [];
   ws.inputTransactionTime = e.transactionTime;
-  ws.householdId = e.householdId;
+  ws.repoId = e.repoId;
 
   if (e.type === "income" || e.type === "expense") {
     ws.inputType = e.type;
@@ -3671,21 +3660,21 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
     const tabContainer = document.getElementById(task + "-household-tabs");
     tabContainer.innerHTML = ""; // clear old buttons
 
-    for (const householdId of userDoc.orderedHouseholds) {
+    for (const repoId of userDoc.orderedHouseholds) {
       const btn = document.createElement("button");
       btn.className = "tab-btn";
-      btn.dataset.id = householdId;
-      btn.textContent = householdDocs[householdId].name;
+      btn.dataset.id = repoId;
+      btn.textContent = householdDocs[repoId].name;
 
       // Mark the first button as active 
-      if (householdId === activeHouseholdId) { 
+      if (repoId === activeHouseholdId) { 
         btn.classList.add("active"); 
       }
 
       // Add click listener
       btn.addEventListener("click", () => {
         // 1. Update active household
-        activeHouseholdId = householdId;
+        activeHouseholdId = repoId;
 
         // 2. Update UI active state
         document.querySelectorAll("#"+task+"-household-tabs .tab-btn")
@@ -3820,7 +3809,7 @@ async function loadLabels(activeHouseholdId, task, type, title) {
   container.appendChild(block);
 }
 
-function createAddCategoryRow(name, icon, parentWrapper, block, householdId, task, type, title, isSecondary, hasSecondary, parentName = null) {
+function createAddCategoryRow(name, icon, parentWrapper, block, repoId, task, type, title, isSecondary, hasSecondary, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
   categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
@@ -3847,7 +3836,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, householdId, tas
     if (existingRow) existingRow.remove();
 
     // create a new empty input row
-    const inputRow = createCategoryInputRow(householdId, task, type, title, hasSecondary, {
+    const inputRow = createCategoryInputRow(repoId, task, type, title, hasSecondary, {
       label: "",
       icon: "",
       isSecondary,
@@ -5769,10 +5758,10 @@ function renderEntryGroup(day, entries) {
 }
 
 function renderEntryByType(e) {
-  const householdId = e.householdId;
+  const repoId = e.repoId;
   const multipleHouseholds = userDoc.households.length > 1;
   const householdName = multipleHouseholds
-    ? `<div class="fe-entry-household">${householdDocs[householdId].name}</div>`
+    ? `<div class="fe-entry-household">${householdDocs[repoId].name}</div>`
     : "";
 
   const time = e.transactionTime.split(" ")[1];
@@ -5783,7 +5772,7 @@ function renderEntryByType(e) {
 
   // --- Income / Expense ---
   if (e.type === "income" || e.type === "expense") {
-    const { primaryIcon, secondaryIcon } = getCategoryIcon(householdId, e.type, e.primaryCategory, e.secondaryCategory);
+    const { primaryIcon, secondaryIcon } = getCategoryIcon(repoId, e.type, e.primaryCategory, e.secondaryCategory);
 
     return `
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
@@ -5858,8 +5847,8 @@ function autoResizeTextarea(el) {
   el.style.height = el.scrollHeight + "px"; // fit content
 }
 
-function getCategoryIcon(householdId, type, primary, secondary) {
-  const dict = householdDocs[householdId]?.[`${type}-categories`];
+function getCategoryIcon(repoId, type, primary, secondary) {
+  const dict = householdDocs[repoId]?.[`${type}-categories`];
   if (!Array.isArray(dict)) {
     return { primaryIcon: "", secondaryIcon: "" };
   }
@@ -6793,14 +6782,14 @@ function updateSelectorPreview(updatedCol) {
 
     if (!hhEl) return;
 
-    const [inputHouseholdId, household] = Object.entries(householdDocs).find(
+    const [inputRepoId, household] = Object.entries(householdDocs).find(
       ([id, h]) => h.name.toLowerCase() === hhEl.textContent.toLowerCase()
     ) || [];
 
-    subWorkspace[subWorkspace.inputType].householdId = inputHouseholdId;
+    subWorkspace[subWorkspace.inputType].repoId = inputRepoId;
 
     lastButton.textContent = household.name;
-    lastButton.dataset.value = inputHouseholdId;
+    lastButton.dataset.value = inputRepoId;
 
     // update other buttons when household change
     let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
@@ -6836,7 +6825,7 @@ function updateSelectorPreview(updatedCol) {
 
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
   } else if (['account', 'fromAccount', 'toAccount'].includes(lastButton.dataset.type)) {
-    const inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
+    const inputRepoId = subWorkspace[subWorkspace.inputType].repoId;
     
     const accountTypeCol = accountSelector.querySelector(".primary-col");
     const accountCol = accountSelector.querySelector(".secondary-col");
@@ -6853,7 +6842,7 @@ function updateSelectorPreview(updatedCol) {
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      subWorkspace[inputType].accountInfo = findSelectedAccount(inputHouseholdId, subWorkspace[inputType].accountInfo.type, accountName);
+      subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
       
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
@@ -6878,8 +6867,8 @@ function updateSelectorPreview(updatedCol) {
       const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
       const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputHouseholdId, null, fromAccountName);
-      subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputHouseholdId, null, toAccountName);
+      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
+      subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputRepoId, null, toAccountName);
       
       const from = subWorkspace.transfer.fromAccountInfo.account;
       const fromIcon = from.icon || "";
@@ -7028,14 +7017,14 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
   const t = translations[currentLang];
 
   const inputType = subWorkspace.inputType;
-  const inputHouseholdId = subWorkspace[inputType].householdId;
+  const inputRepoId = subWorkspace[inputType].repoId;
   let cats = null;
   let primaryCat = null;
   let secondaries =null;
   let secondaryList = [];
 
   if (lastButton.dataset.type === "category") {
-    cats = householdDocs[inputHouseholdId][inputType + '-categories'];
+    cats = householdDocs[inputRepoId][inputType + '-categories'];
 
     const { icon: pIcon, name: pName } =
       getSelectedValue(categorySelector, ".primary-col", true);
@@ -7056,7 +7045,7 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
     }));
     
   } else if (lastButton.dataset.type === "account") {
-    cats = householdDocs[inputHouseholdId].accounts;
+    cats = householdDocs[inputRepoId].accounts;
 
     const inputAccountTypeString = getSelectedValue(accountSelector, ".primary-col", false);
     const reverseMap = Object.fromEntries( Object.entries(t).map(([key, value]) => [value, key]) );
@@ -7794,11 +7783,11 @@ updateBtn.addEventListener("click", () => {
 });
 
 document.getElementById("delete-entry-data-button").addEventListener("click", async () => {
-  const householdId = document.getElementById("household-select").value;
-  if (!householdId) return;
+  const repoId = document.getElementById("household-select").value;
+  if (!repoId) return;
 
-  const isOwner = currentUser.uid === householdId;
-  const ownerUid = householdDocs[householdId].admin;
+  const isOwner = currentUser.uid === repoId;
+  const ownerUid = householdDocs[repoId].admin;
 
   let ownerEmail = "";
   if (!isOwner) {
