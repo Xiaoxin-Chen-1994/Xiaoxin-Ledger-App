@@ -7255,8 +7255,6 @@ window.addEventListener('popstate', (e) => {
     return;
   }
 
-  const historyStack = historyStack[currentBase];
-
   if (historyStack.length > 1) {
     goBack();
     return;
