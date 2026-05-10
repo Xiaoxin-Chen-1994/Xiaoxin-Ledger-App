@@ -1763,6 +1763,7 @@ function setDefaultLedger(button, subWorkspace) {
 
 function setDefaultCategory(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
+  console.log('subWorkspace', subWorkspace)
   const repoId = subWorkspace[inputType].repoId;
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
