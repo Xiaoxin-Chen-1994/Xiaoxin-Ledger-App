@@ -605,10 +605,9 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
-    // const repoHasData = await githubFileExists(repoName, "entries", token);
-    // const localHasData = !!localDbBytes;
-const repoHasData = false
-const localHasData = false
+    const repoHasData = await githubFileExists(repoName, "entries", token);
+    const localHasData = !!localDbBytes;
+
     // ------------------------------------------------------------
     // 2. No data anywhere → create empty
     // ------------------------------------------------------------
@@ -7024,8 +7023,10 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
   let secondaries =null;
   let secondaryList = [];
 
+  const settings = settingsMap[inputRepoId];   // ledger settings for this repo
+
   if (lastButton.dataset.type === "category") {
-    cats = householdDocs[inputRepoId][inputType + '-categories'];
+    cats = settings[inputType + '-categories']; 
 
     const { icon: pIcon, name: pName } =
       getSelectedValue(categorySelector, ".primary-col", true);
@@ -7046,7 +7047,7 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
     }));
     
   } else if (lastButton.dataset.type === "account") {
-    cats = householdDocs[inputRepoId].accounts;
+    cats = settings.accounts;
 
     const inputAccountTypeString = getSelectedValue(accountSelector, ".primary-col", false);
     const reverseMap = Object.fromEntries( Object.entries(t).map(([key, value]) => [value, key]) );
