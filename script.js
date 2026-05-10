@@ -71,6 +71,7 @@
 
 let db = null;
 let selectedRepos = null;
+let settingsMap = null;
 let currentUser = null;
 let userEmail = null;
 let currentLang = 'zh';
@@ -564,7 +565,6 @@ async function smartSync(selectedRepos, token) {
       };
 
       personalSettings.updatedAt = Date.now();
-      await githubWriteJson(repoName, "personal.json", personalSettings, token);
       await set("personal_settings", personalSettings);
 
     } else if (!local && cloud) { // Case B — cloud exists, local missing → pull
@@ -807,6 +807,11 @@ async function smartSync(selectedRepos, token) {
         defaults
       };
 
+      // Save ledger settings locally
+      settingsMap = await get("ledger_settings") || {};
+      settingsMap[repoId] = ledgerSettings;
+      await set("ledger_settings", settingsMap);
+
       // Create DB + ledger table
       const db = new SQL.Database();
       db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
@@ -815,9 +820,6 @@ async function smartSync(selectedRepos, token) {
       localDbMap[repoId] = db.export();
       localLogMap[repoId] = [];
       lastSyncedMap[repoId] = Date.now();
-
-      // Upload ledger settings to cloud
-      await githubWriteJson(repoName, "ledger-settings.json", ledgerSettings, token);
 
       continue;
     }
@@ -1741,7 +1743,7 @@ function setCurrentTime(button, subWorkspace) {
   button.dataset.value = now.toISOString();
 }
 
-function setDefaultHouseholds(button, subWorkspace) {
+function setDefaultLedger(button, subWorkspace) {
   // Set default if workspace is empty
   transactionTypes.forEach(type => {
     if (!subWorkspace[type]) {
@@ -1749,13 +1751,13 @@ function setDefaultHouseholds(button, subWorkspace) {
     }
     
     if (!subWorkspace[type].householdId) {
-      subWorkspace[type].householdId = userDoc.defaults[type].householdId;
+      subWorkspace[type].householdId = selectedRepos.ledgerRepos[0]?.id;
     }
   });
 
   let inputHouseholdId = subWorkspace[subWorkspace.inputType].householdId;
 
-  button.textContent = householdDocs[inputHouseholdId].name;
+  button.textContent = selectedRepos.ledgerRepos[0]?.name;
   button.dataset.value = inputHouseholdId;
 }
 
@@ -2249,7 +2251,7 @@ function switchTab(index) {
 
   // household
   const householdEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='household']`);
-  setDefaultHouseholds(householdEl, subWorkspace);
+  setDefaultLedger(householdEl, subWorkspace);
   
   // category
   if (["expense", "income"].includes(inputType)) {
@@ -3457,7 +3459,7 @@ function showPage(name, navBtn = currentBase, title = latestTitle, options={}) {
         let collectionBtn = document.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
  
         setCurrentTime(dateTimeBtn, workspace.create);
-        setDefaultHouseholds(householdBtn, workspace.create);
+        setDefaultLedger(householdBtn, workspace.create);
         setDefaultCategory(categoryBtn, workspace.create);
         setDefaultAccount(accountBtn, workspace.create);
         setDefaultSubject(subjectBtn, workspace.create);
