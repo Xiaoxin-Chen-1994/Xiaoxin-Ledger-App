@@ -117,7 +117,7 @@ let currentBase = "home";
 let latestPage = null;
 let latestTitle = null;
 let latestOptions = null;
-let entryData_original = {};
+let loadedEntry_original = null;
 
 const translations = {
   en: {
@@ -2612,8 +2612,8 @@ async function saveEntry() {
         .padStart(6, "0");
     writeMode = "create";
   } else {
-    const original = entryData_original[latestOptions.transactionId];
-console.log('entryData_original', entryData_original)
+    const original = loadedEntry_original;
+
     if (original.transactionTime !== ws.inputTransactionTime) {
       entryId =
         ws.inputTransactionTime.replace(/[- :]/g, "") +
@@ -2735,7 +2735,7 @@ console.log('entryData_original', entryData_original)
     } else if (latestPage.includes("transaction")) {
       delete workspace.transactions[latestOptions.transactionId];
     }
-    delete entryData_original[latestOptions.transactionId];
+    delete loadedEntry_original;
 
     showStatusMessage(t.savedSuccess, "success");
 
@@ -3437,7 +3437,7 @@ function goBack() {
 function loadEntryIntoWorkspace(e) {
   let ws = {};
 
-  entryData_original[e.entryId] = e;
+  loadedEntry_original = e;
 
   ws.amount = Number(e.amount) || 0;
   ws.notes = e.notes || "";
