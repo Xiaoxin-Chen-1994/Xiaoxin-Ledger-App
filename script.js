@@ -1805,29 +1805,11 @@ function setDefaultCategory(button, subWorkspace) {
         const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
         subWorkspace[type].primaryCategory = def.primary;
-        subWorkspace[type].primaryCategoryIcon = def.primaryIcon;
         subWorkspace[type].secondaryCategory = def.secondary;
-        subWorkspace[type].secondaryCategoryIcon = def.secondaryIcon;
-      } else {
-        const { primaryIcon, secondaryIcon } = getCategoryIcon(repoId, inputType, subWorkspace[type].primaryCategory, subWorkspace[type].secondaryCategory);
-        subWorkspace[type].primaryCategoryIcon = primaryIcon;
-        subWorkspace[type].secondaryCategoryIcon = secondaryIcon;
       }
-      
-      subWorkspace[type].catInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[type].primaryCategoryIcon}</span>
-          <span class="cat-label">${subWorkspace[type].primaryCategory}</span>
-        </span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[type].secondaryCategoryIcon}</span>
-          <span class="cat-label">${subWorkspace[type].secondaryCategory}</span>
-        </span>
-      `;
     }
   });
-console.log('subWorkspace[inputType]',subWorkspace[inputType])
+
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
@@ -1858,26 +1840,25 @@ console.log('subWorkspace[inputType]',subWorkspace[inputType])
 
       // Restore defaults
       subWorkspace[inputType].primaryCategory = def.primary;
-      subWorkspace[inputType].primaryCategoryIcon = def.primaryIcon;
-
       subWorkspace[inputType].secondaryCategory = def.secondary;
-      subWorkspace[inputType].secondaryCategoryIcon = def.secondaryIcon;
-
-      // Update HTML
-      subWorkspace[inputType].catInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
-          <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
-        </span>
-        <span class="cat-separator">&gt;</span>
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
-          <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
-        </span>
-      `;
-
     }
 
+    const { primaryIcon, secondaryIcon } = getCategoryIcon(repoId, inputType, subWorkspace[inputType].primaryCategory, subWorkspace[inputType].secondaryCategory);
+    subWorkspace[inputType].primaryCategoryIcon = primaryIcon;
+    subWorkspace[inputType].secondaryCategoryIcon = secondaryIcon;
+
+    subWorkspace[inputType].catInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
+      </span>
+      <span class="cat-separator">&gt;</span>
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
+      </span>
+    `;
+console.log('subWorkspace[inputType]',subWorkspace[inputType])
     button.innerHTML = subWorkspace[inputType].catInnerHTML;
 
     // Prepare category columns
