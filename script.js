@@ -1998,22 +1998,19 @@ function setDefaultAccount(button, subWorkspace) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
     }
 
-    // If accountInnerHTML is missing
-    if (!subWorkspace[inputType].accountInnerHTML) {
-      // Extract account info
-      const info = subWorkspace[inputType].accountInfo;
-      const accountObj = info.account;
-      const accountName = accountObj.name;
-      const accountIcon = accountObj.icon || "";
-      const accountCurrency = accountObj.currency;
+    // Extract account info
+    const info = subWorkspace[inputType].accountInfo;
+    const accountObj = info.account;
+    const accountName = accountObj.name;
+    const accountIcon = accountObj.icon || "";
+    const accountCurrency = accountObj.currency;
 
-      subWorkspace[inputType].accountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${accountIcon}</span>
-          <span class="cat-label">${accountName} (${accountCurrency})</span>
-        </span>
-      `;
-    }
+    subWorkspace[inputType].accountInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${accountIcon}</span>
+        <span class="cat-label">${accountName} (${accountCurrency})</span>
+      </span>
+    `;
 
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
@@ -2057,35 +2054,29 @@ function setDefaultAccount(button, subWorkspace) {
       });
     });
 
-    // If accountInnerHTML is missing
-    if (!subWorkspace.transfer.fromAccountInnerHTML) {
-      const from = subWorkspace.transfer.fromAccountInfo.account;
-      const fromIcon = from.icon || "";
-      const fromName = from.name;
-      const fromCurrency = from.currency;
+    const from = subWorkspace.transfer.fromAccountInfo.account;
+    const fromIcon = from.icon || "";
+    const fromName = from.name;
+    const fromCurrency = from.currency;
 
-      subWorkspace.transfer.fromAccountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${fromIcon}</span>
-          <span class="cat-label">${fromName} (${fromCurrency})</span>
-        </span>
-      `;
-    }
+    subWorkspace.transfer.fromAccountInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${fromIcon}</span>
+        <span class="cat-label">${fromName} (${fromCurrency})</span>
+      </span>
+    `;
+    
+    const to = subWorkspace.transfer.toAccountInfo.account;
+    const toIcon = to.icon || "";
+    const toName = to.name;
+    const toCurrency = to.currency;
 
-    // If accountInnerHTML is missing
-    if (!subWorkspace.transfer.toAccountInnerHTML) {
-      const to = subWorkspace.transfer.toAccountInfo.account;
-      const toIcon = to.icon || "";
-      const toName = to.name;
-      const toCurrency = to.currency;
-
-      subWorkspace.transfer.toAccountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${toIcon}</span>
-          <span class="cat-label">${toName} (${toCurrency})</span>
-        </span>
-      `;
-    }
+    subWorkspace.transfer.toAccountInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${toIcon}</span>
+        <span class="cat-label">${toName} (${toCurrency})</span>
+      </span>
+    `;
 
     button[0].innerHTML = subWorkspace[inputType].fromAccountInnerHTML;
     button[1].innerHTML = subWorkspace[inputType].toAccountInnerHTML;
@@ -2101,7 +2092,7 @@ function setDefaultAccount(button, subWorkspace) {
 function setDefaultSubject(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
   const repoId = subWorkspace[inputType].repoId;
-console.log('subWorkspace[inputType]', subWorkspace[inputType])
+
   const settings = settingsMap[repoId];   // ledger settings for this repo
   
   // Initialize workspace for each type
@@ -2117,13 +2108,6 @@ console.log('subWorkspace[inputType]', subWorkspace[inputType])
       if (!subWorkspace[type].subject) {
         subWorkspace[type].subject = def.subject;
         subWorkspace[type].subjectIcon = def.subjectIcon;
-
-        subWorkspace[type].subjectInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${subWorkspace[type].subjectIcon}</span>
-            <span class="cat-label">${subWorkspace[type].subject}</span>
-          </span>
-        `;
       }
     }
   });
@@ -2132,7 +2116,7 @@ console.log('subWorkspace[inputType]', subWorkspace[inputType])
 
   if (["expense", "income"].includes(inputType)) {
     const subjects = settings.subjects;
-
+console.log('subWorkspace[inputType]', subWorkspace[inputType])
     const currentSubject = subWorkspace[inputType].subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
@@ -2337,8 +2321,8 @@ function switchTab(index) {
   // subject
   if (["expense", "income"].includes(inputType)) {
     const subjectEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
-    subjectEl.innerHTML = subWorkspace[inputType].subjectInnerHTML;
-
+    setDefaultSubject(subjectEl, subWorkspace);
+    
     // collection
     const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
     collectionEl.innerHTML = subWorkspace[inputType].collectionInnerHTML;
