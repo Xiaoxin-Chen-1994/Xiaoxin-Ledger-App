@@ -5269,10 +5269,10 @@ async function getFilteredEntries({
 function summarizeIncomeExpense(entries) {
   let income = 0;
   let expense = 0;
-
+  console.log('entries', entries)
+      
   if (Array.isArray(entries)) {
     for (const e of entries) {
-      console.log('entries', entries)
       console.log('e.type', e.type)
       if (e.type === "income") {
         income += Number(e.amount) || 0;
@@ -5430,7 +5430,7 @@ function updateKanbanRow(title, kanbanIndex, filters) {
   const t = translations[currentLang];
 
   // apply filters to all entries
-  let filteredEntries = getFilteredEntries(filters);
+  let filteredEntries = await getFilteredEntries(filters);
   console.log('filteredEntries', filteredEntries)
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
