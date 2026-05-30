@@ -2319,7 +2319,7 @@ function switchTab(index) {
     
     // collection
     const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
-    setDefaultSubject(collectionEl, subWorkspace);
+    setDefaultCollection(collectionEl, subWorkspace);
   }
 
   if (!Array.isArray(subWorkspace.tags)) {
