@@ -3427,7 +3427,7 @@ function showPage(name, title = latestTitle, options={}) {
         const entryId = block.dataset.entryId;    
         const entryType = block.dataset.entryType;
         const entry = options.allEntriesMap[entryId];
-        console.log(options)
+        console.log(entry)
         if (!entry) return;
 
         loadEntryIntoWorkspace(entry);
