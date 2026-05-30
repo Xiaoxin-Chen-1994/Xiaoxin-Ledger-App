@@ -2266,7 +2266,7 @@ function switchTab(index) {
     let categoryBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='category']`);
     setDefaultCategory(categoryBtn, subWorkspace);
   }
-console.log('subWorkspace', subWorkspace)
+
   // account and amount
   if (["expense", "income", "balance"].includes(inputType)) {
     let accountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='account']`);
@@ -3489,6 +3489,7 @@ function loadEntryIntoWorkspace(e) {
 
     ws[e.type].primaryCategory = e.primaryCategory;
     ws[e.type].secondaryCategory = e.secondaryCategory;
+    ws[e.type].catInnerHTML = e.catInnerHTML;
 
     ws[e.type].accountInfo = {
       account: {
@@ -3496,6 +3497,7 @@ function loadEntryIntoWorkspace(e) {
         currency: e.currency
       }
     };
+    ws[e.type].accountInnerHTML = e.accountInnerHTML;
 
     ws[e.type].subject = e.subject || "";
     ws[e.type].collection = e.collection || "";
@@ -3514,6 +3516,7 @@ function loadEntryIntoWorkspace(e) {
         currency: e.fromCurrency
       }
     };
+    ws.transfer.fromAccountInnerHTML = e.fromAccountInnerHTML;
 
     ws.transfer.toAccountInfo = {
       account: {
@@ -3521,6 +3524,7 @@ function loadEntryIntoWorkspace(e) {
         currency: e.toCurrency
       }
     };
+    ws.transfer.toAccountInnerHTML = e.toAccountInnerHTML;
 
     ws.fromAmount = Number(e.amount) || 0;
     ws.toAmount = Number(e.toAmount) || 0;
@@ -3537,6 +3541,7 @@ function loadEntryIntoWorkspace(e) {
         currency: e.currency
       }
     };
+    ws.balance.accountInnerHTML = e.accountInnerHTML;
   }
 
    // Save workspace buffer
