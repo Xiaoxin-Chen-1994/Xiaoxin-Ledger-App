@@ -5693,12 +5693,17 @@ function autoResizeTextarea(el) {
 }
 
 function getCategoryIcon(repoId, type, primary, secondary) {
-  const dict = householdDocs[repoId]?.[`${type}-categories`];
+  const settings = settingsMap[repoId];   // ledger settings for this repo
+  
+  if (!settings) {
+    return { primaryIcon: "", secondaryIcon: "" };
+  }
+
+  const dict = settings[`${type}-categories`];
   if (!Array.isArray(dict)) {
     return { primaryIcon: "", secondaryIcon: "" };
   }
 
-  // Find the primary category object in the array
   const primaryObj = dict.find(c => c.primary === primary);
   if (!primaryObj) {
     return { primaryIcon: "", secondaryIcon: "" };
@@ -5714,7 +5719,6 @@ function getCategoryIcon(repoId, type, primary, secondary) {
 
   return { primaryIcon, secondaryIcon };
 }
-
 
 function getTodayYYYYMMDD() {
   const d = new Date();
