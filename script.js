@@ -832,7 +832,7 @@ async function smartSync(selectedRepos, token) {
       const entryIds = await githubListFiles(repoName, "entries", token);
 
       for (const id of entryIds) {
-        const entry = await githubReadJson(repoName, `entries/${id}`, token);
+        const entry = await githubReadJson(repoName, `entries/${id}.json`, token);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
       }
 
@@ -859,7 +859,7 @@ async function smartSync(selectedRepos, token) {
 
       for (const row of rows) {
         const entry = JSON.parse(row[0]);
-        await githubWriteJson(repoName, `entries/${entry.entryId}`, entry, token);
+        await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
       }
 
       for (const logEntry of localLog) {
@@ -907,7 +907,7 @@ async function smartSync(selectedRepos, token) {
 
       // Only cloud changed
       if (cloudChange && !localChange) {
-        const cloudEntry = await githubReadJson(repoName, `entries/${id}`, token);
+        const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
         console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
         continue;
@@ -918,14 +918,14 @@ async function smartSync(selectedRepos, token) {
         const localEntry = localChange.newEntry;
         console.log('localEntry', localEntry)
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
-        await githubWriteJson(repoName, `entries/${id}`, localEntry, token);
+        await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
         await githubAppendChangeLog(repoName, localChange, token);
         continue;
       }
 
       // Both changed → conflict resolution
       if (cloudChange && localChange) {
-        const cloudEntry = await githubReadJson(repoName, `entries/${id}`, token);
+        const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
         const localOriginal = localChange.original;
         const localNew = localChange.new;
 
@@ -934,7 +934,7 @@ async function smartSync(selectedRepos, token) {
           console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
           console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
           console.log(`Newer local: ${JSON.stringify(localNew)}`);
-          await githubWriteJson(repoName,`entries/${id}`, localNew, token);
+          await githubWriteJson(repoName,`entries/${id}.json`, localNew, token);
           await githubAppendChangeLog(repoName, localChange, token);
         } else {
           console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
