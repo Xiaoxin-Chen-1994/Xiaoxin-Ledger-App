@@ -2394,7 +2394,7 @@ wrapper.addEventListener("touchend", e => {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   const inputType = subWorkspace.inputType;
@@ -2466,7 +2466,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace.transaction;
+      subWorkspace = workspace.transactions[latestOptions.transactionId];
     }
     const inputType = subWorkspace.inputType;
     const repoId = subWorkspace[inputType].repoId;
@@ -2495,7 +2495,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace.transaction;
+      subWorkspace = workspace.transactions[latestOptions.transactionId];
     }
     
     if (!Array.isArray(subWorkspace.tags)) {
@@ -2570,7 +2570,7 @@ document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
     if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
     } else {
-      subWorkspace = workspace.transaction;
+      subWorkspace = workspace.transactions[latestOptions.transactionId];
     }
 
     subWorkspace.inputNotes = this.value; // copy content into inputNotes
@@ -6678,7 +6678,7 @@ function updateSelectorPreview(updatedCol) {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   const inputType = subWorkspace.inputType;
@@ -6956,7 +6956,7 @@ function updateDayColumn() {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   subWorkspace.inputTransactionTimeRaw.yyyy = getSelectedValue(datetimeSelector, ".year-col");
@@ -7078,7 +7078,7 @@ function clickToSetNow() {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   const inputType = subWorkspace.inputType;
@@ -7292,7 +7292,7 @@ function tryUpdateAmount(expr, amountButton) {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   const inputType = subWorkspace.inputType;
@@ -7560,7 +7560,7 @@ document.querySelectorAll(".selector-button[data-type='category']")
       if (latestPage.includes("create")) { // when creating an entry
         subWorkspace = workspace.create;
       } else {
-        subWorkspace = workspace.transaction;
+        subWorkspace = workspace.transactions[latestOptions.transactionId];
       }
 
       const inputType = subWorkspace.inputType;
@@ -7595,7 +7595,7 @@ document.querySelectorAll(
       if (latestPage.includes("create")) { // when creating an entry
         subWorkspace = workspace.create;
       } else {
-        subWorkspace = workspace.transaction;
+        subWorkspace = workspace.transactions[latestOptions.transactionId];
       }
 
       const inputType = subWorkspace.inputType;
