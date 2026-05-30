@@ -1895,7 +1895,7 @@ function setDefaultCategory(button, subWorkspace) {
 function findSelectedAccount(repoId, accountType, accountName) {
   const settings = settingsMap[repoId];   // ledger settings for this repo
   const accountsRoot = settings.accounts;
-console.log('repoId, accountType, accountName', repoId, accountType, accountName)
+
   // -----------------------------------------------------
   // If accountType is null → search ALL account types
   // -----------------------------------------------------
@@ -1911,13 +1911,10 @@ console.log('repoId, accountType, accountName', repoId, accountType, accountName
   // Normal behavior: search within a specific accountType
   // -----------------------------------------------------
   const accountsByType = accountsRoot[accountType];
-  console.log('accountsByType', accountsByType)
-  console.log('!accountsByType', !accountsByType)
   if (!accountsByType) return null;
 
   // 1. Try to match a top-level account
   const top = accountsByType.find(acc => acc.name === accountName);
-  console.log('top', top)
   if (top) {
     return {
       type: accountType,
@@ -1930,7 +1927,7 @@ console.log('repoId, accountType, accountName', repoId, accountType, accountName
   for (const acc of accountsByType) {
     const subs = acc["sub-accounts"] || [];
     const sub = subs.find(sa => sa.name === accountName);
-console.log('sub', sub)
+
     if (sub) {
       return {
         type: accountType,
@@ -2032,7 +2029,7 @@ function setDefaultAccount(button, subWorkspace) {
     // If accountInfo is missing, initialize it using defaults
     if (!subWorkspace[inputType].accountInfo) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
-
+console.log('subWorkspace[inputType]', subWorkspace[inputType])
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
       const accountObj = info.account;
@@ -2047,7 +2044,7 @@ function setDefaultAccount(button, subWorkspace) {
         </span>
       `;
     }
-
+console.log('subWorkspace[inputType]', subWorkspace[inputType])
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
     createList(accountTypeCol, accountTypeList);
