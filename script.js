@@ -3478,7 +3478,6 @@ function loadEntryIntoWorkspace(e) {
     };
     ws.transfer.toAccountInnerHTML = e.toAccountInnerHTML;
 
-    ws.fromAmount = Number(e.amount) || 0;
     ws.toAmount = Number(e.toAmount) || 0;
   }
 
