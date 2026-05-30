@@ -2716,6 +2716,8 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
+    const LOCAL_DB_KEY = "ledger_dbs";
+    const LOCAL_LOG_KEY = "ledger_logs";
     let localDbMap = await get(LOCAL_DB_KEY) || {};
     let localLogMap = await get(LOCAL_LOG_KEY) || {};
 
