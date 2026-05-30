@@ -1937,7 +1937,7 @@ emoji-picker {
 /* Left column: icon */
 .fe-entry-icon {
   width: calc(var(--font-size) * 1.5); /* fixed width for alignment */
-  padding-right: calc(var(--font-size) * 0.8);
+  padding-right: calc(var(--font-size) * 0.6);
   display: flex;
   justify-content: center;
   align-items: flex-start;

@@ -2612,7 +2612,7 @@ async function saveEntry() {
         .padStart(6, "0");
     writeMode = "create";
   } else {
-    const original = entryData_original[nav];
+    const original = entryData_original[latestOptions.transactionId];
 
     if (original.transactionTime !== ws.inputTransactionTime) {
       entryId =
@@ -2730,8 +2730,12 @@ async function saveEntry() {
     // -----------------------------
     // Cleanup workspace
     // -----------------------------
-    delete workspace[nav];
-    delete entryData_original[nav];
+    if (latestPage.includes("create")) {
+      delete workspace.create;
+    } else if (latestPage.includes("transaction")) {
+      delete workspace.transactions[latestOptions.transactionId];
+    }
+    delete entryData_original[latestOptions.transactionId];
 
     showStatusMessage(t.savedSuccess, "success");
 
