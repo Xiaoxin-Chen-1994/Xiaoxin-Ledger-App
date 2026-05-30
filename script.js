@@ -3481,7 +3481,7 @@ function loadEntryIntoWorkspace(e) {
   ws.tags = e.tags || [];
   ws.inputTransactionTime = e.transactionTime;
   ws.repoId = e.repoId;
-
+console.log('e', e)
   if (e.type === "income" || e.type === "expense") {
     ws.inputType = e.type;
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
