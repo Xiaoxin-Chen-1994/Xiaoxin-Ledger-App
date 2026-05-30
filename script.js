@@ -5432,7 +5432,7 @@ function updateKanbanRow(title, kanbanIndex, filters) {
   console.log('filteredEntries', filteredEntries)
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
-
+  console.log('income, expense', income, expense)
   const dateRangeStr = filters.dateRangeStr;
 
   const displayTitle = (title === "presetToday")
