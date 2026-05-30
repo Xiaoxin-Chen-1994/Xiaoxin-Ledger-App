@@ -2628,6 +2628,7 @@ function splitIntoParts(entriesThisYear) {
 // --- Ledger add entry ---
 async function saveEntry() {
   let nav = latestNavBtn === "nav-transaction" ? "create" : "transaction";
+  console.log(workspace)
   let ws = workspace[nav];
 
   const inputType = ws.inputType;
