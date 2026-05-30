@@ -2297,6 +2297,23 @@ function switchTab(index) {
     fromLabel.textContent = subWorkspace.transfer.fromExchangeRate;
     toLabel.textContent   = subWorkspace.transfer.toExchangeRate;
 
+    let fromCurrency = subWorkspace.transfer.fromAccountInfo.account.currency;
+    let toCurrency = subWorkspace.transfer.toAccountInfo.account.currency;
+
+    if (fromCurrency === toCurrency) {
+      subWorkspace.transfer.sameCurrency = true;
+      
+      document.getElementById("simple-transfer-amount-row").style.display = "block";
+      document.getElementById("exchange-transfer-amount-row").style.display = "none";
+    } else {
+      subWorkspace.transfer.sameCurrency = false;
+
+      document.getElementById("transfer-from-currency").textContent = fromCurrency;
+      document.getElementById("transfer-to-currency").textContent = toCurrency;
+      
+      document.getElementById("simple-transfer-amount-row").style.display = "none";
+      document.getElementById("exchange-transfer-amount-row").style.display = "grid";
+    }
   }
   // datetime
   const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
