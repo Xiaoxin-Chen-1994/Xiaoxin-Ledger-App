@@ -2013,7 +2013,7 @@ function setDefaultAccount(button, subWorkspace) {
         <span class="cat-label">${accountName} (${accountCurrency})</span>
       </span>
     `;
-
+console.log('subWorkspace[inputType]',subWorkspace[inputType])
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
     createList(accountTypeCol, accountTypeList);
@@ -3523,7 +3523,6 @@ function loadEntryIntoWorkspace(e) {
 
    // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
-  console.log(workspace.transactions)
 
   showPage("transaction", getEditTitle(e.type), {'transactionId': e.entryId})
 }
