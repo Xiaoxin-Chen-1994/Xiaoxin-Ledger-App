@@ -1858,7 +1858,7 @@ function setDefaultCategory(button, subWorkspace) {
         <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
       </span>
     `;
-console.log('subWorkspace[inputType]',subWorkspace[inputType])
+
     button.innerHTML = subWorkspace[inputType].catInnerHTML;
 
     // Prepare category columns
