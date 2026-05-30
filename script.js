@@ -5205,6 +5205,7 @@ async function getFilteredEntries({
 } = {}) {
 
   const repoIds = Object.keys(window.ledgerDbs);
+  let allEntries = [];
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
   const to   = dateTo   ? dateTo   + " 23:59:59" : null;
@@ -5212,87 +5213,55 @@ async function getFilteredEntries({
   const fromIsThisYear = from && determineTransactionIsThisYear(from);
   const toIsThisYear   = to   && determineTransactionIsThisYear(to);
 
-  // ------------------------------------------------------------
-  // CASE A: Entire range is inside this year → LOCAL ONLY
-  // ------------------------------------------------------------
-  if (fromIsThisYear && toIsThisYear) {
-    const merged = getLocalThisYearEntries(repoIds);
-    return applyFilters(merged);
-  }
+  for (const rid of repoIds) {
+    const dbBytes = window.ledgerDbs[rid];
+    if (!dbBytes) continue;
 
-  // ------------------------------------------------------------
-  // CASE B: Entire range is BEFORE this year → FIRESTORE ONLY
-  // ------------------------------------------------------------
-  if (!fromIsThisYear && !toIsThisYear) {
-    return await queryFirestoreForRange({
-      dateFrom,
-      dateTo,
-      types,
-      collections,
-      accounts,
-      tags,
-      notesKeyword,
-      repoIds
-    });
-  }
+    const db = new SQL.Database(dbBytes);
 
-  // ------------------------------------------------------------
-  // CASE C: Mixed range → combine Firestore (past) + local (this year)
-  // ------------------------------------------------------------
-  const localMerged = getLocalThisYearEntries(repoIds);
+    // Ensure table exists
+    db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
 
-  const past = await queryFirestoreForRange({
-    dateFrom,
-    dateTo: `${new Date().getFullYear() - 1}-12-31`,
-    types,
-    collections,
-    accounts,
-    tags,
-    notesKeyword,
-    repoIds
-  });
+    const result = db.exec("SELECT json FROM ledger");
+    if (result.length === 0) continue;
 
-  return applyFilters([...past, ...localMerged]);
+    const rows = result[0].values;
 
-  // ------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------
-  function getLocalThisYearEntries(rids) {
-    const merged = {};
-    for (const rid of rids) {
-      const repoDb = window.ledgerDbs[rid];
-      if (!repoDb) continue;
-
-      const entries = repoDb.entriesThisYear || {};
-      Object.assign(merged, entries);
+    for (const [jsonStr] of rows) {
+      try {
+        const entry = JSON.parse(jsonStr);
+        allEntries.push(entry);
+      } catch (e) {
+        console.warn("Invalid JSON entry in DB", e);
+      }
     }
-    return Object.values(merged);
   }
 
-  function applyFilters(list) {
-    return list.filter(e => {
-      if (from && e.transactionTime < from) return false;
-      if (to && e.transactionTime > to) return false;
+  // ------------------------------------------------------------
+  // Apply filters
+  // ------------------------------------------------------------
+  return allEntries.filter(e => {
+    if (from && e.transactionTime < from) return false;
+    if (to && e.transactionTime > to) return false;
 
-      if (types && !types.includes(e.type)) return false;
+    if (types && !types.includes(e.type)) return false;
 
-      if (collections && e.collection && !collections.includes(e.collection)) return false;
+    if (collections && e.collection && !collections.includes(e.collection)) return false;
 
-      if (accounts) {
-        const acc = e.account || e.fromAccount || e.toAccount;
-        if (!accounts.includes(acc)) return false;
-      }
+    if (accounts) {
+      const acc = e.account || e.fromAccount || e.toAccount;
+      if (!accounts.includes(acc)) return false;
+    }
 
-      if (tags && !tags.every(t => e.tags?.includes(t))) return false;
+    if (tags && !tags.every(t => e.tags?.includes(t))) return false;
 
-      if (notesKeyword) {
-        const notes = e.notes || "";
-        if (!notes.toLowerCase().includes(notesKeyword.toLowerCase())) return false;
-      }
+    if (notesKeyword) {
+      const notes = e.notes || "";
+      if (!notes.toLowerCase().includes(notesKeyword.toLowerCase())) return false;
+    }
 
-      return true;
-    });
-  }
+    return true;
+  });
 }
 
 function summarizeIncomeExpense(entries) {
