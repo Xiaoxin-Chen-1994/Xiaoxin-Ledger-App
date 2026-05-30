@@ -5204,6 +5204,8 @@ async function getFilteredEntries({
   notesKeyword = null,
 } = {}) {
 
+  let localDbMap = await get(LOCAL_DB_KEY) || {};
+  
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
 
