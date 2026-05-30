@@ -2058,8 +2058,8 @@ function setDefaultAccount(button, subWorkspace) {
       });
     });
 
+    subWorkspace[inputType].fromAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].fromAccountInfo.type, subWorkspace[inputType].fromAccountInfo.account.name);
     const from = subWorkspace.transfer.fromAccountInfo.account;
-    console.log('fromAccountInfo', subWorkspace.transfer.fromAccountInfo)
     const fromIcon = from.icon || "";
     const fromName = from.name;
     const fromCurrency = from.currency;
@@ -2071,8 +2071,8 @@ function setDefaultAccount(button, subWorkspace) {
       </span>
     `;
     
+    subWorkspace[inputType].toAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].toAccountInfo.type, subWorkspace[inputType].toAccountInfo.account.name);
     const to = subWorkspace.transfer.toAccountInfo.account;
-    console.log('toAccountInfo', subWorkspace.transfer.toAccountInfo)
     const toIcon = to.icon || "";
     const toName = to.name;
     const toCurrency = to.currency;
