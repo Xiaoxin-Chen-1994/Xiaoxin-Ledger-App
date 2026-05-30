@@ -1827,7 +1827,7 @@ function setDefaultCategory(button, subWorkspace) {
       `;
     }
   });
-
+console.log('subWorkspace[inputType]',subWorkspace[inputType])
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
