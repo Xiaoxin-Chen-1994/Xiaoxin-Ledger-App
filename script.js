@@ -2631,7 +2631,7 @@ async function saveEntry() {
     createdTimestamp: getFormattedTime(),
     lastModifiedTimestamp: getFormattedTime()
   };
-console.log('ws: ', ws)
+
   let entryData;
 
   if (inputType === "expense" || inputType === "income") {
@@ -2661,7 +2661,7 @@ console.log('ws: ', ws)
       currency: ws[inputType].accountInfo.account.currency
     };
   }
-
+console.log('entrydata', entryData)
   try {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
