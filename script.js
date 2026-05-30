@@ -1960,17 +1960,6 @@ function setDefaultAccount(button, subWorkspace) {
       // these types have one account
       if (!subWorkspace[type].accountInfo) {
         subWorkspace[type].accountInfo = findSelectedAccount(subWorkspace[type].repoId, def.accountType, def.account)
-        const accountType = subWorkspace[type].accountInfo.type;
-        const accountName = subWorkspace[type].accountInfo.account.name;
-        const accountIcon = subWorkspace[type].accountInfo.account.icon;
-        const accountCurrency = subWorkspace[type].accountInfo.account.currency;
-        
-        subWorkspace[type].accountInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${accountIcon}</span>
-            <span class="cat-label">${accountName} (${accountCurrency})</span>
-          </span>
-        `;
       }
     }
 
@@ -1980,33 +1969,11 @@ function setDefaultAccount(button, subWorkspace) {
       // FROM ACCOUNT
       if (!subWorkspace.transfer.fromAccountInfo) {
         subWorkspace.transfer.fromAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, def.fromType, def.fromAccount);
-        const from = subWorkspace.transfer.fromAccountInfo.account;
-        const fromIcon = from.icon || "";
-        const fromName = from.name;
-        const fromCurrency = from.currency;
-
-        subWorkspace.transfer.fromAccountInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${fromIcon}</span>
-            <span class="cat-label">${fromName} (${fromCurrency})</span>
-          </span>
-        `;
       }
 
       // TO ACCOUNT
       if (!subWorkspace.transfer.toAccountInfo) {
         subWorkspace.transfer.toAccountInfo = findSelectedAccount(subWorkspace.transfer.repoId, def.toType, def.toAccount);
-        const to = subWorkspace.transfer.toAccountInfo.account;
-        const toIcon = to.icon || "";
-        const toName = to.name;
-        const toCurrency = to.currency;
-
-        subWorkspace.transfer.toAccountInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${toIcon}</span>
-            <span class="cat-label">${toName} (${toCurrency})</span>
-          </span>
-        `;
       }
 
       if (subWorkspace.transfer.fromAccountInfo.account.currency === subWorkspace.transfer.toAccountInfo.account.currency) {
@@ -2029,7 +1996,10 @@ function setDefaultAccount(button, subWorkspace) {
     // If accountInfo is missing, initialize it using defaults
     if (!subWorkspace[inputType].accountInfo) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
+    }
 
+    // If accountInnerHTML is missing
+    if (!subWorkspace[inputType].accountInnerHTML) {
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
       const accountObj = info.account;
@@ -2086,6 +2056,36 @@ function setDefaultAccount(button, subWorkspace) {
         }
       });
     });
+
+    // If accountInnerHTML is missing
+    if (!subWorkspace.transfer.fromAccountInnerHTML) {
+      const from = subWorkspace.transfer.fromAccountInfo.account;
+      const fromIcon = from.icon || "";
+      const fromName = from.name;
+      const fromCurrency = from.currency;
+
+      subWorkspace.transfer.fromAccountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${fromIcon}</span>
+          <span class="cat-label">${fromName} (${fromCurrency})</span>
+        </span>
+      `;
+    }
+
+    // If accountInnerHTML is missing
+    if (!subWorkspace.transfer.toAccountInnerHTML) {
+      const to = subWorkspace.transfer.toAccountInfo.account;
+      const toIcon = to.icon || "";
+      const toName = to.name;
+      const toCurrency = to.currency;
+
+      subWorkspace.transfer.toAccountInnerHTML = `
+        <span class="cat-part">
+          <span class="icon selected">${toIcon}</span>
+          <span class="cat-label">${toName} (${toCurrency})</span>
+        </span>
+      `;
+    }
 
     button[0].innerHTML = subWorkspace[inputType].fromAccountInnerHTML;
     button[1].innerHTML = subWorkspace[inputType].toAccountInnerHTML;
@@ -3497,7 +3497,6 @@ console.log('e', e)
         currency: e.currency
       }
     };
-    ws[e.type].accountInnerHTML = e.accountInnerHTML;
 
     ws[e.type].subject = e.subject || "";
     ws[e.type].collection = e.collection || "";
