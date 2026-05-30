@@ -2189,7 +2189,7 @@ function setDefaultCollection(button, subWorkspace) {
         <span class="cat-label">${subWorkspace[inputType].collection}</span>
       </span>
     `;
-console.log('subWorkspace[inputType]',subWorkspace[inputType])
+
     // Update button
     button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
 
@@ -2319,7 +2319,7 @@ function switchTab(index) {
     
     // collection
     const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
-    collectionEl.innerHTML = subWorkspace[inputType].collectionInnerHTML;
+    setDefaultSubject(collectionEl, subWorkspace);
   }
 
   if (!Array.isArray(subWorkspace.tags)) {
