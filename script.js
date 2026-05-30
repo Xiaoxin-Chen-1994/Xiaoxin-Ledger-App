@@ -1916,6 +1916,7 @@ console.log('repoId, accountType, accountName', repoId, accountType, accountName
 
   // 1. Try to match a top-level account
   const top = accountsByType.find(acc => acc.name === accountName);
+  console.log('top', top)
   if (top) {
     return {
       type: accountType,
@@ -1928,7 +1929,7 @@ console.log('repoId, accountType, accountName', repoId, accountType, accountName
   for (const acc of accountsByType) {
     const subs = acc["sub-accounts"] || [];
     const sub = subs.find(sa => sa.name === accountName);
-
+console.log('sub', sub)
     if (sub) {
       return {
         type: accountType,
