@@ -2714,6 +2714,9 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
+    let localDbMap = await get(LOCAL_DB_KEY) || {};
+    let localLogMap = await get(LOCAL_LOG_KEY) || {};
+
     const dbBytes = localDbMap[repoId];
     const db = new SQL.Database(dbBytes);
 
