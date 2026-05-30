@@ -1052,7 +1052,7 @@ function encodeBase64Utf8(str) {
 
 async function githubAppendChangeLog(repoName, change, token) {
   const ts = change.timestamp; // use timestamp as filename
-  const path = `/changelog/${ts}.json`;
+  const path = `changelog/${ts}.json`;
 
   const content = encodeBase64Utf8(JSON.stringify(change, null, 2));
 
