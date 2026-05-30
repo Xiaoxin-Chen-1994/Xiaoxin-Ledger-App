@@ -8239,3 +8239,4 @@ async function OpenGrocerySearch() {
 
   fetchCsvFromGitHub();
 }
+window.OpenGrocerySearch = OpenGrocerySearch;
