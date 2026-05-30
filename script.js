@@ -862,6 +862,7 @@ async function smartSync(selectedRepos, token) {
       }
 
       for (const logEntry of localLog) {
+        console.log('logEntry: ', logEntry)
         await githubAppendChangeLog(repoName, logEntry, token);
       }
 
