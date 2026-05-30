@@ -5470,11 +5470,11 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
     </div>
   `;
 
-  row.onclick = () => {
+  row.onclick = async () => {
     // Special case: presetToday loads all entries up to today 
     if (title === "presetToday") { 
       const dateTo = filters.dateTo; 
-      filteredEntries = getFilteredEntries({ dateTo }); 
+      filteredEntries = await getFilteredEntries({ dateTo }); 
       const dateRangeStr = filters.dateRangeStr;
       showFilteredEntriesToday(filteredEntries, dateTo, dateRangeStr)
 
@@ -5500,20 +5500,19 @@ function showFilteredEntries(entries, title, dateRangeStr) {
     return;
   }
 
-  // --- SORT newest first ---
+  // Sort newest first
   entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
-  // --- GROUP BY DATE ---
+  // Group by date
   const groups = {};
   for (const e of entries) {
-    const day = e.transactionTime.split(" ")[0]; // YYYY-MM-DD
+    const day = e.transactionTime.split(" ")[0];
     if (!groups[day]) groups[day] = [];
     groups[day].push(e);
   }
 
   const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
 
-  // --- RENDER ALL GROUPS (no batching) ---
   for (const day of groupKeys) {
     const dayEntries = groups[day];
     scroll.innerHTML += renderEntryGroup(day, dayEntries);
@@ -5523,10 +5522,12 @@ function showFilteredEntries(entries, title, dateRangeStr) {
       textareas.forEach(autoResizeTextarea);
     });
   }
+
+  // FIXED: use entryId
   const allEntriesMap = {};
   entries.forEach(e => allEntriesMap[e.entryId] = e);
-  
-  showPage("filtered-entries", title, {allEntriesMap});
+
+  showPage("filtered-entries", title, { allEntriesMap });
 }
 
 function showFilteredEntriesToday(entries, date, dateRangeStr) {
@@ -5549,17 +5550,17 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
   // Sort newest first
   entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
-  // --- GROUP BY DATE ---
+  // Group by date
   const groups = {};
   for (const e of entries) {
-    const day = e.transactionTime.split(" ")[0]; // YYYY-MM-DD
+    const day = e.transactionTime.split(" ")[0];
     if (!groups[day]) groups[day] = [];
     groups[day].push(e);
   }
 
   const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
 
-  const BATCH_SIZE = 1; // 1 date group per batch
+  const BATCH_SIZE = 1;
   let index = 0;
 
   function renderBatch() {
@@ -5588,10 +5589,11 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
     }
   };
 
+  // FIXED: use entryId
   const allEntriesMap = {};
-  entries.forEach(e => allEntriesMap[e.id] = e);
+  entries.forEach(e => allEntriesMap[e.entryId] = e);
 
-  showPage("filtered-entries", displayTitle, {allEntriesMap});
+  showPage("filtered-entries", displayTitle, { allEntriesMap });
 }
 
 function renderEntryGroup(day, entries) {
