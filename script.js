@@ -2626,6 +2626,8 @@ function splitIntoParts(entriesThisYear) {
 
 // --- Ledger add entry ---
 async function saveEntry() {
+  const t = translations[currentLang];
+
   let ws = null;
   if (latestPage.includes("create")) {
     ws = workspace.create;
