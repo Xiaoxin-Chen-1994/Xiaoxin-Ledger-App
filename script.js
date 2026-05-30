@@ -2013,7 +2013,7 @@ function setDefaultAccount(button, subWorkspace) {
         <span class="cat-label">${accountName} (${accountCurrency})</span>
       </span>
     `;
-console.log('subWorkspace[inputType]',subWorkspace[inputType])
+
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
     createList(accountTypeCol, accountTypeList);
@@ -2189,7 +2189,7 @@ function setDefaultCollection(button, subWorkspace) {
         <span class="cat-label">${subWorkspace[inputType].collection}</span>
       </span>
     `;
-
+console.log('subWorkspace[inputType]',subWorkspace[inputType])
     // Update button
     button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
 
