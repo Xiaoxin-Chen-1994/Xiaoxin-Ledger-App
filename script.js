@@ -2611,21 +2611,11 @@ async function saveEntry() {
         .toString()
         .padStart(6, "0");
     writeMode = "create";
+
   } else {
     const original = loadedEntry_original;
-
-    if (original.transactionTime !== ws.inputTransactionTime) {
-      entryId =
-        ws.inputTransactionTime.replace(/[- :]/g, "") +
-        Math.floor(Math.random() * 1_000_000)
-          .toString()
-          .padStart(6, "0");
-      entryId_original = original.entryId;
-      writeMode = "overwriteWithNewDate";
-    } else {
-      entryId = original.entryId;
-      writeMode = "overwriteSimple";
-    }
+    entryId = original.entryId;
+    writeMode = "overwrite";
   }
 
   // -----------------------------
