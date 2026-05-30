@@ -2101,7 +2101,7 @@ function setDefaultAccount(button, subWorkspace) {
 function setDefaultSubject(button, subWorkspace) {
   const inputType = subWorkspace.inputType;
   const repoId = subWorkspace[inputType].repoId;
-
+console.log('subWorkspace[inputType]', subWorkspace[inputType])
   const settings = settingsMap[repoId];   // ledger settings for this repo
   
   // Initialize workspace for each type
@@ -3481,7 +3481,7 @@ function loadEntryIntoWorkspace(e) {
   ws.tags = e.tags || [];
   ws.inputTransactionTime = e.transactionTime;
   ws.repoId = e.repoId;
-console.log('e', e)
+
   if (e.type === "income" || e.type === "expense") {
     ws.inputType = e.type;
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
