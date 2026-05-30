@@ -5642,10 +5642,6 @@ function renderEntryGroup(day, entries) {
 
 function renderEntryByType(e) {
   const repoId = e.repoId;
-  const multipleHouseholds = userDoc.households.length > 1;
-  const householdName = multipleHouseholds
-    ? `<div class="fe-entry-household">${householdDocs[repoId].name}</div>`
-    : "";
 
   const time = e.transactionTime.split(" ")[1];
   const account = e.account || e.fromAccount || e.toAccount || "";
@@ -5655,7 +5651,12 @@ function renderEntryByType(e) {
 
   // --- Income / Expense ---
   if (e.type === "income" || e.type === "expense") {
-    const { primaryIcon, secondaryIcon } = getCategoryIcon(repoId, e.type, e.primaryCategory, e.secondaryCategory);
+    const { primaryIcon, secondaryIcon } = getCategoryIcon(
+      repoId,
+      e.type,
+      e.primaryCategory,
+      e.secondaryCategory
+    );
 
     return `
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
@@ -5663,12 +5664,13 @@ function renderEntryByType(e) {
 
         <div class="fe-entry-main">
           <div class="fe-entry-title">${e.secondaryCategory}</div>
-          ${renderNotes(e.notes)}
+          ${renderNotes(notes)}
           <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
-          ${householdName}
         </div>
 
-        <div class="fe-entry-amount-right ${e.type}">${Number(e.amount).toFixed(2)}</div>
+        <div class="fe-entry-amount-right ${e.type}">
+          ${Number(e.amount).toFixed(2)}
+        </div>
       </div>
     `;
   }
@@ -5681,9 +5683,8 @@ function renderEntryByType(e) {
 
         <div class="fe-entry-main">
           <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
-          ${renderNotes(e.notes)}
+          ${renderNotes(notes)}
           <div class="fe-entry-meta">${time}</div>
-          ${householdName}
         </div>
 
         <div class="fe-entry-amount-right">
@@ -5701,9 +5702,8 @@ function renderEntryByType(e) {
 
         <div class="fe-entry-main">
           <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
-          ${renderNotes(e.notes)}
+          ${renderNotes(notes)}
           <div class="fe-entry-meta">${time}</div>
-          ${householdName}
         </div>
 
         <div class="fe-entry-amount-right">
