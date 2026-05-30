@@ -2631,7 +2631,7 @@ async function saveEntry() {
     createdTimestamp: getFormattedTime(),
     lastModifiedTimestamp: getFormattedTime()
   };
-
+console.log('ws: ', ws)
   let entryData;
 
   if (inputType === "expense" || inputType === "income") {
@@ -2674,7 +2674,7 @@ async function saveEntry() {
     const dbBytes = localDbMap[repoId];
     const db = new SQL.Database(dbBytes);
 
-    // If overwriting with new date → delete old row
+    // If overwriting → delete old row
     if (loadedEntry_original) {
       const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
       for (const [rowid, jsonStr] of rows) {
@@ -2686,7 +2686,7 @@ async function saveEntry() {
         }
       }
     }
-    console.log(db)
+
     // Insert new entry
     db.run("INSERT INTO ledger (json) VALUES (?)", [JSON.stringify(entryData)]);
 
