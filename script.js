@@ -2765,7 +2765,7 @@ async function saveEntry() {
     // -----------------------------
     await set(LOCAL_DB_KEY, localDbMap);
     await set(LOCAL_LOG_KEY, localLogMap);
-
+console.log(localDbMap)
     // -----------------------------
     // Cleanup workspace
     // -----------------------------
