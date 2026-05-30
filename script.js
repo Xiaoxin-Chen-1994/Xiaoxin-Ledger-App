@@ -916,6 +916,7 @@ async function smartSync(selectedRepos, token) {
       // Only local changed
       if (!cloudChange && localChange) {
         const localEntry = localChange.newEntry;
+        console.log('localEntry', localEntry)
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
         await githubWriteJson(repoName, `entries/${id}`, localEntry, token);
         await githubAppendChangeLog(repoName, localChange, token);
@@ -2661,7 +2662,7 @@ async function saveEntry() {
       currency: ws[inputType].accountInfo.account.currency
     };
   }
-console.log('entrydata', entryData)
+
   try {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
