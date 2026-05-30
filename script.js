@@ -897,7 +897,7 @@ async function smartSync(selectedRepos, token) {
     const changedIds = new Set();
     for (const c of cloudChanges) changedIds.add(c.id);
     for (const c of localLog) changedIds.add(c.id);
-console.log(changeIds)
+console.log(changedIds)
     // 5c. For each changed ID, merge
     for (const id of changedIds) {
       const cloudChange = cloudChanges.find(c => c.id === id) || null;
