@@ -3427,6 +3427,7 @@ function showPage(name, title = latestTitle, options={}) {
         const entryId = block.dataset.entryId;    
         const entryType = block.dataset.entryType;
         const entry = options.allEntriesMap[entryId];
+        console.log(options)
         if (!entry) return;
 
         loadEntryIntoWorkspace(entry);
@@ -5269,11 +5270,9 @@ async function getFilteredEntries({
 function summarizeIncomeExpense(entries) {
   let income = 0;
   let expense = 0;
-  console.log('entries', entries)
       
   if (Array.isArray(entries)) {
     for (const e of entries) {
-      console.log('e.type', e.type)
       if (e.type === "income") {
         income += Number(e.amount) || 0;
       }
@@ -5434,7 +5433,7 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   console.log('filteredEntries', filteredEntries)
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
-  console.log('income, expense', income, expense)
+
   const dateRangeStr = filters.dateRangeStr;
 
   const displayTitle = (title === "presetToday")
