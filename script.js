@@ -858,8 +858,7 @@ async function smartSync(selectedRepos, token) {
 
       for (const row of rows) {
         const entry = JSON.parse(row[0]);
-        console.log(entry)
-        await githubWriteJson(repoName, `entries/${entry.uuid}`, entry, token);
+        await githubWriteJson(repoName, `entries/${entry.entryId}`, entry, token);
       }
 
       for (const logEntry of localLog) {
