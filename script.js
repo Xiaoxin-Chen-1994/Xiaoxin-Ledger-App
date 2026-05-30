@@ -828,6 +828,7 @@ async function smartSync(selectedRepos, token) {
       console.log(`[${repoName}] Only repo has data → pulling all entries`);
 
       const db = new SQL.Database();
+      db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
       const entryIds = await githubListFiles(repoName, "entries", token);
 
       for (const id of entryIds) {
