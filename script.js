@@ -5204,17 +5204,17 @@ async function getFilteredEntries({
   notesKeyword = null,
 } = {}) {
 
-  const repoIds = Object.keys(window.ledgerDbs);
+  const repoIds = Object.keys(localDbMap);
   let allEntries = [];
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
   const to   = dateTo   ? dateTo   + " 23:59:59" : null;
 
-  const fromIsThisYear = from && determineTransactionIsThisYear(from);
-  const toIsThisYear   = to   && determineTransactionIsThisYear(to);
-
+  // ------------------------------------------------------------
+  // Load entries from each repo's local SQLite DB
+  // ------------------------------------------------------------
   for (const rid of repoIds) {
-    const dbBytes = window.ledgerDbs[rid];
+    const dbBytes = localDbMap[rid];
     if (!dbBytes) continue;
 
     const db = new SQL.Database(dbBytes);
