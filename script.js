@@ -78,6 +78,10 @@ let currentLang = 'zh';
 let userDoc = null; // this variable will contain all data under this userId in the Users collection
 let householdDocs = {}; // this variable will contain all data of each household to which this userId has access
 
+const LOCAL_DB_KEY = "ledger_dbs";
+const LOCAL_LOG_KEY = "ledger_logs";
+const LAST_SYNC_KEY = "ledger_lastSynced";
+
 let workspace = {} // use this variable to store temporary transaction data before being saved
 //workspace = {
 //   create: {
@@ -582,10 +586,6 @@ async function smartSync(selectedRepos, token) {
   }
 
   // Sync ledger data
-  const LOCAL_DB_KEY = "ledger_dbs";
-  const LOCAL_LOG_KEY = "ledger_logs";
-  const LAST_SYNC_KEY = "ledger_lastSynced";
-
   let localDbMap = await get(LOCAL_DB_KEY) || {};
   let localLogMap = await get(LOCAL_LOG_KEY) || {};
   let lastSyncedMap = await get(LAST_SYNC_KEY) || {};
@@ -5205,7 +5205,7 @@ async function getFilteredEntries({
 } = {}) {
 
   let localDbMap = await get(LOCAL_DB_KEY) || {};
-  
+
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
 
