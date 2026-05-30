@@ -3307,7 +3307,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 }
 
 // history stacks
-let historyStack = [["home", "nav-home", "Xiaoxin's Ledger App"]]
+let historyStack = [["home", translations[currentLang].homeTitle, "Xiaoxin's Ledger App"]]
 
 function showPage(name, title = latestTitle, options={}) {
   const t = translations[currentLang];
