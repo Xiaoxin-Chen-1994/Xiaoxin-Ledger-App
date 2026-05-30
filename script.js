@@ -111,7 +111,6 @@ const accountTypes = ["cashAccounts", "creditCards", "depositoryAccounts", "stor
 let selectedRepo = null;
 let currentBase = "home";
 let latestPage = null;
-let latestNavBtn = null;
 let latestTitle = null;
 let latestOptions = null;
 let entryData_original = {};
@@ -2627,9 +2626,12 @@ function splitIntoParts(entriesThisYear) {
 
 // --- Ledger add entry ---
 async function saveEntry() {
-  let nav = latestNavBtn === "nav-transaction" ? "create" : "transaction";
-  console.log(workspace)
-  let ws = workspace[nav];
+  let ws = null;
+  if (latestPage.includes("create")) {
+    ws = workspace.create;
+  } else if (latestPage.includes("transaction")) {
+    ws = workspace.transactions[latestOptions.transactionId];
+  }
 
   const inputType = ws.inputType;
   const repoId = ws[inputType].repoId;
