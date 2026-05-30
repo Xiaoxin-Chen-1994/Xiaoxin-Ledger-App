@@ -1033,14 +1033,35 @@ async function githubWriteJson(repoName, path, obj, token) {
   const json = JSON.stringify(obj, null, 2);
   const content = encodeBase64Utf8(json);
 
-  await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
+  const url = `https://api.github.com/repos/${repoName}/contents/${path}`;
+
+  // Step 1: check if file exists → get SHA
+  let sha = undefined;
+  const getRes = await fetch(url, {
+    headers: { Authorization: `token ${token}` }
+  });
+
+  if (getRes.ok) {
+    const existing = await getRes.json();
+    sha = existing.sha;
+  }
+
+  // Step 2: PUT with SHA (if exists)
+  const body = {
+    message: `update ${path}`,
+    content,
+    ...(sha ? { sha } : {})
+  };
+
+  const putRes = await fetch(url, {
     method: "PUT",
     headers: { Authorization: `token ${token}` },
-    body: JSON.stringify({
-      message: `update ${path}`,
-      content
-    })
+    body: JSON.stringify(body)
   });
+
+  if (!putRes.ok) {
+    console.error("GitHub PUT failed:", await putRes.text());
+  }
 }
 
 function encodeBase64Utf8(str) {
