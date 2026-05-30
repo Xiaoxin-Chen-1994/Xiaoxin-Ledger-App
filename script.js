@@ -7228,10 +7228,11 @@ function tryUpdateAmount(expr, amountButton) {
       if (inputType === 'transfer') {
         if (amountButton.id === 'transfer-to-amount') {
           subWorkspace.transfer.toAmount = result;  // numeric
-          console.log('toamount', toAmount)
+          console.log('toamount', result)
           subWorkspace.transfer.toCalculation = expr;          // raw expression
         } else {
           subWorkspace.amount = result;             // numeric
+          console.log('fromamount', result)
           subWorkspace.calculation = expr;                           // raw expression
         }
 
