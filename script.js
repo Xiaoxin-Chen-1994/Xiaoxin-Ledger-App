@@ -2735,7 +2735,7 @@ async function saveEntry() {
     } else if (latestPage.includes("transaction")) {
       delete workspace.transactions[latestOptions.transactionId];
     }
-    delete loadedEntry_original;
+    loadedEntry_original = null;
 
     showStatusMessage(t.savedSuccess, "success");
 
