@@ -2237,7 +2237,7 @@ function switchTab(index) {
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
-    subWorkspace = workspace.transaction;
+    subWorkspace = workspace.transactions[latestOptions.transactionId];
   }
 
   const inputType = transactionTypes[index];
@@ -3382,7 +3382,6 @@ function showPage(name, title = latestTitle, options={}) {
       document.getElementById("return-btn").textContent = "< " + t.cancel;
 
       const inProgress = !!workspace.create;
-      console.log(inProgress)
       if (!inProgress) { // reset button texts when creating a new entry
         workspace.create = {};
         
@@ -3424,7 +3423,7 @@ function showPage(name, title = latestTitle, options={}) {
       subWorkspace = workspace.create;
 
     } else { // when loading an existing entry
-      subWorkspace = workspace.transaction;
+      subWorkspace = workspace.transactions[options.transactionId];
 
       const activeForm = subWorkspace.inputType + "-form";
       dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
