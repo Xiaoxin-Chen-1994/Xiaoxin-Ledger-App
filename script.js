@@ -858,6 +858,7 @@ async function smartSync(selectedRepos, token) {
 
       for (const row of rows) {
         const entry = JSON.parse(row[0]);
+        console.log(entry)
         await githubWriteJson(repoName, `entries/${entry.uuid}`, entry, token);
       }
 
@@ -879,7 +880,6 @@ async function smartSync(selectedRepos, token) {
     console.log(`[${repoName}] Both sides have data → merging`);
 
     const db = new SQL.Database(localDbBytes);
-    console.log('db ', db)
     db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
 
     // 5a. Load cloud change logs since last sync
