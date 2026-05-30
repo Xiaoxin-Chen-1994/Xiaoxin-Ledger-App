@@ -897,7 +897,7 @@ async function smartSync(selectedRepos, token) {
     const changedIds = new Set();
     for (const c of cloudChanges) changedIds.add(c.id);
     for (const c of localLog) changedIds.add(c.id);
-
+console.log(changeIds)
     // 5c. For each changed ID, merge
     for (const id of changedIds) {
       const cloudChange = cloudChanges.find(c => c.id === id) || null;
@@ -2765,7 +2765,7 @@ async function saveEntry() {
     // -----------------------------
     await set(LOCAL_DB_KEY, localDbMap);
     await set(LOCAL_LOG_KEY, localLogMap);
-console.log(localDbMap)
+
     // -----------------------------
     // Cleanup workspace
     // -----------------------------
