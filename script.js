@@ -913,7 +913,7 @@ console.log(changedIds)
 
       // Only local changed
       if (!cloudChange && localChange) {
-        const localEntry = localChange.new;
+        const localEntry = localChange.newEntry;
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
         await githubWriteJson(repoName, `entries/${id}`, localEntry, token);
         continue;
