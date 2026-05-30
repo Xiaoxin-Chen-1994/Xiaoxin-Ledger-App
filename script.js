@@ -2750,7 +2750,7 @@ async function saveEntry() {
     localLogMap[repoId].push({
       mode: writeMode,
       newEntry: entryData,
-      oldEntryId: entryId_original || null,
+      oldEntryId: entryId_original || entryData.entryId,
       timestamp: Date.now()
     });
 
