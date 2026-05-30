@@ -1895,7 +1895,7 @@ function setDefaultCategory(button, subWorkspace) {
 function findSelectedAccount(repoId, accountType, accountName) {
   const settings = settingsMap[repoId];   // ledger settings for this repo
   const accountsRoot = settings.accounts;
-
+console.log(repoId, accountType, accountName)
   // -----------------------------------------------------
   // If accountType is null → search ALL account types
   // -----------------------------------------------------
@@ -3389,7 +3389,6 @@ function showPage(name, title = latestTitle, options={}) {
 
       const activeForm = subWorkspace.inputType + "-form";
       dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-      console.log("going to swtich tab")
       switchTab(subWorkspace.inputTypeIndex);
     }
 
