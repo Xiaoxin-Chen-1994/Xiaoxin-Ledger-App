@@ -1996,6 +1996,8 @@ function setDefaultAccount(button, subWorkspace) {
     // If accountInfo is missing, initialize it using defaults
     if (!subWorkspace[inputType].accountInfo) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
+    } else {
+      subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, subWorkspace[inputType].accountInfo.type, subWorkspace[inputType].accountInfo.account.name);
     }
 
     // Extract account info
@@ -2150,7 +2152,6 @@ function setDefaultCollection(button, subWorkspace) {
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
   
-  
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -2163,15 +2164,6 @@ function setDefaultCollection(button, subWorkspace) {
       // Set default collection if missing
       if (!subWorkspace[type].collection) {
         subWorkspace[type].collection = def.collection;
-        subWorkspace[type].collectionIcon = def.collectionIcon;
-
-        subWorkspace[type].collectionInnerHTML = `
-          <span class="cat-part">
-            <span class="icon selected">${subWorkspace[type].collectionIcon}</span>
-            <span class="cat-label">${subWorkspace[type].collection}</span>
-          </span>
-        `;
-      }
     }
   });
 
@@ -2179,22 +2171,23 @@ function setDefaultCollection(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const collections = settings.collections;
-
     const currentCollection = subWorkspace[inputType].collection;
     const collectionExists = collections.some(c => c.name === currentCollection);
 
     if (!collectionExists) {
       // Restore defaults
       subWorkspace[inputType].collection = def.collection;
-      subWorkspace[inputType].collectionIcon = def.collectionIcon;
-
-      subWorkspace[inputType].collectionInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
-          <span class="cat-label">${subWorkspace[inputType].collection}</span>
-        </span>
-      `;
     }
+
+    const collection = collections.find(acc => acc.name === subWorkspace[inputType].collection);
+    subWorkspace[inputType].collectionIcon = collection.icon
+    
+    subWorkspace[inputType].collectionInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].collection}</span>
+      </span>
+    `;
 
     // Update button
     button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
