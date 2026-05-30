@@ -2627,198 +2627,148 @@ function splitIntoParts(entriesThisYear) {
 
 // --- Ledger add entry ---
 async function saveEntry() {
-  if (!currentUser) return;
+  let nav = latestNavBtn === "nav-transaction" ? "create" : "transaction";
+  let ws = workspace[nav];
 
-  let subWorkspace = null;
-  let nav = true;
-  let entryId = null;
-  let entryId_original = null;
-  let writeMode = null;
+  const inputType = ws.inputType;
+  const repoId = ws[inputType].repoId;
 
-  if (latestNavBtn === "nav-transaction") { // when creating an entry
-    nav = 'create';
+  let entryId, entryId_original = null, writeMode;
+
+  // -----------------------------
+  // Generate entryId inline
+  // -----------------------------
+  if (nav === "create") {
+    entryId =
+      ws.inputTransactionTime.replace(/[- :]/g, "") +
+      Math.floor(Math.random() * 1_000_000)
+        .toString()
+        .padStart(6, "0");
+    writeMode = "create";
   } else {
-    nav = 'transaction';
+    const original = entryData_original[nav];
+
+    if (original.transactionTime !== ws.inputTransactionTime) {
+      entryId =
+        ws.inputTransactionTime.replace(/[- :]/g, "") +
+        Math.floor(Math.random() * 1_000_000)
+          .toString()
+          .padStart(6, "0");
+      entryId_original = original.entryId;
+      writeMode = "overwriteWithNewDate";
+    } else {
+      entryId = original.entryId;
+      writeMode = "overwriteSimple";
+    }
   }
 
-  subWorkspace = workspace[nav];
+  // -----------------------------
+  // Build entryData inline
+  // -----------------------------
+  const base = {
+    entryId,
+    type: inputType,
+    amount: ws.amount ?? 0,
+    repoId,
+    transactionTime: ws.inputTransactionTime,
+    tags: ws.tags ?? [],
+    notes: ws.notes ?? "",
+    createdTimestamp: getFormattedTime(),
+    lastModifiedTimestamp: getFormattedTime()
+  };
 
-  console.log(subWorkspace)
-  
-  const inputType = subWorkspace.inputType;
+  let entryData;
 
-  const repoId = subWorkspace[inputType].repoId; // regardless of household name
+  if (inputType === "expense" || inputType === "income") {
+    entryData = {
+      ...base,
+      primaryCategory: ws[inputType].primaryCategory,
+      secondaryCategory: ws[inputType].secondaryCategory,
+      account: ws[inputType].accountInfo.account.name,
+      currency: ws[inputType].accountInfo.account.currency,
+      subject: ws[inputType].subject,
+      collection: ws[inputType].collection
+    };
+  } else if (inputType === "transfer") {
+    entryData = {
+      ...base,
+      toAmount: ws.toAmount ?? 0,
+      sameCurrency: ws[inputType].sameCurrency,
+      fromAccount: ws[inputType].fromAccountInfo.account.name,
+      fromCurrency: ws[inputType].fromAccountInfo.account.currency,
+      toAccount: ws[inputType].toAccountInfo.account.name,
+      toCurrency: ws[inputType].toAccountInfo.account.currency
+    };
+  } else if (inputType === "balance") {
+    entryData = {
+      ...base,
+      account: ws[inputType].accountInfo.account.name,
+      currency: ws[inputType].accountInfo.account.currency
+    };
+  }
 
-  // 🔑 Store transaction under selected household
   try {
-    // 1. Reference the household document
-    const householdRef = doc(db, "households", repoId);
+    // -----------------------------
+    // Write entry to local SQLite DB (inline)
+    // -----------------------------
+    const dbBytes = localDbMap[repoId];
+    const db = new SQL.Database(dbBytes);
 
-    // 2. Generate a unique entry ID if entry date has changed    
-
-    if (nav === 'create') {
-      entryId = subWorkspace.inputTransactionTime.replace(/[- :]/g, "") +
-           Math.floor(Math.random() * 1_000_000)
-             .toString()
-             .padStart(6, "0");
-      writeMode = 'create'
-
-    } else if (entryData_original[nav].transactionTime !== subWorkspace.inputTransactionTime) {
-      entryId = subWorkspace.inputTransactionTime.replace(/[- :]/g, "") +
-           Math.floor(Math.random() * 1_000_000)
-             .toString()
-             .padStart(6, "0");
-      entryId_original = entryData_original[nav].entryId;
-      writeMode = 'overwriteWithNewDate'
-
-    } else {
-      entryId = entryData_original[nav].entryId;
-      writeMode = 'overwriteSimple'
-    }
-
-    let entryData;
-    
-    // 3. Build the entry object
-    if (["expense", "income"].includes(inputType)) {
-      entryData = {
-        entryId,
-        type: inputType,
-        amount: subWorkspace.amount ?? 0,
-        repoId,
-        primaryCategory: subWorkspace[inputType].primaryCategory,
-        secondaryCategory: subWorkspace[inputType].secondaryCategory,
-        account: subWorkspace[inputType].accountInfo.account.name,
-        currency: subWorkspace[inputType].accountInfo.account.currency,
-        transactionTime: subWorkspace.inputTransactionTime,
-        subject: subWorkspace[inputType].subject,
-        collection: subWorkspace[inputType].collection,
-        tags: subWorkspace.tags ?? [],
-        notes: subWorkspace.notes ?? "",
-
-        createdBy: currentUser.uid,
-        createdTimestamp: getFormattedTime(),
-        lastModifiedBy: currentUser.uid,
-        lastModifiedTimestamp: getFormattedTime(),
-      };
-    } else if (["transfer"].includes(inputType)) {
-      entryData = {
-        entryId,
-        type: inputType,
-        amount: subWorkspace.amount ?? 0,
-        toAmount: subWorkspace.toAmount ?? 0,
-        sameCurrency: subWorkspace[inputType].sameCurrency,
-        repoId,
-        fromAccount: subWorkspace[inputType].fromAccountInfo.account.name,
-        fromCurrency: subWorkspace[inputType].fromAccountInfo.account.currency,
-        toAccount: subWorkspace[inputType].fromAccountInfo.account.name,
-        toCurrency: subWorkspace[inputType].toAccountInfo.account.currency,
-        transactionTime: subWorkspace.inputTransactionTime,
-        tags: subWorkspace.tags ?? [],
-        notes: subWorkspace.notes ?? "",
-
-        createdBy: currentUser.uid,
-        createdTimestamp: getFormattedTime(),
-        lastModifiedBy: currentUser.uid,
-        lastModifiedTimestamp: getFormattedTime(),
-      };
-    } else if (["balance"].includes(inputType)) {
-      entryData = {
-        entryId,
-        type: inputType,
-        amount: subWorkspace.amount ?? 0,
-        repoId,
-        account: subWorkspace[inputType].accountInfo.account.name,
-        currency: subWorkspace[inputType].accountInfo.account.currency,
-        transactionTime: subWorkspace.inputTransactionTime,
-        tags: subWorkspace.tags ?? [],
-        notes: subWorkspace.notes ?? "",
-
-        createdBy: currentUser.uid,
-        createdTimestamp: getFormattedTime(),
-        lastModifiedBy: currentUser.uid,
-        lastModifiedTimestamp: getFormattedTime(),
-      };
-    }
-
-    // 4. entries is now a subcollection under the household
-    const entryRef = doc(db, "households", repoId, "entries", entryId);
-    await setDoc(entryRef, entryData, { merge: true }); // create or update a doc by entryId
-    
-    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
-    const isThisYear_Original = determineTransactionIsThisYear(entryData_original.transactionTime);
-
-    if (isThisYear) {
-      householdDocs[repoId].entriesThisYear ??= {};
-      householdDocs[repoId].entriesThisYear[entryId] = entryData; // add it to entriesThisYear
-    }
-    
-    if (writeMode === 'overwriteWithNewDate') { // the old entry needs to be deleted
-      const entryRef_Original = doc(db, "households", repoId, "entries", entryId_original); 
-      await deleteDoc(entryRef_Original);
-
-      if (isThisYear_Original) {
-        delete householdDocs[repoId].entriesThisYear[entryId_original];
+    // If overwriting with new date → delete old row
+    if (entryId_original) {
+      const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
+      for (const [rowid, jsonStr] of rows) {
+        const obj = JSON.parse(jsonStr);
+        if (obj.entryId === entryId_original) {
+          db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
+          break;
+        }
       }
     }
 
-    const parts = splitIntoParts(householdDocs[repoId].entriesThisYear);
+    // Insert new entry
+    db.run("INSERT INTO ledger (json) VALUES (?)", [JSON.stringify(entryData)]);
 
-    const updatePayload = {
-      lastSynced: getFormattedTime()
-    };
+    // Save DB back to memory
+    localDbMap[repoId] = db.export();
 
-    // add parts for this year // these will go into entriesThisYear_part1, _part2, etc.
-    parts.forEach((part, index) => {
-      const key = `entriesThisYear_part${index + 1}`;
-      updatePayload[key] = part;
+    // -----------------------------
+    // Append to local change log (inline)
+    // -----------------------------
+    localLogMap[repoId] ??= [];
+
+    localLogMap[repoId].push({
+      mode: writeMode,
+      newEntry: entryData,
+      oldEntryId: entryId_original || null,
+      timestamp: Date.now()
     });
 
-    // remove extra parts that are no longer needed
-    for (let i = parts.length + 1; i <= 20; i++) {
-      const key = `entriesThisYear_part${i}`;
-      updatePayload[key] = deleteField();
+    // Trim log if too long
+    const MAX_LOG = 1000;
+    if (localLogMap[repoId].length > MAX_LOG) {
+      localLogMap[repoId] = localLogMap[repoId].slice(-MAX_LOG);
     }
 
-    await updateDoc(householdRef, updatePayload);
+    // -----------------------------
+    // Persist local DB + logs
+    // -----------------------------
+    await set(LOCAL_DB_KEY, localDbMap);
+    await set(LOCAL_LOG_KEY, localLogMap);
 
-    console.log("saveEntry: total number of entriesThisYear parts:", parts.length)
-
-    if (nav !== "create") {
-      const changes = diffEntries(entryData_original[nav], entryData);
-
-      // Read the current log
-      const log = householdDocs[repoId].entryChangeLog || [];
-
-      // Append the new change
-      log.push(changes);
-
-      // If too long, trim the oldest entries
-      const MAX_LOG = 1000;
-      const trimmed = log.length > MAX_LOG
-        ? log.slice(log.length - MAX_LOG)   // keep last 1000
-        : log;
-
-      // Write back the trimmed log
-      await updateDoc(householdRef, {
-        entryChangeLog: trimmed
-      });
-    }
-
-    showStatusMessage({
-      en: 'Transaction saved successfully!',
-      zh: '已成功保存！'
-    }[currentLang], "success")
-
-    // recycle variables
+    // -----------------------------
+    // Cleanup workspace
+    // -----------------------------
     delete workspace[nav];
     delete entryData_original[nav];
 
-    // 5. Reset UI 
+    showStatusMessage(t.savedSuccess, "success");
+
     history.back();
 
   } catch (err) {
     console.error("Error saving transaction:", err);
-    showStatusMessage("添加交易失败", 'error');
+    showStatusMessage(t.saveFailed, "error");
   }
 }
 window.saveEntry = saveEntry;
