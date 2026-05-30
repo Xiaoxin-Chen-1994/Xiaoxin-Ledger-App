@@ -1054,7 +1054,7 @@ async function githubAppendChangeLog(repoName, change, token) {
   const ts = change.timestamp; // use timestamp as filename
   const path = `/changelog/${ts}.json`;
 
-  const content = btoa(JSON.stringify(change, null, 2));
+  const content = encodeBase64Utf8(JSON.stringify(change, null, 2));
 
   await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "PUT",
