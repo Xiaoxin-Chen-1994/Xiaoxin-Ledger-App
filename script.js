@@ -2164,6 +2164,7 @@ function setDefaultCollection(button, subWorkspace) {
       // Set default collection if missing
       if (!subWorkspace[type].collection) {
         subWorkspace[type].collection = def.collection;
+      }
     }
   });
 
