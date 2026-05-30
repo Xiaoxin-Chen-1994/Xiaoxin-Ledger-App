@@ -223,7 +223,6 @@ const translations = {
     manageDefaults: 'Manage transaction templates',
     logout: "Logout",
     deleteAccount: "Delete my account",
-    navHome: "Home",
     navAccounts: "Accounts",
     navTransaction: "Create",
     navUtilities: "Utilities",
@@ -381,7 +380,6 @@ const translations = {
     manageDefaults: '管理交易模版',
     logout: "退出登录",
     deleteAccount: "删除账户",
-    navHome: "首页",
     navAccounts: "账户",
     navTransaction: "记一笔",
     navUtilities: "工具",
@@ -3382,16 +3380,6 @@ function showPage(name, title = latestTitle, options={}) {
 
   const rect = nav.getBoundingClientRect();
 
-  // const navHeight = rect.height;
-  // const navBottom = getComputedStyle(nav).bottom;
-  // let  targetScroll = null;
-  // if (latestPage.includes("create")) { // when creating an entry
-  //   targetScroll = document.querySelector("transaction-page .scroll");
-  // } else {
-  //   targetScroll = document.querySelector(`#${latestPage}-page .scroll`);
-  // }
-  // targetScroll.style.paddingBottom = `calc(${navHeight}px + ${navBottom} + 1rem)`;
-  
   let dateTimeBtn = null;
 
   // transaction page special handling
@@ -4991,7 +4979,7 @@ async function setLanguage(lang) {
   document.getElementById("delete-account-btn").textContent = t.deleteAccount;
 
   // Nav
-  document.getElementById("nav-home").textContent = t.navHome;
+  document.getElementById("nav-home").textContent = t.homeTitle;
   document.getElementById("nav-accounts").textContent = t.navAccounts;
   document.getElementById("nav-transaction").textContent = t.navTransaction;
   document.getElementById("nav-utilities").textContent = t.navUtilities;
