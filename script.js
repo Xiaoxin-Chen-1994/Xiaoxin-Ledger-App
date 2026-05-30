@@ -5413,7 +5413,6 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
   // apply filters to all entries
   let filteredEntries = await getFilteredEntries(filters);
-  console.log('filteredEntries', filteredEntries)
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
 
