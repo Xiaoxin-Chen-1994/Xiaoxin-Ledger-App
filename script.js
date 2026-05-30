@@ -879,6 +879,7 @@ async function smartSync(selectedRepos, token) {
     console.log(`[${repoName}] Both sides have data → merging`);
 
     const db = new SQL.Database(localDbBytes);
+    console.log('db ', db)
     db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
 
     // 5a. Load cloud change logs since last sync
@@ -897,7 +898,7 @@ async function smartSync(selectedRepos, token) {
     const changedIds = new Set();
     for (const c of cloudChanges) changedIds.add(c.entryId);
     for (const c of localLog) changedIds.add(c.entryId);
-console.log(changedIds)
+    
     // 5c. For each changed ID, merge
     for (const id of changedIds) {
       const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
