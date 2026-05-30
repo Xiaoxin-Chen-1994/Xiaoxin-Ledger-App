@@ -82,9 +82,9 @@ const LOCAL_DB_KEY = "ledger_dbs";
 const LOCAL_LOG_KEY = "ledger_logs";
 const LAST_SYNC_KEY = "ledger_lastSynced";
 
-let workspace = {} // use this variable to store temporary transaction data before being saved
+let workspace = {'transactions': {}} // use this variable to store temporary transaction data before being saved
 //workspace = {
-//   create: {
+//   create or transactions[id]: {
 //     amount: amount, 
 //     amountCalulation: string,
 //     inputTransactionTime: datetime,
@@ -3427,7 +3427,6 @@ function showPage(name, title = latestTitle, options={}) {
         const entryId = block.dataset.entryId;    
         const entryType = block.dataset.entryType;
         const entry = options.allEntriesMap[entryId];
-        console.log(entry)
         if (!entry) return;
 
         loadEntryIntoWorkspace(entry);
