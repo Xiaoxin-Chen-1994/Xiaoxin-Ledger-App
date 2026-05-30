@@ -927,23 +927,13 @@ async function smartSync(selectedRepos, token) {
         const localOriginal = localChange.original;
         const localNew = localChange.new;
 
-        const sameAsOriginal =
-          JSON.stringify(localOriginal) === JSON.stringify(cloudEntry);
-
-        if (sameAsOriginal) {
-          console.log(`[${repoName}] ${id} both changed, but cloud matches original → cloud is old → use local`);
-          await githubWriteJson(repoName, `entries/${id}`, localNew, token);
-          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
-          continue;
-        }
-
         // True conflict → compare timestamps
-        if (localChange.updatedAt > cloudChange.updatedAt) {
+        if (localChange.timestamp > cloudChange.timestamp) {
           console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
           console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
           console.log(`Newer local: ${JSON.stringify(localNew)}`);
           await githubWriteJson(repoName,`entries/${id}`, localNew, token);
-          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(localNew)]);
+          await githubAppendChangeLog(repoName, localChange, token);
         } else {
           console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
           console.log(`Older local: ${JSON.stringify(localNew)}`);
@@ -1024,8 +1014,17 @@ async function githubReadJson(repoName, path, token) {
   if (!res.ok) return null;
 
   const data = await res.json();
-  const decoded = atob(data.content);
+  const decoded = decodeBase64Utf8(data.content);
   return JSON.parse(decoded);
+}
+
+function decodeBase64Utf8(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 async function githubWriteJson(repoName, path, obj, token) {
