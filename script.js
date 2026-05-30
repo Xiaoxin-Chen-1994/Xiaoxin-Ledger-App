@@ -7215,18 +7215,24 @@ function tryUpdateAmount(expr, amountButton) {
     return;
   }
 
+  const validStart = /^[\d\-\(\.\s]/.test(expr);
+
   const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
     
-    if (typeof result === 'number' && isFinite(result)) {
+    if (validStart || (typeof result === 'number' && isFinite(result))) {
       // VALID expression
       amountButton.textContent = result.toFixed(2);
       if (inputType === 'transfer') {
         if (amountButton.id === 'transfer-to-amount') {
           subWorkspace.transfer.toAmount = result;  // numeric
+          console.log('toamount', toAmount)
           subWorkspace.transfer.toCalculation = expr;          // raw expression
+        } else {
+          subWorkspace.amount = result;             // numeric
+          subWorkspace.calculation = expr;                           // raw expression
         }
 
         if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
