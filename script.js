@@ -2647,7 +2647,7 @@ console.log('ws: ', ws)
   } else if (inputType === "transfer") {
     entryData = {
       ...base,
-      toAmount: ws.toAmount ?? 0,
+      toAmount: ws[inputType].toAmount ?? 0,
       sameCurrency: ws[inputType].sameCurrency,
       fromAccount: ws[inputType].fromAccountInfo.account.name,
       fromCurrency: ws[inputType].fromAccountInfo.account.currency,
@@ -3478,7 +3478,7 @@ function loadEntryIntoWorkspace(e) {
     };
     ws.transfer.toAccountInnerHTML = e.toAccountInnerHTML;
 
-    ws.toAmount = Number(e.toAmount) || 0;
+    ws.transfer.toAmount = Number(e.toAmount) || 0;
   }
 
   else if (e.type === "balance") {
@@ -7228,11 +7228,9 @@ function tryUpdateAmount(expr, amountButton) {
       if (inputType === 'transfer') {
         if (amountButton.id === 'transfer-to-amount') {
           subWorkspace.transfer.toAmount = result;  // numeric
-          console.log('toamount', result)
           subWorkspace.transfer.toCalculation = expr;          // raw expression
         } else {
           subWorkspace.amount = result;             // numeric
-          console.log('fromamount', result)
           subWorkspace.calculation = expr;                           // raw expression
         }
 
