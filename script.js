@@ -5272,6 +5272,8 @@ function summarizeIncomeExpense(entries) {
 
   if (Array.isArray(entries)) {
     for (const e of entries) {
+      console.log('entries', entries)
+      console.log('e.type', e.type)
       if (e.type === "income") {
         income += Number(e.amount) || 0;
       }
