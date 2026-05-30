@@ -895,8 +895,8 @@ async function smartSync(selectedRepos, token) {
 
     // 5b. Summarize changed IDs
     const changedIds = new Set();
-    for (const c of cloudChanges) changedIds.add(c.id);
-    for (const c of localLog) changedIds.add(c.id);
+    for (const c of cloudChanges) changedIds.add(c.entryId);
+    for (const c of localLog) changedIds.add(c.entryId);
 console.log(changedIds)
     // 5c. For each changed ID, merge
     for (const id of changedIds) {
@@ -2750,7 +2750,7 @@ async function saveEntry() {
     localLogMap[repoId].push({
       mode: writeMode,
       newEntry: entryData,
-      oldEntryId: entryId_original || entryData.entryId,
+      entryId: entryData.entryId,
       timestamp: Date.now()
     });
 
