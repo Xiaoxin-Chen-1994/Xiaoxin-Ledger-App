@@ -5426,7 +5426,7 @@ function getDateRange(type) {
   }
 }
 
-function updateKanbanRow(title, kanbanIndex, filters) {
+async function updateKanbanRow(title, kanbanIndex, filters) {
   const t = translations[currentLang];
 
   // apply filters to all entries
