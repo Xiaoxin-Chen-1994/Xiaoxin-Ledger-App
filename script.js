@@ -916,7 +916,6 @@ async function smartSync(selectedRepos, token) {
       // Only local changed
       if (!cloudChange && localChange) {
         const localEntry = localChange.newEntry;
-        console.log('localEntry', localEntry)
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
         await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
         await githubAppendChangeLog(repoName, localChange, token);
@@ -2060,6 +2059,7 @@ function setDefaultAccount(button, subWorkspace) {
     });
 
     const from = subWorkspace.transfer.fromAccountInfo.account;
+    console.log('fromAccountInfo', subWorkspace.transfer.fromAccountInfo)
     const fromIcon = from.icon || "";
     const fromName = from.name;
     const fromCurrency = from.currency;
@@ -2072,6 +2072,7 @@ function setDefaultAccount(button, subWorkspace) {
     `;
     
     const to = subWorkspace.transfer.toAccountInfo.account;
+    console.log('toAccountInfo', subWorkspace.transfer.toAccountInfo)
     const toIcon = to.icon || "";
     const toName = to.name;
     const toCurrency = to.currency;
