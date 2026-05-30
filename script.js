@@ -918,6 +918,7 @@ async function smartSync(selectedRepos, token) {
         const localEntry = localChange.newEntry;
         console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
         await githubWriteJson(repoName, `entries/${id}`, localEntry, token);
+        await githubAppendChangeLog(repoName, localChange, token);
         continue;
       }
 
@@ -5457,6 +5458,7 @@ function updateKanbanRow(title, kanbanIndex, filters) {
 
   // apply filters to all entries
   let filteredEntries = getFilteredEntries(filters);
+  console.log('filteredEntries', filteredEntries)
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
 
