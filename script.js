@@ -2679,14 +2679,14 @@ async function saveEntry() {
       const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
       for (const [rowid, jsonStr] of rows) {
         const obj = JSON.parse(jsonStr);
-        console.log('obj.entryId, loadedEntry_original.entryId', obj.entryId, loadedEntry_original.entryId)
+        
         if (obj.entryId === loadedEntry_original.entryId) {
           db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
           break;
         }
       }
     }
-
+    console.log(db)
     // Insert new entry
     db.run("INSERT INTO ledger (json) VALUES (?)", [JSON.stringify(entryData)]);
 
