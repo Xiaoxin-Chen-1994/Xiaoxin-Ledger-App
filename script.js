@@ -3473,7 +3473,7 @@ function goBack() {
 }
 
 function loadEntryIntoWorkspace(e) {
-  let ws = workspace.transactions[latestOptions.transactionId] || {};
+  let ws = {};
 
   entryData_original[latestOptions.transactionId] = e;
 
@@ -3540,6 +3540,10 @@ function loadEntryIntoWorkspace(e) {
     };
   }
 
+   // Save workspace buffer
+  workspace.transactions[e.entryId] = ws;
+  latestOptions.transactionId = e.entryId;
+  
   showPage("transaction", getEditTitle(e.type))
 }
 
