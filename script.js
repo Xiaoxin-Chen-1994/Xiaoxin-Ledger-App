@@ -2613,7 +2613,7 @@ async function saveEntry() {
     writeMode = "create";
   } else {
     const original = entryData_original[latestOptions.transactionId];
-
+console.log('entryData_original', entryData_original)
     if (original.transactionTime !== ws.inputTransactionTime) {
       entryId =
         ws.inputTransactionTime.replace(/[- :]/g, "") +
