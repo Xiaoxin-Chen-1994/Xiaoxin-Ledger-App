@@ -3542,9 +3542,9 @@ function loadEntryIntoWorkspace(e) {
 
    // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
-  latestOptions.transactionId = e.entryId;
-  
-  showPage("transaction", getEditTitle(e.type))
+  console.log(workspace.transactions)
+
+  showPage("transaction", getEditTitle(e.type), {'transactionId': e.entryId})
 }
 
 function getEditTitle(type) {
