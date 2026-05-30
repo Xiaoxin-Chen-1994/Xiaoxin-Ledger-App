@@ -3437,7 +3437,7 @@ function goBack() {
 function loadEntryIntoWorkspace(e) {
   let ws = {};
 
-  entryData_original[latestOptions.transactionId] = e;
+  entryData_original[e.entryId] = e;
 
   ws.amount = Number(e.amount) || 0;
   ws.notes = e.notes || "";
