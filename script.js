@@ -3343,11 +3343,10 @@ function showPage(name, title = latestTitle, options={}) {
   } else {
     target = document.getElementById(latestPage + "-page");
   }
+  if (!target) return;
+  
   target.style.display = "block";
   target.zIndex = historyStack.length;
-  console.log(target)
-
-  if (!target) return;
 
   const current = getComputedStyle(target).transform;
   // If it's not already at translateX(0), move it there
@@ -3371,14 +3370,7 @@ function showPage(name, title = latestTitle, options={}) {
     updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
 
-  document.getElementById("app-title").textContent = translations[currentLang][latestTitle];
-  // document.getElementById(navBtn).style.background = "var(--primary)";
-  // document.getElementById(navBtn).classList.add("active");
-
-  // Get the nav element
-  const nav = document.querySelector(".bottom-nav"); 
-
-  const rect = nav.getBoundingClientRect();
+  document.getElementById("app-title").textContent = translations[currentLang][latestTitle] ?? latestTitle;
 
   let dateTimeBtn = null;
 
@@ -3387,11 +3379,10 @@ function showPage(name, title = latestTitle, options={}) {
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
-      document.getElementById("app-title").textContent = t.navTransaction;
-
       document.getElementById("return-btn").textContent = "< " + t.cancel;
 
       const inProgress = !!workspace.create;
+      console.log(inProgress)
       if (!inProgress) { // reset button texts when creating a new entry
         workspace.create = {};
         
@@ -3433,8 +3424,6 @@ function showPage(name, title = latestTitle, options={}) {
       subWorkspace = workspace.create;
 
     } else { // when loading an existing entry
-      document.getElementById("app-title").textContent = t.transaction;
-
       subWorkspace = workspace.transaction;
 
       const activeForm = subWorkspace.inputType + "-form";
