@@ -2599,8 +2599,8 @@ async function saveEntry() {
   const inputType = ws.inputType;
   const repoId = ws[inputType].repoId;
 
-  let entryId, entryId_original = null, writeMode;
-
+  let entryId = null;
+  let writeMode = null;
   // -----------------------------
   // Generate entryId inline
   // -----------------------------
@@ -2611,10 +2611,9 @@ async function saveEntry() {
         .toString()
         .padStart(6, "0");
     writeMode = "create";
-
+    loadedEntry_original = null;
   } else {
-    const original = loadedEntry_original;
-    entryId = original.entryId;
+    entryId = loadedEntry_original.entryId;
     writeMode = "overwrite";
   }
 
@@ -2676,11 +2675,12 @@ async function saveEntry() {
     const db = new SQL.Database(dbBytes);
 
     // If overwriting with new date → delete old row
-    if (entryId_original) {
+    if (loadedEntry_original) {
       const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
       for (const [rowid, jsonStr] of rows) {
         const obj = JSON.parse(jsonStr);
-        if (obj.entryId === entryId_original) {
+        console.log('obj.entryId, loadedEntry_original.entryId', obj.entryId, loadedEntry_original.entryId)
+        if (obj.entryId === loadedEntry_original.entryId) {
           db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
           break;
         }
