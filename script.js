@@ -962,7 +962,7 @@ async function smartSync(selectedRepos, token) {
 
     const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
     settingsMap = await get("ledger_settings");
-    localSettings = settingsMap[repoId];
+    let localSettings = settingsMap[repoId];
     settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
     await set("ledger_settings", settingsMap);
     await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
