@@ -2107,7 +2107,6 @@ function setDefaultSubject(button, subWorkspace) {
       // Set default subject if missing
       if (!subWorkspace[type].subject) {
         subWorkspace[type].subject = def.subject;
-        subWorkspace[type].subjectIcon = def.subjectIcon;
       }
     }
   });
@@ -2116,22 +2115,23 @@ function setDefaultSubject(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const subjects = settings.subjects;
-console.log('subWorkspace[inputType]', subWorkspace[inputType])
     const currentSubject = subWorkspace[inputType].subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
     if (!subjectExists) {
       // Restore defaults
       subWorkspace[inputType].subject = def.subject;
-      subWorkspace[inputType].subjectIcon = def.subjectIcon;
-
-      subWorkspace[inputType].subjectInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
-          <span class="cat-label">${subWorkspace[inputType].subject}</span>
-        </span>
-      `;
     }
+
+    const subject = subjects.find(acc => acc.name === subWorkspace[inputType].subject);
+    subWorkspace[inputType].subjectIcon = subject.icon
+    
+    subWorkspace[inputType].subjectInnerHTML = `
+      <span class="cat-part">
+        <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].subject}</span>
+      </span>
+    `;
 
     // Update button
     button.innerHTML = subWorkspace[inputType].subjectInnerHTML;
