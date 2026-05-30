@@ -2641,7 +2641,7 @@ async function saveEntry() {
   // -----------------------------
   // Generate entryId inline
   // -----------------------------
-  if (nav === "create") {
+  if (latestPage.includes("create")) {
     entryId =
       ws.inputTransactionTime.replace(/[- :]/g, "") +
       Math.floor(Math.random() * 1_000_000)
@@ -3464,18 +3464,9 @@ function goBack() {
 }
 
 function loadEntryIntoWorkspace(e) {
-  let nav = null;
+  let ws = workspace.transactions[latestOptions.transactionId] || {};
 
-  if (latestPage.includes("create")) { // when creating an entry
-    nav = 'create';
-  } else {
-    nav = 'transaction';
-  }
-
-  workspace[nav] = {};
-  const ws = workspace[nav];
-
-  entryData_original[nav] = e;
+  entryData_original[latestOptions.transactionId] = e;
 
   ws.amount = Number(e.amount) || 0;
   ws.notes = e.notes || "";
