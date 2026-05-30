@@ -3307,19 +3307,13 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 }
 
 // history stacks
-let historyStack = [["home", translations[currentLang].homeTitle, "Xiaoxin's Ledger App"]]
+let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]]
 
 function showPage(name, title = latestTitle, options={}) {
   const t = translations[currentLang];
 
   // hide all pages
   document.getElementById("login-section").style.display = "none";
-  // document.querySelectorAll('.base-page').forEach(p => {
-  //   if (p.id !== currentBase + "-page") {
-  //     p.style.display = "none";
-  //     p.classList.remove("active");
-  //   }
-  // });
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").style.display = "none";
@@ -3330,39 +3324,8 @@ function showPage(name, title = latestTitle, options={}) {
   let target = null;
   let latest = null;
 
-  // // reset nav button colors
-  // basePages.forEach(page => {
-  //   document.getElementById(`nav-${page}`).style.background = "";
-  //   document.getElementById(`nav-${page}`).classList.remove("active");
-  // });
-
   vibrate(30); // milliseconds
 
-  // let switchedBase = false;
-
-  // if (latestNavBtn !== navBtn) { // when switching base nav, look for the latest historyStack
-  //   // switchedBase = true;
-
-  //   if (latestPage != null) {
-  //     // if a page was shown, hide all pages at the old base page
-  //     historyStack.forEach(entry => {
-  //       const el = document.getElementById(entry[0] + "-page");
-  //       if (el) el.style.display = "none";
-  //     });
-  //   }
-
-  //   historyStack = historyStack[navBtn.replace("nav-", "")];
-
-  //   // if a page was shown, hide all pages at the old base page
-  //   historyStack.forEach(entry => {
-  //     const el = document.getElementById(entry[0] + "-page");
-  //     if (el) el.style.display = "block";
-  //   });
-  // }
-
-  // currentBase = navBtn.replace("nav-", "");
-
-  // historyStack = historyStack[currentBase];
   latest = historyStack[historyStack.length - 1]; // there should always be at least one historyStack for each base page
   [latestPage, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
 
@@ -3410,7 +3373,7 @@ function showPage(name, title = latestTitle, options={}) {
     updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
   };
 
-  document.getElementById("app-title").textContent = latestTitle;
+  document.getElementById("app-title").textContent = translations[currentLang][latestTitle];
   // document.getElementById(navBtn).style.background = "var(--primary)";
   // document.getElementById(navBtn).classList.add("active");
 
