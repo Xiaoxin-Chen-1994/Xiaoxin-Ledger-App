@@ -2029,7 +2029,7 @@ function setDefaultAccount(button, subWorkspace) {
     // If accountInfo is missing, initialize it using defaults
     if (!subWorkspace[inputType].accountInfo) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
-console.log('subWorkspace[inputType]', subWorkspace[inputType])
+
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
       const accountObj = info.account;
@@ -2044,7 +2044,7 @@ console.log('subWorkspace[inputType]', subWorkspace[inputType])
         </span>
       `;
     }
-console.log('subWorkspace[inputType]', subWorkspace[inputType])
+
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
     createList(accountTypeCol, accountTypeList);
@@ -2266,7 +2266,7 @@ function switchTab(index) {
     let categoryBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='category']`);
     setDefaultCategory(categoryBtn, subWorkspace);
   }
-
+console.log('subWorkspace', subWorkspace)
   // account and amount
   if (["expense", "income", "balance"].includes(inputType)) {
     let accountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='account']`);
