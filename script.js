@@ -7753,3 +7753,489 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
     ]
   });
 });
+
+async function OpenGrocerySearch() {
+  const projectId = "GrocerySearch"
+
+  document.querySelectorAll('style').forEach(style => {
+    const isUniversal = style.id === 'Universal';
+    const isTarget = style.id === projectId;
+    style.disabled = !(isUniversal || isTarget);
+  });
+
+  const content = document.getElementById('content');
+
+  content.innerHTML = `
+    <div class="sticky-header">
+      <h2>🛒 Grocery Search</h2>
+      <div class="row">
+        <label for="itemBox">Item:</label>
+        <input type="text" id="itemBox" />
+      </div>
+      <div id="searchResults" style="padding: 0rem;"></div>
+      <div class="row">
+        <label for="notesBox">Notes:</label>
+        <input type="text" id="notesBox" />
+      </div>
+    </div>
+
+    <div id="storeItemList"></div>
+
+    <div id="statusMessage" style="display:none;"></div>
+  `;
+
+  const repoName = selectedRepos.activeLedgerRepo.name;
+  const filePath = 'GrocerySearchHistory.csv';
+
+  const url = `https://api.github.com/repos/${repoName}/contents/${filePath}`;
+
+  const Websites = [
+    { SiteName: "Flipp", SearchURL1: "https://flipp.com/search/", SearchURL2: "" },
+    { SiteName: "Sobeys", SearchURL1: "https://www.sobeys.com/?query=", SearchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100" },
+    { SiteName: "Walmart", SearchURL1: "https://www.walmart.ca/en/search?q=", SearchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store" },
+    { SiteName: "Costco", SearchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", SearchURL2: "&sortBy=item_location_pricing_salePrice%2Basc" },
+    { SiteName: "Shoppers Drug Mart", SearchURL1: "https://shop.shoppersdrugmart.ca/search?text=", SearchURL2: "" },
+    { SiteName: "T&T", SearchURL1: "https://www.tntsupermarket.com/eng/search.html?query=", SearchURL2: "&sort%5Bfilter%5D=Price%3A+Low+to+High%2Cprice-ASC" },
+    { SiteName: "Dollarama", SearchURL1: "https://www.google.com/search?q=", SearchURL2: " site%3Ainstacart.ca%2Fstore%2Fdollarama" },
+    { SiteName: "Real Canadian Superstore", SearchURL1: "https://www.realcanadiansuperstore.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
+    { SiteName: "No Frills", SearchURL1: "https://www.nofrills.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
+    { SiteName: "Zehrs", SearchURL1: "https://www.zehrs.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
+    { SiteName: "Valu-mart", SearchURL1: "https://www.valumart.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
+    { SiteName: "Giant Tiger", SearchURL1: "https://www.gianttiger.com/search?q=", SearchURL2: "&sort_by=price_asc" },
+    { SiteName: "Wholesale Club", SearchURL1: "https://www.wholesaleclub.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
+    { SiteName: "Amazon.ca", SearchURL1: "https://www.amazon.ca/s?k=", SearchURL2: "&s=price-asc-rank" },
+    { SiteName: "Mark's", SearchURL1: "https://www.marks.com/en/search-results.html?q=", SearchURL2: ";m_ct_sort=national-sort-price" },
+    { SiteName: "Canadian Tire", SearchURL1: "https://www.canadiantire.ca/en/search-results.html?q=", SearchURL2: ";m_ct_sort=national-sort-price" },
+    { SiteName: "Home Hardware", SearchURL1: "https://www.homehardware.ca/en/search?query=", SearchURL2: "&sortBy=price%2Basc" },
+    { SiteName: "Stock Track", SearchURL1: "https://stocktrack.ca/?s=", SearchURL2: "&search=" },
+    { SiteName: "Google", SearchURL1: "https://www.google.com/search?q=", SearchURL2: "" }
+  ];
+
+  let csvData = [];
+  let currentItem = null;
+  let fileSha = null;
+
+  async function fetchCsvFromGitHub() {
+    const bust = `&t=${Date.now()}`;
+    let response = null;
+    try {
+      response = await fetch(`${url}${bust}`, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3.raw'
+        },
+        cache: 'no-store'
+      });
+    } catch (err) {
+      console.error('fetch error:', err);
+      showStatusMessage('Error fetching CSV', type = 'error', duration = 20000);
+    }
+
+    const buffer = await response.arrayBuffer(); // get raw binary
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer); // decode as UTF-8
+
+    try {
+      // Robust CSV parser for quoted fields
+      function parseCSV(text) {
+        const rows = [];
+        let row = [], field = '', inQuotes = false;
+
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          const next = text[i + 1];
+
+          if (char === '"' && inQuotes && next === '"') {
+            field += '"';
+            i++; // skip escaped quote
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(field.trim());
+            field = '';
+          } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            if (field || row.length) {
+              row.push(field.trim());
+              rows.push(row);
+              row = [];
+              field = '';
+            }
+          } else {
+            field += char;
+          }
+        }
+
+        if (field || row.length) {
+          row.push(field.trim());
+          rows.push(row);
+        }
+
+        return rows;
+      }
+    } catch (err) {
+      console.error('parse CSV error after fetching:', err);
+      showStatusMessage('Error parsing CSV after fetching', type = 'error', duration = 10000);
+    }
+
+    const parsedRows = parseCSV(text);
+    const headers = parsedRows[0].map(h => h.trim().toLowerCase());
+    csvData = parsedRows.slice(1).map(values => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        const value = values[i]?.trim() || '';
+        if (h === 'searchhistory') obj.SearchHistory = value;
+        if (h === 'idealprice') obj.IdealPrice = value;
+        if (h === 'store') obj.store = value;
+      });
+      if (!obj.store) obj.store = 'Flipp';
+
+      return obj;
+    });
+
+    renderStoreAndItems();
+    await fetchFileSha();
+  }
+
+  async function fetchFileSha() {
+    try {
+      const fetchUrl = url + `?force=json`;
+      const bust = `&t=${Date.now()}`;
+      const response = await fetch(`${fetchUrl}${bust}`, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`
+        },
+        cache: 'no-store' // optional, but helps in some environments
+      });
+      const json = await response.json();
+      fileSha = json.sha;
+
+    } catch (err) {
+      console.error('fetchFileSha error:', err);
+      showStatusMessage('Error fetching file sha', type = 'error');
+    }
+  }
+
+  async function updateCsvToGitHub() {
+    try {
+      showStatusMessage('Prepare CSV data…', type = 'info');
+
+      const headers = ['SearchHistory', 'IdealPrice', 'store'];
+      const rows = [headers.join(',')];
+
+      csvData.forEach(item => {
+        const row = [
+          `"${item.SearchHistory || ''}"`,
+          `"${item.IdealPrice || ''}"`,
+          `"${item.store || 'Flipp'}"`
+        ];
+        rows.push(row.join(','));
+      });
+
+      const content = utf8ToBase64(rows.join('\n'))
+
+      showStatusMessage('Writing to CSV…', type = 'info');
+      const fetchUrl = url + `?force=json`;
+      await fetch(fetchUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+          message: 'Update CSV via browser',
+          content: content,
+          sha: fileSha,
+          branch: BRANCH
+        })
+      });
+
+      await fetchFileSha();
+      showStatusMessage('✅ CSV updated successfully!', type = 'success');
+    } catch (err) {
+      console.error('Update error:', err);
+      showStatusMessage('Error updating CSV', type = 'error');
+    }
+  }
+
+  function renderStoreAndItems() {
+    try {
+      const container = document.getElementById('storeItemList');
+
+      // 🧭 Record scroll positions of all item-scroll containers
+      const scrollMap = {};
+      container.querySelectorAll('.store-row').forEach(row => {
+        const storeName = row.querySelector('.store-button')?.textContent;
+        const scrollDiv = row.querySelector('.item-scroll');
+        if (storeName && scrollDiv) {
+          scrollMap[storeName] = scrollDiv.scrollLeft;
+        }
+      });
+
+      container.innerHTML = ''; // 🔄 Clear the container before re-rendering
+
+      const grouped = {}; // 📦 Group items by store name (default to 'Flipp' if missing)
+      csvData.forEach(item => {
+        const store = item.store?.trim() || 'Flipp';
+        if (!grouped[store]) grouped[store] = [];
+        grouped[store].push(item);
+      });
+      
+      // 🏪 Iterate over known websites to render each store row
+      Websites.forEach(site => {
+        const store = site.SiteName;
+
+        // 🧱 Create the outer row container for this store
+        const row = document.createElement('div');
+        row.className = 'store-row';
+
+        // 📌 Create the fixed left column for the store button
+        const storeCol = document.createElement('div');
+        storeCol.className = 'store-col';
+
+        const storeBtn = document.createElement('button');
+        storeBtn.textContent = store;
+        storeBtn.className = 'store-button';
+
+        // 🧲 Enable drag-and-drop to assign items to this store
+        storeBtn.addEventListener('dragover', e => e.preventDefault());
+        storeBtn.addEventListener('drop', async e => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text/plain');
+          const draggedItem = JSON.parse(data);
+
+          // 🔍 Find the dragged item in csvData and update its store
+          const index = csvData.findIndex(row =>
+            row.SearchHistory === draggedItem.SearchHistory &&
+            row.IdealPrice === draggedItem.IdealPrice
+          );
+          if (index !== -1) {
+            csvData[index].store = store;
+            renderStoreAndItems();
+            await updateCsvToGitHub();
+          }
+        });
+
+        // 🖱️ Store button click: update currentItem and open search link
+        storeBtn.onclick = async () => {
+          const itemBox = document.getElementById('itemBox');
+          const notesBox = document.getElementById('notesBox');
+          const itemText = itemBox.value.trim();
+          const notesText = notesBox.value.trim();
+
+          if (currentItem) {
+            currentItem.SearchHistory = itemText;
+            currentItem.IdealPrice = notesText;
+
+            // 🧹 Remove and re-add to move currentItem to end
+            csvData = csvData.filter(row => row !== currentItem).concat(currentItem);
+            renderStoreAndItems();
+            await updateCsvToGitHub();
+          }
+
+          // 🔗 Open search URL for this store
+          const siteMatch = Websites.find(w => w.SiteName === store);
+          if (siteMatch && itemText) {
+            window.open(siteMatch.SearchURL1 + encodeURIComponent(itemText) + siteMatch.SearchURL2, '_blank');
+          }
+        };
+
+        storeCol.appendChild(storeBtn);
+
+        // 📜 Create scrollable container for item buttons
+        const itemScroll = document.createElement('div');
+        itemScroll.className = 'item-scroll';
+
+        const items = grouped[store];
+        if (items) {
+          items.forEach(item => {
+            const itemBtn = document.createElement('button');
+            itemBtn.textContent = item.SearchHistory || 'Unnamed';
+            itemBtn.className = 'item-button';
+            itemBtn.draggable = true;
+            
+            // 🚚 Enable drag functionality
+            itemBtn.addEventListener('dragstart', e => {
+              e.dataTransfer.setData('text/plain', JSON.stringify(item));
+              e.dataTransfer.effectAllowed = 'move';
+            });
+
+            // 🖱️ Item button click: populate fields and open store link
+            itemBtn.onclick = async () => {
+              const container = document.getElementById('storeItemList');
+              const scrollY = container.scrollTop; // 🧭 Preserve scroll position
+
+              document.getElementById('searchResults').innerHTML = '';
+              document.getElementById('itemBox').value = item.SearchHistory;
+              document.getElementById('notesBox').value = item.IdealPrice;
+              currentItem = item;
+
+              // 🧹 Move item to end of list
+              csvData = csvData.filter(row => row !== item).concat(item);
+              renderStoreAndItems();
+              container.scrollTop = scrollY;
+              await updateCsvToGitHub();
+
+              // 🔗 Open search URL for item's store
+              const query = item.SearchHistory || '';
+              const notes = item.IdealPrice || '';
+              const storeName = item.store;
+              const siteMatch = Websites.find(w => w.SiteName === storeName);
+
+              if (siteMatch && query) {
+                const url = siteMatch.SearchURL1 + encodeURIComponent(query) + siteMatch.SearchURL2;
+                const newWindow = window.open(url, '_blank');
+              }
+            };
+
+            // 🗑️ Right-click to show delete option
+            itemBtn.addEventListener('contextmenu', e => {
+              e.preventDefault();
+              showDeleteButton(itemBtn, item);
+            });
+
+            // 📱 Long-press on touch devices to show delete
+            let pressTimer;
+            itemBtn.addEventListener('touchstart', () => {
+              pressTimer = setTimeout(() => showDeleteButton(itemBtn, item), 600);
+            });
+            itemBtn.addEventListener('touchend', () => clearTimeout(pressTimer));
+
+            itemScroll.appendChild(itemBtn);
+          });
+        }
+
+        // 🧭 Restore scroll position if previously recorded
+        if (scrollMap[store] !== undefined) {
+            requestAnimationFrame(() => {
+            itemScroll.scrollLeft = scrollMap[store];
+          });
+        }
+
+        row.appendChild(storeCol);
+        row.appendChild(itemScroll);
+        container.appendChild(row);
+      });
+
+    } catch (err) {
+      console.error('render store and item error:', err);
+      showStatusMessage('Error rendering store and item', type = 'error');
+    }
+  }
+
+  function showDeleteButton(targetBtn, item) {
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.className = 'item-button';
+    deleteBtn.style.marginLeft = '0.3rem';
+    deleteBtn.onclick = async () => {
+      csvData = csvData.filter(row => row !== item);
+      renderStoreAndItems();
+      await updateCsvToGitHub();
+    };
+
+    const existing = targetBtn.nextSibling;
+    if (existing?.textContent === '🗑️') return;
+
+    targetBtn.insertAdjacentElement('afterend', deleteBtn);
+    setTimeout(() => deleteBtn.remove(), 2000);
+  }
+
+
+  document.getElementById('itemBox').addEventListener('input', () => {
+    const query = document.getElementById('itemBox').value.trim()
+    const resultsContainer = document.getElementById('searchResults');
+    resultsContainer.innerHTML = '';
+
+    if (!query) return;
+
+    const matches = csvData.filter(item =>
+      item.SearchHistory?.toLowerCase().includes(query.toLowerCase())
+    )
+      .sort((a, b) => (a.SearchHistory || '').localeCompare(b.SearchHistory || ''));
+
+    if (matches.length === 0) {
+      resultsContainer.textContent = 'No matches found.';
+      return;
+    }
+
+    matches.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'item-button';
+      btn.textContent = item.SearchHistory || 'Unnamed';
+
+      // Enable drag
+      btn.draggable = true;
+      btn.addEventListener('dragstart', e => {
+        document.getElementById('itemBox').blur(); // hide keyboard
+        const payload = {
+          SearchHistory: item.SearchHistory,
+          IdealPrice: item.IdealPrice,
+          store: null
+        };
+        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      // Click to load into input
+      btn.onclick = async () => {
+        resultsContainer.innerHTML = '';
+        document.getElementById('itemBox').value = item.SearchHistory;
+        document.getElementById('notesBox').value = item.IdealPrice;
+        currentItem = item;
+
+        // ✅ Move item to bottom of csvData
+        csvData = csvData.filter(row => row !== item).concat(item);
+
+        // ✅ Re-render and update CSV
+        renderStoreAndItems();
+        await updateCsvToGitHub();
+
+        // 🔗 Open search URL for this store
+        const siteMatch = Websites.find(w => w.SiteName === item.store);
+        if (siteMatch) {
+          window.open(siteMatch.SearchURL1 + encodeURIComponent(item.SearchHistory) + siteMatch.SearchURL2, '_blank');
+        }
+      };
+
+      resultsContainer.appendChild(btn);
+    });
+
+    // Update store buttons with live search links
+    const storeButtons = document.querySelectorAll('.store-button');
+    storeButtons.forEach(btn => {
+      const storeName = btn.textContent.trim();
+      const siteMatch = Websites.find(w => w.SiteName === storeName);
+
+      btn.onclick = async () => {
+        const itemBox = document.getElementById('itemBox');
+        const notesBox = document.getElementById('notesBox');
+        const query = itemBox.value.trim();
+        const notesText = notesBox.value.trim();
+
+        if (!query) return; // skip if no item entered
+
+        if (siteMatch) {
+          window.open(siteMatch.SearchURL1 + encodeURIComponent(query) + siteMatch.SearchURL2, '_blank');
+        }
+
+        const index = csvData.findIndex(row =>
+          (row.SearchHistory || '').toLowerCase() === query.toLowerCase()
+        );
+
+        if (index !== -1) { // if item exists, update current row
+          csvData[index].store = storeName;
+        } else { // if item doesn't exist, create a new row
+          csvData.push({
+            SearchHistory: query,
+            IdealPrice: notesText,
+            store: storeName
+          });
+        }
+
+        renderStoreAndItems();
+        await updateCsvToGitHub();
+      };
+    });
+  });
+
+  fetchCsvFromGitHub();
+}
