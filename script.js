@@ -7755,35 +7755,6 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
 });
 
 async function OpenGrocerySearch() {
-  const projectId = "GrocerySearch"
-
-  document.querySelectorAll('style').forEach(style => {
-    const isUniversal = style.id === 'Universal';
-    const isTarget = style.id === projectId;
-    style.disabled = !(isUniversal || isTarget);
-  });
-
-  const content = document.getElementById('content');
-
-  content.innerHTML = `
-    <div class="sticky-header">
-      <h2>🛒 Grocery Search</h2>
-      <div class="row">
-        <label for="itemBox">Item:</label>
-        <input type="text" id="itemBox" />
-      </div>
-      <div id="searchResults" style="padding: 0rem;"></div>
-      <div class="row">
-        <label for="notesBox">Notes:</label>
-        <input type="text" id="notesBox" />
-      </div>
-    </div>
-
-    <div id="storeItemList"></div>
-
-    <div id="statusMessage" style="display:none;"></div>
-  `;
-
   const repoName = selectedRepos.activeLedgerRepo.name;
   const filePath = 'GrocerySearchHistory.csv';
 

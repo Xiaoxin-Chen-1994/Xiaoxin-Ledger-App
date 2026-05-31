@@ -455,11 +455,29 @@
     <div class="page" id="utilities-page">
       <div class="scroll">
         <section class="utilities-section grocery-search">
-          <p class="utilities-title">购物助手</p>
-          <button id="open-grocery-search" class="settings-button" onclick="OpenGrocerySearch()">
-            打开购物搜索
-          </button>
+          <button id="open-grocery-search" class="settings-button" onclick="showPage('grocery-search')">Grocery Search</button>
         </section>
+      </div>
+    </div>
+
+    <div class="page" id="grocery-search-page">
+      <div class="scroll">
+        <div class="sticky-header">
+          <h2>🛒 Grocery Search</h2>
+          <div class="row">
+            <label for="itemBox">Item:</label>
+            <input type="text" id="itemBox" />
+          </div>
+          <div id="searchResults" style="padding: 0rem;"></div>
+          <div class="row">
+            <label for="notesBox">Notes:</label>
+            <input type="text" id="notesBox" />
+          </div>
+        </div>
+
+        <div id="storeItemList"></div>
+
+        <div id="statusMessage" style="display:none;"></div>
       </div>
     </div>
 
