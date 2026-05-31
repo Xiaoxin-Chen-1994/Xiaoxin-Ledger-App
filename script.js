@@ -3292,7 +3292,7 @@ function showPage(name, title = latestTitle, options={}) {
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-
+console.log('historyStack', historyStack)
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
@@ -7763,6 +7763,8 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
 
 async function OpenGrocerySearch() {
   showPage('grocery-search', 'Grocery Search');
+  target = document.getElementById("grocery-search-page");
+  disablePageSwipe(target);
 
   const token = await get("github_token");
   const repoName = selectedRepos.activeLedgerRepo.name;
