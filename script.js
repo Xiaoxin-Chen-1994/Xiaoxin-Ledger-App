@@ -8180,42 +8180,60 @@ function normalizeReceiptLine(line) {
 }
 
 function parseItemLine(lines, index) {
-  const line = lines[index];
-  const clean = line.replace(/^[^\dA-Za-z]+/, "");
+  let line = lines[index].trim();
 
-  // weight-based: "0.660 kg @ $1.52/kg 1.31"
-  let m = clean.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
+  // skip obvious non-item lines
+  if (/SUBTOTAL|TOTAL|LOYALTY|MASTERCARD|CREDIT|ACCOUNT|COPY|creprt/i.test(line)) {
+    return null;
+  }
+
+  // strip leading junk
+  line = line.replace(/^[^\dA-Za-z]+/, "");
+
+  // 1) weight-based: "0.560 kg @ $1.52/kg 1.31"
+  let m = line.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
   if (m) {
+    const qty = parseFloat(m[1]);
+    const unit = m[2].toLowerCase();
+    const unitPrice = parseFloat(m[3]);
+    const total = parseFloat(m[5]);
+
+    const name = findItemName(lines, index);
+
     return {
-      name: findItemName(lines, index),
-      quantity: parseFloat(m[1]),
-      unit: m[2],
-      unit_price: parseFloat(m[3]),
-      total: parseFloat(m[5])
+      name,
+      quantity: qty,
+      unit_price: `$${unitPrice.toFixed(2)}/${unit}`,
+      total: total
     };
   }
 
-  // quantity-based: "6 @ $0.49 2.94"
-  m = clean.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
+  // 2) each-based: "6 @ $0.49 2.94"
+  m = line.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
   if (m) {
+    const qty = parseInt(m[1], 10);
+    const priceEach = parseFloat(m[2]);
+
+    const name = findItemName(lines, index);
+
     return {
-      name: findItemName(lines, index),
-      quantity: parseFloat(m[1]),
-      unit: "each",
-      unit_price: parseFloat(m[2]),
-      total: parseFloat(m[3])
+      name,
+      quantity: qty,
+      price_each: priceEach,
+      total: +(qty * priceEach).toFixed(2)
     };
   }
 
-  // simple: "BANANAS 1.31"
-  m = clean.match(/(.+?)\s+(\d+\.\d{2})$/);
+  // 3) very conservative fallback: "SOMETHING 1.31"
+  m = line.match(/([A-Za-z][A-Za-z0-9 \-]+)\s+(\d+\.\d{2})$/);
   if (m) {
+    const name = m[1].trim();
+    const total = parseFloat(m[2]);
     return {
-      name: m[1].trim(),
+      name,
       quantity: null,
-      unit: null,
       unit_price: null,
-      total: parseFloat(m[2])
+      total
     };
   }
 
@@ -8223,22 +8241,20 @@ function parseItemLine(lines, index) {
 }
 
 function findItemName(lines, index) {
-  // Look 1 line above
-  if (index > 0 && /[A-Za-z]/.test(lines[index - 1])) {
-    return cleanName(lines[index - 1]);
+  for (let offset = 1; offset <= 2; offset++) {
+    const i = index - offset;
+    if (i < 0) break;
+    const line = lines[i];
+    if (/[A-Za-z]/.test(line)) {
+      return cleanName(line);
+    }
   }
-
-  // Look 2 lines above
-  if (index > 1 && /[A-Za-z]/.test(lines[index - 2])) {
-    return cleanName(lines[index - 2]);
-  }
-
   return "";
 }
 
 function cleanName(line) {
   return line
-    .replace(/[^A-Za-z ]+/g, " ") // remove numbers/punctuation
+    .replace(/[^A-Za-z ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
