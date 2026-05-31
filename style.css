@@ -27,7 +27,7 @@
 }
 
 /* Global glass effect*/
-.bottom-nav, #statusMessage {
+.bottom-nav, #statusMessage, .sticky-header {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px); /* Safari support */
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -66,7 +66,7 @@
   }
 
   /* Global glass effect*/
-  .bottom-nav, #statusMessage {
+  .bottom-nav, #statusMessage, .sticky-header {
     border: 1px solid rgba(255, 255, 255, 0.1); /* softer edge in dark mode */
     box-shadow: 0 0.6rem 1rem rgba(255, 255, 255, 0.05); /* subtle glow instead of dark shadow */
   }
