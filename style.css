@@ -2058,7 +2058,7 @@ emoji-picker {
   position: sticky;
   top: 0;
   margin: -1rem -1rem 0 -1rem;
-  background: rgba(255, 255, 255, 0.6); /* or your page background */
+  background: rgba(255, 255, 255, 0.8); /* or your page background */
   z-index: 500;
   padding: 0 0 0.5rem 0;
 }
