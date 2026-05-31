@@ -453,6 +453,10 @@
         <section class="utilities-section grocery-search">
           <button id="open-grocery-search" class="settings-button" onclick="OpenGrocerySearch()">Grocery Search</button>
         </section>
+
+        <section class="utilities-section receipt-scan">
+          <button id="open-receipt-scan" class="settings-button">Scan Receipt</button>
+        </section>
       </div>
     </div>
 
@@ -475,6 +479,31 @@
         </div>
 
         <div id="storeItemList"></div>
+      </div>
+    </div>
+
+    <div class="page" id="receipt-page">
+      <div class="scroll">
+
+        <div class="sticky-header">
+
+          <button id="receipt-take-photo" class="settings-button">
+            Take Receipt Photo
+          </button>
+
+          <div id="receipt-preview" style="margin-top:1rem; display:none;">
+            <img id="receipt-image" style="width:100%; border-radius:8px;" />
+          </div>
+
+          <div id="receipt-actions" style="display:none; margin-top:1rem;">
+            <button id="receipt-retake" class="settings-button">Retake</button>
+            <button id="receipt-confirm" class="settings-button primary">Confirm</button>
+          </div>
+
+          <div id="receipt-ocr-results" style="margin-top:1rem;"></div>
+
+        </div>
+
       </div>
     </div>
 

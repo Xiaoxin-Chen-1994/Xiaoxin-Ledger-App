@@ -2946,8 +2946,8 @@ function showPage(name, title = latestTitle, options={}) {
 
   vibrate(30); // milliseconds
 
-  latest = historyStack[historyStack.length - 1]; // there should always be at least one historyStack for each base page
-  [latestPage, latestTitle, latestOptions] = latest; // retreive the latest page at that base page
+  latest = historyStack[historyStack.length - 1]; // there should always be at least one historyStack
+  [latestPage, latestTitle, latestOptions] = latest; // retreive the latest page
 
   if (name !== latestPage) {
     // if the target page is not latest page, display this page
@@ -7895,3 +7895,158 @@ async function OpenGrocerySearch() {
   fetchCsvFromGitHub();
 }
 window.OpenGrocerySearch = OpenGrocerySearch;
+
+document.getElementById("open-receipt-scan")
+  .addEventListener("click", () => {
+    openReceiptScan({ returnOnly: false });
+  });
+
+let receiptScanMode = { returnOnly: false };
+
+function openReceiptScan(options = { returnOnly: false }) {
+  receiptScanMode = options;
+  showPage("receipt-page", "Scan Receipt");
+}
+
+document.getElementById("receipt-take-photo")
+  .addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      const img = document.getElementById("receipt-image");
+      img.src = URL.createObjectURL(file);
+
+      document.getElementById("receipt-preview").style.display = "block";
+      document.getElementById("receipt-actions").style.display = "flex";
+
+      runReceiptOCR(file);
+    };
+
+    input.click();
+  });
+
+async function runReceiptOCR(file) {
+  const resultsBox = document.getElementById("receipt-ocr-results");
+  resultsBox.innerHTML = "Recognizing…";
+
+  const { data: { text } } = await Tesseract.recognize(file, "eng");
+
+  const parsed = parseReceiptText(text);
+
+  resultsBox.innerHTML = `
+    <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
+    <div><strong>Date:</strong> ${parsed.date || "-"}</div>
+    <div><strong>Total:</strong> ${parsed.total || "-"}</div>
+    <div style="margin-top:0.5rem;"><strong>Items:</strong></div>
+    <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.items, null, 2)}</pre>
+  `;
+
+  window._receiptParsed = parsed;
+}
+
+function parseReceiptText(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const merchant = lines[0];
+
+  const dateMatch = text.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/);
+  const date = dateMatch ? dateMatch[0] : null;
+
+  const totalMatch = text.match(/total[:\s]*\$?(\d+\.\d{2})/i);
+  const total = totalMatch ? totalMatch[1] : null;
+
+  const itemRegex = /^(.+?)\s+(\d+\.\d{2})$/;
+  const items = [];
+
+  for (const line of lines) {
+    const m = line.match(itemRegex);
+    if (m) items.push({ name: m[1], price: parseFloat(m[2]) });
+  }
+
+  return { merchant, date, total, items };
+}
+
+document.getElementById("receipt-retake")
+  .addEventListener("click", () => {
+    document.getElementById("receipt-preview").style.display = "none";
+    document.getElementById("receipt-actions").style.display = "none";
+    document.getElementById("receipt-ocr-results").innerHTML = "";
+  });
+
+document.getElementById("receipt-confirm")
+  .addEventListener("click", () => {
+    const data = window._receiptParsed;
+
+    if (!receiptScanMode.returnOnly) {
+      // Standalone mode → go to create page
+      applyReceiptToWorkspace("create", null, data);
+      showPage("create", translations[currentLang]["create"]);
+
+    } else {
+      // Inline mode → return to existing transaction
+      closeReceiptScan();
+      applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
+      
+      const ws = workspace.transactions[latestOptions.transactionId];
+      switchTab(ws.inputTypeIndex);
+    }
+  });
+
+function closeReceiptScan() {
+  goBack();
+}
+
+function applyReceiptToWorkspace(mode, transactionId, data) {
+  let ws;
+
+  if (mode === "create") {
+    ws = workspace.create;
+  } else {
+    ws = workspace.transactions[transactionId];
+  }
+
+  // -----------------------------
+  // Insert OCR fields into workspace
+  // -----------------------------
+
+  // Merchant → subject or notes depending on your design
+  if (data.merchant) {
+    ws.subject = data.merchant;
+  }
+
+  // Date → inputTransactionTime
+  if (data.date) {
+    ws.inputTransactionTime = normalizeDate(data.date);
+  }
+
+  // Total → amount
+  if (data.total) {
+    ws.amount = parseFloat(data.total);
+  }
+
+  // Items → append to notes or custom field
+  if (data.items && data.items.length > 0) {
+    const itemLines = data.items
+      .map(i => `${i.name}: ${i.price.toFixed(2)}`)
+      .join("\n");
+
+    ws.notes = (ws.notes || "") + "\n" + itemLines;
+  }
+
+  // -----------------------------
+  // Trigger UI refresh
+  // -----------------------------
+  refreshCreateOrTransactionUI(ws);
+}
+
+function normalizeDate(raw) {
+  // Convert 2024/05/31 or 05-31-2024 → YYYY-MM-DD HH:mm
+  const d = new Date(raw);
+  return d.toISOString().slice(0,16).replace("T"," ");
+}
