@@ -4749,7 +4749,7 @@ function enablePageSwipe(pageEl) {
 
   let startX = 0, currentX = 0, isDragging = false;
 
-  const EDGE_ZONE = 40; // px from left edge
+  const EDGE_ZONE = 20; // px from left edge
 
   const onStart = e => {
     const x = e.touches[0].clientX;
