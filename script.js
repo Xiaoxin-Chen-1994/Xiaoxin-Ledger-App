@@ -460,26 +460,27 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 document.getElementById("githubLogin").onclick = () => {
-  window.location.href = "/api/auth/login";
+  // window.location.href = "/api/auth/login";
+  listPrivateRepos()
 };
 
 async function listPrivateRepos() {
-  const token = await get("github_token");
+  // const token = await get("github_token");
 
-  // 2. Get all private repos
-  const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
-    headers: { Authorization: `token ${token}` }
-  }).then(r => r.json());
+  // // 2. Get all private repos
+  // const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
+  //   headers: { Authorization: `token ${token}` }
+  // }).then(r => r.json());
 
-  // 3. Filter personal repos (owned by user)
-  const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
+  // // 3. Filter personal repos (owned by user)
+  // const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
 
-  // 4. Filter ledger repos (any repo user can push to)
-  const ledgerRepos = repos.filter(r => r.permissions.push);
+  // // 4. Filter ledger repos (any repo user can push to)
+  // const ledgerRepos = repos.filter(r => r.permissions.push);
 
   // 5. Render UI
   document.getElementById("repoList").innerHTML = `
-    <h3>Select Personal Settings Repo</h3>
+    <h3>Select a repository to store personal settings</h3>
     <select id="personalRepoSelect">
       <option value="">-- Select one --</option>
       ${personalRepos
@@ -487,7 +488,7 @@ async function listPrivateRepos() {
         .join("")}
     </select>
 
-    <h3>Select Ledger Repos</h3>
+    <h3>Select repositories for ledger data</h3>
     <ul>
       ${ledgerRepos
         .map(
@@ -503,7 +504,9 @@ async function listPrivateRepos() {
         .join("")}
     </ul>
 
-    <button id="confirmRepoSelection">Confirm</button>
+    <div class="actions">
+      <button id="confirmRepoSelection">Confirm</button>
+    </div>
   `;
 
   // 6. Handle confirmation
@@ -1167,392 +1170,13 @@ init();
 //   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
 // }
 
-// --- Authentication ---
-async function signup() {
-  const email = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  try {
-    // ✅ Create user
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const user = cred.user;
-    const myHouseholdId = user.uid;
-
-    // Localized household name
-    const householdName = currentLang === "en"
-      ? `${email}'s Ledger`
-      : `${email}的账本`;
-
-    // Document references
-    const householdRef = doc(db, "households", myHouseholdId);
-    const userRef = doc(db, "users", user.uid);
-    const profileRef = doc(db, "profiles", user.uid);
-
-    // Household doc
-    await setDoc(householdRef, {
-      name: householdName,
-      admin: user.uid,
-      members: [user.uid],
-      lastSynced: getFormattedTime(),
-
-      accounts: {
-        cashAccounts: [
-          { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-        ],
-        creditCards: [
-          { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
-        ],
-        depositoryAccounts: [
-          { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-        ],
-        storedValueCards: [
-          { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
-        ],
-        investmentAccounts: [
-          { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-        ]
-      },
-      "expense-categories": [
-        { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
-          { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
-          { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
-        ]},
-
-        { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
-          { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
-          { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
-          { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
-          { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
-          { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
-          { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
-          { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
-          { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
-          { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
-        ]},
-
-        { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
-          { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
-          { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
-        ]},
-
-        { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
-          { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-          { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
-        ]},
-
-        { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
-          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
-          { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
-          { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
-          { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
-        ]},
-
-        { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
-          { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
-          { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
-          { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
-        ]},
-
-        { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
-          { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
-          { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
-          { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
-          { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
-        ]},
-
-        { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
-          { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
-          { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
-        ]},
-
-        { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
-          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-          { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
-          { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
-          { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
-        ]}
-      ],
-      "income-categories": [
-        { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
-          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
-        ]},
-
-        { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
-          { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
-          { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
-          { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
-        ]},
-
-        { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
-          { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
-          { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
-          { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
-        ]},
-
-        { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
-          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
-        ]}
-      ],
-      collections: [
-        { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
-        { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
-        { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
-        { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-        { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
-        { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
-        { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
-        { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-        { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
-        { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
-        { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
-        { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
-        { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-        { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
-        { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
-        { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
-        { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
-        { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
-        { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
-        { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-        { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
-        { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
-      ],
-      subjects: [
-        { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
-        { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
-        { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
-        { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
-        { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
-        { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
-        { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
-      ],
-      tags: [],
-      entriesThisYear: {} // this document will only store entries of this month to reduce reading and writing of individual documents
-    });
-
-    // Profile doc
-    await setDoc(profileRef, { email });
-
-    const householdSnap = await getDoc(householdRef);
-    const household = householdSnap.data();
-    const firstExpensePrimary = household["expense-categories"][0];
-    const firstIncomePrimary = household["income-categories"][0];
-    
-    const accountEntries = Object.entries(household.accounts);
-    const [firstAccountType, firstAccountList] = accountEntries[0];
-    const firstAccount = firstAccountList[0];
-    const [secondAccountType, secondAccountList] = accountEntries[1];
-    const secondAccount = secondAccountList?.[0];
-
-    const defaults = {
-      expense: {
-        repoId: myHouseholdId,
-        accountType: firstAccountType,
-        account: firstAccount.name,
-        accountIcon: firstAccount.icon,
-        primary: firstExpensePrimary.primary,
-        primaryIcon: firstExpensePrimary.icon,
-        secondary: firstExpensePrimary.secondaries[0].name,
-        secondaryIcon: firstExpensePrimary.secondaries[0].icon,
-        subject: household.subjects[0].name,
-        subjectIcon: household.subjects[0].icon,
-        collection: household.collections[0].name,
-        collectionIcon: household.collections[0].icon
-      },
-
-      income: {
-        repoId: myHouseholdId,
-        accountType: firstAccountType,
-        account: firstAccount.name,
-        accountIcon: firstAccount.icon,
-        primary: firstIncomePrimary.primary,
-        primaryIcon: firstExpensePrimary.icon,
-        secondary: firstIncomePrimary.secondaries[0].name,
-        secondaryIcon: firstExpensePrimary.secondaries[0].icon,
-        subject: household.subjects[0].name,
-        subjectIcon: household.subjects[0].icon,
-        collection: household.collections[0].name,
-        collectionIcon: household.collections[0].icon
-      },
-
-      transfer: {
-        repoId: myHouseholdId,
-        fromType: firstAccountType,
-        fromAccount: firstAccount.name,
-        fromAccountIcon: firstAccount.icon,
-        toType: secondAccountType,
-        toAccount: secondAccount.name,
-        toAccountIcon: secondAccount.icon
-      },
-
-      balance: {
-        repoId: myHouseholdId,
-        accountType: firstAccountType,
-        account: firstAccount.name,
-        accountIcon: firstAccount.icon
-      }
-    };
-
-    // User doc
-    await setDoc(userRef, {
-      profile: {
-        email,
-        language: currentLang,
-        homeImages: [],
-        fontsize: "",
-        themeColor: "",
-        settings: {},
-        lastSynced: getFormattedTime(),
-      },
-      personalHouseholdId: myHouseholdId,
-      households: [myHouseholdId],
-      orderedHouseholds: [myHouseholdId],
-      defaults: defaults
-    })
-
-  } catch (error) {
-    showStatusMessage(error.message, "error");
-  }
-}
-window.signup = signup;
-
-function login() {
-  const email = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  signInWithEmailAndPassword(auth, email, password)
-    .catch(error => {
-      let message;
-
-      switch (error.code) {
-        case 'auth/user-not-found':
-          message = 'No account exists with this email.';
-          break;
-        case 'auth/invalid-login-credentials':
-          message = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          message = 'The email address is not valid.';
-          break;
-        case 'auth/user-disabled':
-          message = 'This account has been disabled. Contact support.';
-          break;
-        default:
-          message = error.message;
-          console.log(error);
-      }
-
-      showStatusMessage(message, 'error');
-    });
-}
-window.login = login;
-
-function resetPassword() {
-  const email = document.getElementById("username").value;
-
-  sendPasswordResetEmail(auth, email)
-    .then(() => {
-      alert("Password reset email sent!");
-    })
-    .catch((error) => {
-      console.error(error.code, error.message);
-      alert("Error: " + error.message);
-    });
-}
-window.resetPassword = resetPassword;
-
 async function logout() {
   await del("github_token");
+  await del("selectedRepos");
   window.location.href = "/";
   window.location.reload();
 }
 window.logout = logout;
-
-function mergeEntriesThisYear(doc) {
-  const merged = {};
-
-  for (const key of Object.keys(doc)) {
-    if (key.startsWith("entriesThisYear_part")) {
-      Object.assign(merged, doc[key]);
-    }
-  }
-
-  return merged;
-}
-
-function removeYearParts(doc) {
-  for (const key of Object.keys(doc)) {
-    if (key.startsWith("entriesThisYear_part")) {
-      delete doc[key];
-    }
-  }
-}
-
-async function syncData(userId) {
-  let lastSyncStatus = {};
-
-  console.time("Retrieve data from Firebase");
-
-  // --- Fetch user doc ---
-  const userRef = doc(db, "users", userId);
-  let userSnap; 
-  do { 
-    userSnap = await getDoc(userRef); 
-  } while (!userSnap.exists()); // make sure userSnap is ready. This is useful after signup.
-  const userDoc = userSnap.data();
-
-  // Track whether the user document came from server
-  let freshFromServer = userSnap.metadata.fromCache === false;
-  if (freshFromServer) {
-    lastSyncStatus["个人偏好"] = userDoc.profile.lastSynced
-  }
-
-  const householdIds = userDoc.households
-
-  // --- Fetch household docs ---
-  const householdDocs = {};
-  await Promise.all(
-    householdIds.map(async (hid) => {
-      freshFromServer = false; // initialize this variable for every household
-
-      const hRef = doc(db, "households", hid);
-      const hSnap = await getDoc(hRef);
-
-      householdDocs[hid] = hSnap.exists() ? hSnap.data() : null;
-
-      // In this local variable, merge entriesThisYear into one, and remove parts
-      householdDocs[hid].entriesThisYear = mergeEntriesThisYear(householdDocs[hid]);
-      removeYearParts(householdDocs[hid]);
-
-      // subcollection entries will not synced at this time
-      // individual entries will only be accessed ad hoc
-
-      // If a household doc came from server, mark it as fresh
-      if (hSnap.metadata.fromCache === false) {
-        freshFromServer = true;
-        if (freshFromServer) {
-          if (!lastSyncStatus[householdDocs[hid].name]) {
-            lastSyncStatus[householdDocs[hid].name] = {};
-          }
-          lastSyncStatus[householdDocs[hid].name] = {[{en:"Household Settings", zh:"账本设置"}[currentLang]]: householdDocs[hid].lastSynced}
-        }
-      }
-    })
-  );
-
-  console.timeEnd("Retrieve data from Firebase");
-
-  // assuming userDoc and householdDocs will always face the same online/offline connection
-  if (Object.keys(lastSyncStatus).length > 0) {// if it's not empty
-    localStorage.setItem("lastSyncStatus", JSON.stringify(lastSyncStatus));
-  }
-
-  populateHouseholdDropdown(userDoc, householdDocs); // prepare the dropdown list for households
-
-  return { userDoc, householdDocs };
-}
 
 // --- Persistent login state ---
 async function onAuthStateChanged(auth, user) {

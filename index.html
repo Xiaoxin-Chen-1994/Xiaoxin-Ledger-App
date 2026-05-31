@@ -28,24 +28,15 @@
 
   <!-- Login / Signup Section -->
   <div id="login-section" class="section">
-    <h2 id="login-title">登录或注册</h2>
-    <button id="githubLogin">Login with GitHub</button>
-    <button id="update-cached-code-1" class="update-code-button">更新程序</button>
-    <div id="repoList"></div>
-
-    <input type="text" id="username" placeholder="邮箱">
-    <input type="password" id="password" placeholder="密码">
+    <h2 id="login-title"></h2>
     <div class="actions">
-      <button id="signup-btn" onclick="signup()">注册</button>
-      <button id="login-btn" onclick="login()">登录</button>
+      <button id="githubLogin">Login with GitHub</button>
     </div>
-    <div class="forgot-password">
-      <button id="forgot-btn" onclick="forgotPassword()">重置密码</button>
+    <div id="repoList"></div>
+    <div class="actions">
+      <button id="update-cached-code-login" class="update-code-button">更新程序</button>
     </div>
-    <small id="reset-hint" class="reset-hint">
-      如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作。
-    </small>
-
+    
     <div id="login-settings" class="login-settings">
       <div id="login-lang-switch" class="login-lang-switch">
         <p id="login-language-title">语言</p>
