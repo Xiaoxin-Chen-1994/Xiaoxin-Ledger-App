@@ -2081,40 +2081,6 @@ wrapper.addEventListener("touchend", e => {
   endX = 0;
 });
 
-const fieldMap = {
-  expense: {
-    household: "expense-household",
-    amount: "expense-amount",
-    account: "expense-account",
-    datetime: "expense-datetime",
-    person: "expense-person",
-    notes: "expense-notes"
-  },
-  income: {
-    household: "income-household",
-    amount: "income-amount",
-    account: "income-account",
-    datetime: "income-datetime",
-    person: "income-person",
-    notes: "income-notes"
-  },
-  transfer: {
-    household: "transfer-household",
-    amountSimple: "transfer-amount",
-    amountFrom: "transfer-from-amount",
-    amountTo: "transfer-to-amount",
-    datetime: "transfer-datetime",
-    fromAccount: "transfer-from",
-    toAccount: "transfer-to",
-    notes: "transfer-notes"
-  },
-  balance: {
-    household: "balance-household",
-    amount: "balance-amount",
-    notes: "balance-notes"
-  }
-};
-
 // Loop through each tag input container
 document.querySelectorAll(".tag-input-container").forEach(container => {
   const input = container.querySelector("input");
@@ -2226,21 +2192,127 @@ function addTag(tag, subWorkspace) {
   container.appendChild(tagEl);
 }
 
+function createItemRow(nameValue = "", priceValue = "") {
+  const t = translations[currentLang];
 
-document.querySelectorAll('textarea.transaction-notes').forEach(textarea => {
-  textarea.addEventListener('input', function () {
-    this.style.height = 'auto';              // reset height
-    this.style.height = this.scrollHeight + 'px'; // set to content height
+  const row = document.createElement("div");
+  row.className = "item-row";
 
-    let subWorkspace = null;
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "item-name";
+  nameInput.placeholder = t.item;
+  nameInput.value = nameValue;
 
-    if (latestPage.includes("create")) { // when creating an entry
-      subWorkspace = workspace.create;
-    } else {
-      subWorkspace = workspace.transactions[latestOptions.transactionId];
+  const priceInput = document.createElement("input");
+  priceInput.type = "text";
+  priceInput.className = "item-price";
+  priceInput.placeholder = t.price;
+  priceInput.value = priceValue;
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.textContent = t.delete;
+
+  row.appendChild(nameInput);
+  row.appendChild(priceInput);
+  row.appendChild(deleteBtn);
+
+  // Right-click to show delete
+  row.addEventListener("contextmenu", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    row.classList.add("show-delete");
+  });
+
+  // Click outside delete to hide
+  row.addEventListener("click", e => {
+    e.stopPropagation();
+    if (!e.target.classList.contains("delete-btn")) {
+      row.classList.remove("show-delete");
     }
+  });
 
-    subWorkspace.inputNotes = this.value; // copy content into inputNotes
+  // Swipe detection
+  let startX = 0;
+  row.addEventListener("touchstart", e => {
+    e.stopPropagation();
+    startX = e.touches[0].clientX;
+  });
+
+  row.addEventListener("touchend", e => {
+    e.stopPropagation();
+    const endX = e.changedTouches[0].clientX;
+    const diff = startX - endX;
+    if (diff > 50) row.classList.add("show-delete");
+    else if (diff < -50) row.classList.remove("show-delete");
+  });
+
+  // Delete button
+  deleteBtn.addEventListener("click", () => {
+    row.remove();
+    saveItemsToWorkspace();
+  });
+
+  return row;
+}
+
+function saveItemsToWorkspace() {
+  let subWorkspace = latestPage.includes("create")
+    ? workspace.create
+    : workspace.transactions[latestOptions.transactionId];
+
+  const rows = document.querySelectorAll(".item-row");
+
+  subWorkspace.items = Array.from(rows).map(row => ({
+    name: row.querySelector(".item-name")?.value || "",
+    price: row.querySelector(".item-price")?.value || ""
+  }));
+}
+
+document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
+  addBtn.addEventListener("click", () => {
+    const group = addBtn.closest(".item-group");
+    const newRow = createItemRow();
+    group.insertBefore(newRow, addBtn);
+    saveItemsToWorkspace();
+  });
+});
+
+document.querySelectorAll(".item-row").forEach(row => {
+  const name = row.querySelector(".item-name")?.value || "";
+  const price = row.querySelector(".item-price")?.value || "";
+  const upgraded = createItemRow(name, price);
+  row.replaceWith(upgraded);
+});
+
+document.addEventListener("focusin", e => {
+  if (e.target.classList.contains("item-price")) {
+    const nameInput = e.target.closest(".item-row").querySelector(".item-name");
+    if (nameInput) nameInput.style.flex = "2";
+  }
+});
+
+document.addEventListener("focusout", e => {
+  if (e.target.classList.contains("item-price")) {
+    const nameInput = e.target.closest(".item-row").querySelector(".item-name");
+    if (nameInput) nameInput.style.flex = "6";
+  }
+});
+
+document.querySelectorAll("textarea.transaction-notes").forEach(textarea => {
+  textarea.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
+
+    let subWorkspace = latestPage.includes("create")
+      ? workspace.create
+      : workspace.transactions[latestOptions.transactionId];
+
+    subWorkspace.inputNotes = this.value;
+
+    saveItemsToWorkspace();
   });
 });
 
@@ -7793,7 +7865,6 @@ async function OpenGrocerySearch() {
     targetBtn.insertAdjacentElement('afterend', deleteBtn);
     setTimeout(() => deleteBtn.remove(), 2000);
   }
-
 
   document.getElementById('itemBox').addEventListener('input', () => {
     const query = document.getElementById('itemBox').value.trim()
