@@ -460,8 +460,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 document.getElementById("githubLogin").onclick = () => {
-  // window.location.href = "/api/auth/login";
-  listPrivateRepos()
+  window.location.href = "/api/auth/login";
 };
 
 async function listPrivateRepos() {
