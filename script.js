@@ -7603,7 +7603,7 @@ document.addEventListener("click", e => {
 });
 
 const updateBtns = document.querySelectorAll(".update-code-button");
-console.log(updateBtns)
+
 updateBtns.forEach(btn => {
   btn.addEventListener("click", () => {
     const title = {
