@@ -1365,6 +1365,52 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   }  
 });
 
+document.getElementById("display-local-storage").addEventListener("click", async () => {
+  const t = translations[currentLang];
+  const container = document.getElementById("local-storage-text");
+
+  // Toggle: hide if already visible
+  if (container.innerHTML.trim() !== "") {
+    container.innerHTML = "";
+    return;
+  }
+
+  const notes = document.createElement("div");
+  notes.style.color = "var(--muted)";
+  notes.style.fontStyle = "italic";
+  container.appendChild(notes);
+
+  // Check browser support
+  if (navigator.storage && navigator.storage.estimate) {
+    const { usage, quota } = await navigator.storage.estimate();
+
+    notes.textContent = t.timestampNotes;
+
+    const blank = document.createElement("div");
+    blank.style.height = "0.8em";
+    container.appendChild(blank);
+
+    const block = document.createElement("div");
+    block.className = "local-storage-entry";
+
+    const usedMB = (usage / 1024 / 1024).toFixed(2);
+    const quotaMB = (quota / 1024 / 1024).toFixed(2);
+
+    block.innerHTML = `
+      <div><strong>Storage usage</strong></div>
+      <div style="margin-left: 1.2em;">
+        Used: ${usedMB} MB<br>
+        Quota: ${quotaMB} MB
+      </div>
+    `;
+
+    container.appendChild(block);
+
+  } else {
+    notes.textContent = "Local storage usage is not available.";
+  }
+});
+
 function getFormattedTime() {
   const now = new Date();
 

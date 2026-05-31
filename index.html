@@ -482,6 +482,7 @@
     <div class="page" id="settings-page">
       <div class="scroll">
         <div class="settings-header">
+          <h2></h2>
           <span id="settings-welcome"></span>
         </div>
 
@@ -490,6 +491,14 @@
           <p id="basic-settings-title">个人偏好</p>
           <button id="open-basic-settings" class="settings-button"
             onclick="showPage('basic-settings')">打开个人偏好</button>
+        </section>
+
+        <section class="settings-section local-storage">
+          <p id="basic-settings-title">本地存储</p>
+          <div>
+            <button id="display-local-storage" class="settings-button">查看存储使用量</button>
+            <div id="local-storage-text"></div>
+          </div>
         </section>
 
         <section class="settings-section last-synced">
