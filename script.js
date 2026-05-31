@@ -3292,7 +3292,7 @@ function showPage(name, title = latestTitle, options={}) {
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-console.log('historyStack', historyStack)
+
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
@@ -4749,10 +4749,21 @@ function enablePageSwipe(pageEl) {
 
   let startX = 0, currentX = 0, isDragging = false;
 
+  const EDGE_ZONE = 20; // px from left edge
+
   const onStart = e => {
+    const x = e.touches[0].clientX;
+
+    // If swipe starts at the very edge → let system back gesture handle it
+    if (x < EDGE_ZONE) {
+      isDragging = false;
+      return;
+    }
+
     if (e.target.closest("input, textarea, [contenteditable]")) return;
+
     e.stopPropagation();
-    startX = e.touches[0].clientX;
+    startX = x;
     isDragging = true;
     pageEl.style.transition = "none";
   };
