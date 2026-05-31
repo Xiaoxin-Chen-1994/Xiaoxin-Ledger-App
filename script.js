@@ -7902,6 +7902,7 @@ document.getElementById("open-receipt-scan")
   });
 
 let receiptScanMode = { returnOnly: false };
+window._currentReceiptFile = null;
 
 function openReceiptScan(options = { returnOnly: false }) {
   receiptScanMode = options;
@@ -7946,38 +7947,105 @@ function openReceiptFileInput(useCamera) {
     const file = input.files[0];
     if (!file) return;
 
-    const img = document.getElementById("receipt-image");
-    img.src = URL.createObjectURL(file);
+    window._currentReceiptFile = file;
+
+    // Show original immediately
+    document.getElementById("receipt-image").src = URL.createObjectURL(file);
 
     document.getElementById("receipt-previews").style.display = "block";
     document.getElementById("receipt-actions").style.display = "flex";
 
-    runReceiptOCR(file);
+    // Trigger first processed preview
+    updateProcessedPreview();
   };
 
   input.click();
 }
 
-async function runReceiptOCR(file) {
+async function preprocessImage(file, settings) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let data = imageData.data;
+
+      const brightness = settings.brightness / 100;
+      const contrast = settings.contrast / 100;
+      const highlights = settings.highlights / 100;
+      const shadows = settings.shadows / 100;
+
+      for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i + 1], b = data[i + 2];
+        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        // Brightness
+        gray *= brightness;
+
+        // Contrast
+        gray = (gray - 128) * contrast + 128;
+
+        // Highlights / Shadows
+        gray = gray < 128 ? gray * shadows : gray * highlights;
+
+        gray = Math.max(0, Math.min(255, gray));
+        data[i] = data[i + 1] = data[i + 2] = gray;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    };
+  });
+}
+
+["brightness", "contrast", "highlights", "shadows"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updateProcessedPreview);
+});
+
+async function updateProcessedPreview() {
+  const file = window._currentReceiptFile;
+  if (!file) return;
+
+  const settings = {
+    brightness: +document.getElementById("brightness").value,
+    contrast: +document.getElementById("contrast").value,
+    highlights: +document.getElementById("highlights").value,
+    shadows: +document.getElementById("shadows").value
+  };
+
+  const processedBlob = await preprocessImage(file, settings);
+  const processedUrl = URL.createObjectURL(processedBlob);
+
+  document.getElementById("receipt-processed-image").src = processedUrl;
+
+  // Save for OCR
+  window._processedBlob = processedBlob;
+}
+
+document.getElementById("run-ocr").onclick = async () => {
+  const blob = window._processedBlob;
+  if (!blob) return;
+
+  await runReceiptOCR(blob);
+};
+
+async function runReceiptOCR(processedBlob) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  // 1. Preprocess the image
-  const processedBlob = await preprocessImage(file);
-
-  // 2. Show the processed image
-  const processedUrl = URL.createObjectURL(processedBlob);
-  const processedImg = document.getElementById("receipt-processed-image");
-  processedImg.src = processedUrl;
-
-  // 3. Run OCR on the processed image
   const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
     tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/- "
   });
 
   const parsed = parseReceiptText(text);
 
-  // 4. Show parsed results
   resultsBox.innerHTML = `
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
     <div><strong>Date:</strong> ${parsed.date || "-"}</div>
@@ -7991,61 +8059,6 @@ async function runReceiptOCR(file) {
 ${text}
     </pre>
   `;
-
-  window._receiptParsed = parsed;
-}
-
-async function preprocessImage(file) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      const src = cv.imread(canvas);
-      const gray = new cv.Mat();
-      const blur = new cv.Mat();
-      const thresh = new cv.Mat();
-
-      // 1️⃣ Convert to grayscale
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-      // 2️⃣ Equalize histogram (balances brightness)
-      cv.equalizeHist(gray, gray);
-
-      // 3️⃣ Gaussian blur (reduce noise)
-      cv.GaussianBlur(gray, blur, new cv.Size(3, 3), 0);
-
-      // 4️⃣ Adaptive threshold (local binarization)
-      cv.adaptiveThreshold(
-        blur,
-        thresh,
-        255,
-        cv.ADAPTIVE_THRESH_MEAN_C,
-        cv.THRESH_BINARY,
-        15,
-        10
-      );
-
-      // 5️⃣ Optional: sharpen edges
-      const kernel = cv.Mat.ones(3, 3, cv.CV_32F);
-      kernel.data32F[4] = -8.0;
-      const sharpened = new cv.Mat();
-      cv.filter2D(thresh, sharpened, cv.CV_8U, kernel);
-
-      cv.imshow(canvas, sharpened);
-
-      canvas.toBlob((blob) => resolve(blob), "image/png");
-
-      // Clean up
-      src.delete(); gray.delete(); blur.delete(); thresh.delete(); sharpened.delete();
-    };
-  });
 }
 
 function parseReceiptText(text) {
