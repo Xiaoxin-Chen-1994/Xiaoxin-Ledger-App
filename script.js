@@ -464,18 +464,18 @@ document.getElementById("githubLogin").onclick = () => {
 };
 
 async function listPrivateRepos() {
-  // const token = await get("github_token");
+  const token = await get("github_token");
 
-  // // 2. Get all private repos
-  // const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
-  //   headers: { Authorization: `token ${token}` }
-  // }).then(r => r.json());
+  // 2. Get all private repos
+  const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
+    headers: { Authorization: `token ${token}` }
+  }).then(r => r.json());
 
-  // // 3. Filter personal repos (owned by user)
-  // const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
+  // 3. Filter personal repos (owned by user)
+  const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
 
-  // // 4. Filter ledger repos (any repo user can push to)
-  // const ledgerRepos = repos.filter(r => r.permissions.push);
+  // 4. Filter ledger repos (any repo user can push to)
+  const ledgerRepos = repos.filter(r => r.permissions.push);
 
   // 5. Render UI
   document.getElementById("repoList").innerHTML = `
@@ -1099,6 +1099,7 @@ async function init() {
   const token = await get("github_token");
 
   if (!token) {
+    window.scrollTo(0, 0);
     console.log("Not logged in");
     return;
   }
