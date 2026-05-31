@@ -7133,8 +7133,8 @@ function closeSelector() {
 
   stopBackspaceHold();
 
-  // // Clear dummy state so further back presses exit normally
-  // history.back();
+  // Clear dummy state so further back presses exit normally
+  history.back();
 }
 window.closeSelector = closeSelector;
 
