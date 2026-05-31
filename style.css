@@ -521,7 +521,7 @@ input[list], input[type="text"], input[type="url"],
 }
 
 .item-row .item-name {
-  flex: 6;        /* allow item-name to be wider */
+  flex: 3;        /* allow item-name to be wider */
   transition: flex 0.2s ease; /* animate flex changes */
   min-width: 0;
 }
