@@ -7276,8 +7276,8 @@ updateBtns.forEach(btn => {
                 en: "Update finished. Restarting the app…",
                 zh: "更新完成，应用将重新启动…"
               }[currentLang]);
-              location.href = location.pathname + `?v=${Date.now()}`;
             }
+            location.href = location.pathname + `?v=${Date.now()}`;
           }
         },
         {
