@@ -3292,7 +3292,7 @@ function showPage(name, title = latestTitle, options={}) {
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-
+showStatusMessage(historyStack.length, 'info')
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
