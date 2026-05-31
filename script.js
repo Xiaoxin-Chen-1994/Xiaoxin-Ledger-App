@@ -7950,39 +7950,105 @@ async function preprocessImage(file, settings) {
     img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
+
       canvas.width = img.width;
       canvas.height = img.height;
+
+      // Draw original
       ctx.drawImage(img, 0, 0);
 
       let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let data = imageData.data;
 
-      const brightness = settings.brightness / 100;
-      const contrast = settings.contrast / 100;
-      const highlights = settings.highlights / 100;
-      const shadows = settings.shadows / 100;
+      // Normalize slider values
+      const brightness = (settings.brightness - 100) / 100; // -1 to +1
+      const contrast = (settings.contrast - 100) / 100;     // -1 to +1
+      const highlights = settings.highlights / 100;         // 0–2
+      const shadows = settings.shadows / 100;               // 0–2
 
+      // Precompute contrast factor
+      const c = (1 + contrast);
+      const intercept = 128 * (1 - c);
+
+      // Loop pixels
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i], g = data[i + 1], b = data[i + 2];
-        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        // Grayscale
+        let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
 
         // Brightness
-        gray *= brightness;
+        gray += brightness * 128;
 
         // Contrast
-        gray = (gray - 128) * contrast + 128;
+        gray = gray * c + intercept;
 
-        // Highlights / Shadows
-        gray = gray < 128 ? gray * shadows : gray * highlights;
+        // Highlights / Shadows (gamma)
+        if (gray < 128) {
+          gray = 128 * Math.pow(gray / 128, 1 / shadows);
+        } else {
+          gray = 128 + (127 * Math.pow((gray - 128) / 127, highlights));
+        }
 
         gray = Math.max(0, Math.min(255, gray));
-        data[i] = data[i + 1] = data[i + 2] = gray;
+
+        data[i] = data[i+1] = data[i+2] = gray;
       }
 
       ctx.putImageData(imageData, 0, 0);
+
+      // Apply Otsu threshold (JS implementation)
+      const threshold = otsuThreshold(imageData.data);
+      for (let i = 0; i < data.length; i += 4) {
+        const v = data[i] < threshold ? 0 : 255;
+        data[i] = data[i+1] = data[i+2] = v;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
       canvas.toBlob((blob) => resolve(blob), "image/png");
     };
   });
+}
+
+function otsuThreshold(data) {
+  const hist = new Array(256).fill(0);
+
+  // Build histogram
+  for (let i = 0; i < data.length; i += 4) {
+    hist[data[i]]++;
+  }
+
+  const total = data.length / 4;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+
+  let sumB = 0;
+  let wB = 0;
+  let wF = 0;
+
+  let maxVar = 0;
+  let threshold = 128;
+
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+
+    wF = total - wB;
+    if (wF === 0) break;
+
+    sumB += t * hist[t];
+
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+
+    const between = wB * wF * (mB - mF) * (mB - mF);
+
+    if (between > maxVar) {
+      maxVar = between;
+      threshold = t;
+    }
+  }
+
+  return threshold;
 }
 
 ["brightness", "contrast", "highlights", "shadows"].forEach(id => {
@@ -8027,8 +8093,12 @@ async function runReceiptOCR(processedBlob) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
-    tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/- "
+  const { data: { text } } = await Tesseract.recognize(blob, "eng", {
+    tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/-%() ",
+    preserve_interword_spaces: "1",
+    user_defined_dpi: "300",
+    tessedit_pageseg_mode: "6", // Assume a uniform block of text
+    tessedit_char_blacklist: "|{}[]<>",
   });
 
   const parsed = parseReceiptText(text);
@@ -8049,44 +8119,123 @@ ${text}
 }
 
 function parseReceiptText(text) {
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const raw = text;
+  const lines = text
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
 
-  // Merchant
-  const merchant = lines[0] || null;
+  // -----------------------------
+  // Merchant (first line with letters)
+  // -----------------------------
+  const merchant =
+    lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // Date detection (supports many formats)
-  const dateRegex = /\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
-  const dateMatch = text.match(dateRegex);
-  const date = dateMatch ? dateMatch[0] : null;
+  // -----------------------------
+  // Date (supports YY/MM/DD, YYYY-MM-DD, etc.)
+  // -----------------------------
+  const date =
+    text.match(/\b\d{2}[\/\-]\d{2}[\/\-]\d{2}\b/)?.[0] ||
+    text.match(/\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/)?.[0] ||
+    null;
 
-  // Total detection (robust)
-  const totalRegex = /(total|amount due|grand total|balance due)[^\d]*(\d+\.\d{2})/i;
-  const totalMatch = text.match(totalRegex);
-  const total = totalMatch ? totalMatch[2] : null;
+  // -----------------------------
+  // Total
+  // -----------------------------
+  const total =
+    text.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] ||
+    text.match(/BALANCE DUE[^0-9]*(\d+\.\d{2})/i)?.[1] ||
+    null;
 
-  // Item detection (flexible)
-  const itemRegex = /^(.+?)[\s\.$]*\$?(\d+\.\d{2})$/;
+  // -----------------------------
+  // Loyalty / Discounts
+  // -----------------------------
+  const loyalty =
+    text.match(/LOYALTY[^0-9]*(\d+\.\d{2})/i)?.[1] || null;
+
+  // -----------------------------
+  // Payment method + last 4 digits
+  // -----------------------------
+  const paymentMethod =
+    text.match(/MASTERCARD|VISA|DEBIT|CREDIT/i)?.[0] || null;
+
+  const cardLast4 =
+    text.match(/(\d{4})\s*$/)?.[1] || null;
+
+  // -----------------------------
+  // Item line detection
+  // -----------------------------
+  const itemLines = lines.filter(l =>
+    /kg|lb|@|\$\d|\d+\.\d{2}/.test(l)
+  );
+
   const items = [];
 
-  for (const line of lines) {
-    const m = line.match(itemRegex);
-    if (m) {
-      items.push({
-        name: m[1].trim(),
-        price: parseFloat(m[2])
-      });
-    }
+  for (const line of itemLines) {
+    const parsed = parseItemLine(line);
+    if (parsed) items.push(parsed);
   }
 
-  return { merchant, date, total, items, raw: text };
+  return {
+    merchant,
+    date,
+    total,
+    loyalty,
+    payment: paymentMethod,
+    cardLast4,
+    items,
+    raw
+  };
 }
 
-document.getElementById("receipt-retake")
-  .addEventListener("click", () => {
-    document.getElementById("receipt-preview").style.display = "none";
-    document.getElementById("receipt-actions").style.display = "none";
-    document.getElementById("receipt-ocr-results").innerHTML = "";
-  });
+function parseItemLine(line) {
+  const clean = line.replace(/[^\w\s\.\@\$\-\/]/g, "");
+
+  // Pattern A: weight-based
+  // "1.595 kg @ $4.38/kg 6.99"
+  let m = clean.match(
+    /([\w\s]+?)\s*(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/
+  );
+  if (m) {
+    return {
+      name: m[1].trim(),
+      quantity: parseFloat(m[2]),
+      unit: m[3],
+      unit_price: parseFloat(m[4]),
+      total: parseFloat(m[6])
+    };
+  }
+
+  // Pattern B: quantity-based
+  // "6 @ $0.49 2.94"
+  m = clean.match(
+    /([\w\s]+?)\s*(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/
+  );
+  if (m) {
+    return {
+      name: m[1].trim(),
+      quantity: parseFloat(m[2]),
+      unit: "each",
+      unit_price: parseFloat(m[3]),
+      total: parseFloat(m[4])
+    };
+  }
+
+  // Pattern C: simple price at end
+  // "BANANAS 1.31"
+  m = clean.match(/(.+?)\s+(\d+\.\d{2})$/);
+  if (m) {
+    return {
+      name: m[1].trim(),
+      quantity: null,
+      unit: null,
+      unit_price: null,
+      total: parseFloat(m[2])
+    };
+  }
+
+  return null;
+}
 
 document.getElementById("receipt-confirm")
   .addEventListener("click", () => {
