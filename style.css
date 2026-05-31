@@ -2053,17 +2053,14 @@ emoji-picker {
 
 /* Utility buttons */
 
-.utilities-container {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
+.utilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
-
-  /* Prevent stretching to full height */
-  align-items: stretch;
+  padding: 1rem;
   width: 100%;
-  max-width: 500px;     /* optional, looks nicer */
-  margin: 0 auto;       /* center horizontally */
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 /* Base button style */
