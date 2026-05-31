@@ -34,20 +34,25 @@
     </div>
     <div id="repoList"></div>
     <div class="actions">
-      <button id="update-cached-code-login" class="update-code-button">更新程序</button>
+      
     </div>
     
     <div id="login-settings" class="login-settings">
-      <div id="login-lang-switch" class="login-lang-switch">
+      <div id="login-lang-switch" class="login-settings-row">
         <p id="login-language-title">语言</p>
         <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
         <button class="settings-button" onclick="setLanguage('en', true)">English</button>
       </div>
 
-      <div id="login-fontsize-change" class="login-fontsize-change">
+      <div id="login-fontsize-change" class="login-settings-row">
         <p id="login-fontsize-title">字体大小</p>
         <button class="settings-button" onclick="decreaseFontsize()">-</button>
         <button class="settings-button" onclick="increaseFontsize()">+</button>
+      </div>
+
+      <div class="login-settings-row">
+        <p></p>
+        <button id="update-cached-code-login" class="update-code-button">更新程序</button>
       </div>
     </div>
 

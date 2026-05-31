@@ -1155,8 +1155,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   word-break: break-word;
 }
 
-.login-lang-switch,
-.login-fontsize-change {
+.login-settings-row {
   display: flex;
   flex-direction: row;      /* label left, buttons right */
   justify-content: space-between;
@@ -1166,8 +1165,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   gap: 1rem;
 }
 
-.login-lang-switch p,
-.login-fontsize-change p {
+.login-settings-row p {
   width: 20%; 
 }
 
