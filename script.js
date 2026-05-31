@@ -7790,7 +7790,7 @@ async function OpenGrocerySearch() {
   let fileSha = null;
 
   async function fetchCsvFromGitHub() {
-    const bust = `&t=${Date.now()}`;
+    const bust = `?t=${Date.now()}`;
     let response = null;
     try {
       response = await fetch(`${url}${bust}`, {
