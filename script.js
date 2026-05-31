@@ -5042,7 +5042,12 @@ async function applyThemeColor(color) {
 
 // Ensure this runs after DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  wireHomeImageSettings();
+  window.addEventListener("beforeunload", (e) => {
+    e.preventDefault();
+    e.returnValue = "";
+  });
+  
+  wireHomeImageSettings();  
 });
 
 let homeImages = []; // start empty; load later
