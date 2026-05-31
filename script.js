@@ -440,10 +440,10 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js')
-    .then(() => console.log('Service Worker registered'));
-}
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('/service-worker.js')
+//     .then(() => console.log('Service Worker registered'));
+// }
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
@@ -1163,9 +1163,9 @@ async function init() {
 
 init();
 
-if (navigator.serviceWorker.controller) {
-  navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
-}
+// if (navigator.serviceWorker.controller) {
+//   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+// }
 
 // --- Authentication ---
 async function signup() {
@@ -7602,70 +7602,72 @@ document.addEventListener("click", e => {
   }
 });
 
-const updateBtn = document.querySelector(".update-code-button");
-console.log(updateBtn)
-updateBtn.addEventListener("click", () => {
-  const title = {
-    en: "Update App or Reset Service Worker",
-    zh: "更新应用或重置Service Worker"
-  }[currentLang];
+const updateBtns = document.querySelector(".update-code-button");
+console.log(updateBtns)
+updateBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const title = {
+      en: "Update App or Reset Service Worker",
+      zh: "更新应用或重置Service Worker"
+    }[currentLang];
 
-  const message = {
-    en: `If the app behaves unexpectedly, you can try <strong>updating</strong> the app or <strong>unregistering</strong> the Service Worker.<br><br>
-        The Service Worker enables offline access. Once the device is online, the app will automatically re-register the Service Worker and recache the required resources.<br><br>
-        The app will restart after <strong>updating</strong> or <strong>unregistering</strong>.`,
+    const message = {
+      en: `If the app behaves unexpectedly, you can try <strong>updating</strong> the app or <strong>unregistering</strong> the Service Worker.<br><br>
+          The Service Worker enables offline access. Once the device is online, the app will automatically re-register the Service Worker and recache the required resources.<br><br>
+          The app will restart after <strong>updating</strong> or <strong>unregistering</strong>.`,
 
-    zh: `如果应用出现异常行为，你可以尝试<strong>更新</strong>应用或<strong>注销</strong> Service Worker。<br><br>
-        Service Worker 提供离线访问功能。设备联网后，应用会自动重新注册 Service Worker 并重新缓存所需资源。<br><br>
-        应用在<strong>更新</strong>或<strong>注销</strong>后会自动重新启动。`
-  }[currentLang];
+      zh: `如果应用出现异常行为，你可以尝试<strong>更新</strong>应用或<strong>注销</strong> Service Worker。<br><br>
+          Service Worker 提供离线访问功能。设备联网后，应用会自动重新注册 Service Worker 并重新缓存所需资源。<br><br>
+          应用在<strong>更新</strong>或<strong>注销</strong>后会自动重新启动。`
+    }[currentLang];
 
-  showPopupWindow({
-    title,
-    message,
-    buttons: [
-      {
-        text: {
-          en: "Update",
-          zh: "更新"
-        }[currentLang],
-        onClick: () => {
-          if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+    showPopupWindow({
+      title,
+      message,
+      buttons: [
+        {
+          text: {
+            en: "Update",
+            zh: "更新"
+          }[currentLang],
+          onClick: () => {
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+              alert({
+                en: "Update finished. Restarting the app…",
+                zh: "更新完成，应用将重新启动…"
+              }[currentLang]);
+              location.reload();
+            }
+          }
+        },
+        {
+          text: {
+            en: "Unregister SW",
+            zh: "注销 Service Worker"
+          }[currentLang],
+          onClick: () => {
+            window.location.href = "/sw-kill.html";
+            window.location.href = "/";
             alert({
-              en: "Update finished. Restarting the app…",
-              zh: "更新完成，应用将重新启动…"
+              en: "Service Worker removed. Restarting the app…",
+              zh: "Service Worker 已注销，应用将重新启动…"
             }[currentLang]);
             location.reload();
           }
+        },
+        {
+          text: {
+            en: "Cancel",
+            zh: "取消"
+          }[currentLang],
+          primary: true,
+          onClick: () => {
+            /* popup auto closes */
+          }
         }
-      },
-      {
-        text: {
-          en: "Unregister SW",
-          zh: "注销 Service Worker"
-        }[currentLang],
-        onClick: () => {
-          window.location.href = "/sw-kill.html";
-          window.location.href = "/";
-          alert({
-            en: "Service Worker removed. Restarting the app…",
-            zh: "Service Worker 已注销，应用将重新启动…"
-          }[currentLang]);
-          location.reload();
-        }
-      },
-      {
-        text: {
-          en: "Cancel",
-          zh: "取消"
-        }[currentLang],
-        primary: true,
-        onClick: () => {
-          /* popup auto closes */
-        }
-      }
-    ]
+      ]
+    });
   });
 });
 
