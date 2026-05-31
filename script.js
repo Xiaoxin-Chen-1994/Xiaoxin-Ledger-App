@@ -8156,14 +8156,30 @@ function parseReceiptText(text) {
 
 function normalizeReceiptText(text) {
   return text
-    .replace(/(\d)\s+(\d)/g, "$1.$2")        // fix "1 52" → "1.52"
-    .replace(/(\d)\.\s+(\d)/g, "$1.$2")      // fix "1. 52" → "1.52"
-    .replace(/(\d)\s+kg/gi, "$1 kg")         // fix "1 kg"
-    .replace(/\s+@/g, " @")                  // fix spacing before @
-    .replace(/\$\s+/g, "$")                  // fix "$ 1.52" → "$1.52"
-    .replace(/\s+\/\s+/g, "/")               // fix "/ kg" → "/kg"
-    .replace(/[^\w\s\.\@\$\-\/]/g, "")       // remove garbage chars
-    .replace(/\s+/g, " ")                    // collapse spaces
+    // Fix "1. 52" → "1.52"
+    .replace(/(\d)\.\s+(\d)/g, "$1.$2")
+
+    // Fix "6. 99" → "6.99"
+    .replace(/(\d)\.\s+(\d{2})/g, "$1.$2")
+
+    // Fix "$1. 52" → "$1.52"
+    .replace(/\$\s*(\d)\.\s*(\d{2})/g, "\$$1.$2")
+
+    // Fix "0. 49" → "0.49"
+    .replace(/(\d)\s*\.\s*(\d{2})/g, "$1.$2")
+
+    // Fix "/ kg" → "/kg"
+    .replace(/\s*\/\s*(kg|lb)/gi, "/$1")
+
+    // Fix "@  $1.52" → "@ $1.52"
+    .replace(/\@\s*\$/g, "@ $")
+
+    // Remove garbage characters
+    .replace(/[^\w\s\.\@\$\-\/]/g, "")
+
+    // Collapse spaces
+    .replace(/\s+/g, " ")
+
     .trim();
 }
 
