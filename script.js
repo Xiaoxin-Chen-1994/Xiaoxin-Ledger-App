@@ -7932,6 +7932,30 @@ document.getElementById("receipt-take-photo")
 
   });
 
+function openReceiptFileInput(useCamera) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+
+  if (useCamera) {
+    input.capture = "environment"; // opens camera
+  }
+
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+
+    const img = document.getElementById("receipt-image");
+    img.src = URL.createObjectURL(file);
+
+    document.getElementById("receipt-preview").style.display = "block";
+    document.getElementById("receipt-actions").style.display = "flex";
+
+    runReceiptOCR(file);
+  };
+
+  input.click();
+}
 
 async function runReceiptOCR(file) {
   const resultsBox = document.getElementById("receipt-ocr-results");
