@@ -1384,8 +1384,6 @@ document.getElementById("display-local-storage").addEventListener("click", async
   if (navigator.storage && navigator.storage.estimate) {
     const { usage, quota } = await navigator.storage.estimate();
 
-    notes.textContent = t.timestampNotes;
-
     const blank = document.createElement("div");
     blank.style.height = "0.8em";
     container.appendChild(blank);
@@ -1397,7 +1395,6 @@ document.getElementById("display-local-storage").addEventListener("click", async
     const quotaMB = (quota / 1024 / 1024).toFixed(2);
 
     block.innerHTML = `
-      <div><strong>Storage usage</strong></div>
       <div style="margin-left: 1.2em;">
         Used: ${usedMB} MB<br>
         Quota: ${quotaMB} MB
