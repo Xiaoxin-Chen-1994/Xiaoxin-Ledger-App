@@ -2033,16 +2033,14 @@ emoji-picker {
 
 .utilities-grid {
   display: grid;
+  box-sizing: border-box;
   grid-template-columns: repeat(auto-fill, minmax(160px, max-content));
   gap: 1rem;
   padding: 1rem;
-
-  /* Center the grid so left/right margins match */
   justify-content: center;
   align-items: start;
-
-  /* Prevent the grid from stretching full height */
   width: 100%;
+  max-width: 100%;
 }
 
 /* Base button style */
