@@ -440,10 +440,10 @@ const translations = {
 window.translations = translations;
 window.currentLang = currentLang;
 
-// if ('serviceWorker' in navigator) {
-//   navigator.serviceWorker.register('/service-worker.js')
-//     .then(() => console.log('Service Worker registered'));
-// }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('Service Worker registered'));
+}
 
 if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
@@ -1163,9 +1163,9 @@ async function init() {
 
 init();
 
-// if (navigator.serviceWorker.controller) {
-//   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
-// }
+if (navigator.serviceWorker.controller) {
+  navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
+}
 
 // --- Authentication ---
 async function signup() {
@@ -7619,7 +7619,7 @@ updateBtn.addEventListener("click", () => {
         Service Worker 提供离线访问功能。设备联网后，应用会自动重新注册 Service Worker 并重新缓存所需资源。<br><br>
         应用在<strong>更新</strong>或<strong>注销</strong>后会自动重新启动。`
   }[currentLang];
-console.log(message)
+
   showPopupWindow({
     title,
     message,
