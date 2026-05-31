@@ -7962,7 +7962,8 @@ async function runReceiptOCR(file) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  const { data: { text } } = await Tesseract.recognize(file, "eng");
+  const preprocessed = await preprocessImage(file);
+  const { data: { text } } = await Tesseract.recognize(preprocessed, "eng");
 
   const parsed = parseReceiptText(text);
 
@@ -7981,6 +7982,64 @@ ${text}
   `;
 
   window._receiptParsed = parsed;
+}
+
+async function preprocessImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      // Draw original
+      ctx.drawImage(img, 0, 0);
+
+      // Get pixels
+      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let data = imageData.data;
+
+      // -----------------------------
+      // 1. Convert to grayscale
+      // -----------------------------
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        data[i] = data[i + 1] = data[i + 2] = gray;
+      }
+
+      // -----------------------------
+      // 2. Increase contrast
+      // -----------------------------
+      const contrast = 1.4; // tweakable
+      const intercept = 128 * (1 - contrast);
+      for (let i = 0; i < data.length; i += 4) {
+        let v = data[i] * contrast + intercept;
+        v = Math.max(0, Math.min(255, v));
+        data[i] = data[i + 1] = data[i + 2] = v;
+      }
+
+      // -----------------------------
+      // 3. Threshold (binarize)
+      // -----------------------------
+      for (let i = 0; i < data.length; i += 4) {
+        const v = data[i] < 160 ? 0 : 255; // tweakable
+        data[i] = data[i + 1] = data[i + 2] = v;
+      }
+
+      // Write back
+      ctx.putImageData(imageData, 0, 0);
+
+      // Return processed image as blob
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    };
+  });
 }
 
 function parseReceiptText(text) {
