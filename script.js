@@ -7757,6 +7757,7 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
 async function OpenGrocerySearch() {
   showPage('grocery-search', 'Grocery Search');
 
+  const token = await get("github_token");
   const repoName = selectedRepos.activeLedgerRepo.name;
   const filePath = 'GrocerySearchHistory.csv';
 
@@ -7794,7 +7795,7 @@ async function OpenGrocerySearch() {
     try {
       response = await fetch(`${url}${bust}`, {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${token}`,
           Accept: 'application/vnd.github.v3.raw'
         },
         cache: 'no-store'
@@ -7874,7 +7875,7 @@ async function OpenGrocerySearch() {
       const bust = `&t=${Date.now()}`;
       const response = await fetch(`${fetchUrl}${bust}`, {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`
+          Authorization: `token ${token}`
         },
         cache: 'no-store' // optional, but helps in some environments
       });
@@ -7910,7 +7911,7 @@ async function OpenGrocerySearch() {
       await fetch(fetchUrl, {
         method: 'PUT',
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${token}`,
           Accept: 'application/vnd.github.v3+json'
         },
         body: JSON.stringify({
