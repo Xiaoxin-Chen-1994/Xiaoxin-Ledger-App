@@ -1094,12 +1094,12 @@ async function githubAppendChangeLog(repoName, change, token) {
 }
 
 async function init() {
-
+  window.scrollTo(0, 0);
+    
   // 1. Load token
   const token = await get("github_token");
 
   if (!token) {
-    window.scrollTo(0, 0);
     console.log("Not logged in");
     return;
   }
