@@ -7899,7 +7899,7 @@ async function OpenGrocerySearch() {
         rows.push(row.join(','));
       });
 
-      const content = utf8ToBase64(rows.join('\n'))
+      const content = encodeBase64Utf8(rows.join('\n'))
 
       showStatusMessage('Writing to CSV…', 'info');
       const fetchUrl = url + `?force=json`;
