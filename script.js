@@ -2959,7 +2959,7 @@ function showPage(name, title = latestTitle, options={}) {
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-
+console.log('historyStack', historyStack)
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
@@ -7905,7 +7905,8 @@ let receiptScanMode = { returnOnly: false };
 
 function openReceiptScan(options = { returnOnly: false }) {
   receiptScanMode = options;
-  showPage("receipt", "Scan Receipt");
+  console.log('receiptScanMode', receiptScanMode)
+  showPage("scan-receipt", "Scan Receipt");
 }
 
 document.getElementById("receipt-take-photo")
