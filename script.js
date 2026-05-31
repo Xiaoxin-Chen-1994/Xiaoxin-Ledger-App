@@ -8191,20 +8191,24 @@ function parseItemLine(lines, index) {
   line = line.replace(/^[^\dA-Za-z]+/, "");
 
   // 1) Weight-based: "0.560 kg @ $1.52/kg 1.31"
-  let m = line.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
+  const UNIT = "(kg|ke|ks|k9|kq|kg\\.|kg\\)|kg\\/|kg\\\\|lb|1b|Ib|\\|b)";
+
+  let m = line.match(
+    new RegExp(`(\\d+\\.\\d+)\\s*${UNIT}\\s*@\\s*\\$(\\d+\\.\\d+)(?:\\/${UNIT})?\\s*(\\d+\\.\\d{2})`, "i")
+  );
+
   if (m) {
-    const qty = parseFloat(m[1]);          // 0.560
-    const unit = (m[2] || m[4]).toLowerCase(); // kg / lb
-    const unitPrice = parseFloat(m[3]);    // 1.52
-    const total = parseFloat(m[5]);        // 1.31
+    const qty = parseFloat(m[1]);
+    const unitPrice = parseFloat(m[3]);
+    const total = parseFloat(m[5]);
 
     const name = findItemName(lines, index);
 
     return {
       name,
       quantity: qty,
-      unit_price: `$${unitPrice.toFixed(2)}/${unit}`,
-      total: total
+      unit_price: `$${unitPrice.toFixed(2)}/kg`,  // normalize to kg
+      total
     };
   }
 
