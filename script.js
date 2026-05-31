@@ -7912,8 +7912,7 @@ async function OpenGrocerySearch() {
         body: JSON.stringify({
           message: 'Update CSV via browser',
           content: content,
-          sha: fileSha,
-          branch: BRANCH
+          sha: fileSha
         })
       });
 
