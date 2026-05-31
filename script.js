@@ -8120,71 +8120,64 @@ ${text}
 
 function parseReceiptText(text) {
   const raw = text;
-  const lines = text
-    .split("\n")
-    .map(l => l.trim())
-    .filter(Boolean);
+  text = normalizeReceiptText(text);
 
-  // Merchant: first line with letters
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  // Merchant
   const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // Date (YY/MM/DD or YYYY-MM-DD)
+  // Date
   const date =
-    text.match(/\b\d{2}[\/\-]\d{2}[\/\-]\d{2}\b/)?.[0] ||
-    text.match(/\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/)?.[0] ||
+    text.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
+    text.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
     null;
 
   // Total
   const total =
     text.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] ||
-    text.match(/BALANCE[^0-9]*(\d+\.\d{2})/i)?.[1] ||
     null;
 
-  // Loyalty
-  const loyalty =
-    text.match(/LOYALTY[^0-9]*(\d+\.\d{2})/i)?.[1] || null;
-
-  // Payment
-  const payment =
-    text.match(/MASTERCARD|VISA|DEBIT|CREDIT/i)?.[0] || null;
-
-  const cardLast4 =
-    text.match(/(\d{4})\s*$/)?.[1] || null;
-
-  // Item lines
-  const itemLines = lines.filter(l =>
-    /kg|lb|@|\$\d|\d+\.\d{2}/.test(l)
-  );
-
   const items = [];
-  for (const line of itemLines) {
-    const parsed = parseItemLine(line);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Skip payment lines
+    if (/MASTERCARD|VISA|DEBIT|CREDIT/i.test(line)) continue;
+    if (/ACCOUNT/i.test(line)) continue;
+
+    const parsed = parseItemLine(lines, i);
     if (parsed) items.push(parsed);
   }
 
-  return {
-    merchant,
-    date,
-    total,
-    loyalty,
-    payment,
-    cardLast4,
-    items,
-    raw
-  };
+  return { merchant, date, total, items, raw };
 }
 
-function parseItemLine(line) {
-  const clean = line.replace(/[^\w\s\.\@\$\-\/]/g, "");
+function normalizeReceiptText(text) {
+  return text
+    .replace(/(\d)\s+(\d)/g, "$1.$2")        // fix "1 52" → "1.52"
+    .replace(/(\d)\.\s+(\d)/g, "$1.$2")      // fix "1. 52" → "1.52"
+    .replace(/(\d)\s+kg/gi, "$1 kg")         // fix "1 kg"
+    .replace(/\s+@/g, " @")                  // fix spacing before @
+    .replace(/\$\s+/g, "$")                  // fix "$ 1.52" → "$1.52"
+    .replace(/\s+\/\s+/g, "/")               // fix "/ kg" → "/kg"
+    .replace(/[^\w\s\.\@\$\-\/]/g, "")       // remove garbage chars
+    .replace(/\s+/g, " ")                    // collapse spaces
+    .trim();
+}
+
+function parseItemLine(lines, index) {
+  const line = lines[index];
+
+  // Fix decimals again (safety)
+  const clean = line.replace(/(\d)\.\s+(\d)/g, "$1.$2");
 
   // Pattern A: weight-based
-  // "1.595 kg @ $4.38/kg 6.99"
-  let m = clean.match(
-    /(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/
-  );
+  let m = clean.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
   if (m) {
     return {
-      name: extractNameBefore(line, m[0]),
+      name: findItemName(lines, index),
       quantity: parseFloat(m[1]),
       unit: m[2],
       unit_price: parseFloat(m[3]),
@@ -8193,13 +8186,10 @@ function parseItemLine(line) {
   }
 
   // Pattern B: quantity-based
-  // "6 @ $0.49 2.94"
-  m = clean.match(
-    /(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/
-  );
+  m = clean.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
   if (m) {
     return {
-      name: extractNameBefore(line, m[0]),
+      name: findItemName(lines, index),
       quantity: parseFloat(m[1]),
       unit: "each",
       unit_price: parseFloat(m[2]),
@@ -8208,7 +8198,6 @@ function parseItemLine(line) {
   }
 
   // Pattern C: simple item
-  // "BANANAS 1.31"
   m = clean.match(/(.+?)\s+(\d+\.\d{2})$/);
   if (m) {
     return {
@@ -8223,10 +8212,19 @@ function parseItemLine(line) {
   return null;
 }
 
-function extractNameBefore(line, matchedPart) {
-  const idx = line.indexOf(matchedPart);
-  if (idx <= 0) return "";
-  return line.slice(0, idx).trim();
+function findItemName(lines, index) {
+  // Look 1 line above
+  if (index > 0 && /^[A-Za-z]/.test(lines[index - 1])) {
+    return lines[index - 1].trim();
+  }
+
+  // Look 2 lines above (OCR sometimes breaks)
+  if (index > 1 && /^[A-Za-z]/.test(lines[index - 2])) {
+    return lines[index - 2].trim();
+  }
+
+  // Fallback: use the line itself
+  return lines[index].replace(/(\d|\$).*/, "").trim();
 }
 
 document.getElementById("receipt-confirm")
