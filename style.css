@@ -2067,15 +2067,6 @@ h2 {
   margin-left: 3.5rem;
 }
 
-input, button {
-  font-size: 1.1rem;
-  padding: 0.6em 1em;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  border: 1px solid #ccc;
-  box-shadow: none;
-}
-
 .store-button {
   background-color: #0057b8;
   color: #ffffff;
@@ -2116,14 +2107,6 @@ input, button {
     background: rgba(0, 0, 0, 0.6);
   }
   
-  input,
-  button {
-    background-color: #1e1e1e;
-    color: #eee;
-    border: 1px solid #444;
-    box-shadow: none;
-  }
-
   .store-button {
     background-color: #2b78c5;
   }
