@@ -2280,3 +2280,24 @@ emoji-picker {
   align-items: center;
   justify-content: center;
 }
+
+#receipt-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-row label {
+  width: 6rem;        /* fixed label width for perfect alignment */
+  font-weight: 600;
+}
+
+.control-row input[type="range"] {
+  flex: 1;            /* slider stretches to fill remaining space */
+}
