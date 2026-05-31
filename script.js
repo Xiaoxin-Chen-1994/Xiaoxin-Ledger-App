@@ -8125,52 +8125,38 @@ function parseReceiptText(text) {
     .map(l => l.trim())
     .filter(Boolean);
 
-  // -----------------------------
-  // Merchant (first line with letters)
-  // -----------------------------
-  const merchant =
-    lines.find(l => /[A-Za-z]/.test(l)) || null;
+  // Merchant: first line with letters
+  const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // -----------------------------
-  // Date (supports YY/MM/DD, YYYY-MM-DD, etc.)
-  // -----------------------------
+  // Date (YY/MM/DD or YYYY-MM-DD)
   const date =
     text.match(/\b\d{2}[\/\-]\d{2}[\/\-]\d{2}\b/)?.[0] ||
     text.match(/\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/)?.[0] ||
     null;
 
-  // -----------------------------
   // Total
-  // -----------------------------
   const total =
     text.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] ||
-    text.match(/BALANCE DUE[^0-9]*(\d+\.\d{2})/i)?.[1] ||
+    text.match(/BALANCE[^0-9]*(\d+\.\d{2})/i)?.[1] ||
     null;
 
-  // -----------------------------
-  // Loyalty / Discounts
-  // -----------------------------
+  // Loyalty
   const loyalty =
     text.match(/LOYALTY[^0-9]*(\d+\.\d{2})/i)?.[1] || null;
 
-  // -----------------------------
-  // Payment method + last 4 digits
-  // -----------------------------
-  const paymentMethod =
+  // Payment
+  const payment =
     text.match(/MASTERCARD|VISA|DEBIT|CREDIT/i)?.[0] || null;
 
   const cardLast4 =
     text.match(/(\d{4})\s*$/)?.[1] || null;
 
-  // -----------------------------
-  // Item line detection
-  // -----------------------------
+  // Item lines
   const itemLines = lines.filter(l =>
     /kg|lb|@|\$\d|\d+\.\d{2}/.test(l)
   );
 
   const items = [];
-
   for (const line of itemLines) {
     const parsed = parseItemLine(line);
     if (parsed) items.push(parsed);
@@ -8181,7 +8167,7 @@ function parseReceiptText(text) {
     date,
     total,
     loyalty,
-    payment: paymentMethod,
+    payment,
     cardLast4,
     items,
     raw
@@ -8194,34 +8180,34 @@ function parseItemLine(line) {
   // Pattern A: weight-based
   // "1.595 kg @ $4.38/kg 6.99"
   let m = clean.match(
-    /([\w\s]+?)\s*(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/
+    /(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/
   );
   if (m) {
     return {
-      name: m[1].trim(),
-      quantity: parseFloat(m[2]),
-      unit: m[3],
-      unit_price: parseFloat(m[4]),
-      total: parseFloat(m[6])
+      name: extractNameBefore(line, m[0]),
+      quantity: parseFloat(m[1]),
+      unit: m[2],
+      unit_price: parseFloat(m[3]),
+      total: parseFloat(m[5])
     };
   }
 
   // Pattern B: quantity-based
   // "6 @ $0.49 2.94"
   m = clean.match(
-    /([\w\s]+?)\s*(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/
+    /(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/
   );
   if (m) {
     return {
-      name: m[1].trim(),
-      quantity: parseFloat(m[2]),
+      name: extractNameBefore(line, m[0]),
+      quantity: parseFloat(m[1]),
       unit: "each",
-      unit_price: parseFloat(m[3]),
-      total: parseFloat(m[4])
+      unit_price: parseFloat(m[2]),
+      total: parseFloat(m[3])
     };
   }
 
-  // Pattern C: simple price at end
+  // Pattern C: simple item
   // "BANANAS 1.31"
   m = clean.match(/(.+?)\s+(\d+\.\d{2})$/);
   if (m) {
@@ -8235,6 +8221,12 @@ function parseItemLine(line) {
   }
 
   return null;
+}
+
+function extractNameBefore(line, matchedPart) {
+  const idx = line.indexOf(matchedPart);
+  if (idx <= 0) return "";
+  return line.slice(0, idx).trim();
 }
 
 document.getElementById("receipt-confirm")
