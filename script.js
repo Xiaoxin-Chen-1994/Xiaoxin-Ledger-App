@@ -8182,21 +8182,21 @@ function normalizeReceiptLine(line) {
 function parseItemLine(lines, index) {
   let line = lines[index].trim();
 
-  // skip obvious non-item lines
-  if (/SUBTOTAL|TOTAL|LOYALTY|MASTERCARD|CREDIT|ACCOUNT|COPY|creprt/i.test(line)) {
+  // Skip obvious non-item lines
+  if (/SUBTOTAL|TOTAL|LOYALTY|MASTERCARD|CREDIT|ACCOUNT|COPY|POINTS|creprt/i.test(line)) {
     return null;
   }
 
-  // strip leading junk
+  // Strip leading junk
   line = line.replace(/^[^\dA-Za-z]+/, "");
 
-  // 1) weight-based: "0.560 kg @ $1.52/kg 1.31"
+  // 1) Weight-based: "0.560 kg @ $1.52/kg 1.31"
   let m = line.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
   if (m) {
-    const qty = parseFloat(m[1]);
-    const unit = m[2].toLowerCase();
-    const unitPrice = parseFloat(m[3]);
-    const total = parseFloat(m[5]);
+    const qty = parseFloat(m[1]);          // 0.560
+    const unit = (m[2] || m[4]).toLowerCase(); // kg / lb
+    const unitPrice = parseFloat(m[3]);    // 1.52
+    const total = parseFloat(m[5]);        // 1.31
 
     const name = findItemName(lines, index);
 
@@ -8208,11 +8208,12 @@ function parseItemLine(lines, index) {
     };
   }
 
-  // 2) each-based: "6 @ $0.49 2.94"
+  // 2) Each-based: "6 @ $0.49 2.94"
   m = line.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
   if (m) {
-    const qty = parseInt(m[1], 10);
-    const priceEach = parseFloat(m[2]);
+    const qty = parseInt(m[1], 10);        // 6
+    const priceEach = parseFloat(m[2]);    // 0.49
+    const total = parseFloat(m[3]);        // 2.94
 
     const name = findItemName(lines, index);
 
@@ -8220,21 +8221,24 @@ function parseItemLine(lines, index) {
       name,
       quantity: qty,
       price_each: priceEach,
-      total: +(qty * priceEach).toFixed(2)
+      total: total   // or +(qty * priceEach).toFixed(2) if you prefer recompute
     };
   }
 
-  // 3) very conservative fallback: "SOMETHING 1.31"
-  m = line.match(/([A-Za-z][A-Za-z0-9 \-]+)\s+(\d+\.\d{2})$/);
-  if (m) {
-    const name = m[1].trim();
-    const total = parseFloat(m[2]);
-    return {
-      name,
-      quantity: null,
-      unit_price: null,
-      total
-    };
+  // 3) Very conservative fallback: "SOMETHING 1.31"
+  //    Only if line starts with a letter and has no '@' or 'kg/lb'
+  if (!/@|kg|lb/i.test(line)) {
+    m = line.match(/^([A-Za-z][A-Za-z0-9 \-]+)\s+(\d+\.\d{2})$/);
+    if (m) {
+      const name = m[1].trim();
+      const total = parseFloat(m[2]);
+      return {
+        name,
+        quantity: null,
+        unit_price: null,
+        total
+      };
+    }
   }
 
   return null;
