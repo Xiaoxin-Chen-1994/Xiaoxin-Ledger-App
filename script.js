@@ -8093,11 +8093,11 @@ async function runReceiptOCR(processedBlob) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  const { data: { text } } = await Tesseract.recognize(blob, "eng", {
+  const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
     tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/-%() ",
     preserve_interword_spaces: "1",
     user_defined_dpi: "300",
-    tessedit_pageseg_mode: "6", // Assume a uniform block of text
+    tessedit_pageseg_mode: "6",
     tessedit_char_blacklist: "|{}[]<>",
   });
 
