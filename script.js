@@ -7808,46 +7808,41 @@ async function OpenGrocerySearch() {
     const buffer = await response.arrayBuffer(); // get raw binary
     const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer); // decode as UTF-8
 
-    try {
-      // Robust CSV parser for quoted fields
-      function parseCSV(text) {
-        const rows = [];
-        let row = [], field = '', inQuotes = false;
+    // Robust CSV parser for quoted fields
+    function parseCSV(text) {
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
 
-        for (let i = 0; i < text.length; i++) {
-          const char = text[i];
-          const next = text[i + 1];
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
 
-          if (char === '"' && inQuotes && next === '"') {
-            field += '"';
-            i++; // skip escaped quote
-          } else if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            row.push(field.trim());
-            field = '';
-          } else if ((char === '\n' || char === '\r') && !inQuotes) {
-            if (field || row.length) {
-              row.push(field.trim());
-              rows.push(row);
-              row = [];
-              field = '';
-            }
-          } else {
-            field += char;
-          }
-        }
-
-        if (field || row.length) {
+        if (char === '"' && inQuotes && next === '"') {
+          field += '"';
+          i++; // skip escaped quote
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
           row.push(field.trim());
-          rows.push(row);
+          field = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (field || row.length) {
+            row.push(field.trim());
+            rows.push(row);
+            row = [];
+            field = '';
+          }
+        } else {
+          field += char;
         }
-
-        return rows;
       }
-    } catch (err) {
-      console.error('parse CSV error after fetching:', err);
-      showStatusMessage('Error parsing CSV after fetching', type = 'error', duration = 10000);
+
+      if (field || row.length) {
+        row.push(field.trim());
+        rows.push(row);
+      }
+
+      return rows;
     }
 
     const parsedRows = parseCSV(text);
