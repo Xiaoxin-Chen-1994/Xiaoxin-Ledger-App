@@ -8040,13 +8040,14 @@ async function preprocessImage(file, settings) {
         // Contrast
         gray = gray * c + intercept;
 
-        // Highlights / Shadows (gamma) — ONLY if sliders moved
-        if (shadows !== 1 || highlights !== 1) {
-          if (gray < 128) {
-            gray = gray + (128 - gray) * (1 - shadows);
-          } else {
-            gray = gray + (gray - 128) * (highlights - 1);
-          }
+        // Shadows (lift or deepen)
+        if (shadows !== 1 && gray < 128) {
+          gray = gray + (128 - gray) * (1 - shadows);
+        }
+
+        // Highlights (recover or boost)
+        if (highlights !== 1 && gray > 128) {
+          gray = gray + (gray - 128) * (highlights - 1);
         }
 
         gray = Math.max(0, Math.min(255, gray));
