@@ -7911,28 +7911,10 @@ function openReceiptScan(options = { returnOnly: false }) {
 }
 
 document.getElementById("receipt-take-photo")
-  .addEventListener("click", () => {
+  .addEventListener("click", () => openReceiptFileInput(true));
 
-    showPopupWindow({
-      title: "Scan Receipt",
-      message: "Choose how you want to add the receipt",
-      buttons: [
-        {
-          text: "Take Photo",
-          primary: true,
-          onClick: () => openReceiptFileInput(true)
-        },
-        {
-          text: "Upload Image",
-          onClick: () => openReceiptFileInput(false)
-        },
-        {
-          text: "Cancel"
-        }
-      ]
-    });
-
-  });
+document.getElementById("receipt-upload-photo")
+  .addEventListener("click", () => openReceiptFileInput(false));
 
 function openReceiptFileInput(useCamera) {
   const input = document.createElement("input");

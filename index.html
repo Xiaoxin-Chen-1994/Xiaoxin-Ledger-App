@@ -487,28 +487,29 @@
 
         <div class="sticky-header">
 
-          <button id="receipt-take-photo" class="settings-button">
-            Take Receipt Photo
-          </button>
+          <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+            <button id="receipt-take-photo" class="settings-button">
+              Take Receipt Photo
+            </button>
+
+            <button id="receipt-upload-photo" class="settings-button">
+              Upload Receipt Photo
+            </button>
+          </div>
 
           <div id="receipt-controls" style="margin-top:1rem;">
-
             <label>Brightness
               <input type="range" id="brightness" min="0" max="200" value="100">
             </label>
-
             <label>Contrast
               <input type="range" id="contrast" min="0" max="200" value="100">
             </label>
-
             <label>Highlights
               <input type="range" id="highlights" min="0" max="200" value="100">
             </label>
-
             <label>Shadows
               <input type="range" id="shadows" min="0" max="200" value="100">
             </label>
-
           </div>
 
           <button id="run-ocr" class="settings-button primary" style="margin-top:1rem;">
