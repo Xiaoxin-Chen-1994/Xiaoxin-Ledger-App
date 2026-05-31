@@ -8059,9 +8059,9 @@ async function preprocessImage(file, settings) {
         // Highlights / Shadows (gamma) — ONLY if sliders moved
         if (shadows !== 1 || highlights !== 1) {
           if (gray < 128) {
-            gray = 128 * Math.pow(gray / 128, shadows);
+            gray = gray + (128 - gray) * (1 - shadows);
           } else {
-            gray = 128 + 127 * Math.pow((gray - 128) / 127, 1 / highlights);
+            gray = gray + (gray - 128) * (highlights - 1);
           }
         }
 
