@@ -7960,6 +7960,7 @@ async function preprocessImage(file, settings) {
       // ALWAYS keep a clean copy of the original pixels
       const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const imageData = ctx.createImageData(canvas.width, canvas.height);
+
       const src = original.data;
       const dst = imageData.data;
 
@@ -7984,7 +7985,7 @@ async function preprocessImage(file, settings) {
         // Contrast
         gray = gray * c + intercept;
 
-        // Highlights / Shadows (gamma)
+        // Highlights / Shadows (gamma) — ONLY if sliders moved
         if (shadows !== 1 || highlights !== 1) {
           if (gray < 128) {
             gray = 128 * Math.pow(gray / 128, shadows);
@@ -8001,7 +8002,7 @@ async function preprocessImage(file, settings) {
 
       ctx.putImageData(imageData, 0, 0);
 
-      // OPTIONAL: Apply threshold ONLY if user wants it
+      // OPTIONAL: threshold only if user wants it
       if (settings.threshold === true) {
         const threshold = otsuThreshold(dst);
         for (let i = 0; i < dst.length; i += 4) {
