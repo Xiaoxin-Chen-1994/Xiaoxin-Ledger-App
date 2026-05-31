@@ -7922,7 +7922,7 @@ function openReceiptFileInput(useCamera) {
   input.accept = "image/*";
 
   if (useCamera) {
-    input.capture = "environment"; // opens camera
+    input.capture = "environment";
   }
 
   input.onchange = () => {
@@ -7931,16 +7931,14 @@ function openReceiptFileInput(useCamera) {
 
     window._currentReceiptFile = file;
 
-    // Show original immediately
+    // This overwrites the old image automatically
     document.getElementById("receipt-image").src = URL.createObjectURL(file);
 
     document.getElementById("receipt-previews").style.display = "block";
-    document.getElementById("receipt-actions").style.display = "flex";
 
-    // Trigger first processed preview
-    updateProcessedPreview();
+    schedulePreprocessUpdate();
   };
-
+  
   input.click();
 }
 
