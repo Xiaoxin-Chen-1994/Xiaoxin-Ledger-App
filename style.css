@@ -489,11 +489,6 @@ input[list], input[type="text"], input[type="url"],
   box-sizing: border-box;
 }
 
-.form-row > button[id$="add-item-btn"] {
-  flex: 1 0 100%;          /* force button to wrap to next line */
-  margin-left: 20%;        /* same width as label */
-}
-
 #expense-add-item-btn, #income-add-item-btn {
   align-self: flex-start; /* keep button aligned with inputs */
   padding: 6px 12px;
