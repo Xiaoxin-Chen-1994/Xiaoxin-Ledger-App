@@ -7957,23 +7957,26 @@ async function preprocessImage(file, settings) {
       // Draw original
       ctx.drawImage(img, 0, 0);
 
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let data = imageData.data;
+      // ALWAYS keep a clean copy of the original pixels
+      const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const imageData = ctx.createImageData(canvas.width, canvas.height);
+      const src = original.data;
+      const dst = imageData.data;
 
       // Normalize slider values
-      const brightness = 1 + (settings.brightness / 100);
-      const contrast   = 1 + (settings.contrast   / 100);
-      const highlights = 1 + (settings.highlights / 100);
-      const shadows    = 1 + (settings.shadows    / 100);
+      const brightness = 1 + (settings.brightness / 100);   // 1 = neutral
+      const contrast   = 1 + (settings.contrast   / 100);   // 1 = neutral
+      const highlights = 1 + (settings.highlights / 100);   // 1 = neutral
+      const shadows    = 1 + (settings.shadows    / 100);   // 1 = neutral
 
       // Precompute contrast factor
       const c = contrast;
       const intercept = 128 * (1 - c);
 
       // Loop pixels
-      for (let i = 0; i < data.length; i += 4) {
-        // Grayscale
-        let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      for (let i = 0; i < src.length; i += 4) {
+        // Grayscale from ORIGINAL pixels
+        let gray = 0.299 * src[i] + 0.587 * src[i+1] + 0.114 * src[i+2];
 
         // Brightness
         gray *= brightness;
@@ -7982,29 +7985,31 @@ async function preprocessImage(file, settings) {
         gray = gray * c + intercept;
 
         // Highlights / Shadows (gamma)
-        if (gray < 128) {
-          gray = 128 * Math.pow(gray / 128, shadows);
-        } else {
-          gray = 128 + 127 * Math.pow((gray - 128) / 127, 1 / highlights);
+        if (shadows !== 1 || highlights !== 1) {
+          if (gray < 128) {
+            gray = 128 * Math.pow(gray / 128, shadows);
+          } else {
+            gray = 128 + 127 * Math.pow((gray - 128) / 127, 1 / highlights);
+          }
         }
 
         gray = Math.max(0, Math.min(255, gray));
 
-        data[i] = data[i+1] = data[i+2] = gray;
+        dst[i] = dst[i+1] = dst[i+2] = gray;
+        dst[i+3] = 255;
       }
 
       ctx.putImageData(imageData, 0, 0);
 
-      // Apply Otsu threshold (JS implementation)
-      const threshold = otsuThreshold(imageData.data);
-      for (let i = 0; i < data.length; i += 4) {
-        const v = data[i] < threshold ? 0 : 255;
-        data[i] = data[i+1] = data[i+2] = v;
+      // OPTIONAL: Apply threshold ONLY if user wants it
+      if (settings.threshold === true) {
+        const threshold = otsuThreshold(dst);
+        for (let i = 0; i < dst.length; i += 4) {
+          const v = dst[i] < threshold ? 0 : 255;
+          dst[i] = dst[i+1] = dst[i+2] = v;
+        }
+        ctx.putImageData(imageData, 0, 0);
       }
-
-      imageData.data.set(data);
-
-      ctx.putImageData(imageData, 0, 0);
 
       canvas.toBlob((blob) => resolve(blob), "image/png");
     };
