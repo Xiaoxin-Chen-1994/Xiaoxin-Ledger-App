@@ -7905,7 +7905,7 @@ let receiptScanMode = { returnOnly: false };
 
 function openReceiptScan(options = { returnOnly: false }) {
   receiptScanMode = options;
-  showPage("receipt-page", "Scan Receipt");
+  showPage("receipt", "Scan Receipt");
 }
 
 document.getElementById("receipt-take-photo")
