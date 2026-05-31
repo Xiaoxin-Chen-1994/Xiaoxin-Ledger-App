@@ -8120,32 +8120,32 @@ ${text}
 
 function parseReceiptText(text) {
   const raw = text;
-  text = normalizeReceiptText(text);
 
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map(l => normalizeReceiptLine(l))  // per-line normalization
+    .map(l => l.trim())
+    .filter(Boolean);
 
-  // Merchant
+  // merchant
   const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // Date
+  // date
   const date =
-    text.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
-    text.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
+    raw.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
+    raw.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
     null;
 
-  // Total
+  // total
   const total =
-    text.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] ||
-    null;
+    raw.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] || null;
 
   const items = [];
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Skip payment lines
-    if (/MASTERCARD|VISA|DEBIT|CREDIT/i.test(line)) continue;
-    if (/ACCOUNT/i.test(line)) continue;
+    // skip obvious non-item lines
+    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|LOYALTY|SUBTOTAL|TOTAL/i.test(line)) continue;
 
     const parsed = parseItemLine(lines, i);
     if (parsed) items.push(parsed);
@@ -8154,42 +8154,30 @@ function parseReceiptText(text) {
   return { merchant, date, total, items, raw };
 }
 
-function normalizeReceiptText(text) {
-  return text
-    // Fix "1. 52" → "1.52"
+function normalizeReceiptLine(line) {
+  return line
+    // fix "1. 52" → "1.52"
     .replace(/(\d)\.\s+(\d)/g, "$1.$2")
-
-    // Fix "6. 99" → "6.99"
-    .replace(/(\d)\.\s+(\d{2})/g, "$1.$2")
-
-    // Fix "$1. 52" → "$1.52"
-    .replace(/\$\s*(\d)\.\s*(\d{2})/g, "\$$1.$2")
-
-    // Fix "0. 49" → "0.49"
+    // fix "0. 49" → "0.49"
     .replace(/(\d)\s*\.\s*(\d{2})/g, "$1.$2")
-
-    // Fix "/ kg" → "/kg"
+    // fix "$1. 52" → "$1.52"
+    .replace(/\$\s*(\d)\.\s*(\d{2})/g, "\$$1.$2")
+    // fix "/ kg" → "/kg"
     .replace(/\s*\/\s*(kg|lb)/gi, "/$1")
-
-    // Fix "@  $1.52" → "@ $1.52"
+    // fix "@  $1.52" → "@ $1.52"
     .replace(/\@\s*\$/g, "@ $")
-
-    // Remove garbage characters
+    // remove garbage chars
     .replace(/[^\w\s\.\@\$\-\/]/g, "")
-
-    // Collapse spaces
-    .replace(/\s+/g, " ")
-
+    // collapse spaces (but NOT newlines, we’re per-line)
+    .replace(/[ \t]+/g, " ")
     .trim();
 }
 
 function parseItemLine(lines, index) {
   const line = lines[index];
+  const clean = line;
 
-  // Fix decimals again (safety)
-  const clean = line.replace(/(\d)\.\s+(\d)/g, "$1.$2");
-
-  // Pattern A: weight-based
+  // weight-based: "0.660 kg @ $1.52/kg 1.31"
   let m = clean.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
   if (m) {
     return {
@@ -8201,7 +8189,7 @@ function parseItemLine(lines, index) {
     };
   }
 
-  // Pattern B: quantity-based
+  // quantity-based: "6 @ $0.49 2.94"
   m = clean.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
   if (m) {
     return {
@@ -8213,7 +8201,7 @@ function parseItemLine(lines, index) {
     };
   }
 
-  // Pattern C: simple item
+  // simple: "BANANAS 1.31"
   m = clean.match(/(.+?)\s+(\d+\.\d{2})$/);
   if (m) {
     return {
@@ -8229,18 +8217,13 @@ function parseItemLine(lines, index) {
 }
 
 function findItemName(lines, index) {
-  // Look 1 line above
   if (index > 0 && /^[A-Za-z]/.test(lines[index - 1])) {
     return lines[index - 1].trim();
   }
-
-  // Look 2 lines above (OCR sometimes breaks)
   if (index > 1 && /^[A-Za-z]/.test(lines[index - 2])) {
     return lines[index - 2].trim();
   }
-
-  // Fallback: use the line itself
-  return lines[index].replace(/(\d|\$).*/, "").trim();
+  return "";
 }
 
 document.getElementById("receipt-confirm")
