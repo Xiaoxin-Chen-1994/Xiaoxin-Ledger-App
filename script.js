@@ -7961,10 +7961,10 @@ async function preprocessImage(file, settings) {
       let data = imageData.data;
 
       // Normalize slider values
-      const brightness = (settings.brightness - 100) / 100; // -1 to +1
-      const contrast = (settings.contrast - 100) / 100;     // -1 to +1
-      const highlights = settings.highlights / 100;         // 0–2
-      const shadows = settings.shadows / 100;               // 0–2
+      const brightness = 1 + (settings.brightness / 100);
+      const contrast   = 1 + (settings.contrast   / 100);
+      const highlights = 1 + (settings.highlights / 100);
+      const shadows    = 1 + (settings.shadows    / 100);
 
       // Precompute contrast factor
       const c = (1 + contrast);
