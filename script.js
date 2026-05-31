@@ -7603,7 +7603,7 @@ document.addEventListener("click", e => {
 });
 
 const updateBtn = document.querySelector(".update-code-button");
-
+console.log(updateBtn)
 updateBtn.addEventListener("click", () => {
   const title = {
     en: "Update App or Reset Service Worker",
