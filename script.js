@@ -7802,7 +7802,7 @@ async function OpenGrocerySearch() {
       });
     } catch (err) {
       console.error('fetch error:', err);
-      showStatusMessage('Error fetching CSV', type = 'error', duration = 20000);
+      showStatusMessage('Error fetching CSV', 'error', 20000);
     }
 
     const buffer = await response.arrayBuffer(); // get raw binary
@@ -7879,13 +7879,13 @@ async function OpenGrocerySearch() {
 
     } catch (err) {
       console.error('fetchFileSha error:', err);
-      showStatusMessage('Error fetching file sha', type = 'error');
+      showStatusMessage('Error fetching file sha', 'error');
     }
   }
 
   async function updateCsvToGitHub() {
     try {
-      showStatusMessage('Prepare CSV data…', type = 'info');
+      showStatusMessage('Prepare CSV data…', 'info');
 
       const headers = ['SearchHistory', 'IdealPrice', 'store'];
       const rows = [headers.join(',')];
@@ -7901,7 +7901,7 @@ async function OpenGrocerySearch() {
 
       const content = utf8ToBase64(rows.join('\n'))
 
-      showStatusMessage('Writing to CSV…', type = 'info');
+      showStatusMessage('Writing to CSV…', 'info');
       const fetchUrl = url + `?force=json`;
       await fetch(fetchUrl, {
         method: 'PUT',
@@ -7918,10 +7918,10 @@ async function OpenGrocerySearch() {
       });
 
       await fetchFileSha();
-      showStatusMessage('✅ CSV updated successfully!', type = 'success');
+      showStatusMessage('✅ CSV updated successfully!', 'success');
     } catch (err) {
       console.error('Update error:', err);
-      showStatusMessage('Error updating CSV', type = 'error');
+      showStatusMessage('Error updating CSV', 'error');
     }
   }
 
@@ -8086,7 +8086,7 @@ async function OpenGrocerySearch() {
 
     } catch (err) {
       console.error('render store and item error:', err);
-      showStatusMessage('Error rendering store and item', type = 'error');
+      showStatusMessage('Error rendering store and item', 'error');
     }
   }
 
