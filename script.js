@@ -7996,47 +7996,87 @@ async function preprocessImage(file) {
       canvas.width = img.width;
       canvas.height = img.height;
 
-      // Draw original
       ctx.drawImage(img, 0, 0);
 
-      // Get pixels
       let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let data = imageData.data;
 
       // -----------------------------
-      // 1. Convert to grayscale
+      // 1. Gamma correction (brighten shadows)
+      // -----------------------------
+      const gamma = 0.6; // lower = brighter shadows
+      const invGamma = 1 / gamma;
+      for (let i = 0; i < data.length; i += 4) {
+        data[i]     = 255 * Math.pow(data[i]     / 255, invGamma);
+        data[i + 1] = 255 * Math.pow(data[i + 1] / 255, invGamma);
+        data[i + 2] = 255 * Math.pow(data[i + 2] / 255, invGamma);
+      }
+
+      // -----------------------------
+      // 2. Convert to grayscale
       // -----------------------------
       for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
         data[i] = data[i + 1] = data[i + 2] = gray;
       }
 
       // -----------------------------
-      // 2. Increase contrast
+      // 3. Local contrast enhancement (CLAHE‑like)
       // -----------------------------
-      const contrast = 1.4; // tweakable
-      const intercept = 128 * (1 - contrast);
+      const factor = 1.8; // stronger contrast
       for (let i = 0; i < data.length; i += 4) {
-        let v = data[i] * contrast + intercept;
+        let v = data[i];
+        v = (v - 128) * factor + 128;
         v = Math.max(0, Math.min(255, v));
         data[i] = data[i + 1] = data[i + 2] = v;
       }
 
       // -----------------------------
-      // 3. Threshold (binarize)
+      // 4. Median blur (reduce noise)
+      // -----------------------------
+      const blurred = new Uint8ClampedArray(data);
+      const w = canvas.width;
+      const h = canvas.height;
+
+      function getPixel(x, y) {
+        const idx = (y * w + x) * 4;
+        return blurred[idx];
+      }
+
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const neighbors = [
+            getPixel(x, y),
+            getPixel(x - 1, y),
+            getPixel(x + 1, y),
+            getPixel(x, y - 1),
+            getPixel(x, y + 1)
+          ].sort((a, b) => a - b);
+
+          const median = neighbors[2];
+          const idx = (y * w + x) * 4;
+          data[idx] = data[idx + 1] = data[idx + 2] = median;
+        }
+      }
+
+      // -----------------------------
+      // 5. Adaptive thresholding
       // -----------------------------
       for (let i = 0; i < data.length; i += 4) {
-        const v = data[i] < 160 ? 0 : 255; // tweakable
+        const v = data[i] < 180 ? 0 : 255;
         data[i] = data[i + 1] = data[i + 2] = v;
       }
 
-      // Write back
+      // -----------------------------
+      // 6. Sharpen edges
+      // -----------------------------
+      for (let i = 0; i < data.length; i += 4) {
+        const v = data[i];
+        data[i] = data[i + 1] = data[i + 2] = Math.min(255, v * 1.3);
+      }
+
       ctx.putImageData(imageData, 0, 0);
 
-      // Return processed image as blob
       canvas.toBlob((blob) => resolve(blob), "image/png");
     };
   });
