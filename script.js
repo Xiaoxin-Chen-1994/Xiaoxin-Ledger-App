@@ -7910,26 +7910,28 @@ function openReceiptScan(options = { returnOnly: false }) {
 
 document.getElementById("receipt-take-photo")
   .addEventListener("click", () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.capture = "environment";
 
-    input.onchange = () => {
-      const file = input.files[0];
-      if (!file) return;
+    showPopupWindow({
+      title: "Scan Receipt",
+      message: "Choose how you want to add the receipt",
+      buttons: [
+        {
+          text: "Take Photo",
+          primary: true,
+          onClick: () => openReceiptFileInput(true)
+        },
+        {
+          text: "Upload Image",
+          onClick: () => openReceiptFileInput(false)
+        },
+        {
+          text: "Cancel"
+        }
+      ]
+    });
 
-      const img = document.getElementById("receipt-image");
-      img.src = URL.createObjectURL(file);
-
-      document.getElementById("receipt-preview").style.display = "block";
-      document.getElementById("receipt-actions").style.display = "flex";
-
-      runReceiptOCR(file);
-    };
-
-    input.click();
   });
+
 
 async function runReceiptOCR(file) {
   const resultsBox = document.getElementById("receipt-ocr-results");
