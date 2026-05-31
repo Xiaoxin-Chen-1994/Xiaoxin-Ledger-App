@@ -228,27 +228,6 @@ h2 { font-size: calc(var(--font-size) * 1.1); margin: 0.5rem 0; }
 
 label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 1); font-weight: 600; }
 
-.forgot-password button {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-size: calc(var(--font-size) * 1);
-  cursor: pointer;
-  text-decoration: underline;
-  margin-top: 0.5rem;
-}
-
-.forgot-password button:hover {
-  background: none;
-}
-
-.reset-hint {
-  margin-left: 0.8rem;   /* adds spacing from the left */
-  display: block;
-  font-size: calc(var(--font-size) * 0.7);
-  color: var(--muted); /* softer text color */
-}
-
 .transaction-tabs {
   display: flex;
   position: relative;
@@ -300,8 +279,7 @@ label { display: block; margin-top: 0.75rem; font-size: calc(var(--font-size) * 
   display: none;             /* Chrome/Safari */
 }
 
-input[list], input[type="text"], 
-input[type="password"], input[type="url"],
+input[list], input[type="text"], input[type="url"],
 #rename-household, #invite-email {
   width: 98%;
   margin: 1%;
@@ -2067,7 +2045,7 @@ emoji-picker {
 .util-button {
   width: 100%;
   padding: 0.9rem 1.2rem;
-  font-size: 1rem;
+  font-size: calc(var(--font-size) * 1.1);
   font-weight: 600;
   border-radius: 10px;
   border: none;
@@ -2078,7 +2056,7 @@ emoji-picker {
 
 @media (max-width: 600px) {
   .util-button {
-    font-size: 0.95rem;
+    font-size: calc(var(--font-size) * 1.1);
     padding: 0.85rem 1rem;
   }
 }
@@ -2181,7 +2159,7 @@ emoji-picker {
 .row input {
   flex: 3;
   padding: 0.5em;
-  font-size: 1em;
+  font-size: calc(var(--font-size) * 1);
 }
 
 #storeItemList {
