@@ -8175,7 +8175,7 @@ function normalizeReceiptLine(line) {
 
 function parseItemLine(lines, index) {
   const line = lines[index];
-  const clean = line;
+  const clean = line.replace(/^[^\dA-Za-z]+/, "");
 
   // weight-based: "0.660 kg @ $1.52/kg 1.31"
   let m = clean.match(/(\d+\.\d+)\s*(kg|lb)\s*@\s*\$(\d+\.\d+)(?:\/(kg|lb))?\s*(\d+\.\d{2})/i);
@@ -8217,13 +8217,24 @@ function parseItemLine(lines, index) {
 }
 
 function findItemName(lines, index) {
-  if (index > 0 && /^[A-Za-z]/.test(lines[index - 1])) {
-    return lines[index - 1].trim();
+  // Look 1 line above
+  if (index > 0 && /[A-Za-z]/.test(lines[index - 1])) {
+    return cleanName(lines[index - 1]);
   }
-  if (index > 1 && /^[A-Za-z]/.test(lines[index - 2])) {
-    return lines[index - 2].trim();
+
+  // Look 2 lines above
+  if (index > 1 && /[A-Za-z]/.test(lines[index - 2])) {
+    return cleanName(lines[index - 2]);
   }
+
   return "";
+}
+
+function cleanName(line) {
+  return line
+    .replace(/[^A-Za-z ]+/g, " ") // remove numbers/punctuation
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 document.getElementById("receipt-confirm")
