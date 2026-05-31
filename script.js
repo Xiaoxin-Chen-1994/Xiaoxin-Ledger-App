@@ -7774,7 +7774,7 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
 
 async function OpenGrocerySearch() {
   showPage('grocery-search', 'Grocery Search');
-  target = document.getElementById("grocery-search-page");
+  let target = document.getElementById("grocery-search-page");
   disablePageSwipe(target);
 
   const token = await get("github_token");
