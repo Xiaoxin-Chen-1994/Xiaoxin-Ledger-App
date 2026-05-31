@@ -505,10 +505,11 @@ input[list], input[type="text"], input[type="url"],
   box-sizing: border-box;        /* include padding + border in width */
 }
 
+/* Make item-group a vertical stack */
 .item-group {
   display: flex;
-  flex-direction: column; /* stack item-rows and button vertically */
-  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem; /* optional spacing */
 }
 
 .item-row {
