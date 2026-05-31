@@ -7755,6 +7755,8 @@ document.getElementById("delete-entry-data-button").addEventListener("click", as
 });
 
 async function OpenGrocerySearch() {
+  showPage('grocery-search', 'Grocery Search');
+
   const repoName = selectedRepos.activeLedgerRepo.name;
   const filePath = 'GrocerySearchHistory.csv';
 
