@@ -479,6 +479,7 @@ input[list], input[type="text"], input[type="url"],
   word-break: break-word; /* break long words if needed */
 }
 
+.form-row input,
 .form-row textarea,
 .form-row div,
 .form-row .selector-button {
@@ -486,6 +487,12 @@ input[list], input[type="text"], input[type="url"],
   width: 100%;          /* force equal width */
   margin: 0;
   box-sizing: border-box;
+}
+
+#expense-add-item-btn, #income-add-item-btn {
+  align-self: flex-start; /* keep button aligned with inputs */
+  padding: 6px 12px;
+  margin-top: 0.25rem;
 }
 
 .selector-button {
@@ -496,6 +503,35 @@ input[list], input[type="text"], input[type="url"],
   background: var(--card);
   color: var(--text);
   box-sizing: border-box;        /* include padding + border in width */
+}
+
+.item-group {
+  display: flex;
+  flex-direction: column; /* stack item-rows and button vertically */
+  flex: 1;
+}
+
+.item-row {
+  display: flex;          /* inputs side by side */
+  margin-right: 0px;
+  position: relative;
+  align-items: center;
+  overflow: hidden;
+}
+
+.item-row .item-name {
+  flex: 6;        /* allow item-name to be wider */
+  transition: flex 0.2s ease; /* animate flex changes */
+  min-width: 0;
+}
+
+/* When show-delete is active */
+.item-row.show-delete .item-content {
+  transform: translateX(-3.7rem); /* slide inputs left */
+}
+
+.item-row.show-delete .delete-btn {
+  transform: translateX(0); /* reveal delete button */
 }
 
 .form-row textarea {
