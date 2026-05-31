@@ -164,6 +164,7 @@ const translations = {
     transferFrom: "From",
     transferTo: "To",
     item: "Item", 
+    unitPrice: "Unit price",
     price: "Price",
     notes: "📝Notes",
     save: "✔️Save",
@@ -323,6 +324,7 @@ const translations = {
     transferFrom: "转出",
     transferTo: "转入",
     item: "条目", 
+    unitPrice: "单价",
     price: "价格",
     notes: "📝备注",
     save: "✔️保存",
@@ -2211,7 +2213,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const unitInput = document.createElement("input");
   unitInput.type = "text";
   unitInput.className = "item-unit-price";
-  unitInput.placeholder = t.unitPrice; // e.g. “单价”
+  unitInput.placeholder = t.unitPrice;
   unitInput.value = unitValue;
 
   const priceInput = document.createElement("input");
