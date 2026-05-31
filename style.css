@@ -526,6 +526,16 @@ input[list], input[type="text"], input[type="url"],
   min-width: 0;
 }
 
+.item-row .item-unit-price {
+  flex: 1;
+  transition: flex 0.2s ease;
+}
+
+.item-row .item-price {
+  flex: 1;
+  transition: flex 0.2s ease;
+}
+
 /* When show-delete is active */
 .item-row.show-delete .item-content {
   transform: translateX(-3.7rem); /* slide inputs left */

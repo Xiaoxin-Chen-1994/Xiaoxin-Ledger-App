@@ -2272,17 +2272,38 @@ document.querySelectorAll(".item-row").forEach(row => {
 });
 
 document.addEventListener("focusin", e => {
-  if (e.target.classList.contains("item-price")) {
-    const nameInput = e.target.closest(".item-row").querySelector(".item-name");
-    if (nameInput) nameInput.style.flex = "1";
+  const row = e.target.closest(".item-row");
+  if (!row) return;
+
+  const name = row.querySelector(".item-name");
+  const unit = row.querySelector(".item-unit-price");
+  const price = row.querySelector(".item-price");
+
+  if (e.target === unit) {
+    name.style.flex = "3";
+    unit.style.flex = "2";
+    price.style.flex = "1";
+  }
+
+  if (e.target === price) {
+    name.style.flex = "3";
+    unit.style.flex = "1";
+    price.style.flex = "2";
   }
 });
 
 document.addEventListener("focusout", e => {
-  if (e.target.classList.contains("item-price")) {
-    const nameInput = e.target.closest(".item-row").querySelector(".item-name");
-    if (nameInput) nameInput.style.flex = "3";
-  }
+  const row = e.target.closest(".item-row");
+  if (!row) return;
+
+  const name = row.querySelector(".item-name");
+  const unit = row.querySelector(".item-unit-price");
+  const price = row.querySelector(".item-price");
+
+  // Reset to default flex values
+  name.style.flex = "4";
+  unit.style.flex = "1";
+  price.style.flex = "1";
 });
 
 document.querySelectorAll("textarea.transaction-notes").forEach(textarea => {
