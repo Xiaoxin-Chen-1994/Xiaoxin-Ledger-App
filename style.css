@@ -2034,7 +2034,8 @@ emoji-picker {
 .utilities-grid {
   display: grid;
   box-sizing: border-box;
-  grid-template-columns: repeat(auto-fill, minmax(160px, max-content));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-auto-columns: 1fr;
   gap: 1rem;
   padding: 1rem;
   justify-content: center;
