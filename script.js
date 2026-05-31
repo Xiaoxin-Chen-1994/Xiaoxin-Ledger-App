@@ -165,7 +165,7 @@ const translations = {
     transferTo: "To",
     item: "Item", 
     unitPrice: "Unit price",
-    price: "Price",
+    priceOrQuantity: "Price/Quantity",
     notes: "📝Notes",
     save: "✔️Save",
     personalSettingsTitle: "Personal Settings",
@@ -325,7 +325,7 @@ const translations = {
     transferTo: "转入",
     item: "条目", 
     unitPrice: "单价",
-    price: "价格",
+    priceOrQuantity: "价格/数量",
     notes: "📝备注",
     save: "✔️保存",
     personalSettingsTitle: "个人偏好",
@@ -2219,7 +2219,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const priceInput = document.createElement("input");
   priceInput.type = "text";
   priceInput.className = "item-price";
-  priceInput.placeholder = t.price;
+  priceInput.placeholder = t.priceOrQuantity;
   priceInput.value = priceValue;
 
   const deleteBtn = document.createElement("button");
