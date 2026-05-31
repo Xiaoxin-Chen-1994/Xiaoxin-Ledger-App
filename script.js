@@ -7988,8 +7988,15 @@ async function preprocessImage(file, settings) {
 }
 
 ["brightness", "contrast", "highlights", "shadows"].forEach(id => {
-  document.getElementById(id).addEventListener("input", updateProcessedPreview);
+  document.getElementById(id).addEventListener("input", schedulePreprocessUpdate);
 });
+
+let preprocessTimer = null;
+
+function schedulePreprocessUpdate() {
+  clearTimeout(preprocessTimer);
+  preprocessTimer = setTimeout(updateProcessedPreview, 400); // 400ms delay
+}
 
 async function updateProcessedPreview() {
   const file = window._currentReceiptFile;
