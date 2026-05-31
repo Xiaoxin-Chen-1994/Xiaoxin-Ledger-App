@@ -7970,8 +7970,14 @@ async function runReceiptOCR(file) {
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
     <div><strong>Date:</strong> ${parsed.date || "-"}</div>
     <div><strong>Total:</strong> ${parsed.total || "-"}</div>
-    <div style="margin-top:0.5rem;"><strong>Items:</strong></div>
+
+    <div style="margin-top:1rem;"><strong>Parsed Items:</strong></div>
     <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.items, null, 2)}</pre>
+
+    <div style="margin-top:1rem;"><strong>Raw OCR Text:</strong></div>
+    <pre style="white-space:pre-wrap; font-size:0.85em; opacity:0.8;">
+${text}
+    </pre>
   `;
 
   window._receiptParsed = parsed;
@@ -7980,23 +7986,34 @@ async function runReceiptOCR(file) {
 function parseReceiptText(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  const merchant = lines[0];
+  // Merchant
+  const merchant = lines[0] || null;
 
-  const dateMatch = text.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/);
+  // Date detection (supports many formats)
+  const dateRegex = /\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+  const dateMatch = text.match(dateRegex);
   const date = dateMatch ? dateMatch[0] : null;
 
-  const totalMatch = text.match(/total[:\s]*\$?(\d+\.\d{2})/i);
-  const total = totalMatch ? totalMatch[1] : null;
+  // Total detection (robust)
+  const totalRegex = /(total|amount due|grand total|balance due)[^\d]*(\d+\.\d{2})/i;
+  const totalMatch = text.match(totalRegex);
+  const total = totalMatch ? totalMatch[2] : null;
 
-  const itemRegex = /^(.+?)\s+(\d+\.\d{2})$/;
+  // Item detection (flexible)
+  const itemRegex = /^(.+?)[\s\.$]*\$?(\d+\.\d{2})$/;
   const items = [];
 
   for (const line of lines) {
     const m = line.match(itemRegex);
-    if (m) items.push({ name: m[1], price: parseFloat(m[2]) });
+    if (m) {
+      items.push({
+        name: m[1].trim(),
+        price: parseFloat(m[2])
+      });
+    }
   }
 
-  return { merchant, date, total, items };
+  return { merchant, date, total, items, raw: text };
 }
 
 document.getElementById("receipt-retake")
