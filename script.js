@@ -7949,7 +7949,7 @@ function openReceiptFileInput(useCamera) {
     const img = document.getElementById("receipt-image");
     img.src = URL.createObjectURL(file);
 
-    document.getElementById("receipt-preview").style.display = "block";
+    document.getElementById("receipt-previews").style.display = "block";
     document.getElementById("receipt-actions").style.display = "flex";
 
     runReceiptOCR(file);
@@ -7969,7 +7969,6 @@ async function runReceiptOCR(file) {
   const processedUrl = URL.createObjectURL(processedBlob);
   const processedImg = document.getElementById("receipt-processed-image");
   processedImg.src = processedUrl;
-  document.getElementById("receipt-processed-preview").style.display = "block";
 
   // 3. Run OCR on the processed image
   const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
@@ -8004,92 +8003,47 @@ async function preprocessImage(file) {
     img.onload = () => {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-
       canvas.width = img.width;
       canvas.height = img.height;
-
       ctx.drawImage(img, 0, 0);
 
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let data = imageData.data;
+      const src = cv.imread(canvas);
+      const gray = new cv.Mat();
+      const blur = new cv.Mat();
+      const thresh = new cv.Mat();
 
-      // -----------------------------
-      // 1. Gamma correction (brighten shadows)
-      // -----------------------------
-      const gamma = 0.6; // lower = brighter shadows
-      const invGamma = 1 / gamma;
-      for (let i = 0; i < data.length; i += 4) {
-        data[i]     = 255 * Math.pow(data[i]     / 255, invGamma);
-        data[i + 1] = 255 * Math.pow(data[i + 1] / 255, invGamma);
-        data[i + 2] = 255 * Math.pow(data[i + 2] / 255, invGamma);
-      }
+      // 1️⃣ Convert to grayscale
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-      // -----------------------------
-      // 2. Convert to grayscale
-      // -----------------------------
-      for (let i = 0; i < data.length; i += 4) {
-        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        data[i] = data[i + 1] = data[i + 2] = gray;
-      }
+      // 2️⃣ Equalize histogram (balances brightness)
+      cv.equalizeHist(gray, gray);
 
-      // -----------------------------
-      // 3. Local contrast enhancement (CLAHE‑like)
-      // -----------------------------
-      const factor = 1.8; // stronger contrast
-      for (let i = 0; i < data.length; i += 4) {
-        let v = data[i];
-        v = (v - 128) * factor + 128;
-        v = Math.max(0, Math.min(255, v));
-        data[i] = data[i + 1] = data[i + 2] = v;
-      }
+      // 3️⃣ Gaussian blur (reduce noise)
+      cv.GaussianBlur(gray, blur, new cv.Size(3, 3), 0);
 
-      // -----------------------------
-      // 4. Median blur (reduce noise)
-      // -----------------------------
-      const blurred = new Uint8ClampedArray(data);
-      const w = canvas.width;
-      const h = canvas.height;
+      // 4️⃣ Adaptive threshold (local binarization)
+      cv.adaptiveThreshold(
+        blur,
+        thresh,
+        255,
+        cv.ADAPTIVE_THRESH_MEAN_C,
+        cv.THRESH_BINARY,
+        15,
+        10
+      );
 
-      function getPixel(x, y) {
-        const idx = (y * w + x) * 4;
-        return blurred[idx];
-      }
+      // 5️⃣ Optional: sharpen edges
+      const kernel = cv.Mat.ones(3, 3, cv.CV_32F);
+      kernel.data32F[4] = -8.0;
+      const sharpened = new cv.Mat();
+      cv.filter2D(thresh, sharpened, cv.CV_8U, kernel);
 
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const neighbors = [
-            getPixel(x, y),
-            getPixel(x - 1, y),
-            getPixel(x + 1, y),
-            getPixel(x, y - 1),
-            getPixel(x, y + 1)
-          ].sort((a, b) => a - b);
-
-          const median = neighbors[2];
-          const idx = (y * w + x) * 4;
-          data[idx] = data[idx + 1] = data[idx + 2] = median;
-        }
-      }
-
-      // -----------------------------
-      // 5. Adaptive thresholding
-      // -----------------------------
-      for (let i = 0; i < data.length; i += 4) {
-        const v = data[i] < 180 ? 0 : 255;
-        data[i] = data[i + 1] = data[i + 2] = v;
-      }
-
-      // -----------------------------
-      // 6. Sharpen edges
-      // -----------------------------
-      for (let i = 0; i < data.length; i += 4) {
-        const v = data[i];
-        data[i] = data[i + 1] = data[i + 2] = Math.min(255, v * 1.3);
-      }
-
-      ctx.putImageData(imageData, 0, 0);
+      cv.imshow(canvas, sharpened);
 
       canvas.toBlob((blob) => resolve(blob), "image/png");
+
+      // Clean up
+      src.delete(); gray.delete(); blur.delete(); thresh.delete(); sharpened.delete();
     };
   });
 }

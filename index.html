@@ -491,8 +491,20 @@
             Take Receipt Photo
           </button>
 
-          <div id="receipt-preview" style="margin-top:1rem; display:none;">
-            <img id="receipt-image" style="width:100%; border-radius:8px;" />
+          <div id="receipt-previews" style="display:none; margin-top:1rem;">
+            <div style="display:flex; gap:1rem;">
+
+              <div style="flex:1;">
+                <div style="font-weight:bold; margin-bottom:0.5rem;">Original</div>
+                <img id="receipt-image" style="width:100%; border-radius:8px;" />
+              </div>
+
+              <div style="flex:1;">
+                <div style="font-weight:bold; margin-bottom:0.5rem;">Processed</div>
+                <img id="receipt-processed-image" style="width:100%; border-radius:8px;" />
+              </div>
+
+            </div>
           </div>
 
           <div id="receipt-actions" style="display:none; margin-top:1rem;">
@@ -501,11 +513,6 @@
           </div>
 
           <div id="receipt-ocr-results" style="margin-top:1rem;"></div>
-
-          <div id="receipt-processed-preview" style="margin-top:1rem; display:none;">
-            <img id="receipt-processed-image" style="width:100%; border-radius:8px;" />
-          </div>
-
         </div>
 
       </div>
@@ -774,6 +781,7 @@
   <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
 
 </body>
 
