@@ -7967,7 +7967,7 @@ async function preprocessImage(file, settings) {
       const shadows    = 1 + (settings.shadows    / 100);
 
       // Precompute contrast factor
-      const c = (1 + contrast);
+      const c = contrast;
       const intercept = 128 * (1 - c);
 
       // Loop pixels
@@ -7976,16 +7976,16 @@ async function preprocessImage(file, settings) {
         let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
 
         // Brightness
-        gray += brightness * 128;
+        gray *= brightness;
 
         // Contrast
         gray = gray * c + intercept;
 
         // Highlights / Shadows (gamma)
         if (gray < 128) {
-          gray = 128 * Math.pow(gray / 128, 1 / shadows);
+          gray = 128 * Math.pow(gray / 128, shadows);
         } else {
-          gray = 128 + (127 * Math.pow((gray - 128) / 127, highlights));
+          gray = 128 + 127 * Math.pow((gray - 128) / 127, 1 / highlights);
         }
 
         gray = Math.max(0, Math.min(255, gray));
@@ -8001,6 +8001,8 @@ async function preprocessImage(file, settings) {
         const v = data[i] < threshold ? 0 : 255;
         data[i] = data[i+1] = data[i+2] = v;
       }
+
+      imageData.data.set(data);
 
       ctx.putImageData(imageData, 0, 0);
 
@@ -8075,6 +8077,10 @@ async function updateProcessedPreview() {
 
   const processedBlob = await preprocessImage(file, settings);
   const processedUrl = URL.createObjectURL(processedBlob);
+
+  if (window._processedUrl) {
+    URL.revokeObjectURL(window._processedUrl);
+  }
 
   document.getElementById("receipt-processed-image").src = processedUrl;
 
