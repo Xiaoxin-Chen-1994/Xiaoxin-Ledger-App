@@ -7962,11 +7962,23 @@ async function runReceiptOCR(file) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  const preprocessed = await preprocessImage(file);
-  const { data: { text } } = await Tesseract.recognize(preprocessed, "eng");
+  // 1. Preprocess the image
+  const processedBlob = await preprocessImage(file);
+
+  // 2. Show the processed image
+  const processedUrl = URL.createObjectURL(processedBlob);
+  const processedImg = document.getElementById("receipt-processed-image");
+  processedImg.src = processedUrl;
+  document.getElementById("receipt-processed-preview").style.display = "block";
+
+  // 3. Run OCR on the processed image
+  const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
+    tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/- "
+  });
 
   const parsed = parseReceiptText(text);
 
+  // 4. Show parsed results
   resultsBox.innerHTML = `
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
     <div><strong>Date:</strong> ${parsed.date || "-"}</div>
