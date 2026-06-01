@@ -8272,7 +8272,7 @@ async function runReceiptOCR(processedBlob) {
     <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.fees, null, 2)}</pre>
 
     <div><strong>Total:</strong> ${parsed.total || "-"}</div>
-    
+
     <div style="margin-top:1rem;"><strong>Corrected Text:</strong></div>
     <pre style="white-space:pre-wrap; font-size:0.9em;">
   ${correctedText}
@@ -8317,7 +8317,7 @@ function correctOCRText(raw) {
 function parseCorrectedText(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  const date = null;
+  let date = null;
   const items = [];
   const discounts = [];
   const taxes = [];
