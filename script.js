@@ -6953,23 +6953,31 @@ function closeSelector() {
 
   stopBackspaceHold();
 
-  // // Clear dummy state so further back presses exit normally
-  // history.back();
 }
 window.closeSelector = closeSelector;
+
+let returnButtonPressed = false;
+
+function onReturnButton() {
+  returnButtonPressed = true;
+  history.back();
+}
 
 window.addEventListener('popstate', (e) => {
   if (openSelector) {
     closeSelector();
-    // return;
+
+    if (returnButtonPressed) {
+      returnButtonPressed = false; // reset
+      goBack(); // This logic is to handle goBack when selector is open. Only goBack when clicking on return button. At system back gesture, close selector only, do not goBack. A second gesture when selector is closed can goBack.  
+    }
+
+    return
   }
 
   if (historyStack.length > 1) {
     goBack();
-    return;
   }
-
-  // At base page: let Android handle back (exit to home)
 });
 
 const allowedKeys = {
