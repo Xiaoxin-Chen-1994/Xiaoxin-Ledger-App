@@ -8208,39 +8208,138 @@ ${text}
 }
 
 function parseReceiptText(text) {
+  // ---------- Regex patterns ----------
+  // Weight-based item: "CHERRIES RED 1.594 kg @ 4.38/kg 6.99"
+  const weightRegex =
+    /(.+?)\s+([\d.]+)\s*(kg|lb)\s*@\s*\$?([\d.]+)(?:\/(kg|lb))?\s+([\d.]+)/i;
+
+  // Count-based item: "BANANA 6 @ 0.49 2.94"
+  const countRegex =
+    /(.+?)\s+(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/i;
+
+  // Simple item: "BANANA 1.31"
+  const simpleRegex =
+    /(.+?)\s+(\d+\.\d{2})$/;
+
+  // Discount / loyalty: "LOYALTY SAVINGS -0.50"
+  const discountRegex =
+    /(LOYALTY|SAVINGS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i;
+
+  // Tax: "HST 0.87", "TAX 1.20"
+  const taxRegex =
+    /(HST|GST|PST|TAX)[^\d]*([\d.]+)/i;
+
+  // Total: "TOTAL 23.45", "AMOUNT DUE 23.45"
+  const totalRegex =
+    /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i;
+
   const raw = text;
 
+  // Normalize & split into lines
   const lines = text
     .split("\n")
-    .map(l => normalizeReceiptLine(l))  // per-line normalization
-    .map(l => l.trim())
+    .map(normalizeReceiptLine)
     .filter(Boolean);
 
-  // merchant
+  // Merchant: first line with letters
   const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // date
+  // Date: simple patterns
   const date =
     raw.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
     raw.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
     null;
 
-  // total
-  const total =
-    raw.match(/TOTAL[^0-9]*(\d+\.\d{2})/i)?.[1] || null;
+  // Merge multi-line items into blocks
+  const blocks = mergeBlocks(lines);
 
   const items = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  const discounts = [];
+  const taxes = [];
+  let total = null;
 
-    // skip obvious non-item lines
-    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|LOYALTY|SUBTOTAL|TOTAL/i.test(line)) continue;
+  for (const block of blocks) {
+    let m;
 
-    const parsed = parseItemLine(lines, i);
-    if (parsed) items.push(parsed);
+    // Skip obvious non-item junk early
+    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY|POINTS/i.test(block)) {
+      continue;
+    }
+
+    // Weight-based item
+    m = block.match(weightRegex);
+    if (m) {
+      items.push({
+        name: cleanName(m[1]),
+        quantity: parseFloat(m[2]),
+        unit: m[3],
+        unit_price: parseFloat(m[4]),
+        total: parseFloat(m[6])
+      });
+      continue;
+    }
+
+    // Count-based item
+    m = block.match(countRegex);
+    if (m) {
+      items.push({
+        name: cleanName(m[1]),
+        quantity: parseInt(m[2], 10),
+        unit_price: parseFloat(m[3]),
+        total: parseFloat(m[4])
+      });
+      continue;
+    }
+
+    // Simple item
+    m = block.match(simpleRegex);
+    if (m) {
+      items.push({
+        name: cleanName(m[1]),
+        quantity: null,
+        unit_price: null,
+        total: parseFloat(m[2])
+      });
+      continue;
+    }
+
+    // Discount / loyalty
+    m = block.match(discountRegex);
+    if (m) {
+      discounts.push({
+        type: m[1],
+        amount: parseFloat(m[2])
+      });
+      continue;
+    }
+
+    // Tax
+    m = block.match(taxRegex);
+    if (m) {
+      taxes.push({
+        type: m[1],
+        amount: parseFloat(m[2])
+      });
+      continue;
+    }
+
+    // Total
+    m = block.match(totalRegex);
+    if (m) {
+      total = parseFloat(m[2]);
+      continue;
+    }
   }
 
-  return { merchant, date, total, items, raw };
+  return {
+    merchant,
+    date,
+    total,
+    items,
+    discounts,
+    taxes,
+    raw
+  };
 }
 
 function normalizeReceiptLine(line) {
@@ -8257,78 +8356,27 @@ function normalizeReceiptLine(line) {
     .replace(/\@\s*\$/g, "@ $")
     // remove garbage chars
     .replace(/[^\w\s\.\@\$\-\/]/g, "")
-    // collapse spaces (but NOT newlines, we’re per-line)
+    // collapse spaces
     .replace(/[ \t]+/g, " ")
     .trim();
 }
 
-function parseItemLine(lines, index) {
-  let line = lines[index].trim();
+function mergeBlocks(lines) {
+  const blocks = [];
+  let current = "";
 
-  // Skip obvious non-item lines
-  if (/SUBTOTAL|TOTAL|LOYALTY|MASTERCARD|CREDIT|ACCOUNT|COPY|POINTS|creprt/i.test(line)) {
-    return null;
-  }
-
-  // Strip leading junk
-  line = line.replace(/^[^\dA-Za-z]+/, "");
-
-  // 1) Weight-based: "0.560 kg @ $1.52/kg 1.31"
-  const UNIT = "(kg|ke|ks|k9|kq|kg\\.|kg\\)|kg\\/|kg\\\\|lb|1b|Ib|\\|b)";
-
-  let m = line.match(
-    new RegExp(`(\\d+\\.\\d+)\\s*${UNIT}\\s*@\\s*\\$(\\d+\\.\\d+)(?:\\/${UNIT})?\\s*(\\d+\\.\\d{2})`, "i")
-  );
-
-  if (m) {
-    const qty = parseFloat(m[1]);
-    const unitPrice = parseFloat(m[3]);
-    const total = parseFloat(m[5]);
-
-    const name = findItemName(lines, index);
-
-    return {
-      name,
-      quantity: qty,
-      unit_price: `$${unitPrice.toFixed(2)}/kg`,  // normalize to kg
-      total
-    };
-  }
-
-  // 2) Each-based: "6 @ $0.49 2.94"
-  m = line.match(/(\d+)\s*@\s*\$(\d+\.\d+)\s*(\d+\.\d{2})/);
-  if (m) {
-    const qty = parseInt(m[1], 10);        // 6
-    const priceEach = parseFloat(m[2]);    // 0.49
-    const total = parseFloat(m[3]);        // 2.94
-
-    const name = findItemName(lines, index);
-
-    return {
-      name,
-      quantity: qty,
-      price_each: priceEach,
-      total: total   // or +(qty * priceEach).toFixed(2) if you prefer recompute
-    };
-  }
-
-  // 3) Very conservative fallback: "SOMETHING 1.31"
-  //    Only if line starts with a letter and has no '@' or 'kg/lb'
-  if (!/@|kg|lb/i.test(line)) {
-    m = line.match(/^([A-Za-z][A-Za-z0-9 \-]+)\s+(\d+\.\d{2})$/);
-    if (m) {
-      const name = m[1].trim();
-      const total = parseFloat(m[2]);
-      return {
-        name,
-        quantity: null,
-        unit_price: null,
-        total
-      };
+  for (const line of lines) {
+    // If line looks like a continuation (has price/qty/unit markers), append
+    if (/(@|\d+\.\d{2}|kg|lb)/i.test(line)) {
+      current += (current ? " " : "") + line;
+    } else {
+      // Start of a new block
+      if (current) blocks.push(current.trim());
+      current = line;
     }
   }
-
-  return null;
+  if (current) blocks.push(current.trim());
+  return blocks;
 }
 
 function findItemName(lines, index) {
@@ -8343,9 +8391,9 @@ function findItemName(lines, index) {
   return "";
 }
 
-function cleanName(line) {
-  return line
-    .replace(/[^A-Za-z ]+/g, " ")
+function cleanName(str) {
+  return str
+    .replace(/[^A-Za-z0-9 ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
