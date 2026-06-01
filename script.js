@@ -3113,10 +3113,10 @@ function showPage(name, title = latestTitle, options = {}) {
     latestTitle = title;
     latestOptions = options;
 
+    // push a new history entry for this new page
+    history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-  // push a new history entry for this new page // change it to push for every page
-  history.pushState({ page: latestPage }, "", location.href);
 
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
@@ -4873,11 +4873,6 @@ async function applyThemeColor(color) {
 
 // Ensure this runs after DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  window.addEventListener("beforeunload", (e) => {
-    e.preventDefault();
-    e.returnValue = "";
-  });
-
   wireHomeImageSettings();
 });
 
