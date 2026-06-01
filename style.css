@@ -1168,6 +1168,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
   background: var(--bg); /* prevents hover background bleeding into options */
 }
 
+.ledger-repo {
+  width: calc(var(--font-size) * 1.2);
+  height: calc(var(--font-size) * 1.2);
+  margin-right: 8px;
+}
+
 .login-settings {
   width: 80%;
   max-width: 500px;
