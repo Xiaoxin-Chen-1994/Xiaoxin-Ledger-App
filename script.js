@@ -6114,17 +6114,44 @@ async function deleteLocalData(mode) { // This function will not delete github_t
   const token = await get("github_token");
   const repos = await get("selectedRepos");
   const personalSettings = await get("personal_settings");
-
+  const reposToDelete = await get("reposToDelete") || [];
 
   // 2. Clear all localStorage
   localStorage.clear();
 
   // 3. Restore the values you want to keep
   if (token) await set("github_token", token);
-  if (repos) await set("selectedRepos", repos);
+  
+  if (repos) {
+    // Remove deleted repos from ledgerRepos
+    const updatedLedgerRepos = repos.ledgerRepos.filter(
+      r => !reposToDelete.includes(r.id)
+    );
+
+    // Update activeLedgerRepo if it was deleted
+    let updatedActive = repos.activeLedgerRepo;
+    if (updatedActive && reposToDelete.includes(updatedActive.id)) {
+      updatedActive = updatedLedgerRepos.length > 0 ? updatedLedgerRepos[0] : null;
+    }
+
+    // Update personalSettingsRepo if needed (rare but possible)
+    let updatedPersonalSettingsRepo = repos.personalSettingsRepo;
+    if (updatedPersonalSettingsRepo && reposToDelete.includes(updatedPersonalSettingsRepo.id)) {
+      updatedPersonalSettingsRepo = null;
+    }
+
+    // Save updated repos structure
+    await set("selectedRepos", {
+      ledgerRepos: updatedLedgerRepos,
+      activeLedgerRepo: updatedActive,
+      personalSettingsRepo: updatedPersonalSettingsRepo
+    });
+  }
+
   if (mode === "data") {
     if (personalSettings) await set("personal_settings", personalSettings);
   }
+  
   // 4. Delete IndexedDB (idb-keyval)
   if (window.indexedDB) {
     await new Promise(resolve => {
