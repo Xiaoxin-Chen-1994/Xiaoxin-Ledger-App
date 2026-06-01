@@ -1835,7 +1835,6 @@ function setDefaultSubject(button, subWorkspace) {
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
-
       const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
       // Set default subject if missing
@@ -1887,15 +1886,11 @@ function setDefaultCollection(button, subWorkspace) {
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
-      if (!subWorkspace[type]) {
-        subWorkspace[type] = {};
-      }
-
       const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
       // Set default collection if missing
-      if (!subWorkspace[type].collection) {
-        subWorkspace[type].collection = def.collection;
+      if (!subWorkspace.collection) {
+        subWorkspace.collection = def.collection;
       }
     }
   });
@@ -1904,32 +1899,32 @@ function setDefaultCollection(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const collections = settings.collections;
-    const currentCollection = subWorkspace[inputType].collection;
+    const currentCollection = subWorkspace.collection;
     const collectionExists = collections.some(c => c.name === currentCollection);
 
     if (!collectionExists) {
       // Restore defaults
-      subWorkspace[inputType].collection = def.collection;
+      subWorkspace.collection = def.collection;
     }
 
-    const collection = collections.find(acc => acc.name === subWorkspace[inputType].collection);
-    subWorkspace[inputType].collectionIcon = collection.icon
+    const collection = collections.find(acc => acc.name === subWorkspace.collection);
+    subWorkspace.collectionIcon = collection.icon
 
-    subWorkspace[inputType].collectionInnerHTML = `
+    subWorkspace.collectionInnerHTML = `
       <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].collection}</span>
+        <span class="icon selected">${subWorkspace.collectionIcon}</span>
+        <span class="cat-label">${subWorkspace.collection}</span>
       </span>
     `;
 
     // Update button
-    button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
+    button.innerHTML = subWorkspace.collectionInnerHTML;
 
     // Prepare collection column
     const collectionCol = collectionSelector.querySelector(".collection-col");
 
     createList(collectionCol, collections);
-    ScrollToSelectItem(collectionCol, subWorkspace[inputType].collection);
+    ScrollToSelectItem(collectionCol, subWorkspace.collection);
   }
 }
 
@@ -2547,8 +2542,8 @@ async function saveEntry() {
       secondaryCategory: ws[inputType].secondaryCategory,
       account: ws[inputType].accountInfo.account.name,
       currency: ws[inputType].accountInfo.account.currency,
-      subject: ws[inputType].subject,
-      collection: ws[inputType].collection
+      subject: ws.subject,
+      collection: ws.collection
     };
   } else if (inputType === "transfer") {
     entryData = {
@@ -3358,8 +3353,8 @@ function loadEntryIntoWorkspace(e) {
       }
     };
 
-    ws[e.type].subject = e.subject || "";
-    ws[e.type].collection = e.collection || "";
+    ws.subject = e.subject || "";
+    ws.collection = e.collection || "";
   }
 
   else if (e.type === "transfer") {
@@ -6879,16 +6874,16 @@ function updateSelectorPreview(updatedCol) {
     const { icon: icon, name: name } =
       getSelectedValue(subjectSelector, ".subject-col", true);
 
-    subWorkspace[subWorkspace.inputType].subject = name;
-    subWorkspace[subWorkspace.inputType].subjectIcon = icon;
+    subWorkspace.subject = name;
+    subWorkspace.subjectIcon = icon;
 
     lastButton.innerHTML = `${icon} ${name}`;
   } else if (lastButton.dataset.type === "collection") {
     const { icon: icon, name: name } =
       getSelectedValue(collectionSelector, ".collection-col", true);
 
-    subWorkspace[subWorkspace.inputType].collection = name;
-    subWorkspace[subWorkspace.inputType].collectionIcon = icon;
+    subWorkspace.collection = name;
+    subWorkspace.collectionIcon = icon;
 
     lastButton.innerHTML = `${icon} ${name}`;
   }
