@@ -2224,7 +2224,6 @@ emoji-picker {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem;
 }
 
 .store-row {
