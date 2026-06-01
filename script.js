@@ -2310,6 +2310,7 @@ function saveItemsToWorkspace() {
   }));
 }
 
+// Attach to all add-item buttons
 document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
   addBtn.addEventListener("click", () => {
     const group = addBtn.closest(".item-group");
@@ -2319,6 +2320,7 @@ document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
   });
 });
 
+// Upgrade any existing rows in HTML
 document.querySelectorAll(".item-row").forEach(row => {
   const name  = row.querySelector(".item-name")?.value || "";
   const unit  = row.querySelector(".item-unit-price")?.value || "";
