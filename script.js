@@ -2224,9 +2224,6 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const row = document.createElement("div");
   row.className = "item-row";
 
-  const content = document.createElement("div");
-  content.className = "item-content";
-
   const nameInput = document.createElement("input");
   nameInput.type = "text";
   nameInput.className = "item-name";
@@ -2294,7 +2291,6 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
 
   return row;
 }
-
 
 function saveItemsToWorkspace() {
   let subWorkspace = latestPage.includes("create")
