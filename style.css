@@ -562,6 +562,7 @@ input[list], input[type="text"], input[type="url"],
   cursor: text;              /* typing cursor */
   transition: background 0.2s ease;
 }
+.form-row input:focus,
 .form-row textarea:focus {
   background: color-mix(in srgb, var(--primary) 5%, var(--bg));
 }
@@ -616,7 +617,7 @@ input[list], input[type="text"], input[type="url"],
 }
 .tag-input:focus {
   outline: 0.0625rem solid var(--border);
-  background: color-mix(in srgb, var(--primary) 40%, var(--bg));
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
 }
 
 /* Button stays small */
