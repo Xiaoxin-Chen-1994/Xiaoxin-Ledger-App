@@ -1230,58 +1230,6 @@ async function logout() {
 }
 window.logout = logout;
 
-// --- Persistent login state ---
-async function onAuthStateChanged(auth, user) {
-  if (user) {
-    currentUser = user;
-
-    ({ userDoc, householdDocs } = await syncData(user.uid));
-
-    // Initialize household selector
-    initLedgerSelector();
-    toggleLedgerFormRows();
-
-    userEmail = userDoc.profile.email;
-
-    // UI updates
-    document.getElementById("login-section").style.display = "none";
-    document.querySelector(".bottom-nav").style.display = "flex";
-
-    // Apply profile settings
-    displayHomeImage()
-
-    if (userDoc.profile.language) {
-      currentLang = userDoc.profile.language;
-      setLanguage(currentLang, false, false);
-    }
-
-    if (isMobileBrowser()) {
-      if (userDoc.profile.fontsizeMobile) {
-        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeMobile);
-      }
-    } else {
-      if (userDoc.profile.fontsizeDesktop) {
-        document.documentElement.style.setProperty("--font-size", userDoc.profile.fontsizeDesktop);
-      }
-    }
-
-    if (userDoc.profile.themeColor) {
-      applyThemeColor(userDoc.profile.themeColor, false)
-    }
-
-    if (userDoc.profile.colorScheme) {
-      setColorScheme(userDoc.profile.colorScheme, false, false);
-      document.getElementById("color-scheme-select").value = userDoc.profile.colorScheme;
-    }
-
-    // ✅ Load main app
-    showPage("home", "Xiaoxin's Ledger App");
-
-  } else {
-    window.scrollTo(0, 0);
-  }
-};
-
 function toggleLedgerFormRows() {
   // Hide the form row if only one ledger
   const repoCount = selectedRepos.ledgerRepos.length;
