@@ -8348,35 +8348,27 @@ function parseCorrectedText(text) {
     }
 
     // 3) Discount / loyalty
-    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS|Pts)[^\d\-]*(-?\d+\.\d{2})/i);
-    if (m) {
-      discounts.push({
-        type: m[1],
-        amount: parseFloat(m[2])
-      });
+    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS|PTS|redemption|redem|redeem)/i.test(line)) {
+      discounts.push(line);
       continue;
     }
 
     // 4) Tax
-    m = line.match(/(HST|GST|PST|TAX)[^\d]*([\d.]+)/i);
-    if (m) {
-      taxes.push({
-        type: m[1],
-        amount: parseFloat(m[2])
-      });
+    if (/(HST|GST|PST|TAX)/i.test(line)) {
+      discounts.push(line);
       continue;
     }
 
-    // 5) Total (but don't treat as item)
+    // 5) Fees
+    if (/(fee)/i.test(line)) {
+      discounts.push(line);
+      continue;
+    }
+
+    // 6) Total (but don't treat as item)
     m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
-      continue;
-    }
-
-    // 6) Simple item: "SOMETHING 1.31"
-    //    BUT: skip SUBTOTAL / TOTAL / LOYALTY etc.
-    if (/^SUBTOTAL\b/i.test(line) || /\bTOTAL\b/i.test(line) || /\bLOYALTY\b/i.test(line)) {
       continue;
     }
 
