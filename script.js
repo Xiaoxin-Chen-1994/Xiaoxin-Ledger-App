@@ -2269,7 +2269,15 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
 
   row.appendChild(deleteBtn);
 
+  let isTouching = false;
+
   row.addEventListener("contextmenu", e => {
+    if (isTouching) {
+      // Mobile long-press → allow normal behavior
+      return;
+    }
+
+    // Desktop right-click → show deletee.preventDefault();
     e.preventDefault();
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     row.classList.add("show-delete"); // reveal delete button
@@ -2288,6 +2296,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   row.addEventListener("touchstart", e => {
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     startX = e.touches[0].clientX;
+    isTouching = true;
   });
   row.addEventListener("touchend", e => {
     e.stopPropagation();  // stop the event from bubbling up to parent elements
@@ -2298,6 +2307,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
     } else if (diff < -50) {
       row.classList.remove("show-delete"); // swipe right
     }
+    setTimeout(() => isTouching = false, 50); // small delay so contextmenu (if fired) still sees isTouching = true
   });
 
   deleteBtn.addEventListener("click", () => {
@@ -3146,6 +3156,7 @@ function showPage(name, title = latestTitle, options = {}) {
 
   // transaction page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
+    disablePageSwipe(target);
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
