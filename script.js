@@ -2029,16 +2029,17 @@ function switchTab(index) {
     // Remove existing rows
     group.querySelectorAll(".item-row").forEach(r => r.remove());
 
+    // Cache the add button ONCE
+    const addBtn = group.querySelector("button[id$='add-item-btn']");
+
     // Insert restored rows
     subWorkspace.items.forEach(item => {
       const row = createItemRow(
         item.name || "",
-        item.unitPrice || item.unit_price || "",
-        item.price || ""
+        item.unitPrice ?? item.unit_price ?? "",
+        item.price ?? item.total ?? ""
       );
 
-      // Insert before the add-item button
-      const addBtn = group.querySelector("button[id$='add-item-btn']");
       group.insertBefore(row, addBtn);
     });
   }
