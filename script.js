@@ -5062,7 +5062,7 @@ async function getFilteredEntries({
 } = {}) {
 
   let localDbMap = await get(LOCAL_DB_KEY) || {};
-console.log('localDbMap:', localDbMap)
+
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
 
@@ -5087,6 +5087,7 @@ console.log('localDbMap:', localDbMap)
     const rows = result[0].values;
 
     for (const [jsonStr] of rows) {
+      console.log('jsonStr:', jsonStr)
       try {
         const entry = JSON.parse(jsonStr);
         allEntries.push(entry);
