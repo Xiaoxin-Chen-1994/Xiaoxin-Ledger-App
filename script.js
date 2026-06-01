@@ -2224,6 +2224,9 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const row = document.createElement("div");
   row.className = "item-row";
 
+  const content = document.createElement("div");
+  content.className = "item-content";
+
   const nameInput = document.createElement("input");
   nameInput.type = "text";
   nameInput.className = "item-name";
@@ -2242,52 +2245,43 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   priceInput.placeholder = t.priceOrQuantity;
   priceInput.value = priceValue;
 
+  content.appendChild(nameInput);
+  content.appendChild(unitInput);
+  content.appendChild(priceInput);
+
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "delete-btn";
   deleteBtn.textContent = t.delete;
 
-  row.appendChild(nameInput);
-  row.appendChild(unitInput);
-  row.appendChild(priceInput);
+  row.appendChild(content);
   row.appendChild(deleteBtn);
 
   // Right-click → show delete
   row.addEventListener("contextmenu", e => {
     e.preventDefault();
-    e.stopPropagation();
     row.classList.add("show-delete");
   });
 
-  // Click outside delete → hide delete
+  // Click outside → hide delete
   row.addEventListener("click", e => {
-    e.stopPropagation();
     if (!e.target.classList.contains("delete-btn")) {
       row.classList.remove("show-delete");
     }
   });
 
-  // Swipe detection
+  // Swipe logic
   let startX = 0;
-
   row.addEventListener("touchstart", e => {
-    e.stopPropagation();
     startX = e.touches[0].clientX;
   });
-
   row.addEventListener("touchend", e => {
-    e.stopPropagation();
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
-
-    if (diff > 50) {
-      row.classList.add("show-delete");   // swipe left
-    } else if (diff < -50) {
-      row.classList.remove("show-delete"); // swipe right
-    }
+    if (diff > 50) row.classList.add("show-delete");
+    if (diff < -50) row.classList.remove("show-delete");
   });
 
-  // Delete button
   deleteBtn.addEventListener("click", () => {
     row.remove();
     saveItemsToWorkspace();
@@ -2295,6 +2289,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
 
   return row;
 }
+
 
 function saveItemsToWorkspace() {
   let subWorkspace = latestPage.includes("create")
@@ -2317,6 +2312,15 @@ document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
     group.insertBefore(newRow, addBtn);
     saveItemsToWorkspace();
   });
+});
+
+document.querySelectorAll(".item-row").forEach(row => {
+  const name  = row.querySelector(".item-name")?.value || "";
+  const unit  = row.querySelector(".item-unit-price")?.value || "";
+  const price = row.querySelector(".item-price")?.value || "";
+
+  const upgraded = createItemRow(name, unit, price);
+  row.replaceWith(upgraded);
 });
 
 document.addEventListener("focusin", e => {
