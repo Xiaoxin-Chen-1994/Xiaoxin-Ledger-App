@@ -5095,12 +5095,11 @@ async function getFilteredEntries({
       }
     }
   }
-
+console.log('allEntries:', allEntries)
   // ------------------------------------------------------------
   // Apply filters
   // ------------------------------------------------------------
   return allEntries.filter(e => {
-    console.log('entry:', e)
     if (from && e.transactionTime < from) return false;
     if (to && e.transactionTime > to) return false;
 
