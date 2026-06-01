@@ -6028,10 +6028,10 @@ async function confirmLeaveHousehold(hid) {
 
 async function deleteAccount(mode) { // mode = "account" (delete all) or mode = "data" (delete just data)
   const message = currentLang === "en"
-    ? isAccountDelete
+    ? mode === "account"
       ? "This action cannot be undone.\n\nThe system will delete all local data, all ledger data inside GitHub repositories you own, and your personal settings stored in GitHub. (Note: You cannot delete data in repositories created by others and shared with you.)"
       : "This action cannot be undone.\n\nThe system will delete all ledger data inside GitHub repositories you own and all local ledger data. Your personal settings will NOT be deleted."
-    : isAccountDelete
+    : mode === "account"
       ? "此操作不可撤销。\n\n系统将删除本地所有数据、您自己 GitHub 仓库中的所有账本数据和 GitHub 上的个人设置\n\n（注意：您无法删除别人创建并共享给您的仓库数据。）"
       : "此操作不可撤销。\n\n系统将删除本地账本数据和您自己 GitHub 仓库中的所有账本数据。您的个人设置不会被删除。";
 
