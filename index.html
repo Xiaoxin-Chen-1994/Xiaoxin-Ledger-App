@@ -863,7 +863,14 @@
 
   <!-- App Logic -->
   <script src="https://sql.js.org/dist/sql-wasm.js"></script>
-  <script type="module" src="script.js"></script>
+  <script id="app-script" type="module" src="script.js"></script>
+  <!-- To ensure it always retreives new version script -->
+  <script> 
+    const s = document.getElementById("app-script");
+    const url = new URL(s.src, location.href);
+    url.searchParams.set("v", Date.now());
+    s.src = url.toString();
+  </script>
   <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
