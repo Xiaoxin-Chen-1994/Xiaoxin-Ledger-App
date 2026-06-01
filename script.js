@@ -6775,7 +6775,11 @@ function updateSelectorPreview(updatedCol) {
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      // link accountInfo of all four types
+      subWorkspace.expense.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      subWorkspace.income.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      subWorkspace.balance.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
 
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
@@ -6800,6 +6804,10 @@ function updateSelectorPreview(updatedCol) {
       const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
       const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
 
+      // link accountInfo of all four types
+      subWorkspace.expense.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
+      subWorkspace.income.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
+      subWorkspace.balance.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
       subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
       subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputRepoId, null, toAccountName);
 
