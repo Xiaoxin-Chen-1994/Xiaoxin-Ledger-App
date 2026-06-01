@@ -8318,7 +8318,6 @@ function parseCorrectedText(text) {
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
     m = line.match(/([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
-    m = line.match(weightRegex);
     if (m) {
       const qty = parseFloat(m[1]);
       const unit = m[2];          // "kg" or "lb"
