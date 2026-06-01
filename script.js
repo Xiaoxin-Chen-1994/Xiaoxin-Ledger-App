@@ -455,13 +455,8 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
-document.getElementById("githubLogin").onclick = async () => {
-  await del("accountDeleted"); // remove the flag safely
-
-  // ensure the write is flushed before redirect
-  setTimeout(() => {
-    window.location.href = "/api/auth/login";
-  }, 0);
+document.getElementById("githubLogin").onclick = () => {
+  window.location.href = "/api/auth/login";
 };
 
 async function listPrivateRepos() {
