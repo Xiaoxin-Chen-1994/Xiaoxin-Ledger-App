@@ -6114,7 +6114,7 @@ async function performAccountDeletion(mode) {
   }
 }
 
-async function deleteLocalData() { // This function will not delete github_token and selectedRepos
+async function deleteLocalData(mode) { // This function will not delete github_token and selectedRepos
   // 1. Read values to keep
   const token = await get("github_token");
   const repos = await get("selectedRepos");
