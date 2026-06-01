@@ -1155,12 +1155,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 0.3rem 0;}
 }
 
 /* Hover/focus states */
+#login-section select:hover,
 .settings-section button:hover, select:hover {
   background: #f8f8f8;
   border-color: #ccc;
   outline: none;
 }
 
+#login-section select option,
 .settings-section select option {
   color: initial;   /* or a specific color you want */
   background: var(--bg); /* prevents hover background bleeding into options */

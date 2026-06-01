@@ -6094,7 +6094,7 @@ async function performAccountDeletion(mode) {
   mode === "account"
     ? currentLang === "en"
       ? "Your account and all associated data have been deleted."
-      : "您的账户和所有相关数据已被删除。"
+      : "您的账户和所有相关数据已删除。"
     : currentLang === "en"
       ? "Your ledger data has been deleted. "
       : "您的账本数据已删除。";
@@ -6151,7 +6151,7 @@ async function deleteLocalData(mode) { // This function will not delete github_t
   if (mode === "data") {
     if (personalSettings) await set("personal_settings", personalSettings);
   }
-  
+
   // 4. Delete IndexedDB (idb-keyval)
   if (window.indexedDB) {
     await new Promise(resolve => {
