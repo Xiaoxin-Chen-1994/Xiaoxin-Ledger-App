@@ -8253,7 +8253,7 @@ async function runReceiptOCR(processedBlob) {
 
   // STEP 2 — Parse the corrected text
   const parsed = parseCorrectedText(correctedText);
-
+items, discounts, taxes, fees, total
   // STEP 3 — Display everything
   resultsBox.innerHTML = `
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
@@ -8308,12 +8308,13 @@ function parseCorrectedText(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   const items = [];
-  let pendingName = null;
   const discounts = [];
   const taxes = [];
   const fees = [];
   let total = null;
-
+  let merchant = null;
+  let pendingName = null;
+  
   for (const line of lines) {
     let m;
 
@@ -8351,8 +8352,6 @@ function parseCorrectedText(text) {
       pendingName = null;
       continue;
     }
-console.log('LINE:', JSON.stringify(line));
-console.log('DISCOUNT TEST:', /(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(line));
 
     // 3) Discount / loyalty
     if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(line)) {
@@ -8371,10 +8370,9 @@ console.log('DISCOUNT TEST:', /(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]
       fees.push(line);
       continue;
     }
-console.log('TOTAL TEST:', /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i.test(line));
 
     // 6) Total (but don't treat as item)
-    m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
+    m = line.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
@@ -8397,7 +8395,11 @@ console.log('TOTAL TEST:', /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)
       !/^=/.test(line) &&              // does NOT begin with "="
       !/=$/.test(line)                 // does NOT end with "="
     ) {
-      pendingName = line.trim();
+      if (!merchant) {
+        merchant = line.trim();
+      } else {
+        pendingName = line.trim();
+      }
       continue;
     }
   }
