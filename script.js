@@ -8052,10 +8052,13 @@ function openReceiptFileInput(useCamera) {
 
     window._currentReceiptFile = file;
 
-    // This overwrites the old image automatically
     document.getElementById("receipt-image").src = URL.createObjectURL(file);
+    document.getElementById("receipt-processed-image").src = "";
 
     document.getElementById("receipt-previews").style.display = "block";
+
+    document.getElementById("run-ocr-btn").disabled = true;
+    document.getElementById("receipt-confirm-btn").style.display = "none";
 
     schedulePreprocessUpdate();
   };
@@ -8182,7 +8185,12 @@ function otsuThreshold(data) {
 }
 
 ["brightness", "contrast", "highlights", "shadows"].forEach(id => {
-  document.getElementById(id).addEventListener("input", schedulePreprocessUpdate);
+  document.getElementById(id).addEventListener("input", () => {
+    document.getElementById("run-ocr-btn").disabled = true;
+    document.getElementById("receipt-confirm-btn").style.display = "none";
+    document.getElementById("receipt-processed-image").src = "";
+    schedulePreprocessUpdate();
+  });
 });
 
 let preprocessTimer = null;
@@ -8211,12 +8219,13 @@ async function updateProcessedPreview() {
   }
 
   document.getElementById("receipt-processed-image").src = processedUrl;
+  document.getElementById("run-ocr-btn").disabled = false;
 
   // Save for OCR
   window._processedBlob = processedBlob;
 }
 
-document.getElementById("run-ocr").onclick = async () => {
+document.getElementById("run-ocr-btn").onclick = async () => {
   const blob = window._processedBlob;
   if (!blob) return;
 
@@ -8224,6 +8233,8 @@ document.getElementById("run-ocr").onclick = async () => {
 };
 
 async function runReceiptOCR(processedBlob) {
+  document.getElementById("receipt-confirm-btn").style.display = "none";
+
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
@@ -8270,6 +8281,8 @@ async function runReceiptOCR(processedBlob) {
   ${rawText}
     </pre>
   `;
+
+  document.getElementById("receipt-confirm-btn").style.display = "block";
 }
 
 function correctOCRText(raw) {
@@ -8422,7 +8435,7 @@ function cleanName(str) {
     .trim();
 }
 
-document.getElementById("receipt-confirm")
+document.getElementById("receipt-confirm-btn")
   .addEventListener("click", () => {
     const data = window._receiptParsed;
 
