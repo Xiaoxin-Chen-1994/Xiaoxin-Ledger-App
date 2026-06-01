@@ -2359,7 +2359,11 @@ function saveItemsToWorkspace() {
     ? workspace.create
     : workspace.transactions[latestOptions.transactionId];
 
-  const rows = document.querySelectorAll(".item-row");
+  let index = subWorkspace.inputTypeIndex;
+  // Find the active tab container
+  const activeTab = document.querySelectorAll(".transaction-page")[index];
+  const activeForm = inputType + "-form";
+  const rows = group.querySelectorAll(".item-row");
 
   subWorkspace.items = Array.from(rows).map(row => ({
     name: row.querySelector(".item-name")?.value || "",
