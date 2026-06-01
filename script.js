@@ -8253,24 +8253,34 @@ async function runReceiptOCR(processedBlob) {
 
   // STEP 2 — Parse the corrected text
   const parsed = parseCorrectedText(correctedText);
-items, discounts, taxes, fees, total
+
   // STEP 3 — Display everything
   resultsBox.innerHTML = `
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
     <div><strong>Date:</strong> ${parsed.date || "-"}</div>
-    <div><strong>Total:</strong> ${parsed.total || "-"}</div>
 
     <div style="margin-top:1rem;"><strong>Parsed Items:</strong></div>
     <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.items, null, 2)}</pre>
 
+    <div style="margin-top:1rem;"><strong>Discounts:</strong></div>
+    <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.discounts, null, 2)}</pre>
+
+    <div style="margin-top:1rem;"><strong>Taxes:</strong></div>
+    <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.taxes, null, 2)}</pre>
+
+    <div style="margin-top:1rem;"><strong>Fees:</strong></div>
+    <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.fees, null, 2)}</pre>
+
+    <div><strong>Total:</strong> ${parsed.total || "-"}</div>
+    
     <div style="margin-top:1rem;"><strong>Corrected Text:</strong></div>
     <pre style="white-space:pre-wrap; font-size:0.9em;">
-${correctedText}
+  ${correctedText}
     </pre>
 
     <div style="margin-top:1rem;"><strong>Raw OCR Text:</strong></div>
     <pre style="white-space:pre-wrap; font-size:0.9em;">
-${rawText}
+  ${rawText}
     </pre>
   `;
 }
@@ -8307,6 +8317,7 @@ function correctOCRText(raw) {
 function parseCorrectedText(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
+  const date = null;
   const items = [];
   const discounts = [];
   const taxes = [];
@@ -8320,6 +8331,13 @@ function parseCorrectedText(text) {
 
     // Skip obvious non-item / summary lines
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
+
+    // Date detection
+    m = line.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/);
+    if (m) {
+      date = m[1];
+      continue;
+    }
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
     m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
@@ -8404,7 +8422,7 @@ function parseCorrectedText(text) {
     }
   }
 
-  return { items, discounts, taxes, fees, total };
+  return { merchant, date, items, discounts, taxes, fees, total };
 }
 
 
