@@ -645,7 +645,7 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
-    const repoHasData = await githubFileExists(repoName, "entries", token);
+    const repoHasData = await githubFileExists(repoName, "ledger-settings.json", token);
     const localHasData = !!localDbBytes;
 
     // ------------------------------------------------------------
@@ -896,6 +896,7 @@ async function smartSync(selectedRepos, token) {
     // 3. Only local has data → push everything
     // ------------------------------------------------------------
     if (!repoHasData && localHasData) {
+
       if (!(await get("isNewLedger"))) { // show popup message if not confirmed yet. 
         showPopupWindow({
           title: currentLang === "en" ? "Upload Local Data?" : "上传本地数据？",
@@ -944,6 +945,7 @@ async function smartSync(selectedRepos, token) {
         lastSyncedMap[repoId] = Date.now();
       }
       
+      await del("isNewLedger");
       continue;
     };
 
