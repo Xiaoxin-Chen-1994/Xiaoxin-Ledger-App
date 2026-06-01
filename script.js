@@ -557,14 +557,14 @@ async function smartSync(selectedRepos, token) {
     // Case A — neither exists → create defaults
     if (!local && !cloud) {
       const personalSettings = {
-        updatedAt: Date.now(),
+        createdAt: Date.now(), // This is account creation date
+        updatedAt: Date.now(), // This is account info updated date
         language: currentLang,
         homeImages: [],
         fontsize: "",
         themeColor: "",
       };
 
-      personalSettings.updatedAt = Date.now();
       await set("personal_settings", personalSettings);
 
     } else if (!local && cloud) { // Case B — cloud exists, local missing → pull
@@ -1152,18 +1152,21 @@ async function init() {
     return;
   }
   
-  const localDeleted = await get("accountDeleted");
+  const localPersonal = await get("personal_settings");
+  const remotePersonal = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
 
-  // Check deletion marker in personal.json
-  const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
+  // Compare timestamps
+  const localCreated = localPersonal?.createdAt || 0;
+  const remoteCreated = remotePersonal.createdAt;
+  const remoteDeleted = remotePersonal.deletedAtTimestamp || 0;
 
-  // If account is deleted and local has not been deleted → wipe local data + refresh page
-  if (deletedFlag?.deleted && !localDeleted) {
+  // If remote is newer (created or deleted) → wipe local
+  if (remoteCreated > localCreated || remoteDeleted > localCreated) {
+    console.log("Local data is older → wiping local data");
     await deleteLocalData();
-
     window.location.href = "/";
     window.location.reload();
-    return
+    return;
   }
   
   // 4. Load ALL ledger DBs
@@ -6064,8 +6067,6 @@ async function deleteLocalData() {
     const req = indexedDB.deleteDatabase("keyval-store");
     req.onerror = () => console.warn("Failed to delete IndexedDB");
   }
-
-  await set("accountDeleted", true);
 }
 
 async function fetchGitHubUsername(token) {
@@ -6111,7 +6112,7 @@ async function deleteLedgerFilesInRepo(username, token) {
   }
 
   // 4. Delete personal settings
-    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", {deleted: true, timestamp: Date.now()}, token);
+    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", {deleted: true, deletedAtTimestamp: Date.now()}, token);
 }
 
 async function githubListDirectory(owner, repo, path, token) {
