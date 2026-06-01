@@ -2243,16 +2243,15 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   priceInput.placeholder = t.priceOrQuantity;
   priceInput.value = priceValue;
 
-  content.appendChild(nameInput);
-  content.appendChild(unitInput);
-  content.appendChild(priceInput);
+  row.appendChild(nameInput);
+  row.appendChild(unitInput);
+  row.appendChild(priceInput);
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "delete-btn";
   deleteBtn.textContent = t.delete;
 
-  row.appendChild(content);
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
