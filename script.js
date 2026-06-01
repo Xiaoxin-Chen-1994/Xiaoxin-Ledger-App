@@ -8398,13 +8398,14 @@ function parseCorrectedText(text) {
 
       let unitExpr = m[3];   // "2/$1.87"
       let unit_price_each = null;
+      let priceForDivisor = null;
 
       if (unitExpr.includes("/")) {
         const cleaned = unitExpr.replace("$", "");  // "2/1.87"
         const [divisorStr, priceStr] = cleaned.split("/");
 
         const divisor = parseFloat(divisorStr);
-        const priceForDivisor = parseFloat(priceStr);
+        priceForDivisor = parseFloat(priceStr);
 
         if (!isNaN(divisor) && !isNaN(priceForDivisor) && divisor > 0) {
           unit_price_each = priceForDivisor / divisor;
