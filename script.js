@@ -2022,10 +2022,22 @@ function switchTab(index) {
 
   addTag(subWorkspace.tags, subWorkspace);
 
-  // notes
-  if (subWorkspace.inputNotes !== undefined) {
-    const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
-    notesEl.value = subWorkspace.inputNotes;
+  // item rows
+  if (Array.isArray(subWorkspace.items)) {
+    const group = activeTab.querySelector(`#${activeForm} .item-group`);
+
+    // Clear existing rows
+    group.querySelectorAll(".item-row").forEach(r => r.remove());
+
+    // Rebuild rows from workspace
+    subWorkspace.items.forEach(item => {
+      const row = createItemRow(
+        item.name || "",
+        item.unitPrice || item.unit_price || "",
+        item.price || ""
+      );
+      group.insertBefore(row, group.querySelector("button[id$='add-item-btn']"));
+    });
   }
 }
 
