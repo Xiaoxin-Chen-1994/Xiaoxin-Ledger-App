@@ -8040,6 +8040,8 @@ function openReceiptScan(options = { returnOnly: false }) {
   receiptScanMode = options;
   console.log('receiptScanMode', receiptScanMode)
   showPage("scan-receipt", "Scan Receipt");
+  let target = document.getElementById("scan-receipt-page");
+  disablePageSwipe(target);
 }
 
 document.getElementById("receipt-take-photo")
