@@ -8221,48 +8221,38 @@ ${text}
 
 function parseReceiptText(text) {
   // ---------- Regex patterns ----------
-  // Weight-based item: "CHERRIES RED 1.594 kg @ 4.38/kg 6.99"
   const weightRegex =
-    /(.+?)\s+([\d.]+)\s*(kg|lb)\s*@\s*\$?([\d.]+)(?:\/(kg|lb))?\s+([\d.]+)/i;
+  /(.+?)\s+([\d.]+)\s*(kg|lb|ke|ks|k9|1b|Ib)\s*@\s*\$?([\d.]+)(?:\/(kg|lb|ke|ks|k9))?\s+([\d.]+)/i;
 
-  // Count-based item: "BANANA 6 @ 0.49 2.94"
   const countRegex =
     /(.+?)\s+(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/i;
 
-  // Simple item: "BANANA 1.31"
   const simpleRegex =
     /(.+?)\s+(\d+\.\d{2})$/;
 
-  // Discount / loyalty: "LOYALTY SAVINGS -0.50"
   const discountRegex =
     /(LOYALTY|SAVINGS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i;
 
-  // Tax: "HST 0.87", "TAX 1.20"
   const taxRegex =
     /(HST|GST|PST|TAX)[^\d]*([\d.]+)/i;
 
-  // Total: "TOTAL 23.45", "AMOUNT DUE 23.45"
   const totalRegex =
     /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i;
 
   const raw = text;
 
-  // Normalize & split into lines
   const lines = text
     .split("\n")
     .map(normalizeReceiptLine)
     .filter(Boolean);
 
-  // Merchant: first line with letters
   const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
 
-  // Date: simple patterns
   const date =
     raw.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
     raw.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
     null;
 
-  // Merge multi-line items into blocks
   const blocks = mergeBlocks(lines);
 
   const items = [];
@@ -8273,7 +8263,6 @@ function parseReceiptText(text) {
   for (const block of blocks) {
     let m;
 
-    // Skip obvious non-item junk early
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY|POINTS/i.test(block)) {
       continue;
     }
@@ -8378,11 +8367,9 @@ function mergeBlocks(lines) {
   let current = "";
 
   for (const line of lines) {
-    // If line looks like a continuation (has price/qty/unit markers), append
-    if (/(@|\d+\.\d{2}|kg|lb)/i.test(line)) {
+    if (/(@|\d+\.\d{2}|kg|lb|ke|ks|k9)/i.test(line)) {
       current += (current ? " " : "") + line;
     } else {
-      // Start of a new block
       if (current) blocks.push(current.trim());
       current = line;
     }
