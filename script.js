@@ -2031,7 +2031,7 @@ function switchTab(index) {
 
     // Cache the add button ONCE
     const addBtn = group.querySelector("button[id$='add-item-btn']");
-
+console.log("subWorkspace.items", subWorkspace.items)
     // Insert restored rows
     subWorkspace.items.forEach(item => {
       const row = createItemRow(
