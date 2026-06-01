@@ -2255,6 +2255,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
+    e.preventDefault(); 
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     row.classList.add("show-delete"); // reveal delete button
   });
