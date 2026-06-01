@@ -8366,7 +8366,7 @@ function parseCorrectedText(text) {
     }
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = trimmedLine.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)/i);
+    m = trimmedLine.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
     if (m) {
       let namePart = m[1].trim();
       // If name is pure number, try using pendingName instead
@@ -8387,7 +8387,7 @@ function parseCorrectedText(text) {
     }
 
     // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
-    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(?\d+\.\d{2})/i);
+    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})?(?:\s*[A-Za-z ]+)?$/i);
     console.log(m)
     if (m) {
       let namePart = m[1].trim();
@@ -8425,7 +8425,7 @@ function parseCorrectedText(text) {
 
 
     // 2.2) Count item: "6 @ 0.45 2.70"
-    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*\$?(\d+(?:\.\d+)?).*?\$?(\d+\.\d{2})/i);
+    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*\$?(\d+(?:\.\d+)?).*?\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
     if (m) {
       let namePart = m[1].trim();
 
@@ -8463,7 +8463,7 @@ function parseCorrectedText(text) {
     }
 
     // 6) Total (but don't treat as item)
-    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*\$?([\d.]+)/i);
+    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)*?[^\d]*\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
