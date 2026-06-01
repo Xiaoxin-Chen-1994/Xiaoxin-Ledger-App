@@ -1157,7 +1157,7 @@ async function init() {
   const localDeleted = await get("accountDeleted");
 
   // Check deletion marker in personal.json
-  const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo, "personal.json", token);
+  const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
 
   // If account is deleted and local has not been deleted → wipe local data + refresh page
   if (deletedFlag?.deleted && !localDeleted) {
