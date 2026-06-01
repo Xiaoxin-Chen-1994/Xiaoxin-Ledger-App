@@ -456,6 +456,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 document.getElementById("githubLogin").onclick = () => {
+  await del("accountDeleted"); // remove the flag entirely
   window.location.href = "/api/auth/login";
 };
 
@@ -1149,6 +1150,20 @@ async function init() {
     await listPrivateRepos();
   }
 
+  const localDeleted = await get("accountDeleted");
+
+  // Check deletion marker in personal.json
+  const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo, "personal.json", token);
+
+  // If account is deleted and local has not been deleted → wipe local data + refresh page
+  if (deletedFlag?.deleted && !localDeleted) {
+    await deleteLocalData();
+
+    window.location.href = "/";
+    window.location.reload();
+    return
+  }
+  
   // 4. Load ALL ledger DBs
   window.ledgerDbs = await smartSync(selectedRepos, token); // smartSync returns a map: { repoId: SQL.Database }
   console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
@@ -6047,7 +6062,10 @@ async function deleteLocalData() {
   if (window.indexedDB) {
     const req = indexedDB.deleteDatabase("keyval-store");
     req.onerror = () => console.warn("Failed to delete IndexedDB");
+    return
   }
+
+  await set("accountDeleted", true);
 }
 
 async function fetchGitHubUsername(token) {
@@ -6080,11 +6098,19 @@ async function deleteLedgerFilesInRepo(username, token) {
       }
     }
 
-    // 2. Delete ledger-settings.json
+    // 2. Delete changelogs
+    const changelogFiles = await githubListDirectory(username, repo.name, "changelog", token);
+    for (const file of changelogFiles) {
+      if (file.type === "file") {
+        await githubDeleteFile(username, repo.name, file.path, file.sha, token);
+      }
+    }
+
+    // 3. Delete ledger-settings.json
     await githubDeleteIfExists(username, repo.name, "ledger-settings.json", token);
 
-    // 3. Delete change-log.jsonl
-    await githubDeleteIfExists(username, repo.name, "change-log.jsonl", token);
+    // 4. Delete personal settings
+    await githubDeleteIfExists(username, repo.name, "personal.json", token);
   }
 }
 
