@@ -4656,7 +4656,6 @@ async function setLanguage(lang) {
     .forEach(el => el.textContent = t.notes);
 
   // Settings
-  document.getElementById("settings-title").textContent = t.settings;
   document.getElementById("basic-settings-title").textContent = t.personalSettingsTitle;
   document.getElementById("open-basic-settings").textContent = t.openPersonalSettings;
   document.getElementById("labels-title").textContent = t.labels;
