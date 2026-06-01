@@ -8260,17 +8260,32 @@ function parseCorrectedText(text) {
   const taxes = [];
   let total = null;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     let m;
 
-    // Weight item: "1.594 kg @ 4.38/kg 6.99"
-    m = line.match(/(.+?)\s+([\d.]+)\s*kg\s*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
+    // Skip obvious non-item lines early
+    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY|POINTS/i.test(line)) continue;
+
+    // Weight item: "0.860 kg @ $1.52/kg 1.31"
+    m = line.match(/([\d.]+)\s*kg\s*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
     if (m) {
+      // Look back for a name line
+      let name = "";
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = lines[j];
+        if (/\d+\.\d{2}/.test(prev) || /kg|@/i.test(prev)) break; // hit another numeric line
+        if (/[A-Za-z]/.test(prev)) {
+          name = cleanName(prev);
+          break;
+        }
+      }
+
       items.push({
-        name: cleanName(m[1]),
-        quantity: parseFloat(m[2]),
-        unit_price: parseFloat(m[3]),
-        total: parseFloat(m[4])
+        name,
+        quantity: parseFloat(m[1]),
+        unit_price: parseFloat(m[2]),
+        total: parseFloat(m[3])
       });
       continue;
     }
@@ -8283,16 +8298,6 @@ function parseCorrectedText(text) {
         quantity: parseInt(m[2]),
         unit_price: parseFloat(m[3]),
         total: parseFloat(m[4])
-      });
-      continue;
-    }
-
-    // Simple item: "BANANA 1.31"
-    m = line.match(/(.+?)\s+(\d+\.\d{2})$/);
-    if (m) {
-      items.push({
-        name: cleanName(m[1]),
-        total: parseFloat(m[2])
       });
       continue;
     }
@@ -8321,6 +8326,20 @@ function parseCorrectedText(text) {
     m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
+      continue;
+    }
+
+    // Simple item: "BANANAS 100 Pts" is NOT an item, "SUBTOTAL 11.24" is NOT an item
+    if (/^SUBTOTAL\b/i.test(line) || /\bTOTAL\b/i.test(line) || /\bLOYALTY\b/i.test(line)) {
+      continue;
+    }
+
+    m = line.match(/(.+?)\s+(\d+\.\d{2})$/);
+    if (m) {
+      items.push({
+        name: cleanName(m[1]),
+        total: parseFloat(m[2])
+      });
       continue;
     }
   }
