@@ -8,5 +8,6 @@
   await set("github_token", token);
 
   // Redirect back to your app
-  window.location.href = "/";
+  const redirect = params.get("redirect") || "/";
+  window.location.href = redirect;
 </script>

@@ -6112,10 +6112,10 @@ async function deleteLedgerFilesInRepo(username, token) {
 
     // 3. Delete ledger-settings.json
     await githubDeleteIfExists(username, repo.name, "ledger-settings.json", token);
-
-    // 4. Delete personal settings
-    await githubDeleteIfExists(username, repo.name, "personal.json", token);
   }
+
+  // 4. Delete personal settings
+    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", {deleted: true, timestamp: Date.now()}, token);
 }
 
 async function githubListDirectory(owner, repo, path, token) {

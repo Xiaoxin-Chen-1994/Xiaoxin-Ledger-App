@@ -16,5 +16,6 @@ export default async function handler(req, res) {
 
   const data = await tokenRes.json();
 
-  res.redirect(`/auth-success.html?token=${data.access_token}`);
+  const redirect = req.query.redirect || "/";
+  res.redirect(`/auth-success.html?token=${data.access_token}&redirect=${encodeURIComponent(redirect)}`);
 }
