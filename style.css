@@ -509,7 +509,8 @@ input[list], input[type="text"], input[type="url"],
 .item-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* optional spacing */
+  gap: 0.2rem; /* optional spacing */
+  margin-bottom: 0.2rem;
 }
 
 .item-row {
