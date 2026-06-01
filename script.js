@@ -468,7 +468,7 @@ async function listPrivateRepos() {
   }).then(r => r.json());
 
   // 3. Filter personal repos (owned by user)
-  const personalRepos = repos.filter(r => r.owner.login === window.currentUserLogin);
+  const personalRepos = repos.filter(r => r.owner.id === window.currentUserId);
 
   // 4. Filter ledger repos (any repo user can push to)
   const ledgerRepos = repos.filter(r => r.permissions.push);
@@ -1183,6 +1183,7 @@ async function init() {
   }).then(r => r.json());
 
   window.currentUserLogin = user.login;
+  window.currentUserId = user.id;
 
   // 2. Load repo selections
   selectedRepos = await get("selectedRepos");
@@ -1194,11 +1195,17 @@ async function init() {
     return
   }
 
-  const params = new URLSearchParams(window.location.search);
+  const pendingDelete = await get("pendingDelete"); // this is a flag for account deletion
+  if (pendingDelete === "yes") {
+    const params = new URLSearchParams(window.location.search);
 
-  if (params.get("deleteMode") === "1") {
-    await performAccountDeletion();
-    return;
+    if (params.get("deleteMode") === "1") {
+      await performAccountDeletion(); // pendingDelete variable is cleared when deleting localStorage
+      return;
+
+    } else {
+      await del("pendingDelete"); // clear this variable to cancel delete account
+    }
   }
   
   // 4. Load ALL ledger DBs
@@ -6006,6 +6013,7 @@ async function deleteAccount() {
       {
         text: currentLang === "en" ? "Delete" : "删除",
         onClick: () => {
+          await set("pendingDelete", "yes");
           const redirectUrl = `${window.location.origin}/?deleteMode=1`;
           window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
         }
@@ -6018,19 +6026,12 @@ window.deleteAccount = deleteAccount;
 async function performAccountDeletion() {
   alert("身份验证成功，正在删除您的账户数据…");
 
-  const token = await get("github_token");
-  if (!token) {
-    alert("无法获取 GitHub token，删除失败");
-    return;
-  }
-
   // 1. Delete GitHub repos owned by this user
-  await deleteLedgerFilesInRepo(token);
+  await deleteLedgerFilesInRepo();
   
   // 2. Delete local data
   await deleteLocalData();
   alert("账户数据已全部删除");
-  
   // logout(); // This function will delete github_token and selectedRepos
 }
 
@@ -6057,13 +6058,15 @@ async function deleteLocalData() { // This function will not delete github_token
   }
 }
 
-async function deleteLedgerFilesInRepo(token) {
+async function deleteLedgerFilesInRepo() {
+  const token = await get("github_token");
+
   for (const repo of selectedRepos.ledgerRepos) {
-    if (repo.ownerId !== token) continue;
+    if (repo.ownerId !== window.currentUserId) continue;
 
     console.log("Cleaning ledger files in repo:", repo.name);
 
-    // Helper to delete all files in a folder
+    // Helper to delete all files in a specified folder
     async function deleteFolder(folder) {
       const list = await githubListDirectory(repo.name, folder, token);
 
