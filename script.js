@@ -1045,6 +1045,8 @@ async function githubReadJson(repoName, path, token) {
 
   const data = await res.json();
   const decoded = decodeBase64Utf8(data.content);
+  console.log('path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
+  console.log('JSON.parse(decoded):', JSON.parse(decoded))
   return JSON.parse(decoded);
 }
 
@@ -5087,7 +5089,6 @@ async function getFilteredEntries({
     const rows = result[0].values;
 
     for (const [jsonStr] of rows) {
-      console.log('jsonStr:', jsonStr)
       try {
         const entry = JSON.parse(jsonStr);
         allEntries.push(entry);
@@ -5096,7 +5097,7 @@ async function getFilteredEntries({
       }
     }
   }
-console.log('allEntries:', allEntries)
+
   // ------------------------------------------------------------
   // Apply filters
   // ------------------------------------------------------------
