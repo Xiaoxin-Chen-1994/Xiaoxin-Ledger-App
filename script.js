@@ -6012,7 +6012,7 @@ async function deleteAccount() {
       },
       {
         text: currentLang === "en" ? "Delete" : "删除",
-        onClick: () => {
+        onClick: async () => {
           await set("pendingDelete", "yes");
           const redirectUrl = `${window.location.origin}/?deleteMode=1`;
           window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
