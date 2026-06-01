@@ -1195,12 +1195,12 @@ async function init() {
     return
   }
 
-  const pendingDelete = await get("pendingDelete"); // this is a flag for account deletion
-  if (pendingDelete === "yes") {
+  const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
+  if (pendingDeleteMode === "account" || pendingDeleteMode === "data")  {
     const params = new URLSearchParams(window.location.search);
 
     if (params.get("deleteMode") === "1") {
-      await performAccountDeletion(); // pendingDelete variable is cleared when deleting localStorage
+      await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
       return;
 
     } else {
@@ -6026,8 +6026,29 @@ async function deleteAccount(mode) { // mode = "account" (delete all) or mode = 
 }
 window.deleteAccount = deleteAccount;
 
-async function performAccountDeletion() {
-  const mode = await get("pendingDelete");   // "account" or "data"
+async function performAccountDeletion(mode) {
+  const ownedRepos = selectedRepos.ledgerRepos.filter(
+    r => r.ownerId === window.currentUserId
+  );
+
+  // Only ask repo selection when deleting DATA, not account
+  if (mode === "data") {
+    if (ownedRepos.length > 1) {
+    // Show multi-select popup and STOP execution here
+    return showRepoMultiSelectPopup(ownedRepos, mode);
+    }
+
+    // If only one repo, auto-select it
+    if (ownedRepos.length === 1) {
+      await set("reposToDelete", [ownedRepos[0].id]);
+    }
+  }
+  
+  // If deleting ENTIRE ACCOUNT → delete ALL repos user owns
+  if (mode === "account") {
+    const allOwnedRepoIds = ownedRepos.map(r => r.id);
+    await set("reposToDelete", allOwnedRepoIds);
+  }
 
   showStatusMessage(
     currentLang === "en"
@@ -6089,15 +6110,75 @@ async function deleteLocalData() { // This function will not delete github_token
   }
 }
 
+function showRepoMultiSelectPopup(repos, mode) {
+  const html = repos
+    .map(
+      r => `
+        <label style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+          <input type="checkbox" value="${r.id}" />
+          <span>${r.name}</span>
+        </label>
+      `
+    )
+    .join("");
+
+  showPopupWindow({
+    title: currentLang === "en" ? "Select Repositories" : "选择仓库",
+    message:
+      (currentLang === "en"
+        ? "Select the repositories you want to delete data from:"
+        : "请选择要删除数据的仓库：") +
+      "<br><br>" +
+      html,
+    buttons: [
+      {
+        text: currentLang === "en" ? "Cancel" : "取消",
+        primary: true,
+        onClick: () => {}
+      },
+      {
+        text: currentLang === "en" ? "Continue" : "继续",
+        onClick: async () => {
+          const checkboxes = document.querySelectorAll(
+            ".popup-window input[type=checkbox]"
+          );
+          const selected = [...checkboxes]
+            .filter(cb => cb.checked)
+            .map(cb => Number(cb.value));
+
+          if (selected.length === 0) {
+            showStatusMessage(
+              currentLang === "en"
+                ? "Please select at least one repository."
+                : "请至少选择一个仓库。",
+              "error",
+              3000
+            );
+            return;
+          }
+
+          await set("reposToDelete", selected);
+
+          // Continue deletion after selection
+          performAccountDeletion(mode);
+        }
+      }
+    ]
+  });
+}
+
 async function deleteLedgerFilesInRepo(mode) {
   const token = await get("github_token");
 
+  // Load selected repos (array of repo IDs)
+  const reposToDelete = await get("reposToDelete") || [];
+
   for (const repo of selectedRepos.ledgerRepos) {
-    if (repo.ownerId !== window.currentUserId) continue;
+    // Skip repos not selected
+    if (!reposToDelete.includes(repo.id)) continue;
 
     console.log("Cleaning ledger files in repo:", repo.name);
 
-    // Helper to delete all files in a specified folder
     async function deleteFolder(folder) {
       const list = await githubListDirectory(repo.name, folder, token);
 
@@ -6116,14 +6197,21 @@ async function deleteLedgerFilesInRepo(mode) {
 
     await deleteFolder("entries");
     await deleteFolder("changelog");
-
     await githubDeleteIfExists(repo.name, "ledger-settings.json", token);
   }
 
+  // ⭐ Only full account deletion wipes personal.json
   if (mode === "account") {
-    // Delete personal.json
-    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", { deleted: true, deletedAtTimestamp: Date.now() }, token);
+    await githubWriteJson(
+      selectedRepos.personalSettingsRepo.name,
+      "personal.json",
+      { deleted: true, deletedAtTimestamp: Date.now() },
+      token
+    );
   }
+
+  // ⭐ Clean up selection after use
+  await del("reposToDelete");
 }
 
 async function githubListDirectory(repoName, path, token) {
