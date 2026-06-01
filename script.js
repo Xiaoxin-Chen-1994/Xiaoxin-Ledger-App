@@ -6068,7 +6068,6 @@ async function deleteLocalData() {
   if (window.indexedDB) {
     const req = indexedDB.deleteDatabase("keyval-store");
     req.onerror = () => console.warn("Failed to delete IndexedDB");
-    return
   }
 
   await set("accountDeleted", true);
