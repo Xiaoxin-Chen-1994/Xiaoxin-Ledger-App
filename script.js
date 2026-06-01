@@ -8307,7 +8307,7 @@ function parseCorrectedText(text) {
     let m;
 
     // Skip obvious non-item lines early
-    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY|POINTS/i.test(line)) continue;
+    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
 
     // Weight item: "0.860 kg @ $1.52/kg 1.31"
     m = line.match(/([\d.]+)\s*kg\s*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
@@ -8345,7 +8345,7 @@ function parseCorrectedText(text) {
     }
 
     // Discount / loyalty
-    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i);
+    m = line.match(/(LOYALTY|SAVINGS|POINTS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i);
     if (m) {
       discounts.push({
         type: m[1],
