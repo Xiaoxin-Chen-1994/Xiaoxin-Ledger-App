@@ -569,7 +569,6 @@ async function smartSync(selectedRepos, token) {
 
       await set("personal_settings", defaults);
       await githubWriteJson(repoName, "personal.json", defaults, token);
-      return;
     }
 
     // -----------------------------------------
@@ -577,7 +576,6 @@ async function smartSync(selectedRepos, token) {
     // -----------------------------------------
     if (!local && cloud) {
       await set("personal_settings", cloud);
-      return;
     }
 
     // -----------------------------------------
@@ -585,7 +583,6 @@ async function smartSync(selectedRepos, token) {
     // -----------------------------------------
     if (local && !cloud) {
       await githubWriteJson(repoName, "personal.json", local, token);
-      return;
     }
 
     // if both local and cloud exists
@@ -602,7 +599,6 @@ async function smartSync(selectedRepos, token) {
         await deleteLocalData();
         window.location.href = "/";
         window.location.reload();
-        return;
       }
 
       // -----------------------------------------
@@ -613,7 +609,6 @@ async function smartSync(selectedRepos, token) {
         (cloud.createdAt < local.createdAt)
       ) {
         await githubWriteJson(repoName, "personal.json", local, token);
-        return;
       }
 
       // -----------------------------------------
@@ -628,7 +623,6 @@ async function smartSync(selectedRepos, token) {
         } else if (cloud.updatedAt > local.updatedAt) {
           await set("personal_settings", cloud);
         }
-        return;
       }
     }
   }
