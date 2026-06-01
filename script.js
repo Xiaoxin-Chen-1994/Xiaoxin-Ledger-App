@@ -824,7 +824,8 @@ async function smartSync(selectedRepos, token) {
         "income-categories": incomeCategories,
         collections,
         subjects,
-        defaults
+        defaults,
+        "tags": [],
       };
 
       // Save ledger settings locally
@@ -2145,8 +2146,9 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     }
     const inputType = subWorkspace.inputType;
     const repoId = subWorkspace[inputType].repoId;
-
-    const tags = householdDocs[repoId].tags
+    const settings = settingsMap[repoId];
+    
+    const tags = settings.tags;
 
     tags.forEach(tag => {
       if (tag && tag.includes(text)) {
