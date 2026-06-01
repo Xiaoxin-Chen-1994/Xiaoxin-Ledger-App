@@ -6962,6 +6962,7 @@ function onReturnButton() {
   returnButtonPressed = true;
   history.back();
 }
+window.onReturnButton = onReturnButton;
 
 window.addEventListener('popstate', (e) => {
   if (openSelector) {
