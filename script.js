@@ -512,7 +512,7 @@ async function listPrivateRepos() {
 
     const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
       .filter(cb => cb.checked)
-      .map(cb => ({ name: cb.value, id: Number(cb.dataset.id) }));
+      .map(cb => ({ name: cb.value, id: Number(cb.dataset.id), ownerId: Number(cb.dataset.ownerId)}));
 
     if (!personalName) {
       alert("Please select a personal settings repo.");
@@ -6024,14 +6024,8 @@ async function performAccountDeletion() {
     return;
   }
 
-  const username = await fetchGitHubUsername(token);
-  if (!username) {
-    alert("无法获取 GitHub 用户名");
-    return;
-  } 
-
   // 1. Delete GitHub repos owned by this user
-  await deleteLedgerFilesInRepo(username, token);
+  await deleteLedgerFilesInRepo(token);
   
   // 2. Delete local data
   await deleteLocalData();
@@ -6063,41 +6057,25 @@ async function deleteLocalData() { // This function will not delete github_token
   }
 }
 
-async function fetchGitHubUsername(token) {
-  const res = await fetch("https://api.github.com/user", {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+async function deleteLedgerFilesInRepo(token) {
+  for (const repo of selectedRepos.ledgerRepos) {
+    if (repo.ownerId !== token) continue;
 
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.login;
-}
-
-async function deleteLedgerFilesInRepo(username, token) {
-  const repos = await fetchUserRepos(token);
-
-  for (const repo of repos) {
-    if (repo.owner.login !== username) continue;
-    if (!repo.name.startsWith("ledger-")) continue;
-
-    const owner = repo.owner.login;
-    const repoName = repo.name;
-
-    console.log("Cleaning ledger files in repo:", repoName);
+    console.log("Cleaning ledger files in repo:", repo.name);
 
     // Helper to delete all files in a folder
     async function deleteFolder(folder) {
-      const list = await githubListDirectory(owner, repoName, folder, token);
+      const list = await githubListDirectory(repo.name, folder, token);
 
       if (!Array.isArray(list)) {
-        console.log(`Folder ${folder} does not exist in ${repoName}`);
+        console.log(`Folder ${folder} does not exist in ${repo.name}`);
         return;
       }
 
       for (const file of list) {
         if (file.type === "file") {
           console.log("Deleting:", file.path);
-          await githubDeleteFile(owner, repoName, file.path, file.sha, token);
+          await githubDeleteFile(repo.name, file.path, file.sha, token);
         }
       }
     }
@@ -6105,38 +6083,38 @@ async function deleteLedgerFilesInRepo(username, token) {
     await deleteFolder("entries");
     await deleteFolder("changelog");
 
-    await githubDeleteIfExists(owner, repoName, "ledger-settings.json", token);
+    await githubDeleteIfExists(repo.name, "ledger-settings.json", token);
   }
 
   // Delete personal.json
   await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", { deleted: true, deletedAtTimestamp: Date.now() }, token);
 }
 
-async function githubListDirectory(owner, repo, path, token) {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+async function githubListDirectory(repoName, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
-console.log('githubListDirectory path:', `https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
+console.log('githubListDirectory path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
   if (res.status === 404) return []; // directory doesn't exist
   return await res.json();
 }
 
-async function githubDeleteIfExists(owner, repo, path, token) {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+async function githubDeleteIfExists(repoName, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-console.log('githubDeleteIfExists path:', `https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
+console.log('githubDeleteIfExists path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
   if (res.status === 404) return;
 
   const file = await res.json();
-  await githubDeleteFile(owner, repo, path, file.sha, token);
+  await githubDeleteFile(repoName, path, file.sha, token);
 }
 
-async function githubDeleteFile(owner, repo, path, sha, token) {
-  console.log('githubDeleteFile path:', `https://api.github.com/repos/${owner}/${repo}/contents/${path}`)
+async function githubDeleteFile(repoName, path, sha, token) {
+  console.log('githubDeleteFile path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
   
-  await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+  await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
