@@ -48,176 +48,181 @@
         // ------------------------------------------------------------
         //  PLACE YOUR REAL parseCorrectedText() LOGIC HERE
         // ------------------------------------------------------------
-function parseCorrectedText(text) {
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+        function parseCorrectedText(text) {
+            const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  let date = null;
-  const items = [];
-  const discounts = [];
-  const taxes = [];
-  const fees = [];
-  let total = null;
-  let merchant = null;
-  let pendingName = null;
+            let date = null;
+            const items = [];
+            const discounts = [];
+            const taxes = [];
+            const fees = [];
+            let total = null;
+            let merchant = null;
+            let pendingName = null;
 
-  for (const line of lines) {
-    let trimmedLine = line.trim();
-    let m;
+            for (const line of lines) {
+                let trimmedLine = line.trim();
+                let m;
 
-    // Skip obvious non-item / summary lines
-    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(trimmedLine)) continue;
+                // Skip obvious non-item / summary lines
+                if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(trimmedLine)) continue;
 
-    // Date detection
-    m = trimmedLine.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/);
-    if (m) {
-      date = m[1];
-      continue;
-    }
+                // Date detection
+                m = trimmedLine.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/);
+                console.log('OCR text parse rule date result:', m)
+                if (m) {
+                    date = m[1];
+                    continue;
+                }
 
-    // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = trimmedLine.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
-    if (m) {
-      let namePart = m[1].trim();
-      // If name is pure number, try using pendingName instead
+                // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
+                m = trimmedLine.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
+                console.log('OCR text parse rule 1 result:', m)
+                if (m) {
+                    let namePart = m[1].trim();
+                    // If name is pure number, try using pendingName instead
 
-      if (/^\d+$/.test(namePart) && pendingName) {
-        namePart = pendingName.trim();
-      }
+                    if (/^\d+$/.test(namePart) && pendingName) {
+                        namePart = pendingName.trim();
+                    }
 
-      items.push({
-        name: namePart || pendingName || "",
-        quantity: `${m[2]} ${m[3]}`,
-        unit_price: `$${parseFloat(m[4]).toFixed(2)}/${m[5]}`,
-        item_total: parseFloat(m[6])
-      });
+                    items.push({
+                        name: namePart || pendingName || "",
+                        quantity: `${m[2]} ${m[3]}`,
+                        unit_price: `$${parseFloat(m[4]).toFixed(2)}/${m[5]}`,
+                        item_total: parseFloat(m[6])
+                    });
 
-      pendingName = null;
-      continue;
-    }
+                    pendingName = null;
+                    continue;
+                }
 
-    // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
-    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})?(?:\s*[A-Za-z ]+)?$/i);
-    console.log(m)
-    if (m) {
-      let namePart = m[1].trim();
+                // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
+                m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})?(?:\s*[A-Za-z ]+)?$/i);
+                console.log('OCR text parse rule 2.1 result:', m)
+                if (m) {
+                    let namePart = m[1].trim();
 
-      if (/^\d+(\.\d+)?$/.test(namePart)) {
-        namePart = pendingName || "";
-      }
+                    if (/^\d+(\.\d+)?$/.test(namePart)) {
+                        namePart = pendingName || "";
+                    }
 
-      let unitExpr = m[3];   // "2/$1.87"
-      let unit_price_each = null;
+                    let unitExpr = m[3];   // "2/$1.87"
+                    let unit_price_each = null;
 
-      if (unitExpr.includes("/")) {
-        const cleaned = unitExpr.replace("$", "");  // "2/1.87"
-        const [divisorStr, priceStr] = cleaned.split("/");
+                    if (unitExpr.includes("/")) {
+                        const cleaned = unitExpr.replace("$", "");  // "2/1.87"
+                        const [divisorStr, priceStr] = cleaned.split("/");
 
-        const divisor = parseFloat(divisorStr);
-        const priceForDivisor = parseFloat(priceStr);
+                        const divisor = parseFloat(divisorStr);
+                        const priceForDivisor = parseFloat(priceStr);
 
-        if (!isNaN(divisor) && !isNaN(priceForDivisor) && divisor > 0) {
-          unit_price_each = priceForDivisor / divisor;
+                        if (!isNaN(divisor) && !isNaN(priceForDivisor) && divisor > 0) {
+                            unit_price_each = priceForDivisor / divisor;
+                        }
+                    }
+
+                    items.push({
+                        name: namePart,
+                        quantity: parseInt(m[2], 10),
+                        unit_price: unit_price_each,  // 0.935
+                        unit_price_string: unitExpr, // "2/$1.87"
+                        item_total: parseFloat(m[4]) || priceForDivisor  // final price
+                    });
+
+                    pendingName = null;
+                    continue;
+                }
+
+
+                // 2.2) Count item: "6 @ 0.45 2.70"
+                m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*\$?(\d+(?:\.\d+)?).*?\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
+                console.log('OCR text parse rule 2.2 result:', m)
+                if (m) {
+                    let namePart = m[1].trim();
+
+                    if (/^\d+(\.\d+)?$/.test(namePart)) {
+                        namePart = pendingName || "";
+                    }
+
+                    items.push({
+                        name: namePart || pendingName || "",
+                        quantity: parseInt(m[2], 10),
+                        unit_price: m[3],
+                        item_total: parseFloat(m[4])
+                    });
+
+                    pendingName = null;
+                    continue;
+                }
+
+                // 3) Discount / loyalty
+                if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(trimmedLine)) {
+                    discounts.push(trimmedLine);
+                    continue;
+                }
+
+                // 4) Tax
+                if (/(HST|GST|PST|TAX)/i.test(trimmedLine)) {
+                    taxes.push(trimmedLine);
+                    continue;
+                }
+
+                // 5) Fees
+                if (/(fee)/i.test(trimmedLine)) {
+                    fees.push(trimmedLine);
+                    continue;
+                }
+
+                // 6) Total (but don't treat as item)
+                m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
+                console.log('OCR text parse rule 6 result:', m)
+                if (m) {
+                    total = parseFloat(m[2]);
+                    continue;
+                }
+
+                // 7) other items that end with a number
+                m = trimmedLine.match(/^(.+?)\s*\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
+                console.log('OCR text parse rule 7 result:', m)
+                if (m) {
+                    let name = m[1].trim();
+
+                    // If name is pure number, try using pendingName instead
+                    if (/^\d+$/.test(name) && pendingName) {
+                        name = pendingName.trim();
+                        pendingName = null;
+                    }
+
+                    // Skip if name is exactly "master"
+                    if (name.toLowerCase() === "master") continue;
+
+                    items.push({
+                        name,
+                        item_total: parseFloat(m[2])
+                    });
+
+                    continue;
+                }
+
+                // if a line doesn't meet above rules but meets below rules, take it as a pending name
+                if (
+                    /^[A-Za-z].{2,}/.test(trimmedLine) &&   // starts with a letter
+                    !/\d/.test(trimmedLine) &&              // contains NO digits
+                    !/^=/.test(trimmedLine) &&              // does NOT begin with "="
+                    !/=$/.test(trimmedLine)                 // does NOT end with "="
+                ) {
+                    if (!merchant) {
+                        merchant = trimmedLine.trim();
+                    } else {
+                        pendingName = trimmedLine.trim();
+                    }
+                    continue;
+                }
+            }
+
+            return { merchant, date, items, discounts, taxes, fees, total };
         }
-      }
-
-      items.push({
-        name: namePart,
-        quantity: parseInt(m[2], 10),
-        unit_price: unit_price_each,  // 0.935
-        unit_price_string: unitExpr, // "2/$1.87"
-        item_total: parseFloat(m[4]) || priceForDivisor  // final price
-      });
-
-      pendingName = null;
-      continue;
-    }
-
-
-    // 2.2) Count item: "6 @ 0.45 2.70"
-    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*\$?(\d+(?:\.\d+)?).*?\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
-    if (m) {
-      let namePart = m[1].trim();
-
-      if (/^\d+(\.\d+)?$/.test(namePart)) {
-        namePart = pendingName || "";
-      }
-
-      items.push({
-        name: namePart || pendingName || "",
-        quantity: parseInt(m[2], 10),
-        unit_price: m[3],
-        item_total: parseFloat(m[4])
-      });
-
-      pendingName = null;
-      continue;
-    }
-
-    // 3) Discount / loyalty
-    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(trimmedLine)) {
-      discounts.push(trimmedLine);
-      continue;
-    }
-
-    // 4) Tax
-    if (/(HST|GST|PST|TAX)/i.test(trimmedLine)) {
-      taxes.push(trimmedLine);
-      continue;
-    }
-
-    // 5) Fees
-    if (/(fee)/i.test(trimmedLine)) {
-      fees.push(trimmedLine);
-      continue;
-    }
-
-    // 6) Total (but don't treat as item)
-    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)*?[^\d]*\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
-    if (m) {
-      total = parseFloat(m[2]);
-      continue;
-    }
-
-    // 7) other items that end with a number
-    m = trimmedLine.match(/^(.+?)\s*\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
-    if (m) {
-      let name = m[1].trim();
-
-      // If name is pure number, try using pendingName instead
-      if (/^\d+$/.test(name) && pendingName) {
-        name = pendingName.trim();
-        pendingName = null;
-      }
-
-      // Skip if name is exactly "master"
-      if (name.toLowerCase() === "master") continue;
-
-      items.push({
-        name,
-        item_total: parseFloat(m[2])
-      });
-
-      continue;
-    }
-
-    // if a line doesn't meet above rules but meets below rules, take it as a pending name
-    if (
-      /^[A-Za-z].{2,}/.test(trimmedLine) &&   // starts with a letter
-      !/\d/.test(trimmedLine) &&              // contains NO digits
-      !/^=/.test(trimmedLine) &&              // does NOT begin with "="
-      !/=$/.test(trimmedLine)                 // does NOT end with "="
-    ) {
-      if (!merchant) {
-        merchant = trimmedLine.trim();
-      } else {
-        pendingName = trimmedLine.trim();
-      }
-      continue;
-    }
-  }
-
-  return { merchant, date, items, discounts, taxes, fees, total };
-}
         // ------------------------------------------------------------
 
         document.getElementById("run").onclick = () => {
