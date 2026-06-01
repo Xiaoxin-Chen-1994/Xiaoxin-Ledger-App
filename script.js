@@ -122,12 +122,7 @@ let loadedEntry_original = null;
 const translations = {
   en: {
     loginTitle: "Login or Signup",
-    email: "Email",
-    password: "Password",
-    signup: "Sign Up",
     login: "Login",
-    forgotBtn: "Reset password",
-    resetHint: "To reset your password, enter your email address above and click the reset button. Then check your inbox for further instructions.",
     back: "Back",
     search: "🔍Search",
     welcome: "Welcome, ",
@@ -283,12 +278,7 @@ const translations = {
   },
   zh: {
     loginTitle: "登录或注册",
-    email: "邮箱",
-    password: "密码",
-    signup: "注册",
     login: "登录",
-    forgotBtn: "重置密码",
-    resetHint: "如需重置密码，请先输入您的邮箱地址并点击重置按钮，然后查看您的邮箱，按照邮件中的提示完成操作",
     back: "返回",
     search: "🔍搜索",
     welcome: "欢迎，",
@@ -566,7 +556,6 @@ async function smartSync(selectedRepos, token) {
     if (!local && !cloud) {
       const personalSettings = {
         updatedAt: Date.now(),
-        email: "",
         language: currentLang,
         homeImages: [],
         fontsize: "",
@@ -4620,12 +4609,7 @@ async function setLanguage(lang) {
 
   // Login text
   document.getElementById("login-title").textContent = t.loginTitle;
-  document.getElementById("username").placeholder = t.email;
-  document.getElementById("password").placeholder = t.password;
-  document.getElementById("signup-btn").textContent = t.signup;
   document.getElementById("login-btn").textContent = t.login;
-  document.getElementById("forgot-btn").textContent = t.forgotBtn;
-  document.getElementById("reset-hint").textContent = t.resetHint;
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
