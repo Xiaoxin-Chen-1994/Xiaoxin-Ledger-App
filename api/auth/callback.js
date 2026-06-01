@@ -1,5 +1,6 @@
 export default async function handler(req, res) {
   const code = req.query.code;
+  const redirect = req.query.redirect || "/";
 
   const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
@@ -16,6 +17,5 @@ export default async function handler(req, res) {
 
   const data = await tokenRes.json();
 
-  const redirect = req.query.redirect || "/";
   res.redirect(`/auth-success.html?token=${data.access_token}&redirect=${encodeURIComponent(redirect)}`);
 }
