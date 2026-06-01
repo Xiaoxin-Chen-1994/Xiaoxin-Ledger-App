@@ -532,7 +532,7 @@ input[list], input[type="text"], input[type="url"],
 }
 
 /* When show-delete is active */
-.item-row.show-delete .item-content {
+.item-row.show-delete input {
   transform: translateX(-3.7rem); /* slide inputs left */
 }
 
