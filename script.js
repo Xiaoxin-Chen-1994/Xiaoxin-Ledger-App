@@ -490,7 +490,7 @@ async function listPrivateRepos() {
         r => `
             <li>
               <label>
-                <input type="checkbox" class="ledger-repo" value="${r.full_name}" data-id="${r.id}">
+                <input type="checkbox" class="ledger-repo" value="${r.full_name}" data-id="${r.id}" data-owner-id="${r.owner.id}">
                 ${r.full_name}
               </label>
             </li>
@@ -6062,7 +6062,6 @@ async function deleteLocalData() { // This function will not delete github_token
     });
   }
 }
-
 
 async function fetchGitHubUsername(token) {
   const res = await fetch("https://api.github.com/user", {
