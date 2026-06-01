@@ -6076,7 +6076,7 @@ async function fetchGitHubUsername(token) {
 
 async function deleteLedgerFilesInRepo(username, token) {
   const repos = await fetchUserRepos(token);
-
+console.log(repos)
   for (const repo of repos) {
     // Only operate on repos owned by the user
     if (repo.owner.login !== username) continue;
