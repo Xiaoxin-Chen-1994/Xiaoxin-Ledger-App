@@ -8327,7 +8327,7 @@ function parseCorrectedText(text) {
     }
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
+    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+\$?([\d.]+)/i);
     if (m) {
       const namePart = m[1].trim();
 
@@ -8343,7 +8343,7 @@ function parseCorrectedText(text) {
     }
 
     // 2) Count item: "6 @ 0.45 2.70"
-    m = line.match(/^(.*?)(?:\s+)?(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
+    m = line.match(/^(.*?)(?:\s+)?(\d+)\s*@\s*\$?([\d.]+)\s+\$?([\d.]+)/i);
     if (m) {
       const namePart = m[1].trim();
 
@@ -8377,15 +8377,17 @@ function parseCorrectedText(text) {
     }
 
     // 6) Total (but don't treat as item)
-    m = line.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*([\d.]+)/i);
+    m = line.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*\$?([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
     }
 
     // 7) other items that end with a number
-    m = line.match(/(.+?)\s+(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/);
+    m = line.match(/(.+?)\s+\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/);
     if (m) {
+      if (name.toLowerCase() === "master") continue; // Skip if name is exactly "master" probably indicating Mastercard
+
       items.push({
         name: m[1].trim(),
         item_total: parseFloat(m[2])
