@@ -5995,11 +5995,14 @@ async function confirmLeaveHousehold(hid) {
   window.location.reload();
 }
 
-async function deleteAccount() {
-  const message =
-    currentLang === "en"
-      ? "This action cannot be undone.\n\nYou will need to log in again via GitHub to confirm your identity. After verification, the system will delete:\n• All local data\n• All ledger data inside GitHub repositories you own\n\n(If a repository is shared with you, you cannot delete it.)"
-      : "此操作不可撤销。\n\n您需要重新通过 GitHub 登录以确认身份。验证成功后，系统将删除：\n• 本地所有数据\n• 您自己 GitHub 仓库中的所有账本数据\n\n（注意：如果仓库是别人创建并共享给您的，您无法删除它。）";
+async function deleteAccount(mode) { // mode = "account" (delete all) or mode = "data" (delete just data)
+  const message = currentLang === "en"
+    ? isAccountDelete
+      ? "This action cannot be undone.\n\nThe system will delete all local data, all ledger data inside GitHub repositories you own, and your personal settings stored in GitHub. (Note: You cannot delete data in repositories created by others and shared with you.)"
+      : "This action cannot be undone.\n\nThe system will delete all ledger data inside GitHub repositories you own and all local ledger data. Your personal settings will NOT be deleted."
+    : isAccountDelete
+      ? "此操作不可撤销。\n\n系统将删除本地所有数据、您自己 GitHub 仓库中的所有账本数据和 GitHub 上的个人设置\n\n（注意：您无法删除别人创建并共享给您的仓库数据。）"
+      : "此操作不可撤销。\n\n系统将删除本地账本数据和您自己 GitHub 仓库中的所有账本数据。您的个人设置不会被删除。";
 
   showPopupWindow({
     title: currentLang === "en" ? "Confirm Deletion" : "确认删除",
@@ -6013,7 +6016,7 @@ async function deleteAccount() {
       {
         text: currentLang === "en" ? "Delete" : "删除",
         onClick: async () => {
-          await set("pendingDelete", "yes");
+          await set("pendingDelete", mode);
           const redirectUrl = `${window.location.origin}/?deleteMode=1`;
           window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
         }
@@ -6024,21 +6027,47 @@ async function deleteAccount() {
 window.deleteAccount = deleteAccount;
 
 async function performAccountDeletion() {
-  alert("身份验证成功，正在删除您的账户数据…");
+  const mode = await get("pendingDelete");   // "account" or "data"
+
+  showStatusMessage(
+    currentLang === "en"
+      ? "Deleting your data…"
+      : "正在删除您的数据…",
+    "info",
+    4000 // ms
+  );
 
   // 1. Delete GitHub repos owned by this user
-  await deleteLedgerFilesInRepo();
+  await deleteLedgerFilesInRepo(mode);
   
   // 2. Delete local data
-  await deleteLocalData();
-  alert("账户数据已全部删除");
-  // logout(); // This function will delete github_token and selectedRepos
+  await deleteLocalData(mode);
+  
+  const successMessage =
+  mode === "account"
+    ? currentLang === "en"
+      ? "Your account and all associated data have been deleted."
+      : "您的账户和所有相关数据已被删除。"
+    : currentLang === "en"
+      ? "Your ledger data has been deleted. "
+      : "您的账本数据已删除。";
+
+  showStatusMessage(successMessage, "success", 4000);
+
+  if (mode === "account") {
+    // logout(); // This function will delete github_token and selectedRepos
+  } else {
+    window.location.href = "/";
+    window.location.reload();
+  }
 }
 
 async function deleteLocalData() { // This function will not delete github_token and selectedRepos
   // 1. Read values to keep
   const token = await get("github_token");
   const repos = await get("selectedRepos");
+  const personalSettings = await get("personal_settings");
+
 
   // 2. Clear all localStorage
   localStorage.clear();
@@ -6046,7 +6075,9 @@ async function deleteLocalData() { // This function will not delete github_token
   // 3. Restore the values you want to keep
   if (token) await set("github_token", token);
   if (repos) await set("selectedRepos", repos);
-
+  if (mode === "data") {
+    if (personalSettings) await set("personal_settings", personalSettings);
+  }
   // 4. Delete IndexedDB (idb-keyval)
   if (window.indexedDB) {
     await new Promise(resolve => {
@@ -6058,7 +6089,7 @@ async function deleteLocalData() { // This function will not delete github_token
   }
 }
 
-async function deleteLedgerFilesInRepo() {
+async function deleteLedgerFilesInRepo(mode) {
   const token = await get("github_token");
 
   for (const repo of selectedRepos.ledgerRepos) {
@@ -6089,8 +6120,10 @@ async function deleteLedgerFilesInRepo() {
     await githubDeleteIfExists(repo.name, "ledger-settings.json", token);
   }
 
-  // Delete personal.json
-  await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", { deleted: true, deletedAtTimestamp: Date.now() }, token);
+  if (mode === "account") {
+    // Delete personal.json
+    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", { deleted: true, deletedAtTimestamp: Date.now() }, token);
+  }
 }
 
 async function githubListDirectory(repoName, path, token) {
@@ -7563,91 +7596,6 @@ updateBtns.forEach(btn => {
         }
       ]
     });
-  });
-});
-
-document.getElementById("delete-entry-data-button").addEventListener("click", async () => {
-  const repoId = document.getElementById("household-select").value;
-  if (!repoId) return;
-
-  const isOwner = currentUser.uid === repoId;
-  const ownerUid = householdDocs[repoId].admin;
-
-  let ownerEmail = "";
-  if (!isOwner) {
-    const profileRef = doc(db, "profiles", ownerUid);
-    const profileSnap = await getDoc(profileRef);
-    ownerEmail = profileSnap.exists() ? profileSnap.data().email : "";
-  }
-
-  const title = {
-    en: "Delete All Transaction Data",
-    zh: "删除所有交易数据"
-  }[currentLang];
-
-  let message = "";
-
-  if (isOwner) {
-    // Household owner
-    message = {
-      en: `
-        You are the owner of this household.<br><br>
-        To delete <strong>all transaction data</strong>, you must delete your entire account.<br><br>
-        To delete your account:<br>
-        1. Return to the main Settings page<br>
-        2. Tap <strong>Personal Settings</strong><br>
-        3. Scroll to the bottom and tap the <strong>Delete Account</strong> button (grey)<br><br>
-        After deleting your account, you may sign up again and rejoin and share households if needed.
-      `,
-      zh: `
-        您是此家庭账本的所有者。<br><br>
-        若要删除<strong>所有交易数据</strong>，您必须删除整个账户。<br><br>
-        删除账户的步骤：<br>
-        1. 返回设置主页面<br>
-        2. 点击<strong>个人偏好</strong><br>
-        3. 滑动到底部，点击<strong>删除账户</strong>（灰色按钮）<br><br>
-        删除账户后，您可以重新注册并根据需要重新加入或共享家庭账本。
-      `
-    }[currentLang];
-  } else {
-    // Not the owner
-    message = {
-      en: `
-        You are <strong>not</strong> the owner of this household.<br><br>
-        Only the household owner can delete all transaction data.<br><br>
-        Please ask the owner (<strong>${ownerEmail}</strong>) to delete their entire account.<br><br>
-        To delete their account, the owner must:<br>
-        1. Return to the main Settings page<br>
-        2. Tap <strong>Personal Settings</strong><br>
-        3. Scroll to the bottom and tap the <strong>Delete Account</strong> button (grey)<br><br>
-        After deleting their account, they may sign up again and rejoin and share households if needed.
-      `,
-      zh: `
-        您<strong>不是</strong>此家庭账本的所有者。<br><br>
-        只有家庭账本的所有者才能删除所有交易数据。<br><br>
-        请联系该用户（<strong>${ownerEmail}</strong>）删除其整个账户。<br><br>
-        删除账户的步骤（由所有者执行）：<br>
-        1. 返回设置主页面<br>
-        2. 点击<strong>个人偏好</strong><br>
-        3. 滑动到底部，点击<strong>删除账户</strong>（灰色按钮）<br><br>
-        删除账户后，该用户可以重新注册并根据需要重新加入或共享家庭账本。
-      `
-    }[currentLang];
-  }
-
-  showPopupWindow({
-    title,
-    message,
-    buttons: [
-      {
-        text: {
-          en: "OK",
-          zh: "确定"
-        }[currentLang],
-        primary: true,
-        onClick: () => { /* popup auto closes */ }
-      }
-    ]
   });
 });
 
