@@ -6953,13 +6953,13 @@ function closeSelector() {
 
   stopBackspaceHold();
 
-  // Clear dummy state so further back presses exit normally
-  history.back();
+  // // Clear dummy state so further back presses exit normally
+  // history.back();
 }
 window.closeSelector = closeSelector;
 
 window.addEventListener('popstate', (e) => {
-  if (e.state && e.state.selector) {
+  if (openSelector) {
     closeSelector();
     return;
   }
