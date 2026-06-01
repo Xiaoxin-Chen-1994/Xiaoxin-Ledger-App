@@ -536,6 +536,8 @@ async function listPrivateRepos() {
     };
 
     await set("selectedRepos", selectedRepos);
+    window.location.href = "/";
+    window.location.reload();
   };
 }
 
@@ -1145,6 +1147,7 @@ async function init() {
   if (!selectedRepos || !selectedRepos.personalSettingsRepo || !selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
     console.log("No personal settings repo selected → show repo picker");
     await listPrivateRepos();
+    return
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -1155,7 +1158,7 @@ async function init() {
   }
   
   const localDeleted = await get("accountDeleted");
-console.log(selectedRepos)
+
   // Check deletion marker in personal.json
   const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
 
