@@ -596,7 +596,8 @@ async function smartSync(selectedRepos, token) {
         (cloud.createdAt > local.createdAt)
       ) {
         console.log("Local data is older → wiping local data");
-        await deleteLocalData();
+        const pendingDeleteMode = await get("pendingDelete");
+        await deleteLocalData(pendingDeleteMode);
         window.location.href = "/";
         window.location.reload();
       }
