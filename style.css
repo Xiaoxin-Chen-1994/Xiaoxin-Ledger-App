@@ -2248,14 +2248,14 @@ emoji-picker {
   left: 0;
   z-index: 2;
   background: inherit;
-  padding-right: 0.2rem;
+  padding-right: 0.3rem;
 }
 
 .item-scroll {
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
-  gap: 0.5rem;
+  gap: 0.3rem;
   scrollbar-width: thin;
   flex: 1;
   align-items: stretch;
