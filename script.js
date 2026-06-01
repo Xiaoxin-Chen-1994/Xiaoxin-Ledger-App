@@ -541,7 +541,7 @@ const SQL = await initSqlJs({
 });
 
 async function smartSync(selectedRepos, token) {
-  // Sync personal settings
+  // Sync personal settings 
   if (selectedRepos.personalSettingsRepo) {
     const repoName = selectedRepos.personalSettingsRepo.name;
 
@@ -869,6 +869,7 @@ async function smartSync(selectedRepos, token) {
       };
 
       const ledgerSettings = {
+        createdAt: Date.now(),
         updatedAt: Date.now(),
         accounts,
         "expense-categories": expenseCategories,
@@ -897,144 +898,174 @@ async function smartSync(selectedRepos, token) {
     }
 
     // ------------------------------------------------------------
-    // 3. Only repo has data → pull everything
-    // ------------------------------------------------------------
-    if (repoHasData && !localHasData) {
-      console.log(`[${repoName}] Only repo has data → pulling all entries`);
-
-      const db = new SQL.Database();
-      db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-      const entryIds = await githubListFiles(repoName, "entries", token);
-
-      for (const id of entryIds) { // this id name already contains '.json'
-        const entry = await githubReadJson(repoName, `entries/${id}`, token);
-        db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
-      }
-
-      const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-      settingsMap = await get("ledger_settings") || {};
-      settingsMap[repoId] = remoteSettings;
-      await set("ledger_settings", settingsMap);
-
-      localDbMap[repoId] = db.export();
-      localLogMap[repoId] = [];
-      lastSyncedMap[repoId] = Date.now();
-      continue;
-    }
-
-    // ------------------------------------------------------------
-    // 4. Only local has data → push everything
+    // 3. Only local has data → push everything
     // ------------------------------------------------------------
     if (!repoHasData && localHasData) {
-      console.log(`[${repoName}] Only local has data → pushing all entries`);
-
-      const db = new SQL.Database(localDbBytes);
-      db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-      const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
-
-      for (const row of rows) {
-        const entry = JSON.parse(row[0]);
-        await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
+      if (!(await get("isNewLedger"))) { // show popup message if not confirmed yet. 
+        showPopupWindow({
+          title: currentLang === "en" ? "Upload Local Data?" : "上传本地数据？",
+          message:
+            currentLang === "en"
+              ? `The GitHub repository "${repoName}" is empty.\n\nDo you want to upload your local data to GitHub?`
+              : `GitHub 仓库 "${repoName}" 是空的。\n\n是否要将本地数据上传到 GitHub？`,
+          buttons: [
+            {
+              text: currentLang === "en" ? "Cancel" : "取消",
+              primary: true,
+              onClick: () => {}
+            },
+            {
+              text: currentLang === "en" ? "Upload" : "上传",
+              onClick: async () => {
+                await set("isNewLedger", true);
+                await smartSync(selectedRepos, token);
+              }
+            }
+          ]
+        });
       }
+      
+      if (await get("isNewLedger")) {
+        console.log(`[${repoName}] Only local has data → pushing all entries`);
 
-      for (const logEntry of localLog) {
-        console.log('logEntry: ', logEntry)
-        await githubAppendChangeLog(repoName, logEntry, token);
-      }
+        const db = new SQL.Database(localDbBytes);
+        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+        const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
 
-      settingsMap = await get("ledger_settings");
-      await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
-
-      localLogMap[repoId] = [];
-      lastSyncedMap[repoId] = Date.now();
-      continue;
-    }
-
-    // ------------------------------------------------------------
-    // 5. Both have data → MERGE
-    // ------------------------------------------------------------
-    console.log(`[${repoName}] Both sides have data → merging`);
-
-    const db = new SQL.Database(localDbBytes);
-    db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-
-    // 5a. Load cloud change logs since last sync
-    const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
-    const cloudChanges = [];
-
-    for (const file of cloudLogFiles) {
-      const ts = Number(file.replace(".json", ""));
-      if (ts > lastSynced) {
-        const change = await githubReadJson(repoName, `changelog/${file}`, token);
-        cloudChanges.push(change);
-      }
-    }
-
-    // 5b. Summarize changed IDs
-    const changedIds = new Set();
-    for (const c of cloudChanges) changedIds.add(c.entryId);
-    for (const c of localLog) changedIds.add(c.entryId);
-
-    // 5c. For each changed ID, merge
-    for (const id of changedIds) {
-      const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
-      const localChange = localLog.find(c => c.entryId === id) || null;
-
-      // Only cloud changed
-      if (cloudChange && !localChange) {
-        const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-        console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
-        db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
-        continue;
-      }
-
-      // Only local changed
-      if (!cloudChange && localChange) {
-        const localEntry = localChange.newEntry;
-        console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
-        await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
-        await githubAppendChangeLog(repoName, localChange, token);
-        continue;
-      }
-
-      // Both changed → conflict resolution
-      if (cloudChange && localChange) {
-        const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-        const localOriginal = localChange.original;
-        const localNew = localChange.new;
-
-        // True conflict → compare timestamps
-        if (localChange.timestamp > cloudChange.timestamp) {
-          console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
-          console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
-          console.log(`Newer local: ${JSON.stringify(localNew)}`);
-          await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
-          await githubAppendChangeLog(repoName, localChange, token);
-        } else {
-          console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
-          console.log(`Older local: ${JSON.stringify(localNew)}`);
-          console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
-          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+        for (const row of rows) {
+          const entry = JSON.parse(row[0]);
+          await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
         }
+
+        for (const logEntry of localLog) {
+          console.log('logEntry: ', logEntry)
+          await githubAppendChangeLog(repoName, logEntry, token);
+        }
+
+        settingsMap = await get("ledger_settings");
+        await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
+
+        localLogMap[repoId] = [];
+        lastSyncedMap[repoId] = Date.now();
+      }
+      
+      continue;
+    };
+
+    // ------------------------------------------------------------
+    // 4. Only repo has data, or local was created in a previous version → pull everything
+    // ------------------------------------------------------------
+    if (repoHasData) {
+      const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+      settingsMap = await get("ledger_settings") || {};
+
+      if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) { 
+        console.log(`[${repoName}] Only repo has data → pulling all entries`);
+
+        const db = new SQL.Database();
+        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+        const entryIds = await githubListFiles(repoName, "entries", token);
+
+        for (const id of entryIds) { // this id name already contains '.json'
+          const entry = await githubReadJson(repoName, `entries/${id}`, token);
+          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
+        }
+        
+        settingsMap[repoId] = remoteSettings;
+        await set("ledger_settings", settingsMap);
+
+        localDbMap[repoId] = db.export();
+        localLogMap[repoId] = [];
+        lastSyncedMap[repoId] = Date.now();
+        continue;
+
+      } else {
+        // ------------------------------------------------------------
+        // 5. Both have data → MERGE
+        // ------------------------------------------------------------
+        console.log(`[${repoName}] Both sides have data → merging`);
+
+        const db = new SQL.Database(localDbBytes);
+        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+
+        // 5a. Load cloud change logs since last sync
+        const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
+        const cloudChanges = [];
+
+        for (const file of cloudLogFiles) {
+          const ts = Number(file.replace(".json", ""));
+          if (ts > lastSynced) {
+            const change = await githubReadJson(repoName, `changelog/${file}`, token);
+            cloudChanges.push(change);
+          }
+        }
+
+        // 5b. Summarize changed IDs
+        const changedIds = new Set();
+        for (const c of cloudChanges) changedIds.add(c.entryId);
+        for (const c of localLog) changedIds.add(c.entryId);
+
+        // 5c. For each changed ID, merge
+        for (const id of changedIds) {
+          const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
+          const localChange = localLog.find(c => c.entryId === id) || null;
+
+          // Only cloud changed
+          if (cloudChange && !localChange) {
+            const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
+            console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
+            db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+            continue;
+          }
+
+          // Only local changed
+          if (!cloudChange && localChange) {
+            const localEntry = localChange.newEntry;
+            console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
+            await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
+            await githubAppendChangeLog(repoName, localChange, token);
+            continue;
+          }
+
+          // Both changed → conflict resolution
+          if (cloudChange && localChange) {
+            const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
+            const localOriginal = localChange.original;
+            const localNew = localChange.new;
+
+            // True conflict → compare timestamps
+            if (localChange.timestamp > cloudChange.timestamp) {
+              console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
+              console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
+              console.log(`Newer local: ${JSON.stringify(localNew)}`);
+              await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
+              await githubAppendChangeLog(repoName, localChange, token);
+            } else {
+              console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
+              console.log(`Older local: ${JSON.stringify(localNew)}`);
+              console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
+              db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+            }
+          }
+        }
+
+        // 5d. Save merged DB
+        localDbMap[repoId] = db.export();
+
+        // 5e. Clear local change log
+        localLogMap[repoId] = [];
+
+        // 5f. Update lastSynced
+        lastSyncedMap[repoId] = Date.now();
+
+        const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+        settingsMap = await get("ledger_settings");
+        let localSettings = settingsMap[repoId];
+        settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
+        await set("ledger_settings", settingsMap);
+        await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
       }
     }
-
-    // 5d. Save merged DB
-    localDbMap[repoId] = db.export();
-
-    // 5e. Clear local change log
-    localLogMap[repoId] = [];
-
-    // 5f. Update lastSynced
-    lastSyncedMap[repoId] = Date.now();
-
-    const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-    settingsMap = await get("ledger_settings");
-    let localSettings = settingsMap[repoId];
-    settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
-    await set("ledger_settings", settingsMap);
-    await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
-
   }
 
   // ------------------------------------------------------------
