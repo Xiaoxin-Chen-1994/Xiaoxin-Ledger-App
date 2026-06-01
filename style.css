@@ -2248,6 +2248,7 @@ emoji-picker {
   left: 0;
   z-index: 2;
   background: inherit;
+  padding-right: 0.2rem;
 }
 
 .item-scroll {
