@@ -8327,7 +8327,7 @@ function parseCorrectedText(text) {
     }
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+\$?([\d.]+)/i);
+    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)/i);
     if (m) {
       const namePart = m[1].trim();
 
@@ -8343,7 +8343,7 @@ function parseCorrectedText(text) {
     }
 
     // 2) Count item: "6 @ 0.45 2.70"
-    m = line.match(/^(.*?)(?:\s+)?(\d+)\s*@\s*\$?([\d.]+)\s+\$?([\d.]+)/i);
+    m = line.match(/^(.*?)(\d+)\s*@\s*\$?([\d.]+).*?\$?([\d.]+)/i);
     if (m) {
       const namePart = m[1].trim();
 
@@ -8384,7 +8384,7 @@ function parseCorrectedText(text) {
     }
 
     // 7) other items that end with a number
-    m = line.match(/(.+?)\s+\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/);
+    m = line.match(/^(.*?)[^\d]*\$?(\d+\.\d{2})/i);
     if (m) {
       if (name.toLowerCase() === "master") continue; // Skip if name is exactly "master" probably indicating Mastercard
 
