@@ -8388,7 +8388,7 @@ function parseCorrectedText(text) {
 
     // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
     m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})/i);
-
+    console.log(m)
     if (m) {
       let namePart = m[1].trim();
 
