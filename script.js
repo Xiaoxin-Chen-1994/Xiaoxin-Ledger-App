@@ -1835,15 +1835,12 @@ function setDefaultSubject(button, subWorkspace) {
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
-      if (!subWorkspace[type]) {
-        subWorkspace[type] = {};
-      }
 
       const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
       // Set default subject if missing
-      if (!subWorkspace[type].subject) {
-        subWorkspace[type].subject = def.subject;
+      if (!subWorkspace.subject) {
+        subWorkspace.subject = def.subject;
       }
     }
   });
@@ -1852,32 +1849,32 @@ function setDefaultSubject(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const subjects = settings.subjects;
-    const currentSubject = subWorkspace[inputType].subject;
+    const currentSubject = subWorkspace.subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
     if (!subjectExists) {
       // Restore defaults
-      subWorkspace[inputType].subject = def.subject;
+      subWorkspace.subject = def.subject;
     }
 
-    const subject = subjects.find(acc => acc.name === subWorkspace[inputType].subject);
-    subWorkspace[inputType].subjectIcon = subject.icon
+    const subject = subjects.find(acc => acc.name === subWorkspace.subject);
+    subWorkspace.subjectIcon = subject.icon
 
-    subWorkspace[inputType].subjectInnerHTML = `
+    subWorkspace.subjectInnerHTML = `
       <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].subject}</span>
+        <span class="icon selected">${subWorkspace.subjectIcon}</span>
+        <span class="cat-label">${subWorkspace.subject}</span>
       </span>
     `;
 
     // Update button
-    button.innerHTML = subWorkspace[inputType].subjectInnerHTML;
+    button.innerHTML = subWorkspace.subjectInnerHTML;
 
     // Prepare subject column
     const subjectCol = subjectSelector.querySelector(".subject-col");
 
     createList(subjectCol, subjects);
-    ScrollToSelectItem(subjectCol, subWorkspace[inputType].subject);
+    ScrollToSelectItem(subjectCol, subWorkspace.subject);
   }
 }
 
