@@ -6094,7 +6094,7 @@ async function githubListDirectory(repoName, path, token) {
   const res = await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
-console.log('githubListDirectory path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
+
   if (res.status === 404) return []; // directory doesn't exist
   return await res.json();
 }
@@ -6104,7 +6104,6 @@ async function githubDeleteIfExists(repoName, path, token) {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-console.log('githubDeleteIfExists path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
   if (res.status === 404) return;
 
   const file = await res.json();
@@ -6112,8 +6111,6 @@ console.log('githubDeleteIfExists path:', `https://api.github.com/repos/${repoNa
 }
 
 async function githubDeleteFile(repoName, path, sha, token) {
-  console.log('githubDeleteFile path:', `https://api.github.com/repos/${repoName}/contents/${path}`)
-  
   await fetch(`https://api.github.com/repos/${repoName}/contents/${path}`, {
     method: "DELETE",
     headers: {
