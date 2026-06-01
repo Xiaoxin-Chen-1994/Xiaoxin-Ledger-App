@@ -8308,8 +8308,10 @@ function parseCorrectedText(text) {
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   const items = [];
+  let pendingName = null;
   const discounts = [];
   const taxes = [];
+  const fees = [];
   let total = null;
 
   for (const line of lines) {
@@ -8319,52 +8321,57 @@ function parseCorrectedText(text) {
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = line.match(/([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
+    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
     if (m) {
-      const qty = parseFloat(m[1]);
-      const unit = m[2];          // "kg" or "lb"
-      const price = parseFloat(m[3]);
-      const unit2 = m[4];         // "kg" or "lb"
-      const total = parseFloat(m[5]);
+      const namePart = m[1].trim();
 
       items.push({
-        name: "",
-        quantity: qty,
-        unit_price: `$${price.toFixed(2)}/${unit2}`,   // <— formatted
-        total: total
+        name: namePart || pendingName || "",
+        quantity: `${m[2]} ${m[3]}`,
+        unit_price: `$${parseFloat(m[4]).toFixed(2)}/${m[5]}`,
+        item_total: parseFloat(m[6])
       });
+
+      pendingName = null;
       continue;
     }
 
     // 2) Count item: "6 @ 0.45 2.70"
-    m = line.match(/(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
+    m = line.match(/^(.*?)(?:\s+)?(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
     if (m) {
+      const namePart = m[1].trim();
+
       items.push({
-        name: "",
-        quantity: parseInt(m[1], 10),
-        unit_price: parseFloat(m[2]),
-        total: parseFloat(m[3])
+        name: namePart || pendingName || "",
+        quantity: parseInt(m[2], 10),
+        unit_price: parseFloat(m[3]),
+        item_total: parseFloat(m[4])
       });
+
+      pendingName = null;
       continue;
     }
+console.log('LINE:', JSON.stringify(line));
+console.log('DISCOUNT TEST:', /(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(line));
 
     // 3) Discount / loyalty
-    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS|PTS|redemption|redem|redeem)/i.test(line)) {
+    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(line)) {
       discounts.push(line);
       continue;
     }
 
     // 4) Tax
     if (/(HST|GST|PST|TAX)/i.test(line)) {
-      discounts.push(line);
+      taxes.push(line);
       continue;
     }
 
     // 5) Fees
     if (/(fee)/i.test(line)) {
-      discounts.push(line);
+      fees.push(line);
       continue;
     }
+console.log('TOTAL TEST:', /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i.test(line));
 
     // 6) Total (but don't treat as item)
     m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
@@ -8373,17 +8380,29 @@ function parseCorrectedText(text) {
       continue;
     }
 
-    m = line.match(/(.+?)\s+(\d+\.\d{2})$/);
+    // 7) other items that end with a number
+    m = line.match(/(.+?)\s+(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/);
     if (m) {
       items.push({
-        name: "", // again, you don't care about names here
-        total: parseFloat(m[2])
+        name: m[1].trim(),
+        item_total: parseFloat(m[2])
       });
+      continue;
+    }
+
+    // if a line doesn't meet above rules but meets below rules, take it as a pending name
+    if (
+      /^[A-Za-z].{2,}/.test(line) &&   // starts with a letter
+      !/\d/.test(line) &&              // contains NO digits
+      !/^=/.test(line) &&              // does NOT begin with "="
+      !/=$/.test(line)                 // does NOT end with "="
+    ) {
+      pendingName = line.trim();
       continue;
     }
   }
 
-  return { items, discounts, taxes, total };
+  return { items, discounts, taxes, fees, total };
 }
 
 
