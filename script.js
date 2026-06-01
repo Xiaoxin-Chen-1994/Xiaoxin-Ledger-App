@@ -7438,7 +7438,10 @@ updateBtns.forEach(btn => {
                 zh: "更新完成，应用将重新启动…"
               }[currentLang]);
             }
-            location.href = location.pathname + `?v=${Date.now()}`;
+            
+            const url = new URL(location.href);
+            url.searchParams.set("v", Date.now());
+            location.href = url.toString();
           }
         },
         {
