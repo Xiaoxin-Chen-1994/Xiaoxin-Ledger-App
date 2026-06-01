@@ -489,12 +489,6 @@ input[list], input[type="text"], input[type="url"],
   box-sizing: border-box;
 }
 
-#expense-add-item-btn, #income-add-item-btn {
-  align-self: flex-start; /* keep button aligned with inputs */
-  padding: 6px 12px;
-  margin-top: 0.25rem;
-}
-
 .selector-button {
   width: 98%;
   margin: 1%;
@@ -544,6 +538,12 @@ input[list], input[type="text"], input[type="url"],
 
 .item-row.show-delete .delete-btn {
   transform: translateX(0); /* reveal delete button */
+}
+
+#expense-add-item-btn, #income-add-item-btn, #transfer-add-item-btn, #balance-add-item-btn {
+  align-self: flex-start; /* keep button aligned with inputs */
+  padding: 6px 12px;
+  margin-bottom: 0.2rem;
 }
 
 .form-row textarea {
