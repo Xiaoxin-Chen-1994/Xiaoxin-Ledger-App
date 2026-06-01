@@ -2257,29 +2257,34 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   row.appendChild(content);
   row.appendChild(deleteBtn);
 
-  // Right-click → show delete
   row.addEventListener("contextmenu", e => {
-    e.preventDefault();
-    row.classList.add("show-delete");
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
+    row.classList.add("show-delete"); // reveal delete button
   });
 
-  // Click outside → hide delete
   row.addEventListener("click", e => {
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
+    // only hide if clicking outside the delete button
     if (!e.target.classList.contains("delete-btn")) {
       row.classList.remove("show-delete");
     }
   });
 
-  // Swipe logic
+  // Swipe detection
   let startX = 0;
   row.addEventListener("touchstart", e => {
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     startX = e.touches[0].clientX;
   });
   row.addEventListener("touchend", e => {
+    e.stopPropagation();  // stop the event from bubbling up to parent elements
     const endX = e.changedTouches[0].clientX;
     const diff = startX - endX;
-    if (diff > 50) row.classList.add("show-delete");
-    if (diff < -50) row.classList.remove("show-delete");
+    if (diff > 50) {
+      row.classList.add("show-delete");   // swipe left
+    } else if (diff < -50) {
+      row.classList.remove("show-delete"); // swipe right
+    }
   });
 
   deleteBtn.addEventListener("click", () => {
