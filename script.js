@@ -8387,7 +8387,7 @@ function parseCorrectedText(text) {
     }
 
     // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
-    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})/i);
+    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(?\d+\.\d{2})/i);
     console.log(m)
     if (m) {
       let namePart = m[1].trim();
@@ -8416,7 +8416,7 @@ function parseCorrectedText(text) {
         quantity: parseInt(m[2], 10),
         unit_price: unit_price_each,  // 0.935
         unit_price_string: unitExpr, // "2/$1.87"
-        item_total: parseFloat(m[4])   // final price
+        item_total: parseFloat(m[4]) || priceForDivisor  // final price
       });
 
       pendingName = null;
