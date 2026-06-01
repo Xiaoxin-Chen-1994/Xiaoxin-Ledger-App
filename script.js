@@ -3113,11 +3113,11 @@ function showPage(name, title = latestTitle, options = {}) {
     latestTitle = title;
     latestOptions = options;
 
-    // push a new history entry for this new page
-    history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-  console.log('historyStack', historyStack)
+  // push a new history entry for this new page // change it to push for every page
+  history.pushState({ page: latestPage }, "", location.href);
+
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
