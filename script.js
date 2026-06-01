@@ -6037,7 +6037,7 @@ async function performAccountDeletion() {
   await deleteLocalData();
   alert("账户数据已全部删除");
   
-  logout(); // This function will delete github_token and selectedRepos
+  // logout(); // This function will delete github_token and selectedRepos
 }
 
 async function deleteLocalData() { // This function will not delete github_token and selectedRepos
@@ -6076,38 +6076,41 @@ async function fetchGitHubUsername(token) {
 
 async function deleteLedgerFilesInRepo(username, token) {
   const repos = await fetchUserRepos(token);
-console.log(repos)
-  for (const repo of repos) {
-    // Only operate on repos owned by the user
-    if (repo.owner.login !== username) continue;
 
-    // Only operate on ledger repos
+  for (const repo of repos) {
+    if (repo.owner.login !== username) continue;
     if (!repo.name.startsWith("ledger-")) continue;
 
-    console.log("Cleaning ledger files in repo:", repo.name);
+    const owner = repo.owner.login;
+    const repoName = repo.name;
 
-    // 1. Delete entries/*.json
-    const entries = await githubListDirectory(username, repo.name, "entries", token);
-    for (const file of entries) {
-      if (file.type === "file") {
-        await githubDeleteFile(username, repo.name, file.path, file.sha, token);
+    console.log("Cleaning ledger files in repo:", repoName);
+
+    // Helper to delete all files in a folder
+    async function deleteFolder(folder) {
+      const list = await githubListDirectory(owner, repoName, folder, token);
+
+      if (!Array.isArray(list)) {
+        console.log(`Folder ${folder} does not exist in ${repoName}`);
+        return;
+      }
+
+      for (const file of list) {
+        if (file.type === "file") {
+          console.log("Deleting:", file.path);
+          await githubDeleteFile(owner, repoName, file.path, file.sha, token);
+        }
       }
     }
 
-    // 2. Delete changelogs
-    const changelogFiles = await githubListDirectory(username, repo.name, "changelog", token);
-    for (const file of changelogFiles) {
-      if (file.type === "file") {
-        await githubDeleteFile(username, repo.name, file.path, file.sha, token);
-      }
-    }
+    await deleteFolder("entries");
+    await deleteFolder("changelog");
 
-    // 3. Delete ledger-settings.json
-    await githubDeleteIfExists(username, repo.name, "ledger-settings.json", token);
+    await githubDeleteIfExists(owner, repoName, "ledger-settings.json", token);
   }
 
-  // 4. Delete personal settings
-    await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", {deleted: true, deletedAtTimestamp: Date.now()}, token);
+  // Delete personal.json
+  await githubWriteJson(selectedRepos.personalSettingsRepo.name, "personal.json", { deleted: true, deletedAtTimestamp: Date.now() }, token);
 }
 
 async function githubListDirectory(owner, repo, path, token) {
