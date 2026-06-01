@@ -1155,18 +1155,21 @@ async function init() {
   const localPersonal = await get("personal_settings");
   const remotePersonal = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
 
-  // Compare timestamps
-  const localCreated = localPersonal?.createdAt || 0;
-  const remoteCreated = remotePersonal.createdAt;
-  const remoteDeleted = remotePersonal.deletedAtTimestamp || 0;
+  if (!localPersonal) {
+    // This is already a new or wiped device
+  }  else {
+    // Compare timestamps only when localPersonal exists
+    const localCreated = localPersonal.createdAt;
+    const remoteCreated = remotePersonal?.createdAt || 0;
+    const remoteDeleted = remotePersonal?.deletedAtTimestamp || 0;
 
-  // If remote is newer (created or deleted) → wipe local
-  if (remoteCreated > localCreated || remoteDeleted > localCreated) {
-    console.log("Local data is older → wiping local data");
-    await deleteLocalData();
-    window.location.href = "/";
-    window.location.reload();
-    return;
+    if (remoteCreated > localCreated || remoteDeleted > localCreated) {
+      console.log("Local data is older → wiping local data");
+      await deleteLocalData();
+      window.location.href = "/";
+      window.location.reload();
+      return;
+    }
   }
   
   // 4. Load ALL ledger DBs
