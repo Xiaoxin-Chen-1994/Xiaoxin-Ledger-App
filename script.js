@@ -2026,7 +2026,21 @@ function switchTab(index) {
   if (Array.isArray(subWorkspace.items)) {
     const group = activeTab.querySelector(`#${activeForm} .item-group`);
 
+    // Remove existing rows
+    group.querySelectorAll(".item-row").forEach(r => r.remove());
 
+    // Insert restored rows
+    subWorkspace.items.forEach(item => {
+      const row = createItemRow(
+        item.name || "",
+        item.unitPrice || item.unit_price || "",
+        item.price || ""
+      );
+
+      // Insert before the add-item button
+      const addBtn = group.querySelector("button[id$='add-item-btn']");
+      group.insertBefore(row, addBtn);
+    });
   }
   // notes
   if (subWorkspace.inputNotes !== undefined) {
