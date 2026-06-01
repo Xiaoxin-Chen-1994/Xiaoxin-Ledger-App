@@ -8352,7 +8352,7 @@ function parseCorrectedText(text) {
   let pendingName = null;
 
   for (const line of lines) {
-    trimmedLine = line.trim();
+    let trimmedLine = line.trim();
     let m;
 
     // Skip obvious non-item / summary lines
