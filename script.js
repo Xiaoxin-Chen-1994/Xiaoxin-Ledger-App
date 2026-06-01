@@ -860,7 +860,7 @@ async function smartSync(selectedRepos, token) {
       db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
       const entryIds = await githubListFiles(repoName, "entries", token);
 
-      for (const id of entryIds) { // this id contains '.json'
+      for (const id of entryIds) { // this id name already contains '.json'
         const entry = await githubReadJson(repoName, `entries/${id}`, token);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
       }
@@ -5100,6 +5100,7 @@ async function getFilteredEntries({
   // Apply filters
   // ------------------------------------------------------------
   return allEntries.filter(e => {
+    console.log('entry:', e)
     if (from && e.transactionTime < from) return false;
     if (to && e.transactionTime > to) return false;
 
