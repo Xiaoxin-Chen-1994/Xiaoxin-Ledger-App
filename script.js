@@ -8315,12 +8315,11 @@ function parseCorrectedText(text) {
     // Skip obvious non-item / summary lines
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
 
-    // 1) Weight item: "0.860 kg @ $1.52/kg 1.31"
-    //    Also handle "1.595 kg Net @ $1.38/kg 6.99"
+    // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
     m = line.match(/([\d.]+)\s*kg.*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
     if (m) {
       items.push({
-        name: "", // you said you're fine without attaching previous line
+        name: "",
         quantity: parseFloat(m[1]),
         unit_price: parseFloat(m[2]),
         total: parseFloat(m[3])
