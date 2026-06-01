@@ -6961,7 +6961,7 @@ window.closeSelector = closeSelector;
 window.addEventListener('popstate', (e) => {
   if (openSelector) {
     closeSelector();
-    return;
+    // return;
   }
 
   if (historyStack.length > 1) {
