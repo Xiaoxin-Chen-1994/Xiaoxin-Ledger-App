@@ -8264,12 +8264,12 @@ async function runReceiptOCR(processedBlob) {
     <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.items, null, 2)}</pre>
 
     <div style="margin-top:1rem;"><strong>Corrected Text:</strong></div>
-    <pre style="white-space:pre-wrap; font-size:0.9em; color:#333;">
+    <pre style="white-space:pre-wrap; font-size:0.9em;">
 ${correctedText}
     </pre>
 
     <div style="margin-top:1rem;"><strong>Raw OCR Text:</strong></div>
-    <pre style="white-space:pre-wrap; font-size:0.85em; opacity:0.7;">
+    <pre style="white-space:pre-wrap; font-size:0.9em;">
 ${rawText}
     </pre>
   `;
