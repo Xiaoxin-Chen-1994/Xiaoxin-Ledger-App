@@ -6904,6 +6904,7 @@ function showSelector(selName) {
   }
 
   history.pushState({ selector: true }, '', location.href);
+  console.log('History after opening a selector: ', history)
 
   // Open the new selector in cases 2 and 3
   openSelector = selName;
@@ -6955,6 +6956,7 @@ function closeSelector() {
 
   // Clear dummy state so further back presses exit normally
   history.back();
+  console.log('History after closing a selector: ', history)
 }
 window.closeSelector = closeSelector;
 
