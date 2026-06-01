@@ -860,8 +860,8 @@ async function smartSync(selectedRepos, token) {
       db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
       const entryIds = await githubListFiles(repoName, "entries", token);
 
-      for (const id of entryIds) {
-        const entry = await githubReadJson(repoName, `entries/${id}.json`, token);
+      for (const id of entryIds) { // this id contains '.json'
+        const entry = await githubReadJson(repoName, `entries/${id}`, token);
         db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
       }
 
@@ -6047,14 +6047,13 @@ async function performAccountDeletion() {
   if (!username) {
     alert("无法获取 GitHub 用户名");
     return;
-  }
+  } 
 
-  // 1. Delete local data
-  await deleteLocalData();
-
-  // 2. Delete GitHub repos owned by this user
+  // 1. Delete GitHub repos owned by this user
   await deleteLedgerFilesInRepo(username, token);
-
+  
+  // 2. Delete local data
+  await deleteLocalData();
   alert("账户数据已全部删除");
   window.location.href = "/";
 }
