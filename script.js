@@ -122,7 +122,7 @@ let loadedEntry_original = null;
 const translations = {
   en: {
     loginTitle: "Login or Signup",
-    login: "Login",
+    loginWithGitHub: "Login with GitHub",
     back: "Back",
     search: "🔍Search",
     welcome: "Welcome, ",
@@ -278,7 +278,7 @@ const translations = {
   },
   zh: {
     loginTitle: "登录或注册",
-    login: "登录",
+    loginWithGitHub: "通过GitHub账户登录",
     back: "返回",
     search: "🔍搜索",
     welcome: "欢迎，",
@@ -4609,7 +4609,7 @@ async function setLanguage(lang) {
 
   // Login text
   document.getElementById("login-title").textContent = t.loginTitle;
-  document.getElementById("login-btn").textContent = t.login;
+  document.getElementById("githubLogin").textContent = t.loginWithGitHub;
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
