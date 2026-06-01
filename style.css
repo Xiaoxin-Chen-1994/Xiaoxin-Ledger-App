@@ -943,6 +943,13 @@ button.secondary {
   border: 0.0625rem solid var(--border);
 }
 
+button:disabled {
+    background: #ccc;
+    color: #666;
+    border-color: #aaa;
+    cursor: not-allowed;
+}
+
 button {
   -webkit-tap-highlight-color: transparent; /* remove the tap highlight color on mobile device */
 }
