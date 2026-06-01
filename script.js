@@ -545,41 +545,90 @@ async function smartSync(selectedRepos, token) {
   if (selectedRepos.personalSettingsRepo) {
     const repoName = selectedRepos.personalSettingsRepo.name;
 
-    // Load local
     const local = await get("personal_settings"); // may be null
 
-    // Load cloud
     const cloudExists = await githubFileExists(repoName, "personal.json", token);
     const cloud = cloudExists
       ? await githubReadJson(repoName, "personal.json", token)
       : null;
 
-    // Case A — neither exists → create defaults
-    if (!local && !cloud) {
-      const personalSettings = {
-        createdAt: Date.now(), // This is account creation date
-        updatedAt: Date.now(), // This is account info updated date
+    const cloudDeleted = cloud?.deletedAtTimestamp || 0;
+
+    // -----------------------------------------
+    // Rule 1 — local null AND (cloud null OR cloud deleted)
+    // -----------------------------------------
+    if (!local && (!cloud || cloudDeleted > 0)) {
+      const defaults = {
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
         language: currentLang,
         homeImages: [],
         fontsize: "",
         themeColor: "",
       };
 
-      await set("personal_settings", personalSettings);
+      await set("personal_settings", defaults);
+      await githubWriteJson(repoName, "personal.json", defaults, token);
+      return;
+    }
 
-    } else if (!local && cloud) { // Case B — cloud exists, local missing → pull
+    // -----------------------------------------
+    // Rule 2 — local null, cloud exists → pull
+    // -----------------------------------------
+    if (!local && cloud) {
       await set("personal_settings", cloud);
+      return;
+    }
 
-    } else if (local && !cloud) { // Case C — local exists, cloud missing → push
+    // -----------------------------------------
+    // Rule 3 — local exists, cloud null → push
+    // -----------------------------------------
+    if (local && !cloud) {
       await githubWriteJson(repoName, "personal.json", local, token);
+      return;
+    }
 
-    } else { // Case D — both exist → newer timestamp wins
-      if (local.updatedAt > cloud.updatedAt) {
-        // local newer → push
+    // if both local and cloud exists
+    if (local && cloud) {
+
+      // -----------------------------------------
+      // Rule 4 — cloud is newer (deleted or recreated) → wipe local
+      // -----------------------------------------
+      if (
+        (cloudDeleted > 0 && cloudDeleted >= local.createdAt) ||
+        (cloud.createdAt > local.createdAt)
+      ) {
+        console.log("Local data is older → wiping local data");
+        await deleteLocalData();
+        window.location.href = "/";
+        window.location.reload();
+        return;
+      }
+
+      // -----------------------------------------
+      // Rule 5 — local is newer (cloud deleted earlier or cloud older) → push local
+      // -----------------------------------------
+      if (
+        (cloudDeleted > 0 && cloudDeleted < local.createdAt) ||
+        (cloud.createdAt < local.createdAt)
+      ) {
         await githubWriteJson(repoName, "personal.json", local, token);
-      } else if (cloud.updatedAt > local.updatedAt) {
-        // cloud newer → pull
-        await set("personal_settings", cloud);
+        return;
+      }
+
+      // -----------------------------------------
+      // Rule 6 — createdAt equal → updatedAt decides
+      // -----------------------------------------
+      if (local.createdAt === cloud.createdAt) {
+        // local newer --> push to cloud
+        if (local.updatedAt > cloud.updatedAt) {
+          await githubWriteJson(repoName, "personal.json", local, token);
+
+        // cloud newer --> overwrite local
+        } else if (cloud.updatedAt > local.updatedAt) {
+          await set("personal_settings", cloud);
+        }
+        return;
       }
     }
   }
@@ -1150,26 +1199,6 @@ async function init() {
   if (params.get("deleteMode") === "1") {
     await performAccountDeletion();
     return;
-  }
-  
-  const localPersonal = await get("personal_settings");
-  const remotePersonal = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
-
-  if (!localPersonal) {
-    // This is already a new or wiped device
-  }  else {
-    // Compare timestamps only when localPersonal exists
-    const localCreated = localPersonal.createdAt;
-    const remoteCreated = remotePersonal?.createdAt || 0;
-    const remoteDeleted = remotePersonal?.deletedAtTimestamp || 0;
-
-    if (remoteCreated > localCreated || remoteDeleted > localCreated) {
-      console.log("Local data is older → wiping local data");
-      await deleteLocalData();
-      window.location.href = "/";
-      window.location.reload();
-      return;
-    }
   }
   
   // 4. Load ALL ledger DBs
