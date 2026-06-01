@@ -8465,7 +8465,7 @@ function parseCorrectedText(text) {
     }
 
     // 6) Total (but don't treat as item)
-    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)*?[^\d]*\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
+    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL).*?\$?([\d.]+)(?:\s*[A-Za-z ]+)?$/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
