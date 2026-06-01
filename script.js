@@ -8317,13 +8317,20 @@ function parseCorrectedText(text) {
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = line.match(/([\d.]+)\s*kg.*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
+    m = line.match(/([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb)\s+([\d.]+)/i);
+    m = line.match(weightRegex);
     if (m) {
+      const qty = parseFloat(m[1]);
+      const unit = m[2];          // "kg" or "lb"
+      const price = parseFloat(m[3]);
+      const unit2 = m[4];         // "kg" or "lb"
+      const total = parseFloat(m[5]);
+
       items.push({
         name: "",
-        quantity: parseFloat(m[1]),
-        unit_price: parseFloat(m[2]),
-        total: parseFloat(m[3])
+        quantity: qty,
+        unit_price: `$${price.toFixed(2)}/${unit2}`,   // <— formatted
+        total: total
       });
       continue;
     }
@@ -8341,7 +8348,7 @@ function parseCorrectedText(text) {
     }
 
     // 3) Discount / loyalty
-    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS)[^\d\-]*(-?\d+\.\d{2})/i);
+    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS|Pts)[^\d\-]*(-?\d+\.\d{2})/i);
     if (m) {
       discounts.push({
         type: m[1],
