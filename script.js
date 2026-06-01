@@ -82,7 +82,7 @@ const LOCAL_DB_KEY = "ledger_dbs";
 const LOCAL_LOG_KEY = "ledger_logs";
 const LAST_SYNC_KEY = "ledger_lastSynced";
 
-let workspace = {'transactions': {}} // use this variable to store temporary transaction data before being saved
+let workspace = { 'transactions': {} } // use this variable to store temporary transaction data before being saved
 //workspace = {
 //   create or transactions[id]: {
 //     amount: amount, 
@@ -142,7 +142,7 @@ const translations = {
     household: "👥Household",
     category: "📁Category",
     account: "💳Account",
-    cashAccounts: "Cash Accounts", 
+    cashAccounts: "Cash Accounts",
     creditCards: "Credit Cards",
     depositoryAccounts: "Depository Accounts",
     storedValueCards: "Stored-Value Cards",
@@ -158,7 +158,7 @@ const translations = {
     exchangeRate: "Ex. Rate",
     transferFrom: "From",
     transferTo: "To",
-    item: "Item", 
+    item: "Item",
     unitPrice: "Unit price",
     priceOrQuantity: "Price/Quantity",
     notes: "📝Notes",
@@ -241,7 +241,7 @@ const translations = {
       </ul>
       </p>
     `,
-    acknowledgements: "Acknowledgements", 
+    acknowledgements: "Acknowledgements",
     acknowledgementsContent: `
       <h2>Acknowledgements</h2>
       <p>This web app would not have been possible without the following services:</p>
@@ -313,7 +313,7 @@ const translations = {
     exchangeRate: "汇率",
     transferFrom: "转出",
     transferTo: "转入",
-    item: "条目", 
+    item: "条目",
     unitPrice: "单价",
     priceOrQuantity: "价格/数量",
     notes: "📝备注",
@@ -396,7 +396,7 @@ const translations = {
       </ul>
       </p>
     `,
-    acknowledgements: "致谢", 
+    acknowledgements: "致谢",
     acknowledgementsContent: `
       <h2>致谢</h2>
       <p>本网页应用的实现离不开以下服务：</p>
@@ -479,15 +479,15 @@ async function listPrivateRepos() {
     <select id="personalRepoSelect">
       <option value="">-- Select one --</option>
       ${personalRepos
-        .map(r => `<option value="${r.full_name}" data-id="${r.id}">${r.full_name}</option>`)
-        .join("")}
+      .map(r => `<option value="${r.full_name}" data-id="${r.id}">${r.full_name}</option>`)
+      .join("")}
     </select>
 
     <h3>Select repositories for ledger data</h3>
     <ul>
       ${ledgerRepos
-        .map(
-          r => `
+      .map(
+        r => `
             <li>
               <label>
                 <input type="checkbox" class="ledger-repo" value="${r.full_name}" data-id="${r.id}">
@@ -495,8 +495,8 @@ async function listPrivateRepos() {
               </label>
             </li>
           `
-        )
-        .join("")}
+      )
+      .join("")}
     </ul>
 
     <div class="actions">
@@ -568,7 +568,7 @@ async function smartSync(selectedRepos, token) {
     } else if (!local && cloud) { // Case B — cloud exists, local missing → pull
       await set("personal_settings", cloud);
 
-    } else if  (local && !cloud) { // Case C — local exists, cloud missing → push
+    } else if (local && !cloud) { // Case C — local exists, cloud missing → push
       await githubWriteJson(repoName, "personal.json", local, token);
 
     } else { // Case D — both exist → newer timestamp wins
@@ -628,78 +628,104 @@ async function smartSync(selectedRepos, token) {
       };
 
       const expenseCategories = [
-        { primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
-          { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
-          { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
-        ]},
-        { primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
-          { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
-          { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
-          { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
-          { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
-          { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
-          { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
-          { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
-          { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
-          { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
-        ]},
-        { primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
-          { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
-          { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
-        ]},
-        { primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
-          { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-          { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
-        ]},
-        { primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
-          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
-          { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
-          { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
-          { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
-        ]},
-        { primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
-          { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
-          { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
-          { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
-        ]},
-        { primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
-          { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
-          { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
-          { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
-          { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
-        ]},
-        { primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
-          { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
-          { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
-        ]},
-        { primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
-          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-          { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
-          { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
-          { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
-        ]}
+        {
+          primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+            { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+            { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+            { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+            { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+            { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+            { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+            { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+            { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+            { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+            { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+            { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+            { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+            { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
+            { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+            { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+            { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+            { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+            { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+            { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+            { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+            { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+            { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+            { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+            { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+            { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+            { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+            { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+            { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
+            { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+            { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+            { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+            { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+            { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+          ]
+        }
       ];
 
       const incomeCategories = [
-        { primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
-          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
-        ]},
-        { primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
-          { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
-          { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
-          { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
-        ]},
-        { primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
-          { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
-          { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
-          { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
-        ]},
-        { primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
-          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
-        ]}
-      ]; 
+        {
+          primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+            { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+            { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+            { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+            { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+            { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+            { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+            { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+            { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
+          ]
+        },
+        {
+          primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+            { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+          ]
+        }
+      ];
 
       const collections = [
         { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
@@ -896,7 +922,7 @@ async function smartSync(selectedRepos, token) {
     const changedIds = new Set();
     for (const c of cloudChanges) changedIds.add(c.entryId);
     for (const c of localLog) changedIds.add(c.entryId);
-    
+
     // 5c. For each changed ID, merge
     for (const id of changedIds) {
       const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
@@ -930,7 +956,7 @@ async function smartSync(selectedRepos, token) {
           console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
           console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
           console.log(`Newer local: ${JSON.stringify(localNew)}`);
-          await githubWriteJson(repoName,`entries/${id}.json`, localNew, token);
+          await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
           await githubAppendChangeLog(repoName, localChange, token);
         } else {
           console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
@@ -956,7 +982,7 @@ async function smartSync(selectedRepos, token) {
     settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
     await set("ledger_settings", settingsMap);
     await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
-    
+
   }
 
   // ------------------------------------------------------------
@@ -1090,7 +1116,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-    
+
   // 1. Load token
   const token = await get("github_token");
 
@@ -1219,7 +1245,7 @@ async function onAuthStateChanged(auth, user) {
 
     // ✅ Load main app
     showPage("home", "Xiaoxin's Ledger App");
-    
+
   } else {
     window.scrollTo(0, 0);
   }
@@ -1243,34 +1269,34 @@ async function displayHomeImage() {
   const personal = await get("personal_settings");
   const images = personal.homeImages;
 
-  const img = document.getElementById("home-image"); 
+  const img = document.getElementById("home-image");
 
   if (Array.isArray(images) && images.length > 0) {
-      
-      const randomIndex = Math.floor(Math.random() * images.length);
-      const randomUrl = images[randomIndex].trim();
 
-      if (randomUrl !== "") {
-        // Create a new Image object to preload
-        const preloader = new Image();
-        preloader.onload = () => {
-          // Once loaded in background, show it
-          img.src = randomUrl;
-          img.style.display = "block";
-        };
-        preloader.onerror = () => {
-          // If loading fails, hide
-          img.style.display = "none";
-        };
+    const randomIndex = Math.floor(Math.random() * images.length);
+    const randomUrl = images[randomIndex].trim();
 
-        // Start loading in background
-        preloader.src = randomUrl;
-      } else {
+    if (randomUrl !== "") {
+      // Create a new Image object to preload
+      const preloader = new Image();
+      preloader.onload = () => {
+        // Once loaded in background, show it
+        img.src = randomUrl;
+        img.style.display = "block";
+      };
+      preloader.onerror = () => {
+        // If loading fails, hide
         img.style.display = "none";
-      }
+      };
+
+      // Start loading in background
+      preloader.src = randomUrl;
     } else {
       img.style.display = "none";
     }
+  } else {
+    img.style.display = "none";
+  }
 }
 
 function timeAgo(rawTime) {
@@ -1313,28 +1339,28 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   const t = translations[currentLang];
 
   const container = document.getElementById("last-synced-text");
-  
+
   // If already visible → hide it 
-  if (container.innerHTML.trim() !== "") { 
-    container.innerHTML = ""; 
-    return; 
+  if (container.innerHTML.trim() !== "") {
+    container.innerHTML = "";
+    return;
   }
-  
+
   const lastSyncStatus = JSON.parse(localStorage.getItem("lastSyncStatus"));
-  
-  const notes = document.createElement("div"); 
-  notes.style.color = "var(--muted)"; 
-  notes.style.fontStyle = "italic"; 
+
+  const notes = document.createElement("div");
+  notes.style.color = "var(--muted)";
+  notes.style.fontStyle = "italic";
   container.appendChild(notes);
 
   if (lastSyncStatus !== null) { // it exists   
     notes.textContent = t.timestampNotes;
-    
-    const blank = document.createElement("div"); 
+
+    const blank = document.createElement("div");
     blank.style.height = "0.8em";
     container.appendChild(blank);
 
-    for (const label in lastSyncStatus) { 
+    for (const label in lastSyncStatus) {
       const syncInfo = lastSyncStatus[label];
       if (!syncInfo) continue;
 
@@ -1355,9 +1381,9 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
       container.appendChild(block);
     }
   } else { // it does not exist 
-    console.log("lastSyncStatus is not found in localStorage"); 
+    console.log("lastSyncStatus is not found in localStorage");
     notes.textContent = "Last sync status is not found in the browser's localStorage."
-  }  
+  }
 });
 
 document.getElementById("display-local-storage").addEventListener("click", async () => {
@@ -1457,7 +1483,7 @@ function setDefaultLedger(button, subWorkspace) {
     if (!subWorkspace[type]) {
       subWorkspace[type] = {};
     }
-    
+
     if (!subWorkspace[type].repoId) {
       subWorkspace[type].repoId = selectedRepos.ledgerRepos[0]?.id;
     }
@@ -1474,7 +1500,7 @@ function setDefaultCategory(button, subWorkspace) {
   const repoId = subWorkspace[inputType].repoId;
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
-  
+
   // Set default if workspace is empty, or loading values and look for icons
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -1496,7 +1522,7 @@ function setDefaultCategory(button, subWorkspace) {
   if (["expense", "income"].includes(subWorkspace.inputType)) {
     // transfer and balance types do not have a category
 
-    const cats = settings[inputType + "-categories"]; 
+    const cats = settings[inputType + "-categories"];
 
     // Build primary list
     const primaryList = cats.map(cat => ({
@@ -1545,7 +1571,7 @@ function setDefaultCategory(button, subWorkspace) {
     button.innerHTML = subWorkspace[inputType].catInnerHTML;
 
     // Prepare category columns
-    const primaryCol   = categorySelector.querySelector(".primary-col");
+    const primaryCol = categorySelector.querySelector(".primary-col");
     const secondaryCol = categorySelector.querySelector(".secondary-col");
 
     createList(primaryCol, primaryList);
@@ -1681,10 +1707,10 @@ function setDefaultAccount(button, subWorkspace) {
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
     createList(accountTypeCol, accountTypeList);
-    ScrollToSelectItem(accountTypeCol, t[subWorkspace[inputType].accountInfo.type]); 
-    
+    ScrollToSelectItem(accountTypeCol, t[subWorkspace[inputType].accountInfo.type]);
+
     updateSecondaryColumn(button, subWorkspace, accountCol);
-    ScrollToSelectItem(accountCol, `${subWorkspace[inputType].accountInfo.name} (${subWorkspace[inputType].accountInfo.currency})`); 
+    ScrollToSelectItem(accountCol, `${subWorkspace[inputType].accountInfo.name} (${subWorkspace[inputType].accountInfo.currency})`);
   }
 
   if (inputType === "transfer") {
@@ -1732,7 +1758,7 @@ function setDefaultAccount(button, subWorkspace) {
         <span class="cat-label">${fromName} (${fromCurrency})</span>
       </span>
     `;
-    
+
     subWorkspace[inputType].toAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].toAccountInfo.type, subWorkspace[inputType].toAccountInfo.account.name);
     const to = subWorkspace.transfer.toAccountInfo.account;
     const toIcon = to.icon || "";
@@ -1750,10 +1776,10 @@ function setDefaultAccount(button, subWorkspace) {
     button[1].innerHTML = subWorkspace[inputType].toAccountInnerHTML;
 
     createList(accountTypeCol, allAccounts);
-    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].fromAccountInfo.name} (${subWorkspace[inputType].fromAccountInfo.currency})`); 
+    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].fromAccountInfo.name} (${subWorkspace[inputType].fromAccountInfo.currency})`);
 
     createList(accountCol, allAccounts);
-    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].toAccountInfo.name} (${subWorkspace[inputType].toAccountInfo.currency})`); 
+    ScrollToSelectItem(accountTypeCol, `${subWorkspace[inputType].toAccountInfo.name} (${subWorkspace[inputType].toAccountInfo.currency})`);
   }
 }
 
@@ -1762,7 +1788,7 @@ function setDefaultSubject(button, subWorkspace) {
   const repoId = subWorkspace[inputType].repoId;
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
-  
+
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -1779,7 +1805,7 @@ function setDefaultSubject(button, subWorkspace) {
     }
   });
 
-  const def = settings.defaults[inputType]; 
+  const def = settings.defaults[inputType];
 
   if (["expense", "income"].includes(inputType)) {
     const subjects = settings.subjects;
@@ -1793,7 +1819,7 @@ function setDefaultSubject(button, subWorkspace) {
 
     const subject = subjects.find(acc => acc.name === subWorkspace[inputType].subject);
     subWorkspace[inputType].subjectIcon = subject.icon
-    
+
     subWorkspace[inputType].subjectInnerHTML = `
       <span class="cat-part">
         <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
@@ -1817,7 +1843,7 @@ function setDefaultCollection(button, subWorkspace) {
   const repoId = subWorkspace[inputType].repoId;
 
   const settings = settingsMap[repoId];   // ledger settings for this repo
-  
+
   // Initialize workspace for each type
   transactionTypes.forEach(type => {
     if (["expense", "income"].includes(type)) {
@@ -1834,7 +1860,7 @@ function setDefaultCollection(button, subWorkspace) {
     }
   });
 
-  const def = settings.defaults[inputType]; 
+  const def = settings.defaults[inputType];
 
   if (["expense", "income"].includes(inputType)) {
     const collections = settings.collections;
@@ -1848,7 +1874,7 @@ function setDefaultCollection(button, subWorkspace) {
 
     const collection = collections.find(acc => acc.name === subWorkspace[inputType].collection);
     subWorkspace[inputType].collectionIcon = collection.icon
-    
+
     subWorkspace[inputType].collectionInnerHTML = `
       <span class="cat-part">
         <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
@@ -1904,7 +1930,7 @@ function switchTab(index) {
   // household
   const householdEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='household']`);
   setDefaultLedger(householdEl, subWorkspace);
-  
+
   // category
   if (["expense", "income"].includes(inputType)) {
     let categoryBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='category']`);
@@ -1924,7 +1950,7 @@ function switchTab(index) {
     }
     amountBtn.textContent = subWorkspace.amount.toFixed(2);
     calculationBtn.textContent = subWorkspace.calculation;
-    
+
   } else { // for transfer
     let fromAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
     let toAccountBtn = activeTab.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
@@ -1955,16 +1981,16 @@ function switchTab(index) {
     toCalculationBtn.textContent = subWorkspace.transfer.toCalculation;
 
     const fromLabel = document.getElementById("exchange-rate-from-label");
-    const toLabel   = document.getElementById("exchange-rate-to-label");
+    const toLabel = document.getElementById("exchange-rate-to-label");
     fromLabel.textContent = subWorkspace.transfer.fromExchangeRate;
-    toLabel.textContent   = subWorkspace.transfer.toExchangeRate;
+    toLabel.textContent = subWorkspace.transfer.toExchangeRate;
 
     let fromCurrency = subWorkspace.transfer.fromAccountInfo.account.currency;
     let toCurrency = subWorkspace.transfer.toAccountInfo.account.currency;
 
     if (fromCurrency === toCurrency) {
       subWorkspace.transfer.sameCurrency = true;
-      
+
       document.getElementById("simple-transfer-amount-row").style.display = "block";
       document.getElementById("exchange-transfer-amount-row").style.display = "none";
     } else {
@@ -1972,7 +1998,7 @@ function switchTab(index) {
 
       document.getElementById("transfer-from-currency").textContent = fromCurrency;
       document.getElementById("transfer-to-currency").textContent = toCurrency;
-      
+
       document.getElementById("simple-transfer-amount-row").style.display = "none";
       document.getElementById("exchange-transfer-amount-row").style.display = "grid";
     }
@@ -1980,7 +2006,7 @@ function switchTab(index) {
   // datetime
   const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
   const [yyyy, mm, dd, hh, min, ss] = parseDateFromString(subWorkspace.inputTransactionTime);
-  
+
   if (!subWorkspace.inputTransactionTimeRaw) {
     subWorkspace.inputTransactionTimeRaw = {};
   }
@@ -1990,7 +2016,7 @@ function switchTab(index) {
   subWorkspace.inputTransactionTimeRaw.hh = Number(hh);
   subWorkspace.inputTransactionTimeRaw.min = Number(min);
   subWorkspace.inputTransactionTimeRaw.ss = Number(ss);
-  
+
   const dateObj = new Date(yyyy, mm - 1, dd, hh, min); // must use numbers
   const prefix = getDatePrefix(dateObj);
   datetimeEl.textContent = `${prefix}${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")} ${String(hh).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
@@ -1999,7 +2025,7 @@ function switchTab(index) {
   if (["expense", "income"].includes(inputType)) {
     const subjectEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
     setDefaultSubject(subjectEl, subWorkspace);
-    
+
     // collection
     const collectionEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
     setDefaultCollection(collectionEl, subWorkspace);
@@ -2020,7 +2046,7 @@ function switchTab(index) {
 
     // Cache the add button ONCE
     const addBtn = group.querySelector("button[id$='add-item-btn']");
-console.log("subWorkspace.items", subWorkspace.items)
+    console.log("subWorkspace.items", subWorkspace.items)
     // Insert restored rows
     subWorkspace.items.forEach(item => {
       const row = createItemRow(
@@ -2071,9 +2097,9 @@ wrapper.addEventListener("touchstart", e => {
 
 wrapper.addEventListener("touchend", e => {
   if (e.target.closest("input, textarea, [contenteditable]")) return;
-  
+
   let subWorkspace;
-  
+
   if (latestPage.includes("create")) { // when creating an entry
     subWorkspace = workspace.create;
   } else {
@@ -2109,7 +2135,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     suggestionsDiv.innerHTML = "";
 
     if (text.length === 0) return;
-    
+
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
@@ -2138,7 +2164,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
   button.addEventListener("click", () => {
     const newTag = input.value.trim();
     if (!newTag) return;
-    
+
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
@@ -2146,7 +2172,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     } else {
       subWorkspace = workspace.transactions[latestOptions.transactionId];
     }
-    
+
     if (!Array.isArray(subWorkspace.tags)) {
       subWorkspace.tags = [];
     }
@@ -2244,7 +2270,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   row.appendChild(deleteBtn);
 
   row.addEventListener("contextmenu", e => {
-    e.preventDefault(); 
+    e.preventDefault();
     e.stopPropagation();  // stop the event from bubbling up to parent elements
     row.classList.add("show-delete"); // reveal delete button
   });
@@ -2308,8 +2334,8 @@ document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
 
 // Upgrade any existing rows in HTML
 document.querySelectorAll(".item-row").forEach(row => {
-  const name  = row.querySelector(".item-name")?.value || "";
-  const unit  = row.querySelector(".item-unit-price")?.value || "";
+  const name = row.querySelector(".item-name")?.value || "";
+  const unit = row.querySelector(".item-unit-price")?.value || "";
   const price = row.querySelector(".item-price")?.value || "";
 
   const upgraded = createItemRow(name, unit, price);
@@ -2389,7 +2415,7 @@ const MAX_SAFE_SIZE = 900 * 1024; // 900 KB buffer
 function splitIntoParts(entriesThisYear) {
   const parts = [];
   let current = {};
-  
+
   for (const [entryId, entryData] of Object.entries(entriesThisYear)) {
     // Try adding to current part
     current[entryId] = entryData;
@@ -2508,7 +2534,7 @@ async function saveEntry() {
       const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
       for (const [rowid, jsonStr] of rows) {
         const obj = JSON.parse(jsonStr);
-        
+
         if (obj.entryId === loadedEntry_original.entryId) {
           db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
           break;
@@ -2597,16 +2623,16 @@ function diffEntries(original, updated) {
 
   return changes;
 
-// Example output
-// {
-//   entryId: string,
-//   transactionTime: datetime string,
-//   lastModifiedBy: userId,
-//   lastModifiedBy: timestamp,
-//
-//   amount: { before: 20, after: 30 },
-//   notes: { before: "", after: "Lunch" }
-// }
+  // Example output
+  // {
+  //   entryId: string,
+  //   transactionTime: datetime string,
+  //   lastModifiedBy: userId,
+  //   lastModifiedBy: timestamp,
+  //
+  //   amount: { before: 20, after: 30 },
+  //   notes: { before: "", after: "Lunch" }
+  // }
 
 }
 
@@ -2678,9 +2704,9 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   });
 
   const repoId = document.getElementById("household-select").value;
-  
+
   // entries is now a subcollection under households
-  const entriesRef = collection(db, "households", repoId, "entries"); 
+  const entriesRef = collection(db, "households", repoId, "entries");
 
   // Build a map: columnName → index
   const colIndex = {};
@@ -2755,12 +2781,12 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
         lastModifiedTimestamp: getFormattedTime(),
       };
 
-      const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
-      if (isThisYear) { 
-        householdDocs[repoId].entriesThisYear ??= {}; 
-        householdDocs[repoId].entriesThisYear[entryId] = entryData; 
+      const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
+      if (isThisYear) {
+        householdDocs[repoId].entriesThisYear ??= {};
+        householdDocs[repoId].entriesThisYear[entryId] = entryData;
       }
-      
+
       // Collect the promise — do NOT await here 
       writePromises.push(addDoc(entriesRef, entryData));
       addDocCount[transactionType] += 1;
@@ -2824,10 +2850,10 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       lastModifiedTimestamp: getFormattedTime(),
     };
 
-    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
-    if (isThisYear) { 
-      householdDocs[repoId].entriesThisYear ??= {}; 
-      householdDocs[repoId].entriesThisYear[entryId] = entryData; 
+    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
+    if (isThisYear) {
+      householdDocs[repoId].entriesThisYear ??= {};
+      householdDocs[repoId].entriesThisYear[entryId] = entryData;
     }
 
     // Collect the promise — do NOT await here 
@@ -2854,10 +2880,10 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       lastModifiedTimestamp: getFormattedTime(),
     };
 
-    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime); 
-    if (isThisYear) { 
-      householdDocs[repoId].entriesThisYear ??= {}; 
-      householdDocs[repoId].entriesThisYear[entryId] = entryData; 
+    const isThisYear = determineTransactionIsThisYear(entryData.transactionTime);
+    if (isThisYear) {
+      householdDocs[repoId].entriesThisYear ??= {};
+      householdDocs[repoId].entriesThisYear[entryId] = entryData;
     }
     // Collect the promise — do NOT await here 
     writePromises.push(addDoc(entriesRef, entryData));
@@ -2872,11 +2898,11 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   }
 
   // write data to firebase in batches to avoid write‑stream exhaustion (massive writing at once)
-  await runInBatches(writePromises, 20); 
+  await runInBatches(writePromises, 20);
 
-  
+
   let changes = {};
-  changes.summary = {added: addDocCount};
+  changes.summary = { added: addDocCount };
 
   // Read the current log
   const log = householdDocs[repoId].entryChangeLog || [];
@@ -2931,9 +2957,9 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
   let html = `
     <div style="color:#b00020; font-weight:600; margin-bottom:8px;">
       ${{
-        en: "Some entries were NOT imported because required fields are missing:",
-        zh: "以下条目因缺少必填字段而未被导入："
-      }[currentLang]}
+      en: "Some entries were NOT imported because required fields are missing:",
+      zh: "以下条目因缺少必填字段而未被导入："
+    }[currentLang]}
     </div>
     <ul style="padding-left:18px; line-height:1.5;">`;
 
@@ -2944,9 +2970,9 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       <li style="margin-bottom:6px;">
         <strong>#${item.index}</strong> — 
         ${{
-          en: "Missing:",
-          zh: "缺少："
-        }[currentLang]}
+        en: "Missing:",
+        zh: "缺少："
+      }[currentLang]}
         ${missingFieldsInRow(row).join(", ")}
         <br>
         <span style="font-size:12px; color:#555;">
@@ -3004,7 +3030,7 @@ function handleAccount(repoId, name, currency) {
 
   // If currency mismatch OR has sub-accounts → create imported version
   if ((acc["sub-accounts"] && acc["sub-accounts"].length > 0) ||
-      acc.currency !== currency) {
+    acc.currency !== currency) {
 
     const importedName = name + ({ en: " imported", zh: " 导入" }[currentLang]);
 
@@ -3051,7 +3077,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]]
 
-function showPage(name, title = latestTitle, options={}) {
+function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
   // hide all pages
@@ -3081,14 +3107,14 @@ function showPage(name, title = latestTitle, options={}) {
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
   }
-console.log('historyStack', historyStack)
+  console.log('historyStack', historyStack)
   if (latestPage.includes("create")) { // when creating an entry
     target = document.getElementById("transaction-page");
   } else {
     target = document.getElementById(latestPage + "-page");
   }
   if (!target) return;
-  
+
   target.style.display = "block";
   target.zIndex = historyStack.length;
 
@@ -3110,8 +3136,8 @@ console.log('historyStack', historyStack)
     document.querySelector(".bottom-nav").style.display = "flex";
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
-    updateKanbanRow({en: "This Month", zh: "本月"}[currentLang], 1, getDateRange('thisMonth'));
-    updateKanbanRow({en: "This Year", zh: "本年"}[currentLang], 2, getDateRange('thisYear'));
+    updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
+    updateKanbanRow({ en: "This Year", zh: "本年" }[currentLang], 2, getDateRange('thisYear'));
   };
 
   document.getElementById("app-title").textContent = translations[currentLang][latestTitle] ?? latestTitle;
@@ -3119,7 +3145,7 @@ console.log('historyStack', historyStack)
   let dateTimeBtn = null;
 
   // transaction page special handling
-  if (latestPage.includes("transaction") || latestPage.includes("create")) {     
+  if (latestPage.includes("transaction") || latestPage.includes("create")) {
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
@@ -3128,7 +3154,7 @@ console.log('historyStack', historyStack)
       const inProgress = !!workspace.create;
       if (!inProgress) { // reset button texts when creating a new entry
         workspace.create = {};
-        
+
         workspace.create.inputTypeIndex = 0;
         workspace.create.inputType = transactionTypes[0]; // start with expense
         workspace.create.amount = 0;
@@ -3142,7 +3168,7 @@ console.log('historyStack', historyStack)
         let accountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='account']`);
         let subjectBtn = document.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
         let collectionBtn = document.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
- 
+
         setCurrentTime(dateTimeBtn, workspace.create);
         setDefaultLedger(householdBtn, workspace.create);
         setDefaultCategory(categoryBtn, workspace.create);
@@ -3181,7 +3207,7 @@ console.log('historyStack', historyStack)
     ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
     ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
     ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
-    
+
     document.getElementById("save-btn-headerbar").style.display = "block";
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
@@ -3202,16 +3228,16 @@ console.log('historyStack', historyStack)
   } else if (latestPage === "filtered-entries") {
 
     target.addEventListener("click", (e) => {
-        const block = e.target.closest(".fe-entry-block");
-        if (!block) return;
+      const block = e.target.closest(".fe-entry-block");
+      if (!block) return;
 
-        const entryId = block.dataset.entryId;    
-        const entryType = block.dataset.entryType;
-        const entry = options.allEntriesMap[entryId];
-        if (!entry) return;
+      const entryId = block.dataset.entryId;
+      const entryType = block.dataset.entryType;
+      const entry = options.allEntriesMap[entryId];
+      if (!entry) return;
 
-        loadEntryIntoWorkspace(entry);
-      });
+      loadEntryIntoWorkspace(entry);
+    });
 
   } else { // for all other pages
 
@@ -3232,7 +3258,7 @@ window.resetCreate = resetCreate;
 
 function goBack() {
   closeSelector();
-  
+
   if (historyStack.length > 1) {
     if (latestPage.includes("create")) { // when creating an entry
       const target = document.getElementById("transaction-page");
@@ -3324,10 +3350,10 @@ function loadEntryIntoWorkspace(e) {
     ws.balance.accountInnerHTML = e.accountInnerHTML;
   }
 
-   // Save workspace buffer
+  // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
 
-  showPage("transaction", getEditTitle(e.type), {'transactionId': e.entryId})
+  showPage("transaction", getEditTitle(e.type), { 'transactionId': e.entryId })
 }
 
 function getEditTitle(type) {
@@ -3350,7 +3376,7 @@ function getEditTitle(type) {
 
 function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.orderedHouseholds[0]) {
 
-  if (userDoc.orderedHouseholds.length > 1) {  
+  if (userDoc.orderedHouseholds.length > 1) {
     const tabContainer = document.getElementById(task + "-household-tabs");
     tabContainer.innerHTML = ""; // clear old buttons
 
@@ -3361,8 +3387,8 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
       btn.textContent = householdDocs[repoId].name;
 
       // Mark the first button as active 
-      if (repoId === activeHouseholdId) { 
-        btn.classList.add("active"); 
+      if (repoId === activeHouseholdId) {
+        btn.classList.add("active");
       }
 
       // Add click listener
@@ -3371,13 +3397,13 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
         activeHouseholdId = repoId;
 
         // 2. Update UI active state
-        document.querySelectorAll("#"+task+"-household-tabs .tab-btn")
+        document.querySelectorAll("#" + task + "-household-tabs .tab-btn")
           .forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
 
         loadLabels(activeHouseholdId, task, type, title);
 
-        const page = document.getElementById(task + "-page"); 
+        const page = document.getElementById(task + "-page");
         page.dataset.activeHouseholdId = activeHouseholdId;
       });
 
@@ -3385,7 +3411,7 @@ function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.ord
     }
   }
 
-  const page = document.getElementById(task + "-page"); 
+  const page = document.getElementById(task + "-page");
   page.dataset.activeHouseholdId = activeHouseholdId;
 
   if (task === "manage-labels" || task === "order-labels") {
@@ -3411,12 +3437,12 @@ async function loadLabels(activeHouseholdId, task, type, title) {
   const block = document.createElement("div");
   block.classList.add("household-block");
 
-   // Household name header
+  // Household name header
   const header = document.createElement("h3");
 
   header.textContent = householdData.name;
   block.appendChild(header);
- 
+
   let primaryCategories = householdDocs[activeHouseholdId][type];
 
   if (!primaryCategories || primaryCategories.length === 0) {
@@ -3427,18 +3453,18 @@ async function loadLabels(activeHouseholdId, task, type, title) {
     block.appendChild(emptyMsg);
   } else {
     if (task === 'order-labels') {
-      const notes = document.createElement("div"); 
-      notes.style.color = "var(--muted)"; 
-      notes.style.fontStyle = "italic"; 
+      const notes = document.createElement("div");
+      notes.style.color = "var(--muted)";
+      notes.style.fontStyle = "italic";
       notes.innerHTML = t.reorderInstructions;
       block.appendChild(notes);
 
-      const checkedCountText = document.createElement("div"); 
-      checkedCountText.style.color = "var(--muted)"; 
-      checkedCountText.style.fontStyle = "italic"; 
+      const checkedCountText = document.createElement("div");
+      checkedCountText.style.color = "var(--muted)";
+      checkedCountText.style.fontStyle = "italic";
       block.appendChild(checkedCountText);
       block.checkedCountText = checkedCountText; // Store reference on the block
-    } 
+    }
 
     if (["expense-categories", "income-categories"].includes(type)) {
 
@@ -3499,7 +3525,7 @@ async function loadLabels(activeHouseholdId, task, type, title) {
       }
     }
   }
-  
+
   container.appendChild(block);
 }
 
@@ -3516,7 +3542,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, repoId, task, ty
   const addBtn = document.createElement("button");
   addBtn.innerHTML = `${icon} ${name.trim()}`;
   addBtn.classList.add(isSecondary ? "secondary-category" : "primary-category");
-  
+
   // assemble row
   rowContent.appendChild(addBtn);
 
@@ -3566,32 +3592,32 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
     wrapper.classList.add("icon-picker-wrapper");
 
     // --- TAB BUTTONS ---
-    const tabRow = document.createElement("div"); 
-    tabRow.style.display = "flex"; 
-    tabRow.style.gap = "0.5rem"; 
+    const tabRow = document.createElement("div");
+    tabRow.style.display = "flex";
+    tabRow.style.gap = "0.5rem";
     tabRow.style.marginBottom = "0.5rem";
 
-    const emojiTab = document.createElement("button"); 
-    emojiTab.textContent = "Emoji"; 
+    const emojiTab = document.createElement("button");
+    emojiTab.textContent = "Emoji";
     emojiTab.classList.add("glass-popup-btn", "primary");
 
-    const iconTab = document.createElement("button"); 
-    iconTab.textContent = "Icon"; 
-    iconTab.classList.add("glass-popup-btn"); 
-    
+    const iconTab = document.createElement("button");
+    iconTab.textContent = "Icon";
+    iconTab.classList.add("glass-popup-btn");
+
     // --- CANCEL BUTTON --- 
-    const cancelBtn = document.createElement("button"); 
-    cancelBtn.textContent = t.cancel; 
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = t.cancel;
     cancelBtn.addEventListener("click", () => hideWrapper(wrapper));
 
-    tabRow.appendChild(emojiTab); 
+    tabRow.appendChild(emojiTab);
     tabRow.appendChild(iconTab);
     tabRow.appendChild(cancelBtn);
 
     // --- CONTENT AREA --- 
     const contentArea = document.createElement("div");
 
-    const emojiPicker  = document.createElement("emoji-picker");
+    const emojiPicker = document.createElement("emoji-picker");
     emojiPicker.addEventListener("emoji-click", event => {
       iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
       iconBtn.classList.add("selected");
@@ -3599,54 +3625,54 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
     });
 
     // --- ICON PICKER --- 
-    const iconGrid = document.createElement("div"); 
+    const iconGrid = document.createElement("div");
     iconGrid.classList.add("icon-picker-grid");
 
-    fetch("/icons/manifest.json") 
-      .then(res => res.json()) 
-      .then(files => { 
+    fetch("/icons/manifest.json")
+      .then(res => res.json())
+      .then(files => {
         files.forEach(file => {
-          const item = document.createElement("div"); 
-          item.classList.add("icon-picker-item"); 
-          
-          const img = document.createElement("img"); 
-          img.src = `/icons/${file}`; 
+          const item = document.createElement("div");
+          item.classList.add("icon-picker-item");
+
+          const img = document.createElement("img");
+          img.src = `/icons/${file}`;
           console.log(file)
-          item.appendChild(img); 
-          
-          item.addEventListener("click", () => { 
+          item.appendChild(img);
+
+          item.addEventListener("click", () => {
             iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
             iconBtn.classList.add("selected");
-            hideWrapper(wrapper); 
-          }); 
-          
-          iconGrid.appendChild(item); 
-        }); 
-    });
+            hideWrapper(wrapper);
+          });
 
-    
+          iconGrid.appendChild(item);
+        });
+      });
+
+
     // --- INITIAL CONTENT ---
     contentArea.appendChild(emojiPicker);
 
     // --- TAB SWITCHING ---
-    emojiTab.addEventListener("click", () => { 
-      emojiTab.classList.add("primary"); 
-      iconTab.classList.remove("primary"); 
-      contentArea.innerHTML = ""; 
-      contentArea.appendChild(emojiPicker); 
+    emojiTab.addEventListener("click", () => {
+      emojiTab.classList.add("primary");
+      iconTab.classList.remove("primary");
+      contentArea.innerHTML = "";
+      contentArea.appendChild(emojiPicker);
     });
 
-    iconTab.addEventListener("click", () => { 
-      iconTab.classList.add("primary"); 
-      emojiTab.classList.remove("primary"); 
-      contentArea.innerHTML = ""; 
-      contentArea.appendChild(iconGrid); 
+    iconTab.addEventListener("click", () => {
+      iconTab.classList.add("primary");
+      emojiTab.classList.remove("primary");
+      contentArea.innerHTML = "";
+      contentArea.appendChild(iconGrid);
     });
 
     // --- BUILD WRAPPER ---
-    wrapper.appendChild(tabRow); 
-    wrapper.appendChild(contentArea); 
-    
+    wrapper.appendChild(tabRow);
+    wrapper.appendChild(contentArea);
+
     inputRow.insertAdjacentElement("afterend", wrapper);
     requestAnimationFrame(() => wrapper.classList.add("show"));
 
@@ -3686,7 +3712,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   const cancelBtn = document.createElement("button");
   cancelBtn.textContent = "✘";
   cancelBtn.classList.add("labels-cancel-btn");
-  
+
   cancelBtn.addEventListener("click", async () => {
     loadLabels(activeHouseholdId, task, type, title);
   })
@@ -3698,15 +3724,15 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
       showStatusMessage("The input name must not be empty.", "error")
       return;
     }
-    
+
     const categories = householdDocs[activeHouseholdId][type];
     const householdRef = doc(db, "households", activeHouseholdId);
-    
+
     const allCategories = householdDocs[activeHouseholdId][type];
 
     if (hasSecondary) {
       // check if this name is available
-      const primaryNames = allCategories.map(c => c.primary); 
+      const primaryNames = allCategories.map(c => c.primary);
       const secondaryNames = allCategories.flatMap(c => c.secondaries.map(s => s.name));
       const allNames = [...primaryNames, ...secondaryNames];
       const valid = name === options.label || !allNames.includes(name)
@@ -3739,7 +3765,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
           [type]: updatedCategories,
           lastSynced: getFormattedTime()
         });
-      
+
       } else if (options.label && options.isSecondary) {
         // Editing existing secondary
         const updatedCategories = categories.map(cat => {
@@ -3788,7 +3814,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
       } else {
         // Adding a new secondary under a primary
         const newSecondary = {
-          name: name, 
+          name: name,
           icon: icon
         };
 
@@ -3843,11 +3869,11 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
         lastSynced: getFormattedTime()
       });
     }
-    
+
     ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
     loadLabels(activeHouseholdId, task, type, title);
-    
+
   });
 
   inputRow.appendChild(iconBtn);
@@ -3913,7 +3939,7 @@ function handleDeleteClick(block, hasSecondary) {
       {
         text: currentLang === "en" ? "Cancel" : "取消",
         primary: true,
-        onClick: () => {}
+        onClick: () => { }
       },
       {
         text: currentLang === "en" ? "Delete" : "删除",
@@ -3948,7 +3974,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
     checkboxWrapper.appendChild(checkbox);
     rowContent.appendChild(checkboxWrapper);
 
-    checkbox.addEventListener("change", () => { 
+    checkbox.addEventListener("change", () => {
       const checked = block.querySelectorAll(".order-checkbox:checked");
       const checkedCount = checked.length;
 
@@ -3958,12 +3984,12 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       // Update UI text
       if (hasSecondary) {
         block.checkedCountText.textContent =
-          currentLang==='en'
+          currentLang === 'en'
             ? `${checkedCount} selected (${primaryChecked} primary, ${secondaryChecked} secondary)`
             : `已勾选 ${checkedCount} 项（一级 ${primaryChecked} 项，二级 ${secondaryChecked} 项）`;
       } else {
         block.checkedCountText.textContent =
-          currentLang==='en'
+          currentLang === 'en'
             ? `${checkedCount} selected `
             : `已勾选 ${checkedCount} 项`;
       }
@@ -4006,24 +4032,24 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
   btn.classList.add(isSecondary ? "secondary-category" : "primary-category");
 
   // Add identifiers 
-  btn.dataset.name = name; 
+  btn.dataset.name = name;
   btn.dataset.type = isSecondary ? "secondary" : "primary";
-  btn.dataset.parentName = parentName; 
+  btn.dataset.parentName = parentName;
   rowContent.appendChild(btn);
-  
+
   // attach to wrapper
   categoryWrapper.appendChild(rowContent);
   parentWrapper.appendChild(categoryWrapper);
-  
+
   if (task === 'order-labels') {
-    const handle = document.createElement("div"); 
-    handle.classList.add("drag-handle"); 
-    handle.textContent = "≡"; 
+    const handle = document.createElement("div");
+    handle.classList.add("drag-handle");
+    handle.textContent = "≡";
     rowContent.appendChild(handle);
-    
-    let pressTimer; 
-    let longPress = false; 
-    let isDragging = false; 
+
+    let pressTimer;
+    let longPress = false;
+    let isDragging = false;
     let dragInfo = null;
     let ghost = null;
 
@@ -4036,7 +4062,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       isDragging = true;
       longPress = false;
       clearTimeout(pressTimer);
-      
+
       if (!isSecondary) {
         block.querySelectorAll(".secondary-wrapper").forEach(w => {
           w.style.display = "none";
@@ -4109,7 +4135,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       isDragging = false;
 
       // Release pointer capture if used
-      try { handle.releasePointerCapture(e.pointerId); } catch {}
+      try { handle.releasePointerCapture(e.pointerId); } catch { }
 
       // Reset visuals
       if (ghost) {
@@ -4133,28 +4159,28 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
         targetBtn
       } = dragInfo;
 
-      const targetName   = targetBtn.dataset.name;
-      const targetType   = targetBtn.dataset.type;
+      const targetName = targetBtn.dataset.name;
+      const targetType = targetBtn.dataset.type;
       const targetParent = targetBtn.dataset.parentName;
 
       // Compute before/after
       const rect = targetBtn.getBoundingClientRect();
       const position = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
-      
+
       // Enforce rules
       if (draggedType === "primary" && targetType === "secondary") return;
       if (draggedName === targetName) return;
       if (!targetName) return;
 
       // Perform reorder
-      await reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type});
+      await reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type });
 
       dragInfo = null;
 
       // Refresh UI
       ({ userDoc, householdDocs } = await syncData(currentUser.uid));
       loadLabels(activeHouseholdId, task, type, title);
-    });    
+    });
 
   } else { // not for the order-labels-page
     // edit + delete buttons
@@ -4167,7 +4193,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
     deleteBtn.classList.add("label-delete-btn");
 
     rowContent.appendChild(editBtn);
-    rowContent.appendChild(deleteBtn);  
+    rowContent.appendChild(deleteBtn);
 
     // === EDIT HANDLER ===
     editBtn.addEventListener("click", () => {
@@ -4194,7 +4220,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
 
       try {
         if (isSecondary) {
-          
+
           const updatedCategories = categories.map(cat => {
             if (cat.primary === parentName) {
               return {
@@ -4265,10 +4291,10 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       }
 
       e.preventDefault();
-      const isVisible = categoryWrapper.classList.contains("has-actions"); 
-      if (isVisible) { 
-        hideActions(categoryWrapper, editBtn, deleteBtn); 
-      } else { 
+      const isVisible = categoryWrapper.classList.contains("has-actions");
+      if (isVisible) {
+        hideActions(categoryWrapper, editBtn, deleteBtn);
+      } else {
         // Remove "has-actions" from any wrapper
         block.querySelectorAll(".has-actions").forEach(wrapper => {
           wrapper.classList.remove("has-actions");
@@ -4279,7 +4305,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
           btn.classList.remove("show");
         });
 
-        showActions(categoryWrapper, editBtn, deleteBtn); 
+        showActions(categoryWrapper, editBtn, deleteBtn);
       }
     });
 
@@ -4325,8 +4351,8 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
     btn.setAttribute("draggable", true);
 
     btn.addEventListener("dragstart", e => {
-      if (lastPointerType !== "mouse") { 
-        e.preventDefault(); 
+      if (lastPointerType !== "mouse") {
+        e.preventDefault();
         return; // skip drag on touch or pen 
       }
 
@@ -4341,7 +4367,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       }
 
       // On dragstart, store what is being dragged
-      e.dataTransfer.setData("drag-name", btn.dataset.name); 
+      e.dataTransfer.setData("drag-name", btn.dataset.name);
       e.dataTransfer.setData("drag-type", btn.dataset.type);
       e.dataTransfer.setData("drag-parent", btn.dataset.parentName);
 
@@ -4357,13 +4383,13 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       if (lastPointerType !== "mouse") return;
       e.preventDefault();
 
-      const draggedName   = e.dataTransfer.getData("drag-name");
-      const draggedType   = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
+      const draggedName = e.dataTransfer.getData("drag-name");
+      const draggedType = e.dataTransfer.getData("drag-type");   // "primary" | "secondary"
       const draggedParent = e.dataTransfer.getData("drag-parent"); // primary name for secondary
 
-      const targetName    = btn.dataset.name;
-      const targetType    = btn.dataset.type;                      // "primary" | "secondary"
-      const targetParent  = btn.dataset.parentName;                // primary name for secondary
+      const targetName = btn.dataset.name;
+      const targetType = btn.dataset.type;                      // "primary" | "secondary"
+      const targetParent = btn.dataset.parentName;                // primary name for secondary
 
       const rect = btn.getBoundingClientRect();
       const dropY = e.clientY;
@@ -4375,7 +4401,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       if (draggedName === targetName) return;
       if (!targetName) return;
 
-      reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type})
+      reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type })
 
       isDragging = false;
       btn.classList.remove("dragging");
@@ -4390,7 +4416,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
   return [rowContent, categoryWrapper];
 }
 
-async function reorderCategory({activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type}) {
+async function reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type }) {
   const categories = householdDocs[activeHouseholdId][type];
   const householdRef = doc(db, "households", activeHouseholdId);
 
@@ -4420,7 +4446,7 @@ async function reorderCategory({activeHouseholdId, hasSecondary, draggedName, dr
     // ============================================================
     if (draggedType === "secondary") {
       const fromPrimary = categories.find(p => p.primary === draggedParent);
-      
+
       if (!fromPrimary) return false;
 
       const fromArr = fromPrimary.secondaries;
@@ -4431,17 +4457,17 @@ async function reorderCategory({activeHouseholdId, hasSecondary, draggedName, dr
       const draggedObj = fromArr.splice(oldIndex, 1)[0];
 
       // When dropped to a primary, insert at the beginning of the target primary's secondaries 
-      if (targetType === "primary") { 
-        const toPrimary   = categories.find(p => p.primary === targetName);
-        const toArr   = toPrimary.secondaries;
+      if (targetType === "primary") {
+        const toPrimary = categories.find(p => p.primary === targetName);
+        const toArr = toPrimary.secondaries;
 
-        toArr.splice(0, 0, draggedObj); 
-        await updateDoc(householdRef, { [type]: categories }); 
-        return true; 
+        toArr.splice(0, 0, draggedObj);
+        await updateDoc(householdRef, { [type]: categories });
+        return true;
 
       } else {
-        const toPrimary   = categories.find(p => p.primary === targetParent);
-        const toArr   = toPrimary.secondaries;
+        const toPrimary = categories.find(p => p.primary === targetParent);
+        const toArr = toPrimary.secondaries;
 
         let newIndex = toArr.findIndex(s => s.name === targetName);
         if (newIndex === -1) return false;
@@ -4569,7 +4595,7 @@ function enablePageSwipe(pageEl) {
   const onEnd = () => {
     if (!isDragging) return;
     isDragging = false;
-    const threshold = window.innerWidth * 2/5;
+    const threshold = window.innerWidth * 2 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
     if (currentX > threshold) {
@@ -4760,7 +4786,7 @@ async function adjustFontsize(delta) {
 
       // Update nested field
       await updateDoc(userRef, {
-        [field]: newSize, 
+        [field]: newSize,
         "profile.lastSynced": getFormattedTime()
       });
 
@@ -4840,8 +4866,8 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     e.returnValue = "";
   });
-  
-  wireHomeImageSettings();  
+
+  wireHomeImageSettings();
 });
 
 let homeImages = []; // start empty; load later
@@ -4926,7 +4952,7 @@ async function saveHomeImages() {
 
     // Update nested field
     await updateDoc(userRef, {
-      "profile.homeImages": homeImages, 
+      "profile.homeImages": homeImages,
       "profile.lastSynced": getFormattedTime()
     });
 
@@ -4968,7 +4994,7 @@ async function queryFirestoreForRange({
 
     // --- Date filters ---
     if (dateFrom) q = query(q, where("transactionTime", ">=", dateFrom + " 00:00:00"));
-    if (dateTo)   q = query(q, where("transactionTime", "<=", dateTo   + " 23:59:59"));
+    if (dateTo) q = query(q, where("transactionTime", "<=", dateTo + " 23:59:59"));
 
     // --- Type filter (only if single) ---
     if (types?.length === 1) {
@@ -5007,7 +5033,7 @@ async function getFilteredEntries({
   let allEntries = [];
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
-  const to   = dateTo   ? dateTo   + " 23:59:59" : null;
+  const to = dateTo ? dateTo + " 23:59:59" : null;
 
   // ------------------------------------------------------------
   // Load entries from each repo's local SQLite DB
@@ -5066,7 +5092,7 @@ async function getFilteredEntries({
 function summarizeIncomeExpense(entries) {
   let income = 0;
   let expense = 0;
-      
+
   if (Array.isArray(entries)) {
     for (const e of entries) {
       if (e.type === "income") {
@@ -5089,9 +5115,9 @@ function getDateRange(type) {
     const [y, m, d] = dateStr.split("-").map(Number);
     const date = new Date(y, m - 1, d); // local, no timezone shift
 
-    const year  = date.getFullYear();
+    const year = date.getFullYear();
     const month = date.getMonth() + 1;
-    const day   = date.getDate();
+    const day = date.getDate();
 
     if (currentLang === "zh") {
       return showYear
@@ -5100,7 +5126,7 @@ function getDateRange(type) {
     }
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     return showYear
       ? `${months[date.getMonth()]} ${String(day).padStart(2, "0")}, ${year}`
@@ -5200,24 +5226,24 @@ function getDateRange(type) {
 
   // --- Switch logic ---
   switch (type) {
-    case "today":       return pack(today, today);
-    case "yesterday":   const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
-    case "last7":       const d7 = new Date(today); d7.setDate(today.getDate() - 6); return pack(d7, today);
-    case "last30":      const d30 = new Date(today); d30.setDate(today.getDate() - 29); return pack(d30, today);
-    case "thisWeek":    return pack(startOfWeek, endOfWeek);
-    case "lastWeek":    const lwS = new Date(startOfWeek); lwS.setDate(lwS.getDate() - 7);
-                        const lwE = new Date(endOfWeek);   lwE.setDate(lwE.getDate() - 7);
-                        return pack(lwS, lwE);
-    case "thisMonth":   return pack(startOfMonth, endOfMonth);
-    case "lastMonth":   return pack(startOfLastMonth, endOfLastMonth);
+    case "today": return pack(today, today);
+    case "yesterday": const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
+    case "last7": const d7 = new Date(today); d7.setDate(today.getDate() - 6); return pack(d7, today);
+    case "last30": const d30 = new Date(today); d30.setDate(today.getDate() - 29); return pack(d30, today);
+    case "thisWeek": return pack(startOfWeek, endOfWeek);
+    case "lastWeek": const lwS = new Date(startOfWeek); lwS.setDate(lwS.getDate() - 7);
+      const lwE = new Date(endOfWeek); lwE.setDate(lwE.getDate() - 7);
+      return pack(lwS, lwE);
+    case "thisMonth": return pack(startOfMonth, endOfMonth);
+    case "lastMonth": return pack(startOfLastMonth, endOfLastMonth);
     case "thisQuarter": return pack(startOfQuarter, endOfQuarter);
     case "lastQuarter": return pack(startOfLastQuarter, endOfLastQuarter);
 
     // Long ranges → show year
-    case "thisYear":    return pack(startOfYear, endOfYear, true);
-    case "lastYear":    return pack(startOfLastYear, endOfLastYear, true);
+    case "thisYear": return pack(startOfYear, endOfYear, true);
+    case "lastYear": return pack(startOfLastYear, endOfLastYear, true);
 
-    default:            return pack(null, null, true);
+    default: return pack(null, null, true);
   }
 }
 
@@ -5240,15 +5266,15 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   if (!list) return;
 
   // Try to find existing row 
-  let row = list.querySelector(`.kanban-row[data-kanban-index="${kanbanIndex}"]`); 
-  if (!row) { 
+  let row = list.querySelector(`.kanban-row[data-kanban-index="${kanbanIndex}"]`);
+  if (!row) {
     // Create new row if not found 
-    row = document.createElement("div"); 
-    row.className = "kanban-row"; 
-    row.dataset.kanbanIndex = kanbanIndex; 
-    
+    row = document.createElement("div");
+    row.className = "kanban-row";
+    row.dataset.kanbanIndex = kanbanIndex;
+
     // Append row + hr 
-    list.appendChild(row); 
+    list.appendChild(row);
     list.appendChild(document.createElement("hr"));
   }
 
@@ -5266,9 +5292,9 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
   row.onclick = async () => {
     // Special case: presetToday loads all entries up to today 
-    if (title === "presetToday") { 
-      const dateTo = filters.dateTo; 
-      filteredEntries = await getFilteredEntries({ dateTo }); 
+    if (title === "presetToday") {
+      const dateTo = filters.dateTo;
+      filteredEntries = await getFilteredEntries({ dateTo });
       const dateRangeStr = filters.dateRangeStr;
       showFilteredEntriesToday(filteredEntries, dateTo, dateRangeStr)
 
@@ -5421,13 +5447,13 @@ function renderEntryGroup(day, entries) {
 
   let html = `<div class="fe-date-group">${dateHeader}`;
 
-  entries.forEach((e, i) => { 
-    html += renderEntryByType(e); 
-    
+  entries.forEach((e, i) => {
+    html += renderEntryByType(e);
+
     // Add <hr> between entries, but not after the last one 
-    if (i < entries.length - 1) { 
-      html += `<hr class="fe-entry-divider">`; 
-    } 
+    if (i < entries.length - 1) {
+      html += `<hr class="fe-entry-divider">`;
+    }
   });
 
   html += `</div>`;
@@ -5526,7 +5552,7 @@ function autoResizeTextarea(el) {
 
 function getCategoryIcon(repoId, type, primary, secondary) {
   const settings = settingsMap[repoId];   // ledger settings for this repo
-  
+
   if (!settings) {
     return { primaryIcon: "", secondaryIcon: "" };
   }
@@ -5692,9 +5718,9 @@ document.getElementById("invite-confirm").onclick = async () => {
       alert("对方已在您的家庭中，无需再次邀请");
       return;
     }
-    
+
     const userRef = doc(db, "users", currentUser.uid);
-    
+
     // 2. Add household to invited user
     const invitedUserRef = doc(db, "users", invitedUserId);
     await updateDoc(invitedUserRef, {
@@ -5821,7 +5847,7 @@ async function confirmRemoveMember(uid) {
   const householdRef = doc(db, "households", myHouseholdId);
 
   // 1. Remove user from household members
-  await updateDoc(householdRef,{
+  await updateDoc(householdRef, {
     members: arrayRemove(uid),
     lastSynced: getFormattedTime()
   });
@@ -5928,7 +5954,7 @@ async function confirmLeaveHousehold(hid) {
 
   // Remove myself from household members
   await updateDoc(doc(db, "households", hid), {
-    members: arrayRemove(currentUser.uid), 
+    members: arrayRemove(currentUser.uid),
     lastSynced: getFormattedTime()
   });
 
@@ -6061,7 +6087,7 @@ function showPopupWindow({ title, message, buttons = [] }) {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       overlay.remove();
-      popup.classList.remove("show"); 
+      popup.classList.remove("show");
     }
   });
 
@@ -6088,7 +6114,7 @@ function showPopupWindow({ title, message, buttons = [] }) {
 
     b.addEventListener("click", () => {
       overlay.remove();
-      popup.classList.remove("show"); 
+      popup.classList.remove("show");
       btn.onClick && btn.onClick();
     });
 
@@ -6102,8 +6128,8 @@ function showPopupWindow({ title, message, buttons = [] }) {
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
 
-  requestAnimationFrame(() => { 
-    popup.classList.add("show"); 
+  requestAnimationFrame(() => {
+    popup.classList.add("show");
   });
 }
 
@@ -6113,9 +6139,9 @@ function showStatusMessage(message, type = 'info', duration = 2000) {
   const bottomNav = document.querySelector('.bottom-nav');
 
   const navHeight = bottomNav.offsetHeight; // px value 
-  const navStyles = getComputedStyle(bottomNav); 
+  const navStyles = getComputedStyle(bottomNav);
   const navBottom = navStyles.bottom;
-  const offset = `calc(${navHeight}px + ${navBottom} + 0.2rem)`; 
+  const offset = `calc(${navHeight}px + ${navBottom} + 0.2rem)`;
   status.style.bottom = offset;
 
   status.textContent = message;
@@ -6474,7 +6500,7 @@ function updateSelectorPreview(updatedCol) {
 
     // update other buttons when household change
     let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
-    if (categoryBtn) {setDefaultCategory(categoryBtn, subWorkspace)};
+    if (categoryBtn) { setDefaultCategory(categoryBtn, subWorkspace) };
 
   } else if (lastButton.dataset.type === "category") {
     const primaryCol = categorySelector.querySelector(".primary-col");
@@ -6485,7 +6511,7 @@ function updateSelectorPreview(updatedCol) {
       updateSecondaryColumn(lastButton, subWorkspace, secondaryCol);
       ScrollToSelectItem(secondaryCol);
     }
-    
+
     const { icon: sIcon, name: sName } =
       getSelectedValue(categorySelector, ".secondary-col", true);
 
@@ -6507,7 +6533,7 @@ function updateSelectorPreview(updatedCol) {
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
   } else if (['account', 'fromAccount', 'toAccount'].includes(lastButton.dataset.type)) {
     const inputRepoId = subWorkspace[subWorkspace.inputType].repoId;
-    
+
     const accountTypeCol = accountSelector.querySelector(".primary-col");
     const accountCol = accountSelector.querySelector(".secondary-col");
 
@@ -6517,14 +6543,14 @@ function updateSelectorPreview(updatedCol) {
         updateSecondaryColumn(lastButton, subWorkspace, accountCol);
         ScrollToSelectItem(accountCol);
       }
-      
+
       const { icon: sIcon, name: sName } =
         getSelectedValue(accountSelector, ".secondary-col", true);
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
 
       subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
-      
+
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
       const accountObj = info.account;
@@ -6544,13 +6570,13 @@ function updateSelectorPreview(updatedCol) {
         getSelectedValue(accountSelector, ".primary-col", true);
       const { icon: sIcon, name: sName } =
         getSelectedValue(accountSelector, ".secondary-col", true);
-      
+
       const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
       const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
 
       subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
       subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputRepoId, null, toAccountName);
-      
+
       const from = subWorkspace.transfer.fromAccountInfo.account;
       const fromIcon = from.icon || "";
       const fromName = from.name;
@@ -6562,7 +6588,7 @@ function updateSelectorPreview(updatedCol) {
           <span class="cat-label">${fromName} (${fromCurrency})</span>
         </span>
       `;
-      
+
       const to = subWorkspace.transfer.toAccountInfo.account;
       const toIcon = to.icon || "";
       const toName = to.name;
@@ -6577,16 +6603,16 @@ function updateSelectorPreview(updatedCol) {
 
       let fromAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
       let toAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
-      
+
       fromAccountBtn.innerHTML = subWorkspace.transfer.fromAccountInnerHTML;
       toAccountBtn.innerHTML = subWorkspace.transfer.toAccountInnerHTML;
 
       if (fromCurrency === toCurrency) {
         subWorkspace.transfer.sameCurrency = true;
-        
+
         document.getElementById("simple-transfer-amount-row").style.display = "block";
         document.getElementById("exchange-transfer-amount-row").style.display = "none";
-        
+
         // make sure simple amount is updated
         let amountBtn = document.querySelector(`#${activeForm} .amount-button`);
         let calculationBtn = document.querySelector(`#${activeForm} .calculation`);
@@ -6597,13 +6623,13 @@ function updateSelectorPreview(updatedCol) {
         }
         amountBtn.textContent = subWorkspace.amount.toFixed(2);
         calculationBtn.textContent = subWorkspace.calculation;
-    
+
       } else {
         subWorkspace.transfer.sameCurrency = false;
 
         document.getElementById("transfer-from-currency").textContent = fromCurrency;
         document.getElementById("transfer-to-currency").textContent = toCurrency;
-        
+
         document.getElementById("simple-transfer-amount-row").style.display = "none";
         document.getElementById("exchange-transfer-amount-row").style.display = "grid";
 
@@ -6620,7 +6646,7 @@ function updateSelectorPreview(updatedCol) {
     }
   } else if (lastButton.dataset.type === "subject") {
     const { icon: icon, name: name } =
-        getSelectedValue(subjectSelector, ".subject-col", true);
+      getSelectedValue(subjectSelector, ".subject-col", true);
 
     subWorkspace[subWorkspace.inputType].subject = name;
     subWorkspace[subWorkspace.inputType].subjectIcon = icon;
@@ -6628,7 +6654,7 @@ function updateSelectorPreview(updatedCol) {
     lastButton.innerHTML = `${icon} ${name}`;
   } else if (lastButton.dataset.type === "collection") {
     const { icon: icon, name: name } =
-        getSelectedValue(collectionSelector, ".collection-col", true);
+      getSelectedValue(collectionSelector, ".collection-col", true);
 
     subWorkspace[subWorkspace.inputType].collection = name;
     subWorkspace[subWorkspace.inputType].collectionIcon = icon;
@@ -6701,37 +6727,37 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
   const inputRepoId = subWorkspace[inputType].repoId;
   let cats = null;
   let primaryCat = null;
-  let secondaries =null;
+  let secondaries = null;
   let secondaryList = [];
 
   const settings = settingsMap[inputRepoId];   // ledger settings for this repo
 
   if (lastButton.dataset.type === "category") {
-    cats = settings[inputType + '-categories']; 
+    cats = settings[inputType + '-categories'];
 
     const { icon: pIcon, name: pName } =
       getSelectedValue(categorySelector, ".primary-col", true);
-    
+
     subWorkspace[inputType].primaryCategory = pName;
     subWorkspace[inputType].primaryCategoryIcon = pIcon;
-    
+
     // Find the primary category object that matches the selected primary name
     primaryCat = cats.find(cat => cat.primary === subWorkspace[inputType].primaryCategory);
-    
+
     // If found, use its secondaries; otherwise fallback to empty list
     secondaries = primaryCat ? primaryCat.secondaries : [];
-    
+
     // Build the list of secondary items as objects
     secondaryList = secondaries.map(sec => ({
       icon: sec.icon || "",
-      name:  sec.name || ""
+      name: sec.name || ""
     }));
-    
+
   } else if (lastButton.dataset.type === "account") {
     cats = settings.accounts;
 
     const inputAccountTypeString = getSelectedValue(accountSelector, ".primary-col", false);
-    const reverseMap = Object.fromEntries( Object.entries(t).map(([key, value]) => [value, key]) );
+    const reverseMap = Object.fromEntries(Object.entries(t).map(([key, value]) => [value, key]));
     const inputAccountType = reverseMap[inputAccountTypeString];
 
     subWorkspace[inputType].accountInfo.type = inputAccountType;
@@ -6760,7 +6786,7 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
       }
     });
   }
-  
+
   // Populate the secondary column
   createList(secondaryCol, secondaryList);
 }
@@ -6776,13 +6802,13 @@ function getSelectedValue(selector, colName, strip = false) {
   if (strip) {
     let icon;
 
-    const iconEl  = selectedItem.querySelector(".selector-item-icon");
+    const iconEl = selectedItem.querySelector(".selector-item-icon");
     if (iconEl) {
       icon = iconEl.innerHTML;
     }
 
     const labelEl = selectedItem.querySelector(".selector-item-label");
-    const name  = labelEl.textContent.trim();
+    const name = labelEl.textContent.trim();
 
     return { icon, name };
   }
@@ -6829,7 +6855,7 @@ let keypadOpen = false;
 function showSelector(selName) {
   if (prevLastButton !== lastButton) { // when switching to a different button
     if (openSelector === 'amount') { // if previously was an amount-selector
-      prevLastButton.style.borderWidth = "1px"; 
+      prevLastButton.style.borderWidth = "1px";
     } else {
       if (prevLastButton) {
         if (prevLastButton.id === "transfer-accounts") {
@@ -6865,7 +6891,7 @@ function showSelector(selName) {
       prevSel.style.transform = 'translateY(120%)';
     }
   }
-  
+
   history.pushState({ selector: true }, '', location.href);
 
   // Open the new selector in cases 2 and 3
@@ -6892,7 +6918,7 @@ function showSelector(selName) {
 
 function closeSelector() {
   if (!openSelector) return;
-  
+
   keypadOpen = false; // keep it false regardless of what selector is open, in case of unexpected interception of keys
 
   if (openSelector === 'amount') {
@@ -6902,12 +6928,12 @@ function closeSelector() {
       lastButton.style.background = "var(--bg)";
       document.getElementById("transfer-from-account").style.background = "var(--bg)";
       document.getElementById("transfer-to-account").style.background = "var(--bg)";
-    
+
     } else {
       lastButton.style.background = "var(--bg)";
     }
   }
-  
+
   const sel = document.getElementById(openSelector + '-selector');
   if (sel) {
     sel.style.transform = 'translateY(120%)';
@@ -6921,7 +6947,7 @@ function closeSelector() {
 }
 window.closeSelector = closeSelector;
 
-window.addEventListener('popstate', (e) => {  
+window.addEventListener('popstate', (e) => {
   if (openSelector) {
     closeSelector();
     return;
@@ -7035,10 +7061,10 @@ function tryUpdateAmount(expr, amountButton) {
       if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
         // Update labels
         const fromLabel = document.getElementById("exchange-rate-from-label");
-        const toLabel   = document.getElementById("exchange-rate-to-label");
+        const toLabel = document.getElementById("exchange-rate-to-label");
 
         fromLabel.textContent = ``;
-        toLabel.textContent   = ``;
+        toLabel.textContent = ``;
         subWorkspace.transfer.fromExchangeRate = 0;
         subWorkspace.transfer.toExchangeRate = 0;
       }
@@ -7060,7 +7086,7 @@ function tryUpdateAmount(expr, amountButton) {
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
-    
+
     if (validStart || (typeof result === 'number' && isFinite(result))) {
       // VALID expression
       amountButton.textContent = result.toFixed(2);
@@ -7075,10 +7101,10 @@ function tryUpdateAmount(expr, amountButton) {
 
         if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
           const fromBtn = document.getElementById("transfer-from-amount");
-          const toBtn   = document.getElementById("transfer-to-amount");
+          const toBtn = document.getElementById("transfer-to-amount");
 
           const fromVal = parseFloat(fromBtn.textContent) || 0;
-          const toVal   = parseFloat(toBtn.textContent) || 0;
+          const toVal = parseFloat(toBtn.textContent) || 0;
 
           // Avoid division by zero
           const ratio = fromVal > 0 ? (toVal / fromVal) : 0;
@@ -7086,10 +7112,10 @@ function tryUpdateAmount(expr, amountButton) {
 
           // Update labels
           const fromLabel = document.getElementById("exchange-rate-from-label");
-          const toLabel   = document.getElementById("exchange-rate-to-label");
+          const toLabel = document.getElementById("exchange-rate-to-label");
 
           fromLabel.textContent = `⇂ ${t.exchangeRate}: ${ratio.toFixed(4)}`;
-          toLabel.textContent   = `↿ ${t.exchangeRate}: ${reverseRatio.toFixed(4)}`;
+          toLabel.textContent = `↿ ${t.exchangeRate}: ${reverseRatio.toFixed(4)}`;
 
           subWorkspace.transfer.fromExchangeRate = ratio;
           subWorkspace.transfer.toExchangeRate = reverseRatio;
@@ -7300,11 +7326,11 @@ document.querySelectorAll(".selector-button[data-type='category']")
       const manageLabelsBtn = document.getElementById("selector-manage-category-btn");
       manageLabelsBtn.onclick = f => {
         f.stopPropagation();
-        
+
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
-        if (inputType === "expense") {prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)};
-        if (inputType === "income") {prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)};  
+        if (inputType === "expense") { prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories) };
+        if (inputType === "income") { prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories) };
       };
 
       ScrollToSelectItem(categorySelector.querySelector(".primary-col"), subWorkspace[inputType].primaryCategory);
@@ -7312,39 +7338,39 @@ document.querySelectorAll(".selector-button[data-type='category']")
     };
   });
 
-document.querySelectorAll( 
+document.querySelectorAll(
   ".selector-button[data-type='account']"
 ).forEach(btn => {
-    btn.onclick = e => {
-      e.stopPropagation();
-      prevLastButton = lastButton; // keep track of the previous button pressed
-      lastButton = btn;
+  btn.onclick = e => {
+    e.stopPropagation();
+    prevLastButton = lastButton; // keep track of the previous button pressed
+    lastButton = btn;
 
-      showSelector('account')
+    showSelector('account')
 
-      let subWorkspace = null;
+    let subWorkspace = null;
 
-      if (latestPage.includes("create")) { // when creating an entry
-        subWorkspace = workspace.create;
-      } else {
-        subWorkspace = workspace.transactions[latestOptions.transactionId];
-      }
+    if (latestPage.includes("create")) { // when creating an entry
+      subWorkspace = workspace.create;
+    } else {
+      subWorkspace = workspace.transactions[latestOptions.transactionId];
+    }
 
-      const inputType = subWorkspace.inputType;
+    const inputType = subWorkspace.inputType;
 
-      const t = translations[currentLang];
+    const t = translations[currentLang];
 
-      if (["expense", "income", "balance"].includes(inputType)) {
-        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
-      }
+    if (["expense", "income", "balance"].includes(inputType)) {
+      ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
+      ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
+    }
 
-      if (inputType === "transfer") {
-        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
-      }
-    };
-  });
+    if (inputType === "transfer") {
+      ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
+      ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
+    }
+  };
+});
 
 document.querySelectorAll(".selector-button[data-type='subject']")
   .forEach(btn => {
@@ -7358,12 +7384,12 @@ document.querySelectorAll(".selector-button[data-type='subject']")
       const manageLabelsBtn = document.getElementById("selector-manage-subject-btn");
       manageLabelsBtn.onclick = f => {
         f.stopPropagation();
-        
+
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
         prepareHouseholdTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects);
       };
-      
+
       ScrollToSelectItem(subjectSelector.querySelector(".subject-col"), btn.textContent);
     };
   });
@@ -7380,7 +7406,7 @@ document.querySelectorAll(".selector-button[data-type='collection']")
       const manageLabelsBtn = document.getElementById("selector-manage-collection-btn");
       manageLabelsBtn.onclick = f => {
         f.stopPropagation();
-        
+
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
         prepareHouseholdTabs('manage-labels', 'collections', translations[currentLang].manageCollections);
@@ -7437,7 +7463,7 @@ updateBtns.forEach(btn => {
                 zh: "更新完成，应用将重新启动…"
               }[currentLang]);
             }
-            
+
             const url = new URL(location.href);
             url.searchParams.set("v", Date.now());
             location.href = url.toString();
@@ -7752,7 +7778,7 @@ async function OpenGrocerySearch() {
         if (!grouped[store]) grouped[store] = [];
         grouped[store].push(item);
       });
-      
+
       // 🏪 Iterate over known websites to render each store row
       Websites.forEach(site => {
         const store = site.SiteName;
@@ -7825,7 +7851,7 @@ async function OpenGrocerySearch() {
             itemBtn.textContent = item.SearchHistory || 'Unnamed';
             itemBtn.className = 'item-button';
             itemBtn.draggable = true;
-            
+
             // 🚚 Enable drag functionality
             itemBtn.addEventListener('dragstart', e => {
               e.dataTransfer.setData('text/plain', JSON.stringify(item));
@@ -7879,7 +7905,7 @@ async function OpenGrocerySearch() {
 
         // 🧭 Restore scroll position if previously recorded
         if (scrollMap[store] !== undefined) {
-            requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
             itemScroll.scrollLeft = scrollMap[store];
           });
         }
@@ -8061,7 +8087,7 @@ function openReceiptFileInput(useCamera) {
 
     schedulePreprocessUpdate();
   };
-  
+
   input.click();
 }
 
@@ -8089,9 +8115,9 @@ async function preprocessImage(file, settings) {
 
       // Normalize slider values
       const brightness = 1 + (settings.brightness / 100);   // 1 = neutral
-      const contrast   = 1 + (settings.contrast   / 100);   // 1 = neutral
+      const contrast = 1 + (settings.contrast / 100);   // 1 = neutral
       const highlights = 1 + (settings.highlights / 100);   // 1 = neutral
-      const shadows    = 1 + (settings.shadows    / 100);   // 1 = neutral
+      const shadows = 1 + (settings.shadows / 100);   // 1 = neutral
 
       // Precompute contrast factor
       const c = contrast;
@@ -8100,7 +8126,7 @@ async function preprocessImage(file, settings) {
       // Loop pixels
       for (let i = 0; i < src.length; i += 4) {
         // Grayscale from ORIGINAL pixels
-        let gray = 0.299 * src[i] + 0.587 * src[i+1] + 0.114 * src[i+2];
+        let gray = 0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2];
 
         // Brightness
         gray *= brightness;
@@ -8120,8 +8146,8 @@ async function preprocessImage(file, settings) {
 
         gray = Math.max(0, Math.min(255, gray));
 
-        dst[i] = dst[i+1] = dst[i+2] = gray;
-        dst[i+3] = 255;
+        dst[i] = dst[i + 1] = dst[i + 2] = gray;
+        dst[i + 3] = 255;
       }
 
       ctx.putImageData(imageData, 0, 0);
@@ -8131,7 +8157,7 @@ async function preprocessImage(file, settings) {
         const threshold = otsuThreshold(dst);
         for (let i = 0; i < dst.length; i += 4) {
           const v = dst[i] < threshold ? 0 : 255;
-          dst[i] = dst[i+1] = dst[i+2] = v;
+          dst[i] = dst[i + 1] = dst[i + 2] = v;
         }
         ctx.putImageData(imageData, 0, 0);
       }
@@ -8324,24 +8350,30 @@ function parseCorrectedText(text) {
   let total = null;
   let merchant = null;
   let pendingName = null;
-  
+
   for (const line of lines) {
+    trimmedLine = line.trim();
     let m;
 
     // Skip obvious non-item / summary lines
-    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
+    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(trimmedLine)) continue;
 
     // Date detection
-    m = line.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/);
+    m = trimmedLine.match(/\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{2,4})\b/);
     if (m) {
       date = m[1];
       continue;
     }
 
     // 1) Weight item: allow "kg Net", "kg Gross", "kg Tare", etc.
-    m = line.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)/i);
+    m = trimmedLine.match(/^(.*?)(?:\s+)?([\d.]+)\s*(kg|lb).*@\s*\$?([\d.]+)\/(kg|lb).*?\$?([\d.]+)/i);
     if (m) {
-      const namePart = m[1].trim();
+      let namePart = m[1].trim();
+      // If name is pure number, try using pendingName instead
+
+      if (/^\d+$/.test(namePart) && pendingName) {
+        namePart = pendingName.trim();
+      }
 
       items.push({
         name: namePart || pendingName || "",
@@ -8354,15 +8386,57 @@ function parseCorrectedText(text) {
       continue;
     }
 
-    // 2) Count item: "6 @ 0.45 2.70"
-    m = line.match(/^(.*?)(\d+)\s*@\s*\$?([\d.]+).*?\$?([\d.]+)/i);
+    // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
+    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})/i);
+
     if (m) {
-      const namePart = m[1].trim();
+      let namePart = m[1].trim();
+
+      if (/^\d+(\.\d+)?$/.test(namePart)) {
+        namePart = pendingName || "";
+      }
+
+      let unitExpr = m[3];   // "2/$1.87"
+      let unit_price_each = null;
+
+      if (unitExpr.includes("/")) {
+        const cleaned = unitExpr.replace("$", "");  // "2/1.87"
+        const [divisorStr, priceStr] = cleaned.split("/");
+
+        const divisor = parseFloat(divisorStr);
+        const priceForDivisor = parseFloat(priceStr);
+
+        if (!isNaN(divisor) && !isNaN(priceForDivisor) && divisor > 0) {
+          unit_price_each = priceForDivisor / divisor;
+        }
+      }
+
+      items.push({
+        name: namePart,
+        quantity: parseInt(m[2], 10),
+        unit_price: unit_price_each,  // 0.935
+        unit_price_string: unitExpr, // "2/$1.87"
+        item_total: parseFloat(m[4])   // final price
+      });
+
+      pendingName = null;
+      continue;
+    }
+
+
+    // 2.2) Count item: "6 @ 0.45 2.70"
+    m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*\$?(\d+(?:\.\d+)?).*?\$?(\d+\.\d{2})/i);
+    if (m) {
+      let namePart = m[1].trim();
+
+      if (/^\d+(\.\d+)?$/.test(namePart)) {
+        namePart = pendingName || "";
+      }
 
       items.push({
         name: namePart || pendingName || "",
         quantity: parseInt(m[2], 10),
-        unit_price: parseFloat(m[3]),
+        unit_price: m[3],
         item_total: parseFloat(m[4])
       });
 
@@ -8371,53 +8445,63 @@ function parseCorrectedText(text) {
     }
 
     // 3) Discount / loyalty
-    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(line)) {
-      discounts.push(line);
+    if (/(LOYALTY|SAVINGS|DISCOUNT|COUPON|P[O0]INTS|PT[S5]|redem(p|ption)?|redeem)/i.test(trimmedLine)) {
+      discounts.push(trimmedLine);
       continue;
     }
 
     // 4) Tax
-    if (/(HST|GST|PST|TAX)/i.test(line)) {
-      taxes.push(line);
+    if (/(HST|GST|PST|TAX)/i.test(trimmedLine)) {
+      taxes.push(trimmedLine);
       continue;
     }
 
     // 5) Fees
-    if (/(fee)/i.test(line)) {
-      fees.push(line);
+    if (/(fee)/i.test(trimmedLine)) {
+      fees.push(trimmedLine);
       continue;
     }
 
     // 6) Total (but don't treat as item)
-    m = line.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*\$?([\d.]+)/i);
+    m = trimmedLine.match(/(TOTAL|AMOUNT DUE|GRAND TOTAL)[^\d]*\$?([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
     }
 
     // 7) other items that end with a number
-    m = line.match(/^(.*?)[^\d]*\$?(\d+\.\d{2})/i);
+    m = trimmedLine.match(/^(.+?)\s*\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
     if (m) {
-      if (name.toLowerCase() === "master") continue; // Skip if name is exactly "master" probably indicating Mastercard
+      let name = m[1].trim();
+
+      // If name is pure number, try using pendingName instead
+      if (/^\d+$/.test(name) && pendingName) {
+        name = pendingName.trim();
+        pendingName = null;
+      }
+
+      // Skip if name is exactly "master"
+      if (name.toLowerCase() === "master") continue;
 
       items.push({
-        name: m[1].trim(),
+        name,
         item_total: parseFloat(m[2])
       });
+
       continue;
     }
 
     // if a line doesn't meet above rules but meets below rules, take it as a pending name
     if (
-      /^[A-Za-z].{2,}/.test(line) &&   // starts with a letter
-      !/\d/.test(line) &&              // contains NO digits
-      !/^=/.test(line) &&              // does NOT begin with "="
-      !/=$/.test(line)                 // does NOT end with "="
+      /^[A-Za-z].{2,}/.test(trimmedLine) &&   // starts with a letter
+      !/\d/.test(trimmedLine) &&              // contains NO digits
+      !/^=/.test(trimmedLine) &&              // does NOT begin with "="
+      !/=$/.test(trimmedLine)                 // does NOT end with "="
     ) {
       if (!merchant) {
-        merchant = line.trim();
+        merchant = trimmedLine.trim();
       } else {
-        pendingName = line.trim();
+        pendingName = trimmedLine.trim();
       }
       continue;
     }
@@ -8425,7 +8509,6 @@ function parseCorrectedText(text) {
 
   return { merchant, date, items, discounts, taxes, fees, total };
 }
-
 
 function cleanName(str) {
   return str
@@ -8447,7 +8530,7 @@ document.getElementById("receipt-confirm-btn")
       // Inline mode → return to existing transaction
       closeReceiptScan();
       applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
-      
+
       const ws = workspace.transactions[latestOptions.transactionId];
       switchTab(ws.inputTypeIndex);
     }
@@ -8503,5 +8586,5 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
 function normalizeDate(raw) {
   // Convert 2024/05/31 or 05-31-2024 → YYYY-MM-DD HH:mm
   const d = new Date(raw);
-  return d.toISOString().slice(0,16).replace("T"," ");
+  return d.toISOString().slice(0, 16).replace("T", " ");
 }
