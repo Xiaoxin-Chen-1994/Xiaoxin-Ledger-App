@@ -8302,29 +8302,18 @@ function parseCorrectedText(text) {
   const taxes = [];
   let total = null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (const line of lines) {
     let m;
 
-    // Skip obvious non-item lines early
+    // Skip obvious non-item / summary lines
     if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY/i.test(line)) continue;
 
-    // Weight item: "0.860 kg @ $1.52/kg 1.31"
-    m = line.match(/([\d.]+)\s*kg\s*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
+    // 1) Weight item: "0.860 kg @ $1.52/kg 1.31"
+    //    Also handle "1.595 kg Net @ $1.38/kg 6.99"
+    m = line.match(/([\d.]+)\s*kg.*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
     if (m) {
-      // Look back for a name line
-      let name = "";
-      for (let j = i - 1; j >= 0; j--) {
-        const prev = lines[j];
-        if (/\d+\.\d{2}/.test(prev) || /kg|@/i.test(prev)) break; // hit another numeric line
-        if (/[A-Za-z]/.test(prev)) {
-          name = cleanName(prev);
-          break;
-        }
-      }
-
       items.push({
-        name,
+        name: "", // you said you're fine without attaching previous line
         quantity: parseFloat(m[1]),
         unit_price: parseFloat(m[2]),
         total: parseFloat(m[3])
@@ -8332,20 +8321,20 @@ function parseCorrectedText(text) {
       continue;
     }
 
-    // Count item: "6 @ 0.49 2.94"
-    m = line.match(/(.+?)\s+(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
+    // 2) Count item: "6 @ 0.45 2.70"
+    m = line.match(/(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
     if (m) {
       items.push({
-        name: cleanName(m[1]),
-        quantity: parseInt(m[2]),
-        unit_price: parseFloat(m[3]),
-        total: parseFloat(m[4])
+        name: "",
+        quantity: parseInt(m[1], 10),
+        unit_price: parseFloat(m[2]),
+        total: parseFloat(m[3])
       });
       continue;
     }
 
-    // Discount / loyalty
-    m = line.match(/(LOYALTY|SAVINGS|POINTS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i);
+    // 3) Discount / loyalty
+    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON|POINTS)[^\d\-]*(-?\d+\.\d{2})/i);
     if (m) {
       discounts.push({
         type: m[1],
@@ -8354,7 +8343,7 @@ function parseCorrectedText(text) {
       continue;
     }
 
-    // Tax
+    // 4) Tax
     m = line.match(/(HST|GST|PST|TAX)[^\d]*([\d.]+)/i);
     if (m) {
       taxes.push({
@@ -8364,14 +8353,15 @@ function parseCorrectedText(text) {
       continue;
     }
 
-    // Total
+    // 5) Total (but don't treat as item)
     m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
     }
 
-    // Simple item: "BANANAS 100 Pts" is NOT an item, "SUBTOTAL 11.24" is NOT an item
+    // 6) Simple item: "SOMETHING 1.31"
+    //    BUT: skip SUBTOTAL / TOTAL / LOYALTY etc.
     if (/^SUBTOTAL\b/i.test(line) || /\bTOTAL\b/i.test(line) || /\bLOYALTY\b/i.test(line)) {
       continue;
     }
@@ -8379,7 +8369,7 @@ function parseCorrectedText(text) {
     m = line.match(/(.+?)\s+(\d+\.\d{2})$/);
     if (m) {
       items.push({
-        name: cleanName(m[1]),
+        name: "", // again, you don't care about names here
         total: parseFloat(m[2])
       });
       continue;
@@ -8388,6 +8378,7 @@ function parseCorrectedText(text) {
 
   return { items, discounts, taxes, total };
 }
+
 
 function cleanName(str) {
   return str
