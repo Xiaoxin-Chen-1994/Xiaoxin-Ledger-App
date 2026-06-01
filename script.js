@@ -6056,18 +6056,33 @@ async function performAccountDeletion() {
   // 2. Delete local data
   await deleteLocalData();
   alert("账户数据已全部删除");
-  window.location.href = "/";
+  
+  logout(); // This function will delete github_token and selectedRepos
 }
 
-async function deleteLocalData() {
+async function deleteLocalData() { // This function will not delete github_token and selectedRepos
+  // 1. Read values to keep
+  const token = await get("github_token");
+  const repos = await get("selectedRepos");
+
+  // 2. Clear all localStorage
   localStorage.clear();
 
-  // delete IndexedDB (idb-keyval)
+  // 3. Restore the values you want to keep
+  if (token) await set("github_token", token);
+  if (repos) await set("selectedRepos", repos);
+
+  // 4. Delete IndexedDB (idb-keyval)
   if (window.indexedDB) {
-    const req = indexedDB.deleteDatabase("keyval-store");
-    req.onerror = () => console.warn("Failed to delete IndexedDB");
+    await new Promise(resolve => {
+      const req = indexedDB.deleteDatabase("keyval-store");
+      req.onerror = () => resolve();
+      req.onsuccess = () => resolve();
+      req.onblocked = () => resolve();
+    });
   }
 }
+
 
 async function fetchGitHubUsername(token) {
   const res = await fetch("https://api.github.com/user", {
