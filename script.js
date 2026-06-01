@@ -8340,6 +8340,7 @@ function correctOCRText(raw) {
 }
 
 function parseCorrectedText(text) {
+  console.log('Corrected OCR text to parse: ', text)
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   let date = null;
