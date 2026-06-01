@@ -1118,6 +1118,13 @@ async function githubAppendChangeLog(repoName, change, token) {
 async function init() {
   window.scrollTo(0, 0);
 
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("deleteMode") === "1") {
+    await performAccountDeletion();
+    return;
+  }
+
   // 1. Load token
   const token = await get("github_token");
 
@@ -2147,7 +2154,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     const inputType = subWorkspace.inputType;
     const repoId = subWorkspace[inputType].repoId;
     const settings = settingsMap[repoId];
-    
+
     const tags = settings.tags;
 
     tags.forEach(tag => {
@@ -5982,108 +5989,146 @@ async function confirmLeaveHousehold(hid) {
 }
 
 async function deleteAccount() {
-  // Confirmation dialog
-  if (!confirm("确定要删除您的账户吗？此操作不可撤销。")) return;
+  const message =
+    currentLang === "en"
+      ? "This action cannot be undone.\n\nYou will need to log in again via GitHub to confirm your identity. After verification, the system will delete:\n• All local data\n• All ledger data inside GitHub repositories you own\n\n(If a repository is shared with you, you cannot delete it.)"
+      : "此操作不可撤销。\n\n您需要重新通过 GitHub 登录以确认身份。验证成功后，系统将删除：\n• 本地所有数据\n• 您自己 GitHub 仓库中的所有账本数据\n\n（注意：如果仓库是别人创建并共享给您的，您无法删除它。）";
 
-  const user = auth.currentUser;
-
-  if (!user) {
-    alert("用户未登录");
-    return;
-  }
-
-  // Ask for password
-  const userPassword = prompt("请输入您的密码以确认删除账户：");
-  if (!userPassword) return; // user cancelled
-
-  try {
-    // Create credential
-    const credential = EmailAuthProvider.credential(user.email, userPassword);
-
-    // Reauthenticate
-    await reauthenticateWithCredential(user, credential);
-
-    // Continue with deletion logic
-    await confirmDeleteAccount();
-
-  } catch (err) {
-    console.error("Reauthentication failed:", err);
-    alert("密码错误或验证失败，请重试");
-  }
+  showPopupWindow({
+    title: currentLang === "en" ? "Confirm Deletion" : "确认删除",
+    message,
+    buttons: [
+      {
+        text: currentLang === "en" ? "Cancel" : "取消",
+        primary: true,
+        onClick: () => {}
+      },
+      {
+        text: currentLang === "en" ? "Delete" : "删除",
+        onClick: () => {
+          const redirectUrl = `${window.location.origin}/?deleteMode=1`;
+          window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
+        }
+      }
+    ]
+  });
 }
 window.deleteAccount = deleteAccount;
 
-async function confirmDeleteAccount() {
-  const uid = currentUser.uid;
+async function performAccountDeletion() {
+  alert("身份验证成功，正在删除您的账户数据…");
 
-  // Identify households from the global variable householdDocs
-  const allHouseholds = Object.entries(householdDocs);
+  const token = await get("github_token");
+  if (!token) {
+    alert("无法获取 GitHub token，删除失败");
+    return;
+  }
 
-  const myHousehold = allHouseholds.find(([hid, data]) => data.admin === uid);
-  const myHouseholdId = myHousehold?.[0];
+  const username = await fetchGitHubUsername(token);
+  if (!username) {
+    alert("无法获取 GitHub 用户名");
+    return;
+  }
 
-  const otherHouseholds = allHouseholds
-    .filter(([hid, data]) => data.members?.includes(uid) && data.admin !== uid)
-    .map(([hid]) => hid);
+  // 1. Delete local data
+  await deleteLocalData();
 
-  const userRef = doc(db, "users", uid);
-  const myProfileRef = doc(db, "profiles", uid);
-  const myHouseholdRef = myHouseholdId
-    ? doc(db, "households", myHouseholdId)
-    : null;
+  // 2. Delete GitHub repos owned by this user
+  await deleteLedgerFilesInRepo(username, token);
 
-  try {
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) throw new Error("User not found");
+  alert("账户数据已全部删除");
+  window.location.href = "/";
+}
 
-    // 1. Remove user from all other households
-    for (const hid of otherHouseholds) {
-      const householdRef = doc(db, "households", hid);
-      await updateDoc(householdRef, {
-        members: arrayRemove(uid),
-        lastSynced: getFormattedTime()
-      });
-    }
+async function deleteLocalData() {
+  localStorage.clear();
 
-    // 2. For each member of the user's own household, remove this household from their user doc
-    if (myHouseholdRef) {
-      const householdSnap = await getDoc(myHouseholdRef);
-      const householdData = householdSnap.data();
-      const members = householdData?.members || [];
+  // delete IndexedDB (idb-keyval)
+  if (window.indexedDB) {
+    const req = indexedDB.deleteDatabase("keyval-store");
+    req.onerror = () => console.warn("Failed to delete IndexedDB");
+  }
+}
 
-      for (const memberUid of members) {
-        const memberRef = doc(db, "users", memberUid);
-        await updateDoc(memberRef, {
-          households: arrayRemove(myHouseholdId),
-          orderedHouseholds: arrayRemove(myHouseholdId),
-          lastHouseholdChange: myHouseholdId
-        });
+async function fetchGitHubUsername(token) {
+  const res = await fetch("https://api.github.com/user", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.login;
+}
+
+async function deleteLedgerFilesInRepo(username, token) {
+  const repos = await fetchUserRepos(token);
+
+  for (const repo of repos) {
+    // Only operate on repos owned by the user
+    if (repo.owner.login !== username) continue;
+
+    // Only operate on ledger repos
+    if (!repo.name.startsWith("ledger-")) continue;
+
+    console.log("Cleaning ledger files in repo:", repo.name);
+
+    // 1. Delete entries/*.json
+    const entries = await githubListDirectory(username, repo.name, "entries", token);
+    for (const file of entries) {
+      if (file.type === "file") {
+        await githubDeleteFile(username, repo.name, file.path, file.sha, token);
       }
     }
 
-    // 3. Delete profile
-    await deleteDoc(myProfileRef);
+    // 2. Delete ledger-settings.json
+    await githubDeleteIfExists(username, repo.name, "ledger-settings.json", token);
 
-    // 4. Delete user's own household
-    if (myHouseholdRef) {
-      await deleteDoc(myHouseholdRef);
-    }
-
-    // 5. Delete user document
-    await deleteDoc(userRef);
-
-    // 6. Delete from Firebase Authentication
-    const auth = getAuth();
-    const authUser = auth.currentUser;
-    await authUser.delete();
-
-    alert("账户已成功删除");
-    window.location.reload();
-
-  } catch (err) {
-    console.error("Error deleting account:", err);
-    alert("删除失败: " + err.message);
+    // 3. Delete change-log.jsonl
+    await githubDeleteIfExists(username, repo.name, "change-log.jsonl", token);
   }
+}
+
+async function githubListDirectory(owner, repo, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (res.status === 404) return []; // directory doesn't exist
+  return await res.json();
+}
+
+async function githubDeleteIfExists(owner, repo, path, token) {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (res.status === 404) return;
+
+  const file = await res.json();
+  await githubDeleteFile(owner, repo, path, file.sha, token);
+}
+
+async function githubDeleteFile(owner, repo, path, sha, token) {
+  await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: `Delete ${path}`,
+      sha
+    })
+  });
+}
+
+async function fetchUserRepos(token) {
+  const res = await fetch("https://api.github.com/user/repos?per_page=100", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!res.ok) return [];
+  return await res.json();
 }
 
 function showPopupWindow({ title, message, buttons = [] }) {

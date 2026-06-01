@@ -21,7 +21,7 @@
   </div>
 
   <div class="header-bar">
-    <button id="return-btn"  onclick="onReturnButton()"" style="display: none;">&lt; 返回</button>
+    <button id="return-btn"  onclick="onReturnButton()" style="display: none;">&lt; 返回</button>
     <button id="cancel-btn" onclick="resetCreate()" style="display: none;">取消</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
     <button id="save-btn-headerbar" class="header-right-button" onclick="saveEntry()" style="display: none;">✔️保存</button>
@@ -637,7 +637,7 @@
 
         <!-- Labels -->
         <section class="settings-section labels">
-          <p id="labels-title">标签</p>
+          <p id="labels-title">类别</p>
           <div id="labels-actions">
               <button id="manage-expense-categories-btn" class="settings-button"
                       onclick="prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)">
@@ -826,7 +826,10 @@
 
         <section class="settings-section danger-zone">
           <p id="danger-zone-title">危险区域</p>
-          <button id="delete-entry-data-button" class="settings-button">删除所有交易数据</button>
+          <div id="danger-zone-actions">
+            <button id="delete-entry-data-button" class="settings-button">删除所有交易数据</button>
+            <button id="delete-all-data-button" class="settings-button">删除账户（删除所有交易数据和账户数据）</button>
+          </div>
         </section>
       </div>
     </div>
