@@ -5062,7 +5062,7 @@ async function getFilteredEntries({
 } = {}) {
 
   let localDbMap = await get(LOCAL_DB_KEY) || {};
-
+console.log('localDbMap:', localDbMap)
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
 
