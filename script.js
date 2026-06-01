@@ -1155,7 +1155,7 @@ async function init() {
   }
   
   const localDeleted = await get("accountDeleted");
-
+console.log(selectedRepos)
   // Check deletion marker in personal.json
   const deletedFlag = await githubReadJson(selectedRepos.personalSettingsRepo.name, "personal.json", token);
 
