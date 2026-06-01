@@ -531,6 +531,10 @@ input[list], input[type="text"], input[type="url"],
   transition: flex 0.2s ease;
 }
 
+.item-row input {
+  transition: transform 0.3s ease;
+}
+
 /* When show-delete is active */
 .item-row.show-delete input {
   transform: translateX(-3.7rem); /* slide inputs left */
