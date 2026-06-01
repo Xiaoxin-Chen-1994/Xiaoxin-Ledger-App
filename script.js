@@ -8188,7 +8188,7 @@ async function runReceiptOCR(processedBlob) {
   const resultsBox = document.getElementById("receipt-ocr-results");
   resultsBox.innerHTML = "Recognizing…";
 
-  const { data: { text } } = await Tesseract.recognize(processedBlob, "eng", {
+  const { data: { text: rawText } } = await Tesseract.recognize(processedBlob, "eng", {
     tessedit_char_whitelist: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.$:/-%() ",
     preserve_interword_spaces: "1",
     user_defined_dpi: "300",
@@ -8196,8 +8196,13 @@ async function runReceiptOCR(processedBlob) {
     tessedit_char_blacklist: "|{}[]<>",
   });
 
-  const parsed = parseReceiptText(text);
+  // STEP 1 — Correct the OCR text
+  const correctedText = correctOCRText(rawText);
 
+  // STEP 2 — Parse the corrected text
+  const parsed = parseCorrectedText(correctedText);
+
+  // STEP 3 — Display everything
   resultsBox.innerHTML = `
     <div><strong>Merchant:</strong> ${parsed.merchant || "-"}</div>
     <div><strong>Date:</strong> ${parsed.date || "-"}</div>
@@ -8206,100 +8211,94 @@ async function runReceiptOCR(processedBlob) {
     <div style="margin-top:1rem;"><strong>Parsed Items:</strong></div>
     <pre style="white-space:pre-wrap;">${JSON.stringify(parsed.items, null, 2)}</pre>
 
+    <div style="margin-top:1rem;"><strong>Corrected Text:</strong></div>
+    <pre style="white-space:pre-wrap; font-size:0.9em; color:#333;">
+${correctedText}
+    </pre>
+
     <div style="margin-top:1rem;"><strong>Raw OCR Text:</strong></div>
-    <pre style="white-space:pre-wrap; font-size:0.85em; opacity:0.8;">
-${text}
+    <pre style="white-space:pre-wrap; font-size:0.85em; opacity:0.7;">
+${rawText}
     </pre>
   `;
 }
 
-function parseReceiptText(text) {
-  // ---------- Regex patterns ----------
-  const weightRegex =
-  /(.+?)\s+([\d.]+)\s*(kg|lb|ke|ks|k9|1b|Ib)\s*@\s*\$?([\d.]+)(?:\/(kg|lb|ke|ks|k9))?\s+([\d.]+)/i;
+function correctOCRText(raw) {
+  return raw
+    // Fix kg variants: ke, ks, k9, 1b, Ib, |b → kg
+    .replace(/\b(k[e9s]|1b|Ib|\|b)\b/gi, "kg")
 
-  const countRegex =
-    /(.+?)\s+(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/i;
+    // Fix decimals: "1. 38" → "1.38"
+    .replace(/(\d)\.\s+(\d)/g, "$1.$2")
 
-  const simpleRegex =
-    /(.+?)\s+(\d+\.\d{2})$/;
+    // Fix decimals: "1 .38" → "1.38"
+    .replace(/(\d)\s*\.\s*(\d{2})/g, "$1.$2")
 
-  const discountRegex =
-    /(LOYALTY|SAVINGS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i;
+    // Fix "$1. 52" → "$1.52"
+    .replace(/\$\s*(\d)\.\s*(\d{2})/g, "\$$1.$2")
 
-  const taxRegex =
-    /(HST|GST|PST|TAX)[^\d]*([\d.]+)/i;
+    // Fix "/ kg" → "/kg"
+    .replace(/\s*\/\s*(kg|lb)/gi, "/$1")
 
-  const totalRegex =
-    /(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i;
+    // Fix "@  $1.52" → "@ $1.52"
+    .replace(/\@\s*\$/g, "@ $")
 
-  const raw = text;
+    // Remove garbage characters
+    .replace(/[^\w\s\.\@\$\-\/]/g, " ")
 
-  const lines = text
-    .split("\n")
-    .map(normalizeReceiptLine)
-    .filter(Boolean);
+    // Collapse spaces
+    .replace(/[ \t]+/g, " ")
 
-  const merchant = lines.find(l => /[A-Za-z]/.test(l)) || null;
+    .trim();
+}
 
-  const date =
-    raw.match(/\b\d{2}\/\d{2}\/\d{2}\b/)?.[0] ||
-    raw.match(/\b\d{4}\/\d{2}\/\d{2}\b/)?.[0] ||
-    null;
-
-  const blocks = mergeBlocks(lines);
+function parseCorrectedText(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   const items = [];
   const discounts = [];
   const taxes = [];
   let total = null;
 
-  for (const block of blocks) {
+  for (const line of lines) {
     let m;
 
-    if (/MASTERCARD|VISA|DEBIT|CREDIT|ACCOUNT|COPY|POINTS/i.test(block)) {
-      continue;
-    }
-
-    // Weight-based item
-    m = block.match(weightRegex);
+    // Weight item: "1.594 kg @ 4.38/kg 6.99"
+    m = line.match(/(.+?)\s+([\d.]+)\s*kg\s*@\s*\$?([\d.]+)\/kg\s+([\d.]+)/i);
     if (m) {
       items.push({
         name: cleanName(m[1]),
         quantity: parseFloat(m[2]),
-        unit: m[3],
-        unit_price: parseFloat(m[4]),
-        total: parseFloat(m[6])
-      });
-      continue;
-    }
-
-    // Count-based item
-    m = block.match(countRegex);
-    if (m) {
-      items.push({
-        name: cleanName(m[1]),
-        quantity: parseInt(m[2], 10),
         unit_price: parseFloat(m[3]),
         total: parseFloat(m[4])
       });
       continue;
     }
 
-    // Simple item
-    m = block.match(simpleRegex);
+    // Count item: "6 @ 0.49 2.94"
+    m = line.match(/(.+?)\s+(\d+)\s*@\s*\$?([\d.]+)\s+([\d.]+)/);
     if (m) {
       items.push({
         name: cleanName(m[1]),
-        quantity: null,
-        unit_price: null,
+        quantity: parseInt(m[2]),
+        unit_price: parseFloat(m[3]),
+        total: parseFloat(m[4])
+      });
+      continue;
+    }
+
+    // Simple item: "BANANA 1.31"
+    m = line.match(/(.+?)\s+(\d+\.\d{2})$/);
+    if (m) {
+      items.push({
+        name: cleanName(m[1]),
         total: parseFloat(m[2])
       });
       continue;
     }
 
     // Discount / loyalty
-    m = block.match(discountRegex);
+    m = line.match(/(LOYALTY|SAVINGS|DISCOUNT|COUPON)[^\d\-]*(-?\d+\.\d{2})/i);
     if (m) {
       discounts.push({
         type: m[1],
@@ -8309,7 +8308,7 @@ function parseReceiptText(text) {
     }
 
     // Tax
-    m = block.match(taxRegex);
+    m = line.match(/(HST|GST|PST|TAX)[^\d]*([\d.]+)/i);
     if (m) {
       taxes.push({
         type: m[1],
@@ -8319,69 +8318,14 @@ function parseReceiptText(text) {
     }
 
     // Total
-    m = block.match(totalRegex);
+    m = line.match(/(TOTAL|AMOUNT DUE|BALANCE|GRAND TOTAL)[^\d]*([\d.]+)/i);
     if (m) {
       total = parseFloat(m[2]);
       continue;
     }
   }
 
-  return {
-    merchant,
-    date,
-    total,
-    items,
-    discounts,
-    taxes,
-    raw
-  };
-}
-
-function normalizeReceiptLine(line) {
-  return line
-    // fix "1. 52" → "1.52"
-    .replace(/(\d)\.\s+(\d)/g, "$1.$2")
-    // fix "0. 49" → "0.49"
-    .replace(/(\d)\s*\.\s*(\d{2})/g, "$1.$2")
-    // fix "$1. 52" → "$1.52"
-    .replace(/\$\s*(\d)\.\s*(\d{2})/g, "\$$1.$2")
-    // fix "/ kg" → "/kg"
-    .replace(/\s*\/\s*(kg|lb)/gi, "/$1")
-    // fix "@  $1.52" → "@ $1.52"
-    .replace(/\@\s*\$/g, "@ $")
-    // remove garbage chars
-    .replace(/[^\w\s\.\@\$\-\/]/g, "")
-    // collapse spaces
-    .replace(/[ \t]+/g, " ")
-    .trim();
-}
-
-function mergeBlocks(lines) {
-  const blocks = [];
-  let current = "";
-
-  for (const line of lines) {
-    if (/(@|\d+\.\d{2}|kg|lb|ke|ks|k9)/i.test(line)) {
-      current += (current ? " " : "") + line;
-    } else {
-      if (current) blocks.push(current.trim());
-      current = line;
-    }
-  }
-  if (current) blocks.push(current.trim());
-  return blocks;
-}
-
-function findItemName(lines, index) {
-  for (let offset = 1; offset <= 2; offset++) {
-    const i = index - offset;
-    if (i < 0) break;
-    const line = lines[i];
-    if (/[A-Za-z]/.test(line)) {
-      return cleanName(line);
-    }
-  }
-  return "";
+  return { items, discounts, taxes, total };
 }
 
 function cleanName(str) {
