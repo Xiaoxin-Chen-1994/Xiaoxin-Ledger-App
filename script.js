@@ -1123,13 +1123,6 @@ async function githubAppendChangeLog(repoName, change, token) {
 async function init() {
   window.scrollTo(0, 0);
 
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.get("deleteMode") === "1") {
-    await performAccountDeletion();
-    return;
-  }
-
   // 1. Load token
   const token = await get("github_token");
 
@@ -1154,6 +1147,13 @@ async function init() {
     await listPrivateRepos();
   }
 
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("deleteMode") === "1") {
+    await performAccountDeletion();
+    return;
+  }
+  
   const localDeleted = await get("accountDeleted");
 
   // Check deletion marker in personal.json
