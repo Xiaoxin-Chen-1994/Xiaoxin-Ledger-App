@@ -2212,6 +2212,10 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     if (!Array.isArray(subWorkspace.tags)) {
       subWorkspace.tags = [];
     }
+    if (subWorkspace.tags.includes(newTag)) {
+      return; // do nothing
+    }
+    
     subWorkspace.tags.push(newTag);
     addTag(newTag, subWorkspace);
     input.value = null;
@@ -2659,6 +2663,22 @@ async function saveEntry() {
     // -----------------------------
     await set(LOCAL_DB_KEY, localDbMap);
     await set(LOCAL_LOG_KEY, localLogMap);
+
+    // add tags to settingsMap
+    const wsTags = ws.tags || [];
+    const existing = settingsMap[repoId]?.tags || [];
+
+    // Merge + dedupe
+    const merged = Array.from(new Set([...existing, ...wsTags]));
+
+    // Sort alphabetically (case-insensitive)
+    merged.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+    // Save back
+    settingsMap[repoId].tags = merged;
+
+    // Persist to IndexedDB
+    await set("ledger_settings", settingsMap);
 
     // -----------------------------
     // Cleanup workspace
