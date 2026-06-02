@@ -467,9 +467,8 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
   container.innerHTML = `
     <h3>Resolve Repository Selection</h3>
 
-    ${
-      incompatible.length > 0
-        ? `
+    ${incompatible.length > 0
+      ? `
       <p>The following local/offline repos no longer exist on GitHub.  
       You may merge them into a GitHub repo OR skip syncing them:</p>
 
@@ -489,27 +488,27 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
         )
         .join("")}
       `
-        : `<p>No incompatible repos detected.</p>`
+      : `<p>No incompatible repos detected.</p>`
     }
 
     <h3>Select a repository to store personal settings</h3>
     <select id="personalRepoSelect">
       <option value="">-- Select one --</option>
       ${ledgerRepos
-        .map(
-          r => `
+      .map(
+        r => `
         <option value="${r.full_name}" data-id="${r.id}">
           ${r.full_name}
         </option>`
-        )
-        .join("")}
+      )
+      .join("")}
     </select>
 
     <h3>Select repositories for ledger data</h3>
     <ul>
       ${ledgerRepos
-        .map(
-          r => `
+      .map(
+        r => `
         <li>
           <label>
             <input type="checkbox" class="ledger-repo"
@@ -519,8 +518,8 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
             ${r.full_name}
           </label>
         </li>`
-        )
-        .join("")}
+      )
+      .join("")}
     </ul>
 
     <div class="actions">
@@ -624,7 +623,7 @@ async function smartSync(selectedRepos, token) {
 
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
-      
+
       const cloudExists = await githubFileExists(repoName, "personal.json", token);
       cloud = cloudExists
         ? await githubReadJson(repoName, "personal.json", token)
@@ -1151,7 +1150,7 @@ async function smartSync(selectedRepos, token) {
   }
 
   settingsMap = await get("ledger_settings") || {};
-  
+
   // ------------------------------------------------------------
   // Save everything
   // ------------------------------------------------------------
@@ -1277,7 +1276,7 @@ async function init() {
 
   // 1. Load token
   const token = await get("github_token");
-  
+
   const loginBtn = document.getElementById("login-btn");
   if (token) {
     // Logged in → show Logout
@@ -1320,8 +1319,8 @@ async function init() {
 
       // Basic structural checks
       if (!selectedRepos ||
-          !Array.isArray(selectedRepos.ledgerRepos) ||
-          selectedRepos.ledgerRepos.length === 0) {
+        !Array.isArray(selectedRepos.ledgerRepos) ||
+        selectedRepos.ledgerRepos.length === 0) {
         return { valid: false, incompatible: [] };
       }
 
@@ -1369,7 +1368,7 @@ async function init() {
   } else { // if not logged in
     if (!selectedRepos) { // if not logged in, and if local data not exist, create new
       let ledgerRepos;
-      
+
       ledgerRepos = [
         {
           id: "local",
@@ -1385,13 +1384,13 @@ async function init() {
 
       await set("selectedRepos", selectedRepos);
     }
-console.log(selectedRepos)
+
     window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
   }
 
-  
+
   // 4. Load ALL ledger DBs
-  smartSync(selectedRepos, token);
+  await smartSync(selectedRepos, token);
 
   // Initialize household selector
   initLedgerSelector();
@@ -1446,7 +1445,7 @@ async function logout() {
   let ledgerRepos;
 
   const repoIds = Object.keys(localDbMap);
-  
+
   if (repoIds.length > 0) {
     // Logged out but local data exists → create a local repo
     ledgerRepos = repoIds.map((rid, index) => ({
@@ -2363,8 +2362,19 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
         const span = document.createElement("span");
         span.textContent = tag;
         span.addEventListener("click", () => {
-          input.value = tag;
+          // Add to subWorkspace.tags if not already present
+          if (!Array.isArray(subWorkspace.tags)) {
+            subWorkspace.tags = [];
+          }
+          if (!subWorkspace.tags.includes(tag)) {
+            subWorkspace.tags.push(tag);
+          }
+          
+          addTag(tag, subWorkspace);
+          input.value = null; // Clear input
+          suggestionsDiv.innerHTML = ""; // Clear suggestions
         });
+
         suggestionsDiv.appendChild(span);
       }
     });
@@ -2375,7 +2385,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     const newTag = input.value.trim();
     if (!newTag) return;
 
-    let subWorkspace = null;
+      let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
@@ -2393,6 +2403,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     subWorkspace.tags.push(newTag);
     addTag(newTag, subWorkspace);
     input.value = null;
+    suggestionsDiv.innerHTML = "";
   });
 });
 
@@ -3374,7 +3385,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 }
 
 // history stacks
-let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]]
+let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
 
 function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
@@ -3517,7 +3528,7 @@ function showPage(name, title = latestTitle, options = {}) {
     const orderBtn = document.getElementById("manage-btn-headerbar");
     orderBtn.style.display = "block";
     orderBtn.onclick = () => {
-      prepareHouseholdTabs('order-labels', options.type, options.title);
+      prepareRepoTabs('order-labels', options.type, options.title);
     };
 
   } else if (latestPage === "order-labels") {
@@ -3709,55 +3720,59 @@ function getEditTitle(type) {
   return titleMap[currentLang]?.[type] || "";
 }
 
-function prepareHouseholdTabs(task, type, title, activeHouseholdId = userDoc.orderedHouseholds[0]) {
+function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.ledgerRepos[0].id) {
 
-  if (userDoc.orderedHouseholds.length > 1) {
-    const tabContainer = document.getElementById(task + "-household-tabs");
+  const repoList = selectedRepos.ledgerRepos;
+
+  if (repoList.length > 1) {
+    const tabContainer = document.getElementById(task + "-repo-tabs");
     tabContainer.innerHTML = ""; // clear old buttons
 
-    for (const repoId of userDoc.orderedHouseholds) {
+    for (const repo of repoList) {
       const btn = document.createElement("button");
       btn.className = "tab-btn";
-      btn.dataset.id = repoId;
-      btn.textContent = householdDocs[repoId].name;
+      btn.dataset.id = repo.id;
+      btn.textContent = repo.name; // repo name
 
-      // Mark the first button as active 
-      if (repoId === activeHouseholdId) {
+      // Mark active
+      if (repo.id === activeRepoId) {
         btn.classList.add("active");
       }
 
-      // Add click listener
+      // Click handler
       btn.addEventListener("click", () => {
-        // 1. Update active household
-        activeHouseholdId = repoId;
+        activeRepoId = repo.id;
 
-        // 2. Update UI active state
-        document.querySelectorAll("#" + task + "-household-tabs .tab-btn")
+        // Update UI
+        document.querySelectorAll("#" + task + "-repo-tabs .tab-btn")
           .forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
 
-        loadLabels(activeHouseholdId, task, type, title);
+        // Load labels/settings for this repo
+        loadLabels(activeRepoId, task, type, title);
 
+        // Store active repo on page
         const page = document.getElementById(task + "-page");
-        page.dataset.activeHouseholdId = activeHouseholdId;
+        page.dataset.activeRepoId = activeRepoId;
       });
 
       tabContainer.appendChild(btn);
     }
   }
 
+  // Set active repo on page
   const page = document.getElementById(task + "-page");
-  page.dataset.activeHouseholdId = activeHouseholdId;
+  page.dataset.activeRepoId = activeRepoId;
 
+  // Auto-load labels for these tasks
   if (task === "manage-labels" || task === "order-labels") {
-    loadLabels(activeHouseholdId, task, type, title);
+    loadLabels(activeRepoId, task, type, title);
     showPage(task, title, { type, title });
   }
-
 }
-window.prepareHouseholdTabs = prepareHouseholdTabs;
+window.prepareRepoTabs = prepareRepoTabs;
 
-async function loadLabels(activeHouseholdId, task, type, title) {
+async function loadLabels(activeRepoId, task, type, title) {
   const t = translations[currentLang];
 
   const deleteBtn = document.getElementById("delete-btn-headerbar");
@@ -3767,18 +3782,19 @@ async function loadLabels(activeHouseholdId, task, type, title) {
   const container = document.getElementById(task + "-labels-container");
   container.innerHTML = "";
 
-  const householdData = householdDocs[activeHouseholdId];
+  // Repo data
+  const repoSettings = settingsMap[activeRepoId];
+  const repoInfo = selectedRepos.ledgerRepos.find(r => r.id === activeRepoId);
 
   const block = document.createElement("div");
-  block.classList.add("household-block");
+  block.classList.add("repo-block");
 
-  // Household name header
+  // Repo name header
   const header = document.createElement("h3");
-
-  header.textContent = householdData.name;
+  header.textContent = repoInfo ? repoInfo.name : "(Unknown Repo)";
   block.appendChild(header);
 
-  let primaryCategories = householdDocs[activeHouseholdId][type];
+  let primaryCategories = repoSettings[type];
 
   if (!primaryCategories || primaryCategories.length === 0) {
     const emptyMsg = document.createElement("button");
@@ -3786,8 +3802,9 @@ async function loadLabels(activeHouseholdId, task, type, title) {
     emptyMsg.textContent = t.noPrimaryCategories;
     emptyMsg.style.background = "none";
     block.appendChild(emptyMsg);
+
   } else {
-    if (task === 'order-labels') {
+    if (task === "order-labels") {
       const notes = document.createElement("div");
       notes.style.color = "var(--muted)";
       notes.style.fontStyle = "italic";
@@ -3798,21 +3815,43 @@ async function loadLabels(activeHouseholdId, task, type, title) {
       checkedCountText.style.color = "var(--muted)";
       checkedCountText.style.fontStyle = "italic";
       block.appendChild(checkedCountText);
-      block.checkedCountText = checkedCountText; // Store reference on the block
+      block.checkedCountText = checkedCountText;
     }
 
     if (["expense-categories", "income-categories"].includes(type)) {
 
-      if (task != 'order-labels') {
-        // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, true);
+      if (task !== "order-labels") {
+        const [addRow, addWrapper] = createAddCategoryRow(
+          t.createPrimaryCategory,
+          `<span class="icon-content">➕</span>`,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          true
+        );
         block.appendChild(addWrapper);
       }
 
-      for (const category of householdDocs[activeHouseholdId][type]) {
-        const [row, primaryWrapper] = createCategoryRow(category.primary, category.icon, block, block, activeHouseholdId, task, type, title, false, true);
+      for (const category of repoSettings[type]) {
+        const [row, primaryWrapper] = createCategoryRow(
+          category.primary,
+          category.icon,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          true
+        );
 
         let secondaryCategories = category.secondaries;
+
         if (!secondaryCategories || secondaryCategories.length === 0) {
           const emptyMsg = document.createElement("button");
           emptyMsg.classList.add("secondary-category");
@@ -3825,37 +3864,102 @@ async function loadLabels(activeHouseholdId, task, type, title) {
 
         } else {
           for (const secondaryCategory of category.secondaries) {
-            const [secRow, secondaryWrapper] = createCategoryRow(secondaryCategory.name, secondaryCategory.icon, primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
+            createCategoryRow(
+              secondaryCategory.name,
+              secondaryCategory.icon,
+              primaryWrapper,
+              block,
+              activeRepoId,
+              task,
+              type,
+              title,
+              true,
+              true,
+              category.primary
+            );
           }
         }
 
-        if (task != 'order-labels') {
-          // Allow adding a secondary // not for the order-labels-page
-          const [secAddRow, secAddWrapper] = createAddCategoryRow(t.createSecondaryCategory, `<span class="icon-content">➕</span>`, primaryWrapper, block, activeHouseholdId, task, type, title, true, true, category.primary);
+        if (task !== "order-labels") {
+          const [secAddRow, secAddWrapper] = createAddCategoryRow(
+            t.createSecondaryCategory,
+            `<span class="icon-content">➕</span>`,
+            primaryWrapper,
+            block,
+            activeRepoId,
+            task,
+            type,
+            title,
+            true,
+            true,
+            category.primary
+          );
           primaryWrapper.appendChild(secAddWrapper);
         }
       }
 
-      if (task != 'order-labels') {
-        // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createPrimaryCategory, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, true);
+      if (task !== "order-labels") {
+        const [addRow, addWrapper] = createAddCategoryRow(
+          t.createPrimaryCategory,
+          `<span class="icon-content">➕</span>`,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          true
+        );
         block.appendChild(addWrapper);
       }
 
     } else {
-      if (task != 'order-labels') {
-        // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, false);
+      // Labels (not categories)
+      if (task !== "order-labels") {
+        const [addRow, addWrapper] = createAddCategoryRow(
+          t.createLabel,
+          `<span class="icon-content">➕</span>`,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          false
+        );
         block.appendChild(addWrapper);
       }
 
-      for (const label of householdDocs[activeHouseholdId][type]) {
-        const [row, primaryWrapper] = createCategoryRow(label.name, label.icon, block, block, activeHouseholdId, task, type, title, false, false);
-      };
+      for (const label of repoSettings[type]) {
+        createCategoryRow(
+          label.name,
+          label.icon,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          false
+        );
+      }
 
-      if (task != 'order-labels') {
-        // Allow adding a primary // not for the order-labels-page
-        const [addRow, addWrapper] = createAddCategoryRow(t.createLabel, `<span class="icon-content">➕</span>`, block, block, activeHouseholdId, task, type, title, false, false);
+      if (task !== "order-labels") {
+        const [addRow, addWrapper] = createAddCategoryRow(
+          t.createLabel,
+          `<span class="icon-content">➕</span>`,
+          block,
+          block,
+          activeRepoId,
+          task,
+          type,
+          title,
+          false,
+          false
+        );
         block.appendChild(addWrapper);
       }
     }
@@ -3904,7 +4008,7 @@ function createAddCategoryRow(name, icon, parentWrapper, block, repoId, task, ty
   return [rowContent, categoryWrapper];
 }
 
-function createCategoryInputRow(activeHouseholdId, task, type, title, hasSecondary, options = {}) {
+function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, options = {}) {
   // options: { primaryDocId, isSecondary, parentId, label, icon, onSave }
   const t = translations[currentLang];
 
@@ -4049,7 +4153,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
   cancelBtn.classList.add("labels-cancel-btn");
 
   cancelBtn.addEventListener("click", async () => {
-    loadLabels(activeHouseholdId, task, type, title);
+    loadLabels(activeRepoId, task, type, title);
   })
 
   tickBtn.addEventListener("click", async () => {
@@ -4060,10 +4164,10 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
       return;
     }
 
-    const categories = householdDocs[activeHouseholdId][type];
-    const householdRef = doc(db, "households", activeHouseholdId);
+    const categories = settingsMap[activeRepoId][type];
+    const householdRef = doc(db, "households", activeRepoId);
 
-    const allCategories = householdDocs[activeHouseholdId][type];
+    const allCategories = settingsMap[activeRepoId][type];
 
     if (hasSecondary) {
       // check if this name is available
@@ -4207,7 +4311,7 @@ function createCategoryInputRow(activeHouseholdId, task, type, title, hasSeconda
 
     ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
-    loadLabels(activeHouseholdId, task, type, title);
+    loadLabels(activeRepoId, task, type, title);
 
   });
 
@@ -4287,7 +4391,7 @@ function handleDeleteClick(block, hasSecondary) {
   });
 }
 
-function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, task, type, title, isSecondary, hasSecondary, parentName = null) {
+function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task, type, title, isSecondary, hasSecondary, parentName = null) {
   // wrapper for one row
   const categoryWrapper = document.createElement("div");
   categoryWrapper.classList.add(isSecondary ? "secondary-wrapper" : "category-wrapper");
@@ -4508,13 +4612,13 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       if (!targetName) return;
 
       // Perform reorder
-      await reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type });
+      await reorderCategory({ activeRepoId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type });
 
       dragInfo = null;
 
       // Refresh UI
       ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-      loadLabels(activeHouseholdId, task, type, title);
+      loadLabels(activeRepoId, task, type, title);
     });
 
   } else { // not for the order-labels-page
@@ -4537,7 +4641,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       if (existingRow) existingRow.remove();
 
       // create a new input row with current values
-      const inputRow = createCategoryInputRow(activeHouseholdId, task, type, title, hasSecondary, {
+      const inputRow = createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, {
         label: name,
         icon: icon,
         isSecondary,
@@ -4550,8 +4654,8 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
     // === DELETE HANDLER ===
     deleteBtn.addEventListener("click", async () => {
       if (!confirm("Delete this category?")) return;
-      const categories = householdDocs[activeHouseholdId][type];
-      const householdRef = doc(db, "households", activeHouseholdId)
+      const categories = settingsMap[activeRepoId][type];
+      const householdRef = doc(db, "households", activeRepoId)
 
       try {
         if (isSecondary) {
@@ -4585,7 +4689,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
 
       ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
-      loadLabels(activeHouseholdId, task, type, title);
+      loadLabels(activeRepoId, task, type, title);
     });
 
     // gesture handling: swipe, right-click, or long press
@@ -4736,14 +4840,14 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
       if (draggedName === targetName) return;
       if (!targetName) return;
 
-      reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type })
+      reorderCategory({ activeRepoId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type })
 
       isDragging = false;
       btn.classList.remove("dragging");
 
       ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
-      loadLabels(activeHouseholdId, task, type, title);
+      loadLabels(activeRepoId, task, type, title);
 
     });
   }
@@ -4751,14 +4855,31 @@ function createCategoryRow(name, icon, parentWrapper, block, activeHouseholdId, 
   return [rowContent, categoryWrapper];
 }
 
-async function reorderCategory({ activeHouseholdId, hasSecondary, draggedName, draggedType, draggedParent, targetName, targetType, targetParent, position, type }) {
-  const categories = householdDocs[activeHouseholdId][type];
-  const householdRef = doc(db, "households", activeHouseholdId);
+async function reorderCategory({
+  activeRepoId,
+  hasSecondary,
+  draggedName,
+  draggedType,
+  draggedParent,
+  targetName,
+  targetType,
+  targetParent,
+  position,
+  type
+}) {
+  // Categories now come from settingsMap
+  const categories = settingsMap[activeRepoId][type];
 
+  if (!categories) return false;
+
+  // ============================================================
+  // PRIMARY + SECONDARY STRUCTURE
+  // ============================================================
   if (hasSecondary) {
-    // ============================================================
+
+    // ------------------------------------------------------------
     // PRIMARY MOVE
-    // ============================================================
+    // ------------------------------------------------------------
     if (draggedType === "primary") {
       const oldIndex = categories.findIndex(p => p.primary === draggedName);
       if (oldIndex === -1) return false;
@@ -4772,75 +4893,69 @@ async function reorderCategory({ activeHouseholdId, hasSecondary, draggedName, d
 
       categories.splice(newIndex, 0, draggedObj);
 
-      await updateDoc(householdRef, { [type]: categories });
+      await saveSettings(activeRepoId);
       return true;
     }
 
-    // ============================================================
+    // ------------------------------------------------------------
     // SECONDARY MOVE
-    // ============================================================
+    // ------------------------------------------------------------
     if (draggedType === "secondary") {
       const fromPrimary = categories.find(p => p.primary === draggedParent);
-
       if (!fromPrimary) return false;
 
       const fromArr = fromPrimary.secondaries;
-
       const oldIndex = fromArr.findIndex(s => s.name === draggedName);
       if (oldIndex === -1) return false;
 
       const draggedObj = fromArr.splice(oldIndex, 1)[0];
 
-      // When dropped to a primary, insert at the beginning of the target primary's secondaries 
+      // Dropped onto a primary → insert at beginning
       if (targetType === "primary") {
         const toPrimary = categories.find(p => p.primary === targetName);
-        const toArr = toPrimary.secondaries;
+        if (!toPrimary) return false;
 
-        toArr.splice(0, 0, draggedObj);
-        await updateDoc(householdRef, { [type]: categories });
-        return true;
+        toPrimary.secondaries.splice(0, 0, draggedObj);
 
-      } else {
-        const toPrimary = categories.find(p => p.primary === targetParent);
-        const toArr = toPrimary.secondaries;
-
-        let newIndex = toArr.findIndex(s => s.name === targetName);
-        if (newIndex === -1) return false;
-
-        if (position === "after") newIndex++;
-
-        toArr.splice(newIndex, 0, draggedObj);
-
-        await updateDoc(householdRef, { [type]: categories });
+        await saveSettings(activeRepoId);
         return true;
       }
+
+      // Dropped onto another secondary
+      const toPrimary = categories.find(p => p.primary === targetParent);
+      if (!toPrimary) return false;
+
+      const toArr = toPrimary.secondaries;
+
+      let newIndex = toArr.findIndex(s => s.name === targetName);
+      if (newIndex === -1) return false;
+
+      if (position === "after") newIndex++;
+
+      toArr.splice(newIndex, 0, draggedObj);
+
+      await saveSettings(activeRepoId);
+      return true;
     }
-  } else {
-
-    // ============================================================
-    // NO SECONDARY STRUCTURE → FLAT LIST MOVE
-    // ============================================================
-
-    // Find old index
-    const oldIndex = categories.findIndex(item => item.name === draggedName);
-    if (oldIndex === -1) return false;
-
-    const draggedObj = categories.splice(oldIndex, 1)[0];
-
-    // Find new index
-    let newIndex = categories.findIndex(item => item.name === targetName);
-    if (newIndex === -1) return false;
-
-    if (position === "after") newIndex++;
-
-    // Insert at new position
-    categories.splice(newIndex, 0, draggedObj);
-
-    await updateDoc(householdRef, { [type]: categories });
-    return true;
   }
 
-  return false;
+  // ============================================================
+  // FLAT LIST (no secondary structure)
+  // ============================================================
+  const oldIndex = categories.findIndex(item => item.name === draggedName);
+  if (oldIndex === -1) return false;
+
+  const draggedObj = categories.splice(oldIndex, 1)[0];
+
+  let newIndex = categories.findIndex(item => item.name === targetName);
+  if (newIndex === -1) return false;
+
+  if (position === "after") newIndex++;
+
+  categories.splice(newIndex, 0, draggedObj);
+
+  await saveSettings(activeRepoId);
+  return true;
 }
 
 function showActions(wrapper, editBtn, deleteBtn) {
@@ -5069,14 +5184,14 @@ async function setLanguage(lang) {
   document.getElementById("save-home-image-btn").textContent = t.save;
   document.getElementById("defaults-title").textContent = t.defaults;
   document.getElementById("manage-defaults-btn").textContent = t.manageDefaults;
-  
-  
+
+
   if (token) {
     document.getElementById("login-btn").textContent = t.logout;
   } else {
     document.getElementById("login-btn").textContent = t.loginWithGitHub;
   }
-  
+
   document.getElementById("delete-account-btn").textContent = t.deleteAccount;
 
   // Nav
@@ -7973,8 +8088,8 @@ document.querySelectorAll(".selector-button[data-type='category']")
 
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
-        if (inputType === "expense") { prepareHouseholdTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories) };
-        if (inputType === "income") { prepareHouseholdTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories) };
+        if (inputType === "expense") { prepareRepoTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories) };
+        if (inputType === "income") { prepareRepoTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories) };
       };
 
       ScrollToSelectItem(categorySelector.querySelector(".primary-col"), subWorkspace[inputType].primaryCategory);
@@ -8031,7 +8146,7 @@ document.querySelectorAll(".selector-button[data-type='subject']")
 
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
-        prepareHouseholdTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects);
+        prepareRepoTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects);
       };
 
       ScrollToSelectItem(subjectSelector.querySelector(".subject-col"), btn.textContent);
@@ -8053,7 +8168,7 @@ document.querySelectorAll(".selector-button[data-type='collection']")
 
         sel.style.transform = 'translateY(120%)';
         openSelector = null;
-        prepareHouseholdTabs('manage-labels', 'collections', translations[currentLang].manageCollections);
+        prepareRepoTabs('manage-labels', 'collections', translations[currentLang].manageCollections);
       };
 
       ScrollToSelectItem(collectionSelector.querySelector(".collection-col"), btn.textContent);
