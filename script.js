@@ -2365,6 +2365,8 @@ function saveItemsToWorkspace() {
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
+  
+  const group = activeTab.querySelector(`#${activeForm} .item-group`);
   const rows = group.querySelectorAll(".item-row");
 
   subWorkspace.items = Array.from(rows).map(row => ({
