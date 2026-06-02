@@ -1838,8 +1838,8 @@ function setDefaultSubject(button, subWorkspace) {
       const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
       // Set default subject if missing
-      if (!subWorkspace.subject) {
-        subWorkspace.subject = def.subject;
+      if (!subWorkspace[inputType].subject) {
+        subWorkspace[inputType].subject = def.subject;
       }
     }
   });
@@ -1848,32 +1848,32 @@ function setDefaultSubject(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const subjects = settings.subjects;
-    const currentSubject = subWorkspace.subject;
+    const currentSubject = subWorkspace[inputType].subject;
     const subjectExists = subjects.some(s => s.name === currentSubject);
 
     if (!subjectExists) {
       // Restore defaults
-      subWorkspace.subject = def.subject;
+      subWorkspace[inputType].subject = def.subject;
     }
 
-    const subject = subjects.find(acc => acc.name === subWorkspace.subject);
-    subWorkspace.subjectIcon = subject.icon
+    const subject = subjects.find(acc => acc.name === subWorkspace[inputType].subject);
+    subWorkspace[inputType].subjectIcon = subject.icon
 
-    subWorkspace.subjectInnerHTML = `
+    subWorkspace[inputType].subjectInnerHTML = `
       <span class="cat-part">
-        <span class="icon selected">${subWorkspace.subjectIcon}</span>
-        <span class="cat-label">${subWorkspace.subject}</span>
+        <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].subject}</span>
       </span>
     `;
 
     // Update button
-    button.innerHTML = subWorkspace.subjectInnerHTML;
+    button.innerHTML = subWorkspace[inputType].subjectInnerHTML;
 
     // Prepare subject column
     const subjectCol = subjectSelector.querySelector(".subject-col");
 
     createList(subjectCol, subjects);
-    ScrollToSelectItem(subjectCol, subWorkspace.subject);
+    ScrollToSelectItem(subjectCol, subWorkspace[inputType].subject);
   }
 }
 
@@ -1889,8 +1889,8 @@ function setDefaultCollection(button, subWorkspace) {
       const def = settings.defaults[type];    // defaults for expense/income/transfer/balance
 
       // Set default collection if missing
-      if (!subWorkspace.collection) {
-        subWorkspace.collection = def.collection;
+      if (!subWorkspace[inputType].collection) {
+        subWorkspace[inputType].collection = def.collection;
       }
     }
   });
@@ -1899,32 +1899,32 @@ function setDefaultCollection(button, subWorkspace) {
 
   if (["expense", "income"].includes(inputType)) {
     const collections = settings.collections;
-    const currentCollection = subWorkspace.collection;
+    const currentCollection = subWorkspace[inputType].collection;
     const collectionExists = collections.some(c => c.name === currentCollection);
 
     if (!collectionExists) {
       // Restore defaults
-      subWorkspace.collection = def.collection;
+      subWorkspace[inputType].collection = def.collection;
     }
 
-    const collection = collections.find(acc => acc.name === subWorkspace.collection);
-    subWorkspace.collectionIcon = collection.icon
+    const collection = collections.find(acc => acc.name === subWorkspace[inputType].collection);
+    subWorkspace[inputType].collectionIcon = collection.icon
 
-    subWorkspace.collectionInnerHTML = `
+    subWorkspace[inputType].collectionInnerHTML = `
       <span class="cat-part">
-        <span class="icon selected">${subWorkspace.collectionIcon}</span>
-        <span class="cat-label">${subWorkspace.collection}</span>
+        <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
+        <span class="cat-label">${subWorkspace[inputType].collection}</span>
       </span>
     `;
 
     // Update button
-    button.innerHTML = subWorkspace.collectionInnerHTML;
+    button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
 
     // Prepare collection column
     const collectionCol = collectionSelector.querySelector(".collection-col");
 
     createList(collectionCol, collections);
-    ScrollToSelectItem(collectionCol, subWorkspace.collection);
+    ScrollToSelectItem(collectionCol, subWorkspace[inputType].collection);
   }
 }
 
@@ -2565,8 +2565,8 @@ async function saveEntry() {
       secondaryCategory: ws[inputType].secondaryCategory,
       account: ws[inputType].accountInfo.account.name,
       currency: ws[inputType].accountInfo.account.currency,
-      subject: ws.subject,
-      collection: ws.collection
+      subject: ws[inputType].subject,
+      collection: ws[inputType].collection
     };
   } else if (inputType === "transfer") {
     entryData = {
@@ -3371,8 +3371,8 @@ function loadEntryIntoWorkspace(e) {
 
     ws[e.type].accountInfo      = { account: {name: e.account, currency: e.currency} };
 
-    ws.subject = e.subject || "";
-    ws.collection = e.collection || "";
+    ws[e.type].subject = e.subject || "";
+    ws[e.type].collection = e.collection || "";
   }
 
   else if (e.type === "transfer") {
@@ -6873,16 +6873,16 @@ function updateSelectorPreview(updatedCol) {
     const { icon: icon, name: name } =
       getSelectedValue(subjectSelector, ".subject-col", true);
 
-    subWorkspace.subject = name;
-    subWorkspace.subjectIcon = icon;
+    subWorkspace[inputType].subject = name;
+    subWorkspace[inputType].subjectIcon = icon;
 
     lastButton.innerHTML = `${icon} ${name}`;
   } else if (lastButton.dataset.type === "collection") {
     const { icon: icon, name: name } =
       getSelectedValue(collectionSelector, ".collection-col", true);
 
-    subWorkspace.collection = name;
-    subWorkspace.collectionIcon = icon;
+    subWorkspace[inputType].collection = name;
+    subWorkspace[inputType].collectionIcon = icon;
 
     lastButton.innerHTML = `${icon} ${name}`;
   }
@@ -8704,11 +8704,6 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
   // Insert OCR fields into workspace
   // -----------------------------
 
-  // Merchant → subject or notes depending on your design
-  if (data.merchant) {
-    ws.subject = data.merchant;
-  }
-
   // Date → inputTransactionTime
   if (data.date) {
     ws.inputTransactionTime = normalizeDate(data.date);
@@ -8725,7 +8720,7 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
       .map(i => `${i.name}: ${i.price.toFixed(2)}`)
       .join("\n");
 
-    ws.notes = (ws.notes || "") + "\n" + itemLines;
+    ws.notes = (ws.notes || "") + "\n" + data.merchant + "\n" + itemLines;
   }
 
   // -----------------------------
