@@ -3352,10 +3352,7 @@ function loadEntryIntoWorkspace(e) {
     ws[e.type].secondaryCategory = e.secondaryCategory;
     ws[e.type].catInnerHTML = e.catInnerHTML;
 
-    ws.expense.accountInfo      = { account: {name: e.account, currency: e.currency} };
-    ws.income.accountInfo       = { account: {name: e.account, currency: e.currency} };
-    ws.balance.accountInfo      = { account: {name: e.account, currency: e.currency} };
-    ws.transfer.fromAccountInfo = { account: {name: e.account, currency: e.currency} };
+    ws[e.type].accountInfo      = { account: {name: e.account, currency: e.currency} };
 
     ws.subject = e.subject || "";
     ws.collection = e.collection || "";
@@ -3368,9 +3365,6 @@ function loadEntryIntoWorkspace(e) {
 
     ws.transfer.sameCurrency = e.sameCurrency;
 
-    ws.expense.accountInfo      = { account: {name: e.fromAccount, currency: e.fromCurrency} };
-    ws.income.accountInfo       = { account: {name: e.fromAccount, currency: e.fromCurrency} };
-    ws.balance.accountInfo      = { account: {name: e.fromAccount, currency: e.fromCurrency} };
     ws.transfer.fromAccountInfo = { account: {name: e.fromAccount, currency: e.fromCurrency} };
     ws.transfer.toAccountInfo   = { account: {name: e.toAccount, currency: e.toCurrency} };
 
@@ -3382,10 +3376,7 @@ function loadEntryIntoWorkspace(e) {
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
     ws.balance = {};
 
-    ws.expense.accountInfo      = { account: {name: e.account, currency: e.currency} };
-    ws.income.accountInfo       = { account: {name: e.account, currency: e.currency} };
     ws.balance.accountInfo      = { account: {name: e.account, currency: e.currency} };
-    ws.transfer.fromAccountInfo = { account: {name: e.account, currency: e.currency} };
   }
 
   // Save workspace buffer
@@ -6765,12 +6756,8 @@ function updateSelectorPreview(updatedCol) {
         getSelectedValue(accountSelector, ".secondary-col", true);
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
-
-      // link accountInfo of all four types
-      subWorkspace.expense.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
-      subWorkspace.income.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
-      subWorkspace.balance.accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
-      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      
+      subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
 
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
@@ -6795,10 +6782,6 @@ function updateSelectorPreview(updatedCol) {
       const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
       const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      // link accountInfo of all four types
-      subWorkspace.expense.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
-      subWorkspace.income.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
-      subWorkspace.balance.accountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
       subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
       subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputRepoId, null, toAccountName);
 
