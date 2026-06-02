@@ -2365,7 +2365,7 @@ function saveItemsToWorkspace() {
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
-  
+
   const group = activeTab.querySelector(`#${activeForm} .item-group`);
   const rows = group.querySelectorAll(".item-row");
 
@@ -7314,25 +7314,32 @@ function tryUpdateAmount(expr, amountButton) {
     calcLabel.style.color = 'grey';
     amountButton.style.color = getAmountColor(amountButton);
     return;
+  
+  } else {
+    if (inputType === 'transfer') {
+      if (amountButton.id === 'transfer-to-amount') {
+        subWorkspace.transfer.toCalculation = expr; // raw expression
+      } else {
+        subWorkspace.calculation = expr; // raw expression
+      }
+    } else {
+      subWorkspace.calculation = expr; // raw expression
+    }
   }
-
-  const validStart = /^[\d\-\(\.\s]/.test(expr);
 
   const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
 
-    if (validStart || (typeof result === 'number' && isFinite(result))) {
+    if (typeof result === 'number' && isFinite(result)) {
       // VALID expression
       amountButton.textContent = result.toFixed(2);
       if (inputType === 'transfer') {
         if (amountButton.id === 'transfer-to-amount') {
           subWorkspace.transfer.toAmount = result;  // numeric
-          subWorkspace.transfer.toCalculation = expr;          // raw expression
         } else {
           subWorkspace.amount = result;             // numeric
-          subWorkspace.calculation = expr;                           // raw expression
         }
 
         if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
@@ -7359,7 +7366,6 @@ function tryUpdateAmount(expr, amountButton) {
 
       } else {
         subWorkspace.amount = result;             // numeric
-        subWorkspace.calculation = expr;                           // raw expression
       }
 
       calcLabel.style.color = 'grey';
