@@ -30,38 +30,6 @@
     <button id="delete-btn-headerbar" class="header-right-button" style="display: none;">删除</button>
   </div>
 
-  <!-- Login / Signup Section -->
-  <div id="login-section" class="section">
-    <h2 id="login-title"></h2>
-    <div class="actions">
-      <button id="githubLogin">Login with GitHub</button>
-    </div>
-    <div id="repoList"></div>
-    <div class="actions">
-      
-    </div>
-    
-    <div id="login-settings" class="login-settings">
-      <div id="login-lang-switch" class="login-settings-row">
-        <p id="login-language-title">语言</p>
-        <button class="settings-button" onclick="setLanguage('zh', true)">中文</button>
-        <button class="settings-button" onclick="setLanguage('en', true)">English</button>
-      </div>
-
-      <div id="login-fontsize-change" class="login-settings-row">
-        <p id="login-fontsize-title">字体大小</p>
-        <button class="settings-button" onclick="decreaseFontsize()">-</button>
-        <button class="settings-button" onclick="increaseFontsize()">+</button>
-      </div>
-
-      <div class="login-settings-row">
-        <p></p>
-        <button id="update-cached-code-login" class="update-code-button">更新程序</button>
-      </div>
-    </div>
-
-  </div>
-
   <div class="pages-wrapper" id="pages-wrapper">
     <!-- Home Page -->
     <div class="base-page" id="home-page">
@@ -779,7 +747,7 @@
         </section>
 
         <div class="actions">
-          <button type="button" id="logout-btn" class="secondary" onclick="logout()">退出登录</button>
+          <button type="button" id="login-btn" class="secondary"></button>
           <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount('account')">删除账户</button>
         </div>
       </div>
@@ -866,7 +834,7 @@
 
   <!-- App Logic -->
   <script src="https://sql.js.org/dist/sql-wasm.js"></script>
-  <script id="app-script" type="module" src="script.js?v=1780363210202></script>
+  <script type="module" src="script.js"></script>
   <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@latest/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

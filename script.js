@@ -81,6 +81,9 @@ let householdDocs = {}; // this variable will contain all data of each household
 const LOCAL_DB_KEY = "ledger_dbs";
 const LOCAL_LOG_KEY = "ledger_logs";
 const LAST_SYNC_KEY = "ledger_lastSynced";
+let localDbMap = null;
+let localLogMap = null;
+let lastSyncedMap = null;
 
 let workspace = { 'transactions': {} } // use this variable to store temporary transaction data before being saved
 //workspace = {
@@ -455,48 +458,69 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
-document.getElementById("githubLogin").onclick = () => {
-  window.location.href = "/api/auth/login";
-};
+async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
+  const container = document.getElementById("repoList");
 
-async function listPrivateRepos() {
-  const token = await get("github_token");
+  const validIds = new Set(ledgerRepos.map(r => r.id));
 
-  // 2. Get all private repos
-  const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
-    headers: { Authorization: `token ${token}` }
-  }).then(r => r.json());
+  // Build UI
+  container.innerHTML = `
+    <h3>Resolve Repository Selection</h3>
 
-  // 3. Filter personal repos (owned by user)
-  const personalRepos = repos.filter(r => r.owner.id === window.currentUserId);
+    ${
+      incompatible.length > 0
+        ? `
+      <p>The following local/offline repos no longer exist on GitHub.  
+      You may merge them into a GitHub repo OR skip syncing them:</p>
 
-  // 4. Filter ledger repos (any repo user can push to)
-  const ledgerRepos = repos.filter(r => r.permissions.push);
+      ${incompatible
+        .map(
+          local => `
+        <div class="merge-block">
+          <strong>${local.name}</strong>
+          <select class="merge-target" data-local-id="${local.id}">
+            <option value="">-- Skip syncing this local repo --</option>
+            ${ledgerRepos
+              .map(r => `<option value="${r.id}">${r.full_name}</option>`)
+              .join("")}
+          </select>
+        </div>
+      `
+        )
+        .join("")}
+      `
+        : `<p>No incompatible repos detected.</p>`
+    }
 
-  // 5. Render UI
-  document.getElementById("repoList").innerHTML = `
     <h3>Select a repository to store personal settings</h3>
     <select id="personalRepoSelect">
       <option value="">-- Select one --</option>
-      ${personalRepos
-      .map(r => `<option value="${r.full_name}" data-id="${r.id}">${r.full_name}</option>`)
-      .join("")}
+      ${ledgerRepos
+        .map(
+          r => `
+        <option value="${r.full_name}" data-id="${r.id}">
+          ${r.full_name}
+        </option>`
+        )
+        .join("")}
     </select>
 
     <h3>Select repositories for ledger data</h3>
     <ul>
       ${ledgerRepos
-      .map(
-        r => `
-            <li>
-              <label>
-                <input type="checkbox" class="ledger-repo" value="${r.full_name}" data-id="${r.id}" data-owner-id="${r.owner.id}">
-                ${r.full_name}
-              </label>
-            </li>
-          `
-      )
-      .join("")}
+        .map(
+          r => `
+        <li>
+          <label>
+            <input type="checkbox" class="ledger-repo"
+              value="${r.full_name}"
+              data-id="${r.id}"
+              data-owner-id="${r.owner.id}">
+            ${r.full_name}
+          </label>
+        </li>`
+        )
+        .join("")}
     </ul>
 
     <div class="actions">
@@ -504,33 +528,84 @@ async function listPrivateRepos() {
     </div>
   `;
 
-  // 6. Handle confirmation
+  // Pre-select valid ledger repos
+  if (selectedRepos && selectedRepos.ledgerRepos) {
+    selectedRepos.ledgerRepos.forEach(sel => {
+      if (validIds.has(sel.id)) {
+        const cb = document.querySelector(`.ledger-repo[data-id="${sel.id}"]`);
+        if (cb) cb.checked = true;
+      }
+    });
+  }
+
+  // Pre-select personal repo if still valid
+  if (selectedRepos && selectedRepos.personalSettingsRepo) {
+    const pid = selectedRepos.personalSettingsRepo.id;
+    const opt = document.querySelector(`#personalRepoSelect option[data-id="${pid}"]`);
+    if (opt) opt.selected = true;
+  }
+
+  // Handle confirmation
   document.getElementById("confirmRepoSelection").onclick = async () => {
+    // Validate personal repo
     const personalSelect = document.getElementById("personalRepoSelect");
     const personalName = personalSelect.value;
     const personalId = Number(personalSelect.selectedOptions[0]?.dataset.id);
-
-    const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
-      .filter(cb => cb.checked)
-      .map(cb => ({ name: cb.value, id: Number(cb.dataset.id), ownerId: Number(cb.dataset.ownerId)}));
 
     if (!personalName) {
       alert("Please select a personal settings repo.");
       return;
     }
 
+    // Validate ledger repos
+    const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
+      .filter(cb => cb.checked)
+      .map(cb => ({
+        name: cb.value,
+        id: Number(cb.dataset.id),
+        ownerId: Number(cb.dataset.ownerId)
+      }));
+
     if (ledgerSelections.length === 0) {
       alert("Please select at least one ledger repo.");
       return;
     }
 
-    selectedRepos = {
+    // Handle merging of incompatible repos
+    const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
+
+    for (const sel of mergeSelections) {
+      const localId = sel.dataset.localId;
+      const targetId = sel.value;
+
+      if (targetId) {
+        // Merge local DB into GitHub repo
+        localDbMap[targetId] = localDbMap[localId];
+        delete localDbMap[localId];
+      } else {
+        // Skip syncing → keep local DB under its localId
+        // Do NOT include it in selectedRepos
+      }
+    }
+
+    await set(LOCAL_DB_KEY, localDbMap);
+
+    // Build final ledgerRepos list
+    const mergedLedgerRepos = ledgerSelections.map(r => ({
+      id: r.id,
+      name: r.name,
+      ownerId: r.ownerId
+    }));
+
+    // Save new selectedRepos
+    const newSelected = {
       personalSettingsRepo: { name: personalName, id: personalId },
-      ledgerRepos: ledgerSelections,
-      activeLedgerRepo: ledgerSelections[0]
+      ledgerRepos: mergedLedgerRepos,
+      activeLedgerRepo: mergedLedgerRepos[0]
     };
 
-    await set("selectedRepos", selectedRepos);
+    await set("selectedRepos", newSelected);
+
     window.location.href = "/";
     window.location.reload();
   };
@@ -542,17 +617,23 @@ const SQL = await initSqlJs({
 
 async function smartSync(selectedRepos, token) {
   // Sync personal settings 
-  if (selectedRepos.personalSettingsRepo) {
-    const repoName = selectedRepos.personalSettingsRepo.name;
+  if (!token || selectedRepos.personalSettingsRepo) {
+    let repoName = null;
+    let cloud = null;
+    let cloudDeleted = null;
+
+    if (token) {
+      repoName = selectedRepos.personalSettingsRepo.name;
+      
+      const cloudExists = await githubFileExists(repoName, "personal.json", token);
+      cloud = cloudExists
+        ? await githubReadJson(repoName, "personal.json", token)
+        : null;
+
+      cloudDeleted = cloud?.deletedAtTimestamp || 0;
+    }
 
     const local = await get("personal_settings"); // may be null
-
-    const cloudExists = await githubFileExists(repoName, "personal.json", token);
-    const cloud = cloudExists
-      ? await githubReadJson(repoName, "personal.json", token)
-      : null;
-
-    const cloudDeleted = cloud?.deletedAtTimestamp || 0;
 
     // -----------------------------------------
     // Rule 1 — local null AND (cloud null OR cloud deleted)
@@ -568,71 +649,71 @@ async function smartSync(selectedRepos, token) {
       };
 
       await set("personal_settings", defaults);
-      await githubWriteJson(repoName, "personal.json", defaults, token);
+      if (token) {
+        await githubWriteJson(repoName, "personal.json", defaults, token);
+      }
     }
 
-    // -----------------------------------------
-    // Rule 2 — local null, cloud exists → pull
-    // -----------------------------------------
-    if (!local && cloud) {
-      await set("personal_settings", cloud);
-    }
-
-    // -----------------------------------------
-    // Rule 3 — local exists, cloud null → push
-    // -----------------------------------------
-    if (local && !cloud) {
-      await githubWriteJson(repoName, "personal.json", local, token);
-    }
-
-    // if both local and cloud exists
-    if (local && cloud) {
-
+    if (token) {
       // -----------------------------------------
-      // Rule 4 — cloud is newer (deleted or recreated) → wipe local
+      // Rule 2 — local null, cloud exists → pull
       // -----------------------------------------
-      if (
-        (cloudDeleted > 0 && cloudDeleted >= local.createdAt) ||
-        (cloud.createdAt > local.createdAt)
-      ) {
-        console.log("Local data is older → wiping local data");
-        const pendingDeleteMode = await get("pendingDelete");
-        await deleteLocalData(pendingDeleteMode);
-        window.location.href = "/";
-        window.location.reload();
+      if (!local && cloud) {
+        await set("personal_settings", cloud);
       }
 
       // -----------------------------------------
-      // Rule 5 — local is newer (cloud deleted earlier or cloud older) → push local
+      // Rule 3 — local exists, cloud null → push
       // -----------------------------------------
-      if (
-        (cloudDeleted > 0 && cloudDeleted < local.createdAt) ||
-        (cloud.createdAt < local.createdAt)
-      ) {
+      if (local && !cloud) {
         await githubWriteJson(repoName, "personal.json", local, token);
       }
 
-      // -----------------------------------------
-      // Rule 6 — createdAt equal → updatedAt decides
-      // -----------------------------------------
-      if (local.createdAt === cloud.createdAt) {
-        // local newer --> push to cloud
-        if (local.updatedAt > cloud.updatedAt) {
-          await githubWriteJson(repoName, "personal.json", local, token);
+      // if both local and cloud exists
+      if (local && cloud) {
 
-        // cloud newer --> overwrite local
-        } else if (cloud.updatedAt > local.updatedAt) {
-          await set("personal_settings", cloud);
+        // -----------------------------------------
+        // Rule 4 — cloud is newer (deleted or recreated) → wipe local
+        // -----------------------------------------
+        if (
+          (cloudDeleted > 0 && cloudDeleted >= local.createdAt) ||
+          (cloud.createdAt > local.createdAt)
+        ) {
+          console.log("Local data is older → wiping local data");
+          const pendingDeleteMode = await get("pendingDelete");
+          await deleteLocalData(pendingDeleteMode);
+          window.location.href = "/";
+          window.location.reload();
+        }
+
+        // -----------------------------------------
+        // Rule 5 — local is newer (cloud deleted earlier or cloud older) → push local
+        // -----------------------------------------
+        if (
+          (cloudDeleted > 0 && cloudDeleted < local.createdAt) ||
+          (cloud.createdAt < local.createdAt)
+        ) {
+          await githubWriteJson(repoName, "personal.json", local, token);
+        }
+
+        // -----------------------------------------
+        // Rule 6 — createdAt equal → updatedAt decides
+        // -----------------------------------------
+        if (local.createdAt === cloud.createdAt) {
+          // local newer --> push to cloud
+          if (local.updatedAt > cloud.updatedAt) {
+            await githubWriteJson(repoName, "personal.json", local, token);
+
+            // cloud newer --> overwrite local
+          } else if (cloud.updatedAt > local.updatedAt) {
+            await set("personal_settings", cloud);
+          }
         }
       }
     }
   }
 
   // Sync ledger data
-  let localDbMap = await get(LOCAL_DB_KEY) || {};
-  let localLogMap = await get(LOCAL_LOG_KEY) || {};
-  let lastSyncedMap = await get(LAST_SYNC_KEY) || {};
-
   for (const repo of selectedRepos.ledgerRepos) {
     const repoId = repo.id;
     const repoName = repo.name;
@@ -645,13 +726,15 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
-    const repoHasData = await githubFileExists(repoName, "ledger-settings.json", token);
+    if (token) {
+      const repoHasData = await githubFileExists(repoName, "ledger-settings.json", token);
+    }
     const localHasData = !!localDbBytes;
 
     // ------------------------------------------------------------
     // 2. No data anywhere → create empty
     // ------------------------------------------------------------
-    if (!repoHasData && !localHasData) {
+    if ((!token || !repoHasData) && !localHasData) {
       console.log(`[${repoName}] No data anywhere → create empty`);
 
       // Initialize ledger-level settings
@@ -872,7 +955,7 @@ async function smartSync(selectedRepos, token) {
         collections,
         subjects,
         defaults,
-        "tags": [],
+        "tags": {},
       };
 
       // Save ledger settings locally
@@ -892,196 +975,189 @@ async function smartSync(selectedRepos, token) {
       continue;
     }
 
-    // ------------------------------------------------------------
-    // 3. Only local has data → push everything
-    // ------------------------------------------------------------
-    if (!repoHasData && localHasData) {
+    if (token) {
+      // ------------------------------------------------------------
+      // 3. Only local has data → push everything
+      // ------------------------------------------------------------
+      if (!repoHasData && localHasData) {
 
-      if (!(await get("isNewLedger"))) { // show popup message if not confirmed yet. 
-        showPopupWindow({
-          title: currentLang === "en" ? "Upload Local Data?" : "上传本地数据？",
-          message:
-            currentLang === "en"
-              ? `The GitHub repository "${repoName}" is empty.\n\nDo you want to upload your local data to GitHub?`
-              : `GitHub 仓库 "${repoName}" 是空的。\n\n是否要将本地数据上传到 GitHub？`,
-          buttons: [
-            {
-              text: currentLang === "en" ? "Cancel" : "取消",
-              primary: true,
-              onClick: () => {}
-            },
-            {
-              text: currentLang === "en" ? "Upload" : "上传",
-              onClick: async () => {
-                await set("isNewLedger", true);
-                await smartSync(selectedRepos, token);
+        if (!(await get("isNewLedger"))) { // show popup message if not confirmed yet. 
+          showPopupWindow({
+            title: currentLang === "en" ? "Upload Local Data?" : "上传本地数据？",
+            message:
+              currentLang === "en"
+                ? `The GitHub repository "${repoName}" is empty.\n\nDo you want to upload your local data to GitHub?`
+                : `GitHub 仓库 "${repoName}" 是空的。\n\n是否要将本地数据上传到 GitHub？`,
+            buttons: [
+              {
+                text: currentLang === "en" ? "Cancel" : "取消",
+                primary: true,
+                onClick: () => { }
+              },
+              {
+                text: currentLang === "en" ? "Upload" : "上传",
+                onClick: async () => {
+                  await set("isNewLedger", true);
+                  await smartSync(selectedRepos, token);
+                }
+              }
+            ]
+          });
+        }
+
+        if (await get("isNewLedger")) {
+          console.log(`[${repoName}] Only local has data → pushing all entries`);
+
+          const db = new SQL.Database(localDbBytes);
+          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+          const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
+
+          for (const row of rows) {
+            const entry = JSON.parse(row[0]);
+            await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
+          }
+
+          for (const logEntry of localLog) {
+            console.log('logEntry: ', logEntry)
+            await githubAppendChangeLog(repoName, logEntry, token);
+          }
+
+          settingsMap = await get("ledger_settings");
+          await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
+
+          localLogMap[repoId] = [];
+          lastSyncedMap[repoId] = Date.now();
+        }
+
+        await del("isNewLedger");
+        continue;
+      };
+
+      // ------------------------------------------------------------
+      // 4. Only repo has data, or local was created in a previous version → pull everything
+      // ------------------------------------------------------------
+      if (repoHasData) {
+        const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+        settingsMap = await get("ledger_settings") || {};
+
+        if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
+          console.log(`[${repoName}] Only repo has data → pulling all entries`);
+
+          const db = new SQL.Database();
+          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+          const entryIds = await githubListFiles(repoName, "entries", token);
+
+          for (const id of entryIds) { // this id name already contains '.json'
+            const entry = await githubReadJson(repoName, `entries/${id}`, token);
+            db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
+          }
+
+          settingsMap[repoId] = remoteSettings;
+          await set("ledger_settings", settingsMap);
+
+          localDbMap[repoId] = db.export();
+          localLogMap[repoId] = [];
+          lastSyncedMap[repoId] = Date.now();
+          continue;
+
+        } else {
+          // ------------------------------------------------------------
+          // 5. Both have data → MERGE
+          // ------------------------------------------------------------
+          console.log(`[${repoName}] Both sides have data → merging`);
+
+          const db = new SQL.Database(localDbBytes);
+          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+
+          // 5a. Load cloud change logs since last sync
+          const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
+          const cloudChanges = [];
+
+          for (const file of cloudLogFiles) {
+            const ts = Number(file.replace(".json", ""));
+            if (ts > lastSynced) {
+              const change = await githubReadJson(repoName, `changelog/${file}`, token);
+              cloudChanges.push(change);
+            }
+          }
+
+          // 5b. Summarize changed IDs
+          const changedIds = new Set();
+          for (const c of cloudChanges) changedIds.add(c.entryId);
+          for (const c of localLog) changedIds.add(c.entryId);
+
+          // 5c. For each changed ID, merge
+          for (const id of changedIds) {
+            const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
+            const localChange = localLog.find(c => c.entryId === id) || null;
+
+            // Only cloud changed
+            if (cloudChange && !localChange) {
+              const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
+              console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
+              db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+              continue;
+            }
+
+            // Only local changed
+            if (!cloudChange && localChange) {
+              const localEntry = localChange.newEntry;
+              console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
+              await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
+              await githubAppendChangeLog(repoName, localChange, token);
+              continue;
+            }
+
+            // Both changed → conflict resolution
+            if (cloudChange && localChange) {
+              const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
+              const localOriginal = localChange.original;
+              const localNew = localChange.new;
+
+              // True conflict → compare timestamps
+              if (localChange.timestamp > cloudChange.timestamp) {
+                console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
+                console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
+                console.log(`Newer local: ${JSON.stringify(localNew)}`);
+                await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
+                await githubAppendChangeLog(repoName, localChange, token);
+              } else {
+                console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
+                console.log(`Older local: ${JSON.stringify(localNew)}`);
+                console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
+                db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
               }
             }
-          ]
-        });
-      }
-      
-      if (await get("isNewLedger")) {
-        console.log(`[${repoName}] Only local has data → pushing all entries`);
-
-        const db = new SQL.Database(localDbBytes);
-        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-        const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
-
-        for (const row of rows) {
-          const entry = JSON.parse(row[0]);
-          await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
-        }
-
-        for (const logEntry of localLog) {
-          console.log('logEntry: ', logEntry)
-          await githubAppendChangeLog(repoName, logEntry, token);
-        }
-
-        settingsMap = await get("ledger_settings");
-        await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
-
-        localLogMap[repoId] = [];
-        lastSyncedMap[repoId] = Date.now();
-      }
-      
-      await del("isNewLedger");
-      continue;
-    };
-
-    // ------------------------------------------------------------
-    // 4. Only repo has data, or local was created in a previous version → pull everything
-    // ------------------------------------------------------------
-    if (repoHasData) {
-      const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-      settingsMap = await get("ledger_settings") || {};
-
-      if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) { 
-        console.log(`[${repoName}] Only repo has data → pulling all entries`);
-
-        const db = new SQL.Database();
-        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-        const entryIds = await githubListFiles(repoName, "entries", token);
-
-        for (const id of entryIds) { // this id name already contains '.json'
-          const entry = await githubReadJson(repoName, `entries/${id}`, token);
-          db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
-        }
-        
-        settingsMap[repoId] = remoteSettings;
-        await set("ledger_settings", settingsMap);
-
-        localDbMap[repoId] = db.export();
-        localLogMap[repoId] = [];
-        lastSyncedMap[repoId] = Date.now();
-        continue;
-
-      } else {
-        // ------------------------------------------------------------
-        // 5. Both have data → MERGE
-        // ------------------------------------------------------------
-        console.log(`[${repoName}] Both sides have data → merging`);
-
-        const db = new SQL.Database(localDbBytes);
-        db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-
-        // 5a. Load cloud change logs since last sync
-        const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
-        const cloudChanges = [];
-
-        for (const file of cloudLogFiles) {
-          const ts = Number(file.replace(".json", ""));
-          if (ts > lastSynced) {
-            const change = await githubReadJson(repoName, `changelog/${file}`, token);
-            cloudChanges.push(change);
-          }
-        }
-
-        // 5b. Summarize changed IDs
-        const changedIds = new Set();
-        for (const c of cloudChanges) changedIds.add(c.entryId);
-        for (const c of localLog) changedIds.add(c.entryId);
-
-        // 5c. For each changed ID, merge
-        for (const id of changedIds) {
-          const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
-          const localChange = localLog.find(c => c.entryId === id) || null;
-
-          // Only cloud changed
-          if (cloudChange && !localChange) {
-            const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-            console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
-            db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
-            continue;
           }
 
-          // Only local changed
-          if (!cloudChange && localChange) {
-            const localEntry = localChange.newEntry;
-            console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
-            await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
-            await githubAppendChangeLog(repoName, localChange, token);
-            continue;
-          }
+          // 5d. Save merged DB
+          localDbMap[repoId] = db.export();
 
-          // Both changed → conflict resolution
-          if (cloudChange && localChange) {
-            const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-            const localOriginal = localChange.original;
-            const localNew = localChange.new;
+          // 5e. Clear local change log
+          localLogMap[repoId] = [];
 
-            // True conflict → compare timestamps
-            if (localChange.timestamp > cloudChange.timestamp) {
-              console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
-              console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
-              console.log(`Newer local: ${JSON.stringify(localNew)}`);
-              await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
-              await githubAppendChangeLog(repoName, localChange, token);
-            } else {
-              console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
-              console.log(`Older local: ${JSON.stringify(localNew)}`);
-              console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
-              db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
-            }
-          }
+          // 5f. Update lastSynced
+          lastSyncedMap[repoId] = Date.now();
+
+          const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+          settingsMap = await get("ledger_settings");
+          let localSettings = settingsMap[repoId];
+          settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
+          await set("ledger_settings", settingsMap);
+          await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
         }
-
-        // 5d. Save merged DB
-        localDbMap[repoId] = db.export();
-
-        // 5e. Clear local change log
-        localLogMap[repoId] = [];
-
-        // 5f. Update lastSynced
-        lastSyncedMap[repoId] = Date.now();
-
-        const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-        settingsMap = await get("ledger_settings");
-        let localSettings = settingsMap[repoId];
-        settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
-        await set("ledger_settings", settingsMap);
-        await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
       }
     }
   }
 
+  settingsMap = await get("ledger_settings") || {};
+  
   // ------------------------------------------------------------
   // Save everything
   // ------------------------------------------------------------
   await set(LOCAL_DB_KEY, localDbMap);
   await set(LOCAL_LOG_KEY, localLogMap);
   await set(LAST_SYNC_KEY, lastSyncedMap);
-
-  // now create SQL live DBs based on the indexDB bytes data
-  const dbMap = {};
-
-  for (const repo of selectedRepos.ledgerRepos) {
-    const repoId = repo.id;
-    const bytes = localDbMap[repoId];
-    dbMap[repoId] = new SQL.Database(bytes);
-  }
-
-  return dbMap;
 }
 
 async function githubFileExists(repoName, path, token) {
@@ -1197,55 +1273,131 @@ async function githubAppendChangeLog(repoName, change, token) {
 async function init() {
   window.scrollTo(0, 0);
 
+  let t = translations[currentLang];
+
   // 1. Load token
   const token = await get("github_token");
-
-  if (!token) {
-    console.log("Not logged in");
-    return;
+  
+  const loginBtn = document.getElementById("login-btn");
+  if (token) {
+    // Logged in → show Logout
+    loginBtn.textContent = t.logout;
+    loginBtn.onclick = logout;
+  } else {
+    // Not logged in → show Login
+    loginBtn.textContent = t.loginWithGitHub;
+    loginBtn.onclick = () => {
+      window.location.href = "/api/auth/login";
+    };
   }
 
-  // Get current user login
-  const user = await fetch("https://api.github.com/user", {
-    headers: { Authorization: `token ${token}` }
-  }).then(r => r.json());
+  localDbMap = await get(LOCAL_DB_KEY) || {};
+  localLogMap = await get(LOCAL_LOG_KEY) || {};
+  lastSyncedMap = await get(LAST_SYNC_KEY) || {};
 
-  window.currentUserLogin = user.login;
-  window.currentUserId = user.id;
-
-  // 2. Load repo selections
+  // Load local repo selections
   selectedRepos = await get("selectedRepos");
 
-  // 3. If user has not selected repos → show repo picker
-  if (!selectedRepos || !selectedRepos.personalSettingsRepo || !selectedRepos.ledgerRepos || selectedRepos.ledgerRepos.length === 0) {
-    console.log("No personal settings repo selected → show repo picker");
-    await listPrivateRepos();
-    return
-  }
+  if (token) {
+    // Get current user login
+    const user = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `token ${token}` }
+    }).then(r => r.json());
 
-  const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
-  if (pendingDeleteMode === "account" || pendingDeleteMode === "data")  {
-    const params = new URLSearchParams(window.location.search);
+    window.currentUserLogin = user.login;
+    window.currentUserId = user.id;
 
-    if (params.get("deleteMode") === "1") {
-      await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
-      return;
+    // 2. Get all private repos
+    const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
+      headers: { Authorization: `token ${token}` }
+    }).then(r => r.json());
 
-    } else {
-      await del("pendingDelete"); // clear this variable to cancel delete account
+    // 3. Filter ledger repos (any repo user can push to)
+    const ledgerRepos = repos.filter(r => r.permissions.push);
+
+    function validateLocalSelectedRepos(ledgerRepos) {
+      const incompatible = [];
+
+      // Basic structural checks
+      if (!selectedRepos ||
+          !Array.isArray(selectedRepos.ledgerRepos) ||
+          selectedRepos.ledgerRepos.length === 0) {
+        return { valid: false, incompatible: [] };
+      }
+
+      const validIds = new Set(ledgerRepos.map(r => r.id));
+
+      // Check each selected repo
+      for (const repo of selectedRepos.ledgerRepos) {
+        if (!validIds.has(repo.id)) {
+          incompatible.push(repo);
+        }
+      }
+
+      return {
+        valid: incompatible.length === 0,
+        incompatible
+      };
     }
+
+    // if the local repos have repo Ids that don't exist in Github, ask user to select repos and merge
+    const { valid, incompatible } = validateLocalSelectedRepos(ledgerRepos);
+
+    if (!valid) {
+      console.log("Selected repos invalid — showing merge UI");
+
+      // incompatible = list of repos like:
+      // [{ id: "local 1", name: "Local Ledger 1", ownerId: "local" }, ...]
+
+      showRepoSelectionAndMergeRepos(ledgerRepos, incompatible);
+      return;
+    }
+
+    const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
+    if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
+      const params = new URLSearchParams(window.location.search);
+
+      if (params.get("deleteMode") === "1") {
+        await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
+        return;
+
+      } else {
+        await del("pendingDelete"); // clear this variable to cancel delete account
+      }
+    }
+
+  } else { // if not logged in
+    if (!selectedRepos) { // if not logged in, and if local data not exist, create new
+      let ledgerRepos;
+      
+      ledgerRepos = [
+        {
+          id: "local",
+          name: currentLang === "zh" ? "本地账本" : "Local Ledger",
+          ownerId: "local"
+        }
+      ];
+
+      selectedRepos = {
+        ledgerRepos,
+        activeLedgerRepo: ledgerRepos[0]
+      };
+
+      await set("selectedRepos", selectedRepos);
+    }
+console.log(selectedRepos)
+    window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
   }
+
   
   // 4. Load ALL ledger DBs
-  window.ledgerDbs = await smartSync(selectedRepos, token); // smartSync returns a map: { repoId: SQL.Database }
-  console.log("smartSync complete. Loaded DBs:", window.ledgerDbs);
+  smartSync(selectedRepos, token);
 
   // Initialize household selector
   initLedgerSelector();
   toggleLedgerFormRows();
 
   // UI updates
-  document.getElementById("login-section").style.display = "none";
   document.querySelector(".bottom-nav").style.display = "flex";
 
   // Apply profile settings
@@ -1289,10 +1441,32 @@ init();
 async function logout() {
   await del("github_token");
   await del("selectedRepos");
+
+  // check if local has data
+  let ledgerRepos;
+
+  const repoIds = Object.keys(localDbMap);
+  
+  if (repoIds.length > 0) {
+    // Logged out but local data exists → create a local repo
+    ledgerRepos = repoIds.map((rid, index) => ({
+      id: `local ${index + 1}`,
+      name: `Local Ledger ${index + 1}`,
+      ownerId: `local ${index + 1}`
+    }));
+
+    // Also update selectedRepos so the rest of the app works
+    selectedRepos = {
+      ledgerRepos,
+      activeLedgerRepo: ledgerRepos[0]
+    };
+  }
+
+  await set("selectedRepos", selectedRepos);
+
   window.location.href = "/";
   window.location.reload();
 }
-window.logout = logout;
 
 function toggleLedgerFormRows() {
   // Hide the form row if only one ledger
@@ -2184,7 +2358,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
 
     const tags = settings.tags;
 
-    tags.forEach(tag => {
+    Object.keys(tags).forEach(tag => {
       if (tag && tag.includes(text)) {
         const span = document.createElement("span");
         span.textContent = tag;
@@ -2215,7 +2389,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     if (subWorkspace.tags.includes(newTag)) {
       return; // do nothing
     }
-    
+
     subWorkspace.tags.push(newTag);
     addTag(newTag, subWorkspace);
     input.value = null;
@@ -2382,7 +2556,7 @@ function saveItemsToWorkspace() {
 
   let index = subWorkspace.inputTypeIndex;
   const inputType = transactionTypes[index];
-  
+
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
@@ -2531,7 +2705,7 @@ async function saveEntry() {
 
   if (inputType === "transfer") {
     const fromAcc = ws.transfer.fromAccountInfo.account.name;
-    const toAcc   = ws.transfer.toAccountInfo.account.name;
+    const toAcc = ws.transfer.toAccountInfo.account.name;
 
     // Prevent same-account transfers
     if (fromAcc === toAcc) {
@@ -2664,20 +2838,37 @@ async function saveEntry() {
     await set(LOCAL_DB_KEY, localDbMap);
     await set(LOCAL_LOG_KEY, localLogMap);
 
-    // add tags to settingsMap
-    const wsTags = ws.tags || [];
-    const existing = settingsMap[repoId]?.tags || [];
+    // add or remove tags from tag map
+    const oldTags = loadedEntry_original?.tags || [];
+    const newTags = entryData.tags || [];
 
-    // Merge + dedupe
-    const merged = Array.from(new Set([...existing, ...wsTags]));
+    const added = newTags.filter(t => !oldTags.includes(t));
+    const removed = oldTags.filter(t => !newTags.includes(t));
 
-    // Sort alphabetically (case-insensitive)
-    merged.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    // Handle added tags
+    for (const tag of added) {
+      if (!settingsMap[repoId].tags[tag]) {
+        settingsMap[repoId].tags[tag] = [];
+      }
 
-    // Save back
-    settingsMap[repoId].tags = merged;
+      if (!settingsMap[repoId].tags[tag].includes(entryId)) {
+        settingsMap[repoId].tags[tag].push(entryId);
+      }
+    }
 
-    // Persist to IndexedDB
+    // Handle removed tags
+    for (const tag of removed) {
+      if (!settingsMap[repoId].tags[tag]) continue;
+
+      settingsMap[repoId].tags[tag] =
+        settingsMap[repoId].tags[tag].filter(id => id !== entryId);
+
+      if (settingsMap[repoId].tags[tag].length === 0) {
+        delete settingsMap[repoId].tags[tag];
+      }
+    }
+
+    // Persist
     await set("ledger_settings", settingsMap);
 
     // -----------------------------
@@ -3189,7 +3380,6 @@ function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
   // hide all pages
-  document.getElementById("login-section").style.display = "none";
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").style.display = "none";
@@ -3340,8 +3530,24 @@ function showPage(name, title = latestTitle, options = {}) {
       const block = e.target.closest(".fe-entry-block");
       if (!block) return;
 
+      // If clicking Modify
+      if (e.target.classList.contains("modify-btn")) {
+        const entryId = block.dataset.entryId;
+        const entry = options.allEntriesMap[entryId];
+        if (entry) loadEntryIntoWorkspace(entry);
+        return;
+      }
+
+      // If clicking Delete
+      if (e.target.classList.contains("delete-btn")) {
+        const entryId = block.dataset.entryId;
+        deleteEntry(entryId);
+        block.remove();
+        return;
+      }
+
+      // Normal click → load entry
       const entryId = block.dataset.entryId;
-      const entryType = block.dataset.entryType;
       const entry = options.allEntriesMap[entryId];
       if (!entry) return;
 
@@ -3388,6 +3594,50 @@ function goBack() {
   }
 }
 
+async function deleteEntry(entryId) {
+  let localDbMap = await get(LOCAL_DB_KEY) || {};
+  settingsMap = await get("ledger_settings") || {};
+
+  // Find which repo contains this entry
+  const repoIds = Object.keys(localDbMap);
+
+  for (const rid of repoIds) {
+    const dbBytes = localDbMap[rid];
+    if (!dbBytes) continue;
+
+    const db = new SQL.Database(dbBytes);
+
+    db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+
+    // Load all rows
+    const result = db.exec("SELECT rowid, json FROM ledger");
+    if (result.length === 0) continue;
+
+    const rows = result[0].values;
+
+    for (const [rowid, jsonStr] of rows) {
+      const entry = JSON.parse(jsonStr);
+
+      if (entry.entryId === entryId) {
+        // Delete from SQLite
+        db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
+
+        // Save updated DB back to localDbMap
+        localDbMap[rid] = db.export();
+
+        // Remove from settings tags
+        removeEntryFromTagMap(settingsMap, rid, entry);
+
+        // Persist both
+        await set(LOCAL_DB_KEY, localDbMap);
+        await set("ledger_settings", settingsMap);
+
+        return;
+      }
+    }
+  }
+}
+
 function loadEntryIntoWorkspace(e) {
   let ws = {};
 
@@ -3408,7 +3658,7 @@ function loadEntryIntoWorkspace(e) {
     ws[e.type].secondaryCategory = e.secondaryCategory;
     ws[e.type].catInnerHTML = e.catInnerHTML;
 
-    ws[e.type].accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws[e.type].accountInfo = { account: { name: e.account, currency: e.currency } };
 
     ws[e.type].subject = e.subject || "";
     ws[e.type].collection = e.collection || "";
@@ -3421,8 +3671,8 @@ function loadEntryIntoWorkspace(e) {
 
     ws.transfer.sameCurrency = e.sameCurrency;
 
-    ws.transfer.fromAccountInfo = { account: {name: e.fromAccount, currency: e.fromCurrency} };
-    ws.transfer.toAccountInfo   = { account: {name: e.toAccount, currency: e.toCurrency} };
+    ws.transfer.fromAccountInfo = { account: { name: e.fromAccount, currency: e.fromCurrency } };
+    ws.transfer.toAccountInfo = { account: { name: e.toAccount, currency: e.toCurrency } };
 
     ws.transfer.toAmount = Number(e.toAmount) || 0;
   }
@@ -3432,7 +3682,7 @@ function loadEntryIntoWorkspace(e) {
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
     ws.balance = {};
 
-    ws.balance.accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws.balance.accountInfo = { account: { name: e.account, currency: e.currency } };
   }
 
   // Save workspace buffer
@@ -4718,9 +4968,9 @@ async function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
 
+  const token = await get("github_token");
+
   // Login text
-  document.getElementById("login-title").textContent = t.loginTitle;
-  document.getElementById("githubLogin").textContent = t.loginWithGitHub;
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
@@ -4819,7 +5069,14 @@ async function setLanguage(lang) {
   document.getElementById("save-home-image-btn").textContent = t.save;
   document.getElementById("defaults-title").textContent = t.defaults;
   document.getElementById("manage-defaults-btn").textContent = t.manageDefaults;
-  document.getElementById("logout-btn").textContent = t.logout;
+  
+  
+  if (token) {
+    document.getElementById("login-btn").textContent = t.logout;
+  } else {
+    document.getElementById("login-btn").textContent = t.loginWithGitHub;
+  }
+  
   document.getElementById("delete-account-btn").textContent = t.deleteAccount;
 
   // Nav
@@ -5472,6 +5729,25 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
     }
     index = end;
 
+    document.querySelectorAll(".fe-entry-block").forEach(block => {
+      let startX = 0;
+
+      block.addEventListener("touchstart", e => {
+        startX = e.touches[0].clientX;
+      });
+
+      block.addEventListener("touchend", e => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+
+        if (diff > 40) {
+          block.classList.add("show-actions");   // swipe left
+        } else if (diff < -40) {
+          block.classList.remove("show-actions"); // swipe right
+        }
+      });
+    });
+
     requestAnimationFrame(() => {
       const textareas = scroll.querySelectorAll(".fe-notes-textarea");
       textareas.forEach(autoResizeTextarea);
@@ -5541,6 +5817,8 @@ function renderEntryGroup(day, entries) {
 }
 
 function renderEntryByType(e) {
+  let t = translations[currentLang];
+
   const repoId = e.repoId;
 
   const time = e.transactionTime.split(" ")[1];
@@ -5560,17 +5838,26 @@ function renderEntryByType(e) {
 
     return `
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
-        <div class="fe-entry-icon">${secondaryIcon}</div>
+        
+        <div class="fe-entry-content">
+          <div class="fe-entry-icon">${secondaryIcon}</div>
 
-        <div class="fe-entry-main">
-          <div class="fe-entry-title">${e.secondaryCategory}</div>
-          ${renderNotes(notes)}
-          <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
+          <div class="fe-entry-main">
+            <div class="fe-entry-title">${e.secondaryCategory}</div>
+            ${renderNotes(notes)}
+            <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
+          </div>
+
+          <div class="fe-entry-amount-right ${e.type}">
+            ${Number(e.amount).toFixed(2)}
+          </div>
         </div>
 
-        <div class="fe-entry-amount-right ${e.type}">
-          ${Number(e.amount).toFixed(2)}
+        <div class="fe-entry-actions">
+          <button class="modify-btn">${t.modify}</button>
+          <button class="delete-btn">${t.delete}</button>
         </div>
+
       </div>
     `;
   }
@@ -5579,17 +5866,26 @@ function renderEntryByType(e) {
   if (e.type === "transfer") {
     return `
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
-        <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
+        
+        <div class="fe-entry-content">
+          <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
 
-        <div class="fe-entry-main">
-          <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
-          ${renderNotes(notes)}
-          <div class="fe-entry-meta">${time}</div>
+          <div class="fe-entry-main">
+            <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
+            ${renderNotes(notes)}
+            <div class="fe-entry-meta">${time}</div>
+          </div>
+
+          <div class="fe-entry-amount-right">
+            ${Number(e.amount).toFixed(2)}
+          </div>
         </div>
 
-        <div class="fe-entry-amount-right">
-          ${Number(e.amount).toFixed(2)}
+        <div class="fe-entry-actions">
+          <button class="modify-btn">${t.modify}</button>
+          <button class="delete-btn">${t.delete}</button>
         </div>
+
       </div>
     `;
   }
@@ -5598,17 +5894,26 @@ function renderEntryByType(e) {
   if (e.type === "balance") {
     return `
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
-        <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
+        
+        <div class="fe-entry-content">
+          <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
 
-        <div class="fe-entry-main">
-          <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
-          ${renderNotes(notes)}
-          <div class="fe-entry-meta">${time}</div>
+          <div class="fe-entry-main">
+            <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
+            ${renderNotes(notes)}
+            <div class="fe-entry-meta">${time}</div>
+          </div>
+
+          <div class="fe-entry-amount-right">
+            ${Number(e.amount).toFixed(2)}
+          </div>
         </div>
 
-        <div class="fe-entry-amount-right">
-          ${Number(e.amount).toFixed(2)}
+        <div class="fe-entry-actions">
+          <button class="modify-btn">${t.modify}</button>
+          <button class="delete-btn">${t.delete}</button>
         </div>
+
       </div>
     `;
   }
@@ -6069,7 +6374,7 @@ async function deleteAccount(mode) { // mode = "account" (delete all) or mode = 
       {
         text: currentLang === "en" ? "Cancel" : "取消",
         primary: true,
-        onClick: () => {}
+        onClick: () => { }
       },
       {
         text: currentLang === "en" ? "Delete" : "删除",
@@ -6092,8 +6397,8 @@ async function performAccountDeletion(mode) {
   // Only ask repo selection when deleting DATA, not account
   if (mode === "data") {
     if (ownedRepos.length > 1) {
-    // Show multi-select popup and STOP execution here
-    return showRepoMultiSelectPopup(ownedRepos, mode);
+      // Show multi-select popup and STOP execution here
+      return showRepoMultiSelectPopup(ownedRepos, mode);
     }
 
     // If only one repo, auto-select it
@@ -6101,7 +6406,7 @@ async function performAccountDeletion(mode) {
       await set("reposToDelete", [ownedRepos[0].id]);
     }
   }
-  
+
   // If deleting ENTIRE ACCOUNT → delete ALL repos user owns
   if (mode === "account") {
     const allOwnedRepoIds = ownedRepos.map(r => r.id);
@@ -6118,18 +6423,18 @@ async function performAccountDeletion(mode) {
 
   // 1. Delete GitHub repos owned by this user
   await deleteLedgerFilesInRepo(mode);
-  
+
   // 2. Delete local data
   await deleteLocalData(mode);
-  
+
   const successMessage =
-  mode === "account"
-    ? currentLang === "en"
-      ? "Your account and all associated data have been deleted."
-      : "您的账户和所有相关数据已删除。"
-    : currentLang === "en"
-      ? "Your ledger data has been deleted. "
-      : "您的账本数据已删除。";
+    mode === "account"
+      ? currentLang === "en"
+        ? "Your account and all associated data have been deleted."
+        : "您的账户和所有相关数据已删除。"
+      : currentLang === "en"
+        ? "Your ledger data has been deleted. "
+        : "您的账本数据已删除。";
 
   showStatusMessage(successMessage, "success", 4000);
 
@@ -6153,7 +6458,7 @@ async function deleteLocalData(mode) { // This function will not delete github_t
 
   // 3. Restore the values you want to keep
   if (token) await set("github_token", token);
-  
+
   if (repos) {
     // Remove deleted repos from ledgerRepos
     const updatedLedgerRepos = repos.ledgerRepos.filter(
@@ -6219,7 +6524,7 @@ function showRepoMultiSelectPopup(repos, mode) {
       {
         text: currentLang === "en" ? "Cancel" : "取消",
         primary: true,
-        onClick: () => {}
+        onClick: () => { }
       },
       {
         text: currentLang === "en" ? "Continue" : "继续",
@@ -7387,7 +7692,7 @@ function tryUpdateAmount(expr, amountButton) {
     calcLabel.style.color = 'grey';
     amountButton.style.color = getAmountColor(amountButton);
     return;
-  
+
   } else {
     if (inputType === 'transfer') {
       if (amountButton.id === 'transfer-to-amount') {
@@ -7400,7 +7705,25 @@ function tryUpdateAmount(expr, amountButton) {
     }
   }
 
-  const safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
+  function parenBalance(expr) {
+    let count = 0;
+    for (const c of expr) {
+      if (c === "(") count++;
+      if (c === ")") count--;
+    }
+    return count; // positive = missing ')', negative = invalid
+  }
+
+  let safeExpr = expr.replace(/×/g, '*').replace(/÷/g, '/');
+  let autoFixed = false;
+
+  const balance = parenBalance(safeExpr);
+
+  if (balance > 0) {
+    // Missing closing parens → auto-fix
+    safeExpr += ")".repeat(balance);
+    autoFixed = true;
+  }
 
   try {
     const result = Function(`"use strict"; return (${safeExpr})`)();
@@ -7441,7 +7764,11 @@ function tryUpdateAmount(expr, amountButton) {
         subWorkspace.amount = result;             // numeric
       }
 
-      calcLabel.style.color = 'grey';
+      if (balance > 0) { // parenthesis not balanced
+        calcLabel.style.color = 'red';
+      } else { // normal cases
+        calcLabel.style.color = 'grey';
+      }
       amountButton.style.color = getAmountColor(amountButton);
     } else {
       // Not a number → error
