@@ -181,7 +181,7 @@
                 }
 
                 // 7) other items that end with a number
-                m = trimmedLine.match(/^(.+?)\s*\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
+                m = trimmedLine.match(/^(?:\d+\s+)?(.+?)\s*\$?(\d+\.\d{2}).*$/i);
                 if (m) {
                     let name = m[1].trim();
 

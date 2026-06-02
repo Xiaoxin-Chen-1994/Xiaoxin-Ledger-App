@@ -3699,25 +3699,7 @@ function loadEntryIntoWorkspace(e) {
   // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
 
-  showPage("transaction", getEditTitle(e.type), { 'transactionId': e.entryId })
-}
-
-function getEditTitle(type) {
-  const titleMap = {
-    zh: {
-      expense: "编辑支出",
-      income: "编辑收入",
-      transfer: "编辑转账",
-      balance: "编辑余额"
-    },
-    en: {
-      expense: "Edit Expense",
-      income: "Edit Income",
-      transfer: "Edit Transfer",
-      balance: "Edit Balance"
-    }
-  };
-  return titleMap[currentLang]?.[type] || "";
+  showPage("transaction", "编辑", { 'transactionId': e.entryId })
 }
 
 function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.ledgerRepos[0].id) {
@@ -8981,6 +8963,8 @@ async function runReceiptOCR(processedBlob) {
     </pre>
   `;
 
+  window._receiptParsed = parsed;
+
   document.getElementById("receipt-confirm-btn").style.display = "block";
 }
 
@@ -9063,7 +9047,6 @@ function parseCorrectedText(text) {
 
     // 2.1) Count item: Divisor format: "2 @2/$1.87 W 1.87"
     m = trimmedLine.match(/^(.*?)(\d+)\s*@\s*.*?(\d+(?:\.\d+)?\/\$?\d+\.\d{2}).*?\$?(\d+\.\d{2})?(?:\s*[A-Za-z ]+)?$/i);
-    console.log(m)
     if (m) {
       let namePart = m[1].trim();
 
@@ -9146,7 +9129,7 @@ function parseCorrectedText(text) {
     }
 
     // 7) other items that end with a number
-    m = trimmedLine.match(/^(.+?)\s*\$?(\d+\.\d{2})(?:\s*[A-Za-z ]+)?$/i);
+    m = trimmedLine.match(/^(?:\d+\s+)?(.+?)\s*\$?(\d+\.\d{2}).*$/i);
     if (m) {
       let name = m[1].trim();
 
@@ -9199,13 +9182,17 @@ document.getElementById("receipt-confirm-btn")
 
     if (!receiptScanMode.returnOnly) {
       // Standalone mode → go to create page
-      applyReceiptToWorkspace("create", null, data);
-      showPage("create", translations[currentLang]["create"]);
+      let entryData = applyReceiptToWorkspace("create", null, data);
+      goBack();
+      goBack();
+
+      loadEntryIntoWorkspace(entryData);
 
     } else {
       // Inline mode → return to existing transaction
       closeReceiptScan();
-      applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
+      let entryData = applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
+      goBack();
 
       const ws = workspace.transactions[latestOptions.transactionId];
       switchTab(ws.inputTypeIndex);
@@ -9218,9 +9205,50 @@ function closeReceiptScan() {
 
 function applyReceiptToWorkspace(mode, transactionId, data) {
   let ws;
+  let entryId;
+  let entryData;
 
   if (mode === "create") {
-    ws = workspace.create;
+
+    // instead, make an entry
+    const now = new Date();
+
+    entryId =
+      String(now.getFullYear()) +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0") +
+      String(now.getHours()).padStart(2, "0") +
+      String(now.getMinutes()).padStart(2, "0") +
+      String(now.getSeconds()).padStart(2, "0") +
+      Math.floor(Math.random() * 1_000_000)
+        .toString()
+        .padStart(6, "0");
+
+    if (!workspace.transactions[entryId]) { // initialize
+      workspace.transactions[entryId] = {};
+
+      workspace.transactions[entryId].inputTypeIndex = 0;
+      workspace.transactions[entryId].inputType = transactionTypes[0]; // start with expense
+      workspace.transactions[entryId].amount = 0;
+      workspace.transactions[entryId].calculation = "";
+      workspace.transactions[entryId].tags = [];
+      workspace.transactions[entryId].notes = "";
+      const activeForm = workspace.transactions[entryId].inputType + "-form";
+      let dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
+      let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
+      let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
+      let accountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='account']`);
+      let subjectBtn = document.querySelector(`#${activeForm} .selector-button[data-type='subject']`);
+      let collectionBtn = document.querySelector(`#${activeForm} .selector-button[data-type='collection']`);
+
+      setCurrentTime(dateTimeBtn, workspace.transactions[entryId]);
+      setDefaultLedger(householdBtn, workspace.transactions[entryId]);
+      setDefaultCategory(categoryBtn, workspace.transactions[entryId]);
+      setDefaultAccount(accountBtn, workspace.transactions[entryId]);
+      setDefaultSubject(subjectBtn, workspace.transactions[entryId]);
+      setDefaultCollection(collectionBtn, workspace.transactions[entryId]);
+    }
+    ws = workspace.transactions[entryId];
   } else {
     ws = workspace.transactions[transactionId];
   }
@@ -9232,6 +9260,17 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
   // Date → inputTransactionTime
   if (data.date) {
     ws.inputTransactionTime = normalizeDate(data.date);
+
+    const [yyyy, mm, dd, hh, min, ss] = parseDateFromString(ws.inputTransactionTime);
+
+    if (!ws.inputTransactionTimeRaw) { ws.inputTransactionTimeRaw = {}; }
+
+    ws.inputTransactionTimeRaw.yyyy = Number(yyyy);
+    ws.inputTransactionTimeRaw.mm   = Number(mm);
+    ws.inputTransactionTimeRaw.dd   = Number(dd);
+    ws.inputTransactionTimeRaw.hh   = Number(hh);
+    ws.inputTransactionTimeRaw.min  = Number(min);
+    ws.inputTransactionTimeRaw.ss   = Number(ss);
   }
 
   // Total → amount
@@ -9241,17 +9280,64 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
 
   // Items → append to notes or custom field
   if (data.items && data.items.length > 0) {
-    const itemLines = data.items
-      .map(i => `${i.name}: ${i.price.toFixed(2)}`)
-      .join("\n");
-
-    ws.notes = (ws.notes || "") + "\n" + data.merchant + "\n" + itemLines;
+    ws.items = data.items.map(i => ({
+      name: i.name || "",
+      unitPrice: i.unit_price || i.item_total || "",
+      price: i.item_total || ""
+    }));
   }
 
-  // -----------------------------
-  // Trigger UI refresh
-  // -----------------------------
-  refreshCreateOrTransactionUI(ws);
+  if (data.merchant) {
+    ws.notes = (ws.notes || "") + "\n" + data.merchant;
+  }
+
+  if (mode === "create") {
+    const inputType = ws.inputType;
+
+    const base = {
+      entryId,
+      type: inputType,
+      amount: ws.amount ?? 0,
+      repoId: ws[inputType].repoId,
+      transactionTime: ws.inputTransactionTime,   // you can set this earlier
+      tags: ws.tags ?? [],
+      notes: ws.notes ?? "",
+      createdTimestamp: getFormattedTime(),
+      lastModifiedTimestamp: getFormattedTime()
+    };
+
+    if (inputType === "expense" || inputType === "income") {
+      entryData = {
+        ...base,
+        primaryCategory: ws[inputType].primaryCategory,
+        secondaryCategory: ws[inputType].secondaryCategory,
+        account: ws[inputType].accountInfo.account.name,
+        currency: ws[inputType].accountInfo.account.currency,
+        subject: ws[inputType].subject,
+        collection: ws[inputType].collection
+      };
+    } else if (inputType === "transfer") {
+      entryData = {
+        ...base,
+        toAmount: ws[inputType].toAmount ?? 0,
+        sameCurrency: ws[inputType].sameCurrency,
+        fromAccount: ws[inputType].fromAccountInfo.account.name,
+        fromCurrency: ws[inputType].fromAccountInfo.account.currency,
+        toAccount: ws[inputType].toAccountInfo.account.name,
+        toCurrency: ws[inputType].toAccountInfo.account.currency
+      };
+    } else if (inputType === "balance") {
+      entryData = {
+        ...base,
+        account: ws[inputType].accountInfo.account.name,
+        currency: ws[inputType].accountInfo.account.currency
+      };
+    }
+  } else {
+    entryData = null;
+  }
+
+  return entryData
 }
 
 function normalizeDate(raw) {
