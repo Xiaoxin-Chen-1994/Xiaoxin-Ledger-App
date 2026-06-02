@@ -2506,6 +2506,23 @@ async function saveEntry() {
   const inputType = ws.inputType;
   const repoId = ws[inputType].repoId;
 
+  if (inputType === "transfer") {
+    const fromAcc = ws.transfer.fromAccountInfo.account.name;
+    const toAcc   = ws.transfer.toAccountInfo.account.name;
+
+    // Prevent same-account transfers
+    if (fromAcc === toAcc) {
+      showStatusMessage(
+        currentLang === "en"
+          ? "The from and to accounts cannot be the same."
+          : "转出账户和转入账户不能相同。",
+        "error",
+        4000
+      );
+      return; // stop save
+    }
+  }
+
   let entryId = null;
   let writeMode = null;
   // -----------------------------
@@ -6756,7 +6773,7 @@ function updateSelectorPreview(updatedCol) {
         getSelectedValue(accountSelector, ".secondary-col", true);
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
-      
+
       subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
 
       // Extract account info
