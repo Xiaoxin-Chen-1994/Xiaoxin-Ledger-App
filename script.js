@@ -7459,11 +7459,11 @@ function handleAmountKey(key) {
     return;
   }
 
-  // 2. Prevent parentheses next to operators
-  if (isParen(key) && isOp(last)) return;
-  if (isOp(key) && isParen(last)) return;
-
   if (last) {
+    // 2. Prevent parentheses next to operators
+    if (isParen(key) && isOp(last)) return;
+    if (isOp(key) && isParen(last)) return;
+
     // 3. Replace operator if two typed consecutively
     if (isOp(key) && isOp(last)) {
       expr = expr.slice(0, -1) + key;
