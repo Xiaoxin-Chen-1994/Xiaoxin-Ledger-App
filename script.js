@@ -7463,12 +7463,14 @@ function handleAmountKey(key) {
   if (isParen(key) && isOp(last)) return;
   if (isOp(key) && isParen(last)) return;
 
-  // 3. Replace operator if two typed consecutively
-  if (isOp(key) && isOp(last)) {
-    expr = expr.slice(0, -1) + key;
-    calcLabel.textContent = expr;
-    tryUpdateAmount(expr, amountButton);
-    return;
+  if (last) {
+    // 3. Replace operator if two typed consecutively
+    if (isOp(key) && isOp(last)) {
+      expr = expr.slice(0, -1) + key;
+      calcLabel.textContent = expr;
+      tryUpdateAmount(expr, amountButton);
+      return;
+    }
   }
 
   // Append normal key
