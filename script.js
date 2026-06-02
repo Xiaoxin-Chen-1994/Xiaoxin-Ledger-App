@@ -2267,9 +2267,9 @@ function switchTab(index) {
     });
   }
   // notes
-  if (subWorkspace.inputNotes !== undefined) {
+  if (subWorkspace.notes !== undefined) {
     const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
-    notesEl.value = subWorkspace.inputNotes;
+    notesEl.value = subWorkspace.notes;
   }
 }
 
