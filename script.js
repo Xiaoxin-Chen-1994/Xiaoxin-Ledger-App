@@ -7219,7 +7219,9 @@ const allowedKeys = {
   "Enter": "confirm"
 };
 
+let isHoldingBackspace = false;
 let backspaceInterval = null;
+let backspaceClearTimeout = null;
 
 document.addEventListener("keydown", e => {
   if (!keypadOpen) return; // only respond when keypad is open
@@ -7232,7 +7234,9 @@ document.addEventListener("keydown", e => {
 
   // Handle keyboard backspace hold
   if (mapped === 'backspace') {
-    handleAmountKey('backspace'); // repeated automatically by key repeat
+    if (!isHoldingBackspace) {
+      startBackspaceHold();
+    }
     return;
   }
 
@@ -7245,21 +7249,53 @@ document.addEventListener("keydown", e => {
   handleAmountKey(mapped);
 });
 
-function startBackspaceHold() {
-  // Delete one immediately for responsiveness
-  handleAmountKey('backspace');
+document.addEventListener("keyup", e => {
+  if (!keypadOpen) return; // only respond when keypad is open
 
-  // Start repeating delete
+  if (allowedKeys[e.key] === "backspace") {
+    stopBackspaceHold();
+  }
+});
+
+function startBackspaceHold() {
+  isHoldingBackspace = true;
+
+  // 1. Delete once immediately
+  handleAmountKey("backspace");
+
+  // 2. After 300ms, start slow repeating
   backspaceInterval = setInterval(() => {
-    handleAmountKey('backspace');
-  }, 80); // 80ms feels like a real keyboard
+    handleAmountKey("backspace");
+  }, 120); // slower, more natural
+
+  // 3. After 800ms of holding → clear all
+  backspaceClearTimeout = setTimeout(() => {
+    clearAllAmount();
+  }, 800);
 }
 
 function stopBackspaceHold() {
+  isHoldingBackspace = false;
+
   if (backspaceInterval) {
     clearInterval(backspaceInterval);
     backspaceInterval = null;
   }
+
+  if (backspaceClearTimeout) {
+    clearTimeout(backspaceClearTimeout);
+    backspaceClearTimeout = null;
+  }
+}
+
+function clearAllAmount() {
+  if (!lastButton) return;
+
+  const calcLabel = lastButton.querySelector(".calculation");
+  const amountButton = lastButton.querySelector(".amount-button");
+
+  calcLabel.textContent = "";
+  tryUpdateAmount("", amountButton);
 }
 
 function getAmountColor(amountButton) {
