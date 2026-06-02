@@ -649,7 +649,7 @@ input[list], input[type="text"], input[type="url"],
 .tag {
   display: flex;
   align-items: center;
-  background: var(--card);
+  background: color-mix(in srgb, var(--primary) 20%, var(--bg));
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   gap: 0.25rem;
