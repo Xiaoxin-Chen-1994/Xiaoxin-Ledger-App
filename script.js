@@ -2360,6 +2360,8 @@ function saveItemsToWorkspace() {
     : workspace.transactions[latestOptions.transactionId];
 
   let index = subWorkspace.inputTypeIndex;
+  const inputType = transactionTypes[index];
+  
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
