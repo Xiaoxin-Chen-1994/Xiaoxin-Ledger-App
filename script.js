@@ -3350,12 +3350,10 @@ function loadEntryIntoWorkspace(e) {
     ws[e.type].secondaryCategory = e.secondaryCategory;
     ws[e.type].catInnerHTML = e.catInnerHTML;
 
-    ws[e.type].accountInfo = {
-      account: {
-        name: e.account,
-        currency: e.currency
-      }
-    };
+    ws.expense.accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws.income.accountInfo       = { account: {name: e.account, currency: e.currency} };
+    ws.balance.accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws.transfer.fromAccountInfo = { account: {name: e.account, currency: e.currency} };
 
     ws.subject = e.subject || "";
     ws.collection = e.collection || "";
@@ -3368,21 +3366,11 @@ function loadEntryIntoWorkspace(e) {
 
     ws.transfer.sameCurrency = e.sameCurrency;
 
-    ws.transfer.fromAccountInfo = {
-      account: {
-        name: e.fromAccount,
-        currency: e.fromCurrency
-      }
-    };
-    ws.transfer.fromAccountInnerHTML = e.fromAccountInnerHTML;
-
-    ws.transfer.toAccountInfo = {
-      account: {
-        name: e.toAccount,
-        currency: e.toCurrency
-      }
-    };
-    ws.transfer.toAccountInnerHTML = e.toAccountInnerHTML;
+    ws.expense.accountInfo      = { account: {name: e.fromAccount, currency: e.fromCurrency} };
+    ws.income.accountInfo       = { account: {name: e.fromAccount, currency: e.fromCurrency} };
+    ws.balance.accountInfo      = { account: {name: e.fromAccount, currency: e.fromCurrency} };
+    ws.transfer.fromAccountInfo = { account: {name: e.fromAccount, currency: e.fromCurrency} };
+    ws.transfer.toAccountInfo   = { account: {name: e.toAccount, currency: e.toCurrency} };
 
     ws.transfer.toAmount = Number(e.toAmount) || 0;
   }
@@ -3392,13 +3380,10 @@ function loadEntryIntoWorkspace(e) {
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
     ws.balance = {};
 
-    ws.balance.accountInfo = {
-      account: {
-        name: e.account,
-        currency: e.currency
-      }
-    };
-    ws.balance.accountInnerHTML = e.accountInnerHTML;
+    ws.expense.accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws.income.accountInfo       = { account: {name: e.account, currency: e.currency} };
+    ws.balance.accountInfo      = { account: {name: e.account, currency: e.currency} };
+    ws.transfer.fromAccountInfo = { account: {name: e.account, currency: e.currency} };
   }
 
   // Save workspace buffer
