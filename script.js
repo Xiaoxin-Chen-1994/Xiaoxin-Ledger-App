@@ -2270,6 +2270,15 @@ function addTag(tag, subWorkspace) {
   container.appendChild(tagEl);
 }
 
+let saveTimer = null;
+
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveItemsToWorkspace();
+  }, 150);
+}
+
 function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const t = translations[currentLang];
 
@@ -2297,6 +2306,14 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   row.appendChild(nameInput);
   row.appendChild(unitInput);
   row.appendChild(priceInput);
+
+  function attachAutoSave(input) {
+    input.addEventListener("input", autoSave);
+  }
+
+  attachAutoSave(nameInput);
+  attachAutoSave(unitInput);
+  attachAutoSave(priceInput);
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
