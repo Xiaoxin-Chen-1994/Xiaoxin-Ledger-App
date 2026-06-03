@@ -783,6 +783,12 @@ async function smartSync(selectedRepos, token) {
 
   // Sync ledger data
   for (const repo of selectedRepos.ledgerRepos) {
+    
+    if (repo.skipSync) {
+      console.log(`[${repo.name}] skipSync=true → skipping sync`);
+      continue;
+    }
+    
     const repoId = repo.id;
     const repoName = repo.name;
     console.log('reponame', repoName)
