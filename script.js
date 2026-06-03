@@ -725,8 +725,9 @@ async function smartSync(selectedRepos, token) {
     // ------------------------------------------------------------
     // 1. Detect if repo has data
     // ------------------------------------------------------------
+    let repoHasData = null;
     if (token) {
-      const repoHasData = await githubFileExists(repoName, "ledger-settings.json", token);
+      repoHasData = await githubFileExists(repoName, "ledger-settings.json", token);
     }
     const localHasData = !!localDbBytes;
 
