@@ -669,7 +669,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
     const newSelected = {
       personalSettingsRepo: { name: personalName, id: personalId },
       ledgerRepos: mergedLedgerRepos,
-      activeLedgerRepo: mergedLedgerRepos.find(r => !r.skipSync) || null
+      activeLedgerRepo: mergedLedgerRepos[0]
     };
 
     await set("selectedRepos", newSelected);
