@@ -1665,20 +1665,21 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   container.appendChild(notes);
 
   // ⭐ Show skip-sync message if ANY ledger is local-only
+  // ⭐ Show skip-sync message if ANY ledger is local-only
   const skippedLedgers = selectedRepos?.ledgerRepos?.filter(r => r.skipSync) || [];
 
   if (skippedLedgers.length > 0) {
     const msg = document.createElement("div");
     msg.style.marginBottom = "0.8em";
 
-    // Localized header
+    // Localized header (improved wording)
     const header = document.createElement("div");
     header.style.fontStyle = "italic";
     header.style.color = "var(--muted)";
     header.textContent =
       currentLang === "en"
-        ? "The following ledgers are stored locally and syncing is skipped:"
-        : "以下账本仅存储在本地，且已跳过同步：";
+        ? "The following ledgers are stored locally only because you have chosen to skip their syncing:"
+        : "以下账本因您选择跳过同步而仅存储在本地：";
     msg.appendChild(header);
 
     // List skipped ledgers
@@ -1694,6 +1695,17 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
     });
 
     msg.appendChild(list);
+
+    // ⭐ Data-loss warning
+    const warn = document.createElement("div");
+    warn.style.fontStyle = "italic";
+    warn.style.color = "var(--warning, #d9534f)";
+    warn.style.marginBottom = "0.8em";
+    warn.textContent =
+      currentLang === "en"
+        ? "Warning: Local-only data can be easily lost if the browser clears site data (cache, cookies, storage)."
+        : "警告：如果浏览器清除网站数据（缓存、Cookie、本地存储），这些仅存储在本地的账本可能会丢失。";
+    msg.appendChild(warn);
 
     // Localized instruction
     const note = document.createElement("div");
