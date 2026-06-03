@@ -1664,6 +1664,18 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   notes.style.fontStyle = "italic";
   container.appendChild(notes);
 
+  // ⭐ Show skip-sync message if ANY ledger is local-only
+  const hasSkipped = selectedRepos?.ledgerRepos?.some(r => r.skipSync);
+
+  if (hasSkipped) {
+    const msg = document.createElement("div");
+    msg.style.color = "var(--muted)";
+    msg.style.fontStyle = "italic";
+    msg.style.marginBottom = "0.8em";
+    msg.textContent = "One or more ledgers are stored locally and syncing is skipped.";
+    container.appendChild(msg);
+  }
+
   if (lastSyncStatus !== null) { // it exists   
     notes.textContent = t.timestampNotes;
 
