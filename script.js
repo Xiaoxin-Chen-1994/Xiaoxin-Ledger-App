@@ -586,97 +586,98 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
   // Handle confirmation
   document.getElementById("confirmRepoSelection").onclick = async () => {
-  // Validate personal repo
-  const personalSelect = document.getElementById("personalRepoSelect");
-  const personalName = personalSelect.value;
-  const personalId = Number(personalSelect.selectedOptions[0]?.dataset.id);
+    // Validate personal repo
+    const personalSelect = document.getElementById("personalRepoSelect");
+    const personalName = personalSelect.value;
+    const personalId = Number(personalSelect.selectedOptions[0]?.dataset.id);
 
-  if (!personalName) {
-    alert("Please select a personal settings repo.");
-    return;
-  }
-
-  // Ledger repos (ADDITIONAL repos only)
-  const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
-    .filter(cb => cb.checked)
-    .map(cb => ({
-      id: Number(cb.dataset.id),
-      name: cb.value,
-      ownerId: Number(cb.dataset.ownerId),
-      skipSync: false
-    }));
-
-  // Handle merging of incompatible repos
-  const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
-
-  for (const sel of mergeSelections) {
-    const localId = sel.dataset.localId;
-    const targetId = sel.value;
-
-    if (targetId) {
-      // Merge local DB into GitHub repo
-      localDbMap[targetId] = localDbMap[localId];
-      delete localDbMap[localId];
-
-      // Remove skipSync if merging now
-      const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
-      if (repo) repo.skipSync = false;
-
-    } else {
-      // User chose "Skip syncing"
-      const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
-      if (repo) repo.skipSync = true;
+    if (!personalName) {
+      alert("Please select a personal settings repo.");
+      return;
     }
-  }
 
-  await set(LOCAL_DB_KEY, localDbMap);
+    // Ledger repos (ADDITIONAL repos only)
+    const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
+      .filter(cb => cb.checked)
+      .map(cb => ({
+        id: Number(cb.dataset.id),
+        name: cb.value,
+        ownerId: Number(cb.dataset.ownerId),
+        skipSync: false
+      }));
 
-  // Build final ledgerRepos list
-  // Start with ALL existing repos (including skipped ones)
-  const mergedLedgerRepos = selectedRepos.ledgerRepos.map(r => ({ ...r }));
+    // Handle merging of incompatible repos
+    const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
 
-  // 1. Add merge-target repos first
-  for (const sel of mergeSelections) {
-    if (sel.value) {
-      const targetId = Number(sel.value);
-      const targetRepo = ledgerRepos.find(r => r.id === targetId);
+    for (const sel of mergeSelections) {
+      const localId = sel.dataset.localId;
+      const targetId = sel.value;
 
-      if (targetRepo) {
-        const existing = mergedLedgerRepos.find(r => r.id === targetId);
+      if (targetId) {
+        // Merge local DB into GitHub repo
+        localDbMap[targetId] = localDbMap[localId];
+        delete localDbMap[localId];
 
-        if (existing) {
-          existing.skipSync = false; // ensure syncing
-        } else {
-          mergedLedgerRepos.push({
-            id: targetRepo.id,
-            name: targetRepo.full_name,
-            ownerId: targetRepo.owner.id,
-            skipSync: false
-          });
+        // Remove skipSync if merging now
+        const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
+        if (repo) repo.skipSync = false;
+
+      } else {
+        // User chose "Skip syncing"
+        const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
+        if (repo) repo.skipSync = true;
+      }
+    }
+
+    await set(LOCAL_DB_KEY, localDbMap);
+
+    // Build final ledgerRepos list
+    // Start with ALL existing repos (including skipped ones)
+    const mergedLedgerRepos = selectedRepos.ledgerRepos.map(r => ({ ...r }));
+
+    // 1. Add merge-target repos first
+    for (const sel of mergeSelections) {
+      if (sel.value) {
+        const targetId = Number(sel.value);
+        const targetRepo = ledgerRepos.find(r => r.id === targetId);
+
+        if (targetRepo) {
+          const existing = mergedLedgerRepos.find(r => r.id === targetId);
+
+          if (existing) {
+            existing.skipSync = false; // ensure syncing
+          } else {
+            mergedLedgerRepos.push({
+              id: targetRepo.id,
+              name: targetRepo.full_name,
+              ownerId: targetRepo.owner.id,
+              skipSync: false
+            });
+          }
         }
       }
     }
-  }
 
-  // 2. Add additional checkbox-selected repos
-  ledgerSelections.forEach(r => {
-    if (!mergedLedgerRepos.some(x => x.id === r.id)) {
-      mergedLedgerRepos.push({ ...r, skipSync: false });
-    }
-  });
+    // 2. Add additional checkbox-selected repos
+    ledgerSelections.forEach(r => {
+      if (!mergedLedgerRepos.some(x => x.id === r.id)) {
+        mergedLedgerRepos.push({ ...r, skipSync: false });
+      }
+    });
 
-  // Save new selectedRepos
-  const newSelected = {
-    personalSettingsRepo: { name: personalName, id: personalId },
-    ledgerRepos: mergedLedgerRepos,
-    activeLedgerRepo: mergedLedgerRepos.find(r => !r.skipSync) || null
+    // Save new selectedRepos
+    const newSelected = {
+      personalSettingsRepo: { name: personalName, id: personalId },
+      ledgerRepos: mergedLedgerRepos,
+      activeLedgerRepo: mergedLedgerRepos.find(r => !r.skipSync) || null
+    };
+
+    await set("selectedRepos", newSelected);
+
+    window.location.href = "/";
+    window.location.reload();
   };
-
-  await set("selectedRepos", newSelected);
-
-  window.location.href = "/";
-  window.location.reload();
-};
+}
 
 const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
