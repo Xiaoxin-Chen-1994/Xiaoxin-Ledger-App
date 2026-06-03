@@ -783,12 +783,12 @@ async function smartSync(selectedRepos, token) {
 
   // Sync ledger data
   for (const repo of selectedRepos.ledgerRepos) {
-    
+
     if (repo.skipSync) {
       console.log(`[${repo.name}] skipSync=true → skipping sync`);
       continue;
     }
-    
+
     const repoId = repo.id;
     const repoName = repo.name;
     console.log('reponame', repoName)
@@ -1525,18 +1525,35 @@ async function logout() {
   const repoIds = Object.keys(localDbMap);
 
   if (repoIds.length > 0) {
-    // Logged out but local data exists → create a local repo
-    ledgerRepos = repoIds.map((rid, index) => ({
-      id: `local ${index + 1}`,
-      name: `Local Ledger ${index + 1}`,
-      ownerId: `local ${index + 1}`
-    }));
+    if (repoIds.length === 1) {
+      // Exactly one local repo → no numbering
+      const rid = repoIds[0];
+      ledgerRepos = [
+        {
+          id: "local",
+          name: "Local Ledger",
+          ownerId: "local"
+        }
+      ];
 
-    // Also update selectedRepos so the rest of the app works
-    selectedRepos = {
-      ledgerRepos,
-      activeLedgerRepo: ledgerRepos[0]
-    };
+      selectedRepos = {
+        ledgerRepos,
+        activeLedgerRepo: ledgerRepos[0]
+      };
+
+    } else {
+      // Multiple local repos → number them
+      ledgerRepos = repoIds.map((rid, index) => ({
+        id: `local ${index + 1}`,
+        name: `Local Ledger ${index + 1}`,
+        ownerId: `local ${index + 1}`
+      }));
+
+      selectedRepos = {
+        ledgerRepos,
+        activeLedgerRepo: ledgerRepos[0]
+      };
+    }
   }
 
   await set("selectedRepos", selectedRepos);
