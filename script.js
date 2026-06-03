@@ -624,9 +624,9 @@ async function smartSync(selectedRepos, token) {
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
-      const cloudExists = await githubFileExists(repoName, "personal.json", token);
+      const cloudExists = await githubFileExists(repoName, "ledger-personal-settings.json", token);
       cloud = cloudExists
-        ? await githubReadJson(repoName, "personal.json", token)
+        ? await githubReadJson(repoName, "ledger-personal-settings.json", token)
         : null;
 
       cloudDeleted = cloud?.deletedAtTimestamp || 0;
@@ -649,7 +649,7 @@ async function smartSync(selectedRepos, token) {
 
       await set("personal_settings", defaults);
       if (token) {
-        await githubWriteJson(repoName, "personal.json", defaults, token);
+        await githubWriteJson(repoName, "ledger-personal-settings.json", defaults, token);
       }
     }
 
@@ -665,7 +665,7 @@ async function smartSync(selectedRepos, token) {
       // Rule 3 — local exists, cloud null → push
       // -----------------------------------------
       if (local && !cloud) {
-        await githubWriteJson(repoName, "personal.json", local, token);
+        await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
       }
 
       // if both local and cloud exists
@@ -692,7 +692,7 @@ async function smartSync(selectedRepos, token) {
           (cloudDeleted > 0 && cloudDeleted < local.createdAt) ||
           (cloud.createdAt < local.createdAt)
         ) {
-          await githubWriteJson(repoName, "personal.json", local, token);
+          await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
         }
 
         // -----------------------------------------
@@ -701,7 +701,7 @@ async function smartSync(selectedRepos, token) {
         if (local.createdAt === cloud.createdAt) {
           // local newer --> push to cloud
           if (local.updatedAt > cloud.updatedAt) {
-            await githubWriteJson(repoName, "personal.json", local, token);
+            await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
 
             // cloud newer --> overwrite local
           } else if (cloud.updatedAt > local.updatedAt) {
@@ -6681,11 +6681,11 @@ async function deleteLedgerFilesInRepo(mode) {
     await githubDeleteIfExists(repo.name, "ledger-settings.json", token);
   }
 
-  // ⭐ Only full account deletion wipes personal.json
+  // ⭐ Only full account deletion wipes ledger-personal-settings.json
   if (mode === "account") {
     await githubWriteJson(
       selectedRepos.personalSettingsRepo.name,
-      "personal.json",
+      "ledger-personal-settings.json",
       { deleted: true, deletedAtTimestamp: Date.now() },
       token
     );
