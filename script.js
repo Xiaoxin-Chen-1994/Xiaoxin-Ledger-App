@@ -1665,14 +1665,46 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
   container.appendChild(notes);
 
   // ⭐ Show skip-sync message if ANY ledger is local-only
-  const hasSkipped = selectedRepos?.ledgerRepos?.some(r => r.skipSync);
+  const skippedLedgers = selectedRepos?.ledgerRepos?.filter(r => r.skipSync) || [];
 
-  if (hasSkipped) {
+  if (skippedLedgers.length > 0) {
     const msg = document.createElement("div");
-    msg.style.color = "var(--muted)";
-    msg.style.fontStyle = "italic";
     msg.style.marginBottom = "0.8em";
-    msg.textContent = "One or more ledgers are stored locally and syncing is skipped.";
+
+    // Localized header
+    const header = document.createElement("div");
+    header.style.fontStyle = "italic";
+    header.style.color = "var(--muted)";
+    header.textContent =
+      currentLang === "en"
+        ? "The following ledgers are stored locally and syncing is skipped:"
+        : "以下账本仅存储在本地，且已跳过同步：";
+    msg.appendChild(header);
+
+    // List skipped ledgers
+    const list = document.createElement("ul");
+    list.style.margin = "0.4em 0 0.8em 1.2em";
+    list.style.padding = "0";
+    list.style.color = "var(--muted)";
+
+    skippedLedgers.forEach(r => {
+      const li = document.createElement("li");
+      li.textContent = r.name;
+      list.appendChild(li);
+    });
+
+    msg.appendChild(list);
+
+    // Localized instruction
+    const note = document.createElement("div");
+    note.style.fontStyle = "italic";
+    note.style.color = "var(--muted)";
+    note.textContent =
+      currentLang === "en"
+        ? "To sync these ledgers, log out and re‑login, then select a GitHub repo to merge the local data into."
+        : "如需同步这些账本，请先退出登录并重新登录，然后选择一个 GitHub 仓库以合并本地数据。";
+    msg.appendChild(note);
+
     container.appendChild(msg);
   }
 
