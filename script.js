@@ -459,7 +459,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
 async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
-  const container = document.getElementById("repoList");
+  const container = document.querySelector("#repoList-page .scroll");
 
   const validIds = new Set(ledgerRepos.map(r => r.id));
 
@@ -526,6 +526,8 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       <button id="confirmRepoSelection">Confirm</button>
     </div>
   `;
+
+  showPage('repoList', 'Select repos');
 
   // Pre-select valid ledger repos
   if (selectedRepos && selectedRepos.ledgerRepos) {
@@ -632,7 +634,7 @@ async function smartSync(selectedRepos, token) {
       cloudDeleted = cloud?.deletedAtTimestamp || 0;
     }
 
-    const local = await get("personal_settings"); // may be null
+    const local = await get("ledger_personal_settings"); // may be null
 
     // -----------------------------------------
     // Rule 1 — local null AND (cloud null OR cloud deleted)
@@ -647,7 +649,7 @@ async function smartSync(selectedRepos, token) {
         themeColor: "",
       };
 
-      await set("personal_settings", defaults);
+      await set("ledger_personal_settings", defaults);
       if (token) {
         await githubWriteJson(repoName, "ledger-personal-settings.json", defaults, token);
       }
@@ -658,7 +660,7 @@ async function smartSync(selectedRepos, token) {
       // Rule 2 — local null, cloud exists → pull
       // -----------------------------------------
       if (!local && cloud) {
-        await set("personal_settings", cloud);
+        await set("ledger_personal_settings", cloud);
       }
 
       // -----------------------------------------
@@ -705,7 +707,7 @@ async function smartSync(selectedRepos, token) {
 
             // cloud newer --> overwrite local
           } else if (cloud.updatedAt > local.updatedAt) {
-            await set("personal_settings", cloud);
+            await set("ledger_personal_settings", cloud);
           }
         }
       }
@@ -1403,7 +1405,7 @@ async function init() {
   // Apply profile settings
   displayHomeImage();
 
-  const personal = await get("personal_settings");
+  const personal = await get("ledger_personal_settings");
   if (personal.language) {
     currentLang = personal.language;
     setLanguage(currentLang);
@@ -1483,7 +1485,7 @@ function toggleLedgerFormRows() {
 }
 
 async function displayHomeImage() {
-  const personal = await get("personal_settings");
+  const personal = await get("ledger_personal_settings");
   const images = personal.homeImages;
 
   const img = document.getElementById("home-image");
@@ -6541,7 +6543,7 @@ async function deleteLocalData(mode) { // This function will not delete github_t
   // 1. Read values to keep
   const token = await get("github_token");
   const repos = await get("selectedRepos");
-  const personalSettings = await get("personal_settings");
+  const personalSettings = await get("ledger_personal_settings");
   const reposToDelete = await get("reposToDelete") || [];
 
   // 2. Clear all localStorage
@@ -6577,7 +6579,7 @@ async function deleteLocalData(mode) { // This function will not delete github_t
   }
 
   if (mode === "data") {
-    if (personalSettings) await set("personal_settings", personalSettings);
+    if (personalSettings) await set("ledger_personal_settings", personalSettings);
   }
 
   // 4. Delete IndexedDB (idb-keyval)
