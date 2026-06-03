@@ -596,7 +596,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       return;
     }
 
-    // Validate ledger repos
+    // Ledger repos (ADDITIONAL repos only)
     const ledgerSelections = Array.from(document.querySelectorAll(".ledger-repo"))
       .filter(cb => cb.checked)
       .map(cb => ({
@@ -605,10 +605,8 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
         ownerId: Number(cb.dataset.ownerId)
       }));
 
-    if (ledgerSelections.length === 0) {
-      alert("Please select at least one ledger repo.");
-      return;
-    }
+    // DO NOT require at least one ledger repo
+    // The merge-target repo counts as the primary ledger repo
 
     // Handle merging of incompatible repos
     const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
@@ -621,23 +619,15 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
         // Merge local DB into GitHub repo
         localDbMap[targetId] = localDbMap[localId];
         delete localDbMap[localId];
-      } else {
-        // Skip syncing → keep local DB under its localId
-        // Do NOT include it in selectedRepos
       }
     }
 
     await set(LOCAL_DB_KEY, localDbMap);
 
     // Build final ledgerRepos list
-    const mergedLedgerRepos = ledgerSelections.map(r => ({
-      id: r.id,
-      name: r.name,
-      ownerId: r.ownerId
-    }));
+    const mergedLedgerRepos = [];
 
-    // Add merge target repos
-    const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
+    // 1. Add merge-target repos first
     for (const sel of mergeSelections) {
       if (sel.value) {
         const targetId = Number(sel.value);
@@ -652,11 +642,18 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       }
     }
 
+    // 2. Add additional checkbox-selected repos
+    ledgerSelections.forEach(r => {
+      if (!mergedLedgerRepos.some(x => x.id === r.id)) {
+        mergedLedgerRepos.push(r);
+      }
+    });
+
     // Save new selectedRepos
     const newSelected = {
       personalSettingsRepo: { name: personalName, id: personalId },
       ledgerRepos: mergedLedgerRepos,
-      activeLedgerRepo: mergedLedgerRepos[0]
+      activeLedgerRepo: mergedLedgerRepos[0] || null
     };
 
     await set("selectedRepos", newSelected);
