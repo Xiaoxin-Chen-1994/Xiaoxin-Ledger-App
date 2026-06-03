@@ -2370,7 +2370,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
           if (!subWorkspace.tags.includes(tag)) {
             subWorkspace.tags.push(tag);
           }
-          
+
           addTag(tag, subWorkspace);
           input.value = null; // Clear input
           suggestionsDiv.innerHTML = ""; // Clear suggestions
@@ -2386,7 +2386,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     const newTag = input.value.trim();
     if (!newTag) return;
 
-      let subWorkspace = null;
+    let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
       subWorkspace = workspace.create;
@@ -3575,13 +3575,6 @@ function showPage(name, title = latestTitle, options = {}) {
   }
 }
 window.showPage = showPage;
-
-function resetCreate() {
-  delete workspace.create;
-  closeSelector();
-  showPage('transaction');
-}
-window.resetCreate = resetCreate;
 
 function goBack() {
   closeSelector();
@@ -8248,452 +8241,443 @@ async function OpenGrocerySearch() {
 
   const token = await get("github_token");
   const repoName = selectedRepos.activeLedgerRepo.name;
-  const filePath = 'GrocerySearchHistory.csv';
 
-  const url = `https://api.github.com/repos/${repoName}/contents/${filePath}`;
+  // initialize this list for the first time. After that, users can tweak the links themselves.
 
-  const Websites = [
-    { SiteName: "Flipp", SearchURL1: "https://flipp.com/search/", SearchURL2: "" },
-    { SiteName: "Sobeys", SearchURL1: "https://www.sobeys.com/?query=", SearchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100" },
-    { SiteName: "Walmart", SearchURL1: "https://www.walmart.ca/en/search?q=", SearchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store" },
-    { SiteName: "Costco", SearchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", SearchURL2: "&sortBy=item_location_pricing_salePrice%2Basc" },
-    { SiteName: "Shoppers Drug Mart", SearchURL1: "https://shop.shoppersdrugmart.ca/search?text=", SearchURL2: "" },
-    { SiteName: "T&T", SearchURL1: "https://www.tntsupermarket.com/eng/search.html?query=", SearchURL2: "&sort%5Bfilter%5D=Price%3A+Low+to+High%2Cprice-ASC" },
-    { SiteName: "Dollarama", SearchURL1: "https://www.google.com/search?q=", SearchURL2: " site%3Ainstacart.ca%2Fstore%2Fdollarama" },
-    { SiteName: "Real Canadian Superstore", SearchURL1: "https://www.realcanadiansuperstore.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
-    { SiteName: "No Frills", SearchURL1: "https://www.nofrills.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
-    { SiteName: "Zehrs", SearchURL1: "https://www.zehrs.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
-    { SiteName: "Valu-mart", SearchURL1: "https://www.valumart.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
-    { SiteName: "Giant Tiger", SearchURL1: "https://www.gianttiger.com/search?q=", SearchURL2: "&sort_by=price_asc" },
-    { SiteName: "Wholesale Club", SearchURL1: "https://www.wholesaleclub.ca/search?search-bar=", SearchURL2: "&sort=price-asc" },
-    { SiteName: "Amazon.ca", SearchURL1: "https://www.amazon.ca/s?k=", SearchURL2: "&s=price-asc-rank" },
-    { SiteName: "Mark's", SearchURL1: "https://www.marks.com/en/search-results.html?q=", SearchURL2: ";m_ct_sort=national-sort-price" },
-    { SiteName: "Canadian Tire", SearchURL1: "https://www.canadiantire.ca/en/search-results.html?q=", SearchURL2: ";m_ct_sort=national-sort-price" },
-    { SiteName: "Home Hardware", SearchURL1: "https://www.homehardware.ca/en/search?query=", SearchURL2: "&sortBy=price%2Basc" },
-    { SiteName: "Stock Track", SearchURL1: "https://stocktrack.ca/?s=", SearchURL2: "&search=" },
-    { SiteName: "Google", SearchURL1: "https://www.google.com/search?q=", SearchURL2: "" }
-  ];
+  const csvFilePath = 'GrocerySearchHistory.csv';
+  const jsonFilePath = 'GrocerySearchHistory.json';
 
-  let csvData = [];
+  const groceryData = await initializeGrocerySearch();
+  // Use groceryData.websites instead of hardcoded Websites
+  console.log(groceryData)
+
   let currentItem = null;
-  let fileSha = null;
 
-  async function fetchCsvFromGitHub() {
-    const bust = `?t=${Date.now()}`;
-    let response = null;
-    try {
-      response = await fetch(`${url}${bust}`, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: 'application/vnd.github.v3.raw'
-        },
-        cache: 'no-store'
-      });
-    } catch (err) {
-      console.error('fetch error:', err);
-      showStatusMessage('Error fetching CSV', 'error', 20000);
-    }
+  renderStoreAndItems();
 
-    const buffer = await response.arrayBuffer(); // get raw binary
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer); // decode as UTF-8
+  async function initializeGrocerySearch() {
+    const localJSON = await get("grocery_search");
+    const cloudJSON = token
+      ? await githubReadJson(repoName, "GrocerySearch.json", token)
+      : null;
 
-    // Robust CSV parser for quoted fields
-    function parseCSV(text) {
-      const rows = [];
-      let row = [], field = '', inQuotes = false;
+    const hasLocal = !!localJSON;
+    const hasCloud = !!cloudJSON;
 
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const next = text[i + 1];
-
-        if (char === '"' && inQuotes && next === '"') {
-          field += '"';
-          i++; // skip escaped quote
-        } else if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          row.push(field.trim());
-          field = '';
-        } else if ((char === '\n' || char === '\r') && !inQuotes) {
-          if (field || row.length) {
-            row.push(field.trim());
-            rows.push(row);
-            row = [];
-            field = '';
-          }
-        } else {
-          field += char;
+    // Case 1: neither exists → create new
+    if (!hasLocal && !hasCloud) {
+      const now = new Date().toISOString();
+      const obj = {
+        createdAt: now,
+        lastUpdatedAt: now,
+        stores: {
+          "Flipp": { searchURL1: "https://flipp.com/search/", searchURL2: "", items: [] },
+          "Sobeys": { searchURL1: "https://www.sobeys.com/?query=", searchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100", items: [] },
+          "Walmart": { searchURL1: "https://www.walmart.ca/en/search?q=", searchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store", items: [] },
+          "Costco": { searchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", searchURL2: "&sortBy=item_location_pricing_salePrice%2Basc", items: [] },
+          "Shoppers Drug Mart": { searchURL1: "https://shop.shoppersdrugmart.ca/search?text=", searchURL2: "", items: [] },
+          "T&T": { searchURL1: "https://www.tntsupermarket.com/eng/search.html?query=", searchURL2: "&sort%5Bfilter%5D=Price%3A+Low+to+High%2Cprice-ASC", items: [] },
+          "Dollarama": { searchURL1: "https://www.google.com/search?q=", searchURL2: " site%3Ainstacart.ca%2Fstore%2Fdollarama", items: [] },
+          "Real Canadian Superstore": { searchURL1: "https://www.realcanadiansuperstore.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+          "No Frills": { searchURL1: "https://www.nofrills.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+          "Zehrs": { searchURL1: "https://www.zehrs.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+          "Valu-mart": { searchURL1: "https://www.valumart.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+          "Giant Tiger": { searchURL1: "https://www.gianttiger.com/search?q=", searchURL2: "&sort_by=price_asc", items: [] },
+          "Wholesale Club": { searchURL1: "https://www.wholesaleclub.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+          "Amazon.ca": { searchURL1: "https://www.amazon.ca/s?k=", searchURL2: "&s=price-asc-rank", items: [] },
+          "Mark's": { searchURL1: "https://www.marks.com/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
+          "Canadian Tire": { searchURL1: "https://www.canadiantire.ca/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
+          "Home Hardware": { searchURL1: "https://www.homehardware.ca/en/search?query=", searchURL2: "&sortBy=price%2Basc", items: [] },
+          "Stock Track": { searchURL1: "https://stocktrack.ca/?s=", searchURL2: "&search=", items: [] },
+          "Google": { searchURL1: "https://www.google.com/search?q=", searchURL2: "", items: [] }
         }
-      }
-
-      if (field || row.length) {
-        row.push(field.trim());
-        rows.push(row);
-      }
-
-      return rows;
+      };
+      await set("grocery_search", JSON.stringify(obj));
+      if (token) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
+      return obj;
     }
 
-    const parsedRows = parseCSV(text);
-    const headers = parsedRows[0].map(h => h.trim().toLowerCase());
-    csvData = parsedRows.slice(1).map(values => {
-      const obj = {};
-      headers.forEach((h, i) => {
-        const value = values[i]?.trim() || '';
-        if (h === 'searchhistory') obj.SearchHistory = value;
-        if (h === 'idealprice') obj.IdealPrice = value;
-        if (h === 'store') obj.store = value;
-      });
-      if (!obj.store) obj.store = 'Flipp';
+    // Case 2: cloud exists, local does not → copy cloud → local
+    if (hasCloud && !hasLocal) {
+      await set("grocery_search", JSON.stringify(cloudJSON));
+      return cloudJSON;
+    }
 
-      return obj;
+    // Case 3: local exists, cloud does not → copy local → cloud
+    if (!hasCloud && hasLocal) {
+      if (token) await githubWriteJson(repoName, "GrocerySearch.json", JSON.parse(localJSON), token);
+      return JSON.parse(localJSON);
+    }
+
+    // Case 4: both exist → ask user which to keep
+    const localObj = JSON.parse(localJSON);
+    const cloudObj = cloudJSON;
+
+    const localTime = new Date(localObj.lastUpdatedAt);
+    const cloudTime = new Date(cloudObj.lastUpdatedAt);
+
+    const useCloud = await new Promise(resolve => {
+      showPopupWindow({
+        title: "Choose Data Source",
+        message:
+          `Cloud and Local data both exist.<br><br>` +
+          `<b>Cloud last updated:</b><br>${cloudTime.toUTCString()}<br>${cloudTime}<br><br>` +
+          `<b>Local last updated:</b><br>${localTime.toUTCString()}<br>${localTime}<br><br>` +
+          `Which version do you want to use?`,
+        buttons: [
+          {
+            label: "Use Cloud",
+            onClick: () => resolve(true)
+          },
+          {
+            label: "Use Local",
+            onClick: () => resolve(false)
+          }
+        ]
+      });
     });
 
-    renderStoreAndItems();
-    await fetchFileSha();
-  }
-
-  async function fetchFileSha() {
-    try {
-      const fetchUrl = url + `?force=json`;
-      const bust = `&t=${Date.now()}`;
-      const response = await fetch(`${fetchUrl}${bust}`, {
-        headers: {
-          Authorization: `token ${token}`
-        },
-        cache: 'no-store' // optional, but helps in some environments
-      });
-      const json = await response.json();
-      fileSha = json.sha;
-
-    } catch (err) {
-      console.error('fetchFileSha error:', err);
-      showStatusMessage('Error fetching file sha', 'error');
+    if (useCloud) {
+      await set("grocery_search", JSON.stringify(cloudObj));
+      return cloudObj;
+    } else {
+      if (token) await githubWriteJson(repoName, "GrocerySearch.json", localObj, token);
+      return localObj;
     }
   }
 
-  async function updateCsvToGitHub() {
-    try {
-      showStatusMessage('Prepare CSV data…', 'info');
+  async function syncGroceryData() {
+    groceryData.lastUpdatedAt = new Date().toISOString();
 
-      const headers = ['SearchHistory', 'IdealPrice', 'store'];
-      const rows = [headers.join(',')];
+    await set("grocery_search", JSON.stringify(groceryData));
 
-      csvData.forEach(item => {
-        const row = [
-          `"${item.SearchHistory || ''}"`,
-          `"${item.IdealPrice || ''}"`,
-          `"${item.store || 'Flipp'}"`
-        ];
-        rows.push(row.join(','));
-      });
-
-      const content = encodeBase64Utf8(rows.join('\n'))
-
-      showStatusMessage('Writing to CSV…', 'info');
-      const fetchUrl = url + `?force=json`;
-      await fetch(fetchUrl, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        },
-        body: JSON.stringify({
-          message: 'Update CSV via browser',
-          content: content,
-          sha: fileSha
-        })
-      });
-
-      await fetchFileSha();
-      showStatusMessage('✅ CSV updated successfully!', 'success');
-    } catch (err) {
-      console.error('Update error:', err);
-      showStatusMessage('Error updating CSV', 'error');
+    if (token) {
+      await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
     }
   }
 
   function renderStoreAndItems() {
-    try {
-      const container = document.getElementById('storeItemList');
+    const container = document.getElementById("storeItemList");
+    container.innerHTML = "";
 
-      // 🧭 Record scroll positions of all item-scroll containers
-      const scrollMap = {};
-      container.querySelectorAll('.store-row').forEach(row => {
-        const storeName = row.querySelector('.store-button')?.textContent;
-        const scrollDiv = row.querySelector('.item-scroll');
-        if (storeName && scrollDiv) {
-          scrollMap[storeName] = scrollDiv.scrollLeft;
-        }
-      });
+    for (const [storeName, storeObj] of Object.entries(groceryData.stores)) {
+      const storeRow = document.createElement("div");
+      storeRow.className = "store-row";
+      storeRow.dataset.storeName = storeName;
 
-      container.innerHTML = ''; // 🔄 Clear the container before re-rendering
+      const storeCol = document.createElement("div");
+      storeCol.className = "store-col";
 
-      const grouped = {}; // 📦 Group items by store name (default to 'Flipp' if missing)
-      csvData.forEach(item => {
-        const store = item.store?.trim() || 'Flipp';
-        if (!grouped[store]) grouped[store] = [];
-        grouped[store].push(item);
-      });
+      const storeBtn = document.createElement("button");
+      storeBtn.textContent = storeName;
+      storeBtn.className = "store-button";
 
-      // 🏪 Iterate over known websites to render each store row
-      Websites.forEach(site => {
-        const store = site.SiteName;
+      storeBtn.onclick = async () => {
+        const itemName = document.getElementById("itemBox").value.trim();
+        const notes = document.getElementById("notesBox").value.trim();
+        if (!itemName) return;
 
-        // 🧱 Create the outer row container for this store
-        const row = document.createElement('div');
-        row.className = 'store-row';
+        const found = findItemInStores(groceryData, itemName);
 
-        // 📌 Create the fixed left column for the store button
-        const storeCol = document.createElement('div');
-        storeCol.className = 'store-col';
+        if (found) {
+          // ✔ Item exists → update notes in THAT store only
+          const { storeName: existingStore, itemObj } = found;
+          itemObj.itemNotes = notes;
 
-        const storeBtn = document.createElement('button');
-        storeBtn.textContent = store;
-        storeBtn.className = 'store-button';
+          await syncGroceryData();
+          renderStoreAndItems();
 
-        // 🧲 Enable drag-and-drop to assign items to this store
-        storeBtn.addEventListener('dragover', e => e.preventDefault());
-        storeBtn.addEventListener('drop', async e => {
-          e.preventDefault();
-          const data = e.dataTransfer.getData('text/plain');
-          const draggedItem = JSON.parse(data);
-
-          // 🔍 Find the dragged item in csvData and update its store
-          const index = csvData.findIndex(row =>
-            row.SearchHistory === draggedItem.SearchHistory &&
-            row.IdealPrice === draggedItem.IdealPrice
+          window.open(
+            storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
+            "_blank"
           );
-          if (index !== -1) {
-            csvData[index].store = store;
-            renderStoreAndItems();
-            await updateCsvToGitHub();
+
+          return;
+        }
+
+        // ✔ Item does NOT exist → add to THIS store
+        groceryData.stores[storeName].items.push({
+          item: itemName,
+          itemNotes: notes
+        });
+
+        await syncGroceryData();
+        renderStoreAndItems();
+
+        window.open(
+          storeObj.searchURL1 + encodeURIComponent(itemName) + storeObj.searchURL2,
+          "_blank"
+        );
+      };
+
+      storeCol.appendChild(storeBtn);
+
+      const itemScroll = document.createElement("div");
+      itemScroll.className = "item-scroll";
+
+      storeObj.items.forEach(itemObj => {
+        const btn = document.createElement("button");
+        btn.className = "item-button";
+        btn.textContent = itemObj.item;
+
+        // Load item into input fields
+        btn.onclick = () => {
+          document.getElementById("itemBox").value = itemObj.item;
+          document.getElementById("notesBox").value = itemObj.itemNotes;
+          currentItem = { storeName, itemObj };
+        };
+
+        // --- MOUSE DRAG SUPPORT ---
+        btn.draggable = true;
+
+        btn.addEventListener("dragstart", e => {
+          btn.isDragging = true;
+
+          e.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({ itemName: itemObj.item })
+          );
+          e.dataTransfer.effectAllowed = "move";
+        });
+
+        btn.addEventListener("dragend", () => {
+          setTimeout(() => (btn.isDragging = false), 50);
+        });
+
+        // --- TOUCH DRAG SUPPORT ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let moved = false;
+        let pressTimer;
+
+        btn.addEventListener("touchstart", e => {
+          moved = false;
+          btn.isDragging = false;
+
+          const t = e.touches[0];
+          touchStartX = t.clientX;
+          touchStartY = t.clientY;
+
+          // Long‑press delete (only if NOT dragging)
+          pressTimer = setTimeout(() => {
+            if (!moved) {
+              showGroceryItemDeleteButton(btn, storeName, itemObj);
+            }
+          }, 600);
+        });
+
+        btn.addEventListener("touchmove", e => {
+          const t = e.touches[0];
+          const dx = Math.abs(t.clientX - touchStartX);
+          const dy = Math.abs(t.clientY - touchStartY);
+
+          if (dx > 10 || dy > 10) {
+            moved = true;
+            clearTimeout(pressTimer);
+
+            // Highlight store BUTTON while dragging
+            const elem = document.elementFromPoint(t.clientX, t.clientY);
+            const row = elem?.closest(".store-row");
+            if (row) {
+              const storeBtn = row.querySelector(".store-button");
+              storeBtn.classList.add("drag-hover");
+            }
           }
         });
 
-        // 🖱️ Store button click: update currentItem and open search link
-        storeBtn.onclick = async () => {
-          const itemBox = document.getElementById('itemBox');
-          const notesBox = document.getElementById('notesBox');
-          const itemText = itemBox.value.trim();
-          const notesText = notesBox.value.trim();
+        btn.addEventListener("touchend", async e => {
+          clearTimeout(pressTimer);
 
-          if (currentItem) {
-            currentItem.SearchHistory = itemText;
-            currentItem.IdealPrice = notesText;
+          // Remove all highlights
+          document.querySelectorAll(".store-button.drag-hover")
+            .forEach(b => b.classList.remove("drag-hover"));
 
-            // 🧹 Remove and re-add to move currentItem to end
-            csvData = csvData.filter(row => row !== currentItem).concat(currentItem);
-            renderStoreAndItems();
-            await updateCsvToGitHub();
-          }
+          if (!moved) return;
 
-          // 🔗 Open search URL for this store
-          const siteMatch = Websites.find(w => w.SiteName === store);
-          if (siteMatch && itemText) {
-            window.open(siteMatch.SearchURL1 + encodeURIComponent(itemText) + siteMatch.SearchURL2, '_blank');
-          }
-        };
+          const t = e.changedTouches[0];
+          const elem = document.elementFromPoint(t.clientX, t.clientY);
+          const row = elem?.closest(".store-row");
+          if (!row) return;
 
-        storeCol.appendChild(storeBtn);
+          const toStore = row.dataset.storeName;
 
-        // 📜 Create scrollable container for item buttons
-        const itemScroll = document.createElement('div');
-        itemScroll.className = 'item-scroll';
+          // Use helper to find the REAL item object
+          const found = findItemInStores(groceryData, itemObj.item);
+          if (!found) return;
 
-        const items = grouped[store];
-        if (items) {
-          items.forEach(item => {
-            const itemBtn = document.createElement('button');
-            itemBtn.textContent = item.SearchHistory || 'Unnamed';
-            itemBtn.className = 'item-button';
-            itemBtn.draggable = true;
+          const { storeName: fromStore, itemObj: realItem } = found;
 
-            // 🚚 Enable drag functionality
-            itemBtn.addEventListener('dragstart', e => {
-              e.dataTransfer.setData('text/plain', JSON.stringify(item));
-              e.dataTransfer.effectAllowed = 'move';
-            });
+          // Remove from old store (value-based match)
+          groceryData.stores[fromStore].items =
+            groceryData.stores[fromStore].items.filter(i =>
+              !(i.item === realItem.item && i.itemNotes === realItem.itemNotes)
+            );
 
-            // 🖱️ Item button click: populate fields and open store link
-            itemBtn.onclick = async () => {
-              const container = document.getElementById('storeItemList');
-              const scrollY = container.scrollTop; // 🧭 Preserve scroll position
+          // Add to new store
+          groceryData.stores[toStore].items.push(realItem);
 
-              document.getElementById('searchResults').innerHTML = '';
-              document.getElementById('itemBox').value = item.SearchHistory;
-              document.getElementById('notesBox').value = item.IdealPrice;
-              currentItem = item;
+          await syncGroceryData();
+          renderStoreAndItems();
+        });
 
-              // 🧹 Move item to end of list
-              csvData = csvData.filter(row => row !== item).concat(item);
-              renderStoreAndItems();
-              container.scrollTop = scrollY;
-              await updateCsvToGitHub();
+        // --- RIGHT‑CLICK DELETE ---
+        btn.addEventListener("contextmenu", e => {
+          e.preventDefault();
+          showGroceryItemDeleteButton(btn, storeName, itemObj);
+        });
 
-              // 🔗 Open search URL for item's store
-              const query = item.SearchHistory || '';
-              const notes = item.IdealPrice || '';
-              const storeName = item.store;
-              const siteMatch = Websites.find(w => w.SiteName === storeName);
-
-              if (siteMatch && query) {
-                const url = siteMatch.SearchURL1 + encodeURIComponent(query) + siteMatch.SearchURL2;
-                const newWindow = window.open(url, '_blank');
-              }
-            };
-
-            // 🗑️ Right-click to show delete option
-            itemBtn.addEventListener('contextmenu', e => {
-              e.preventDefault();
-              showDeleteButton(itemBtn, item);
-            });
-
-            // 📱 Long-press on touch devices to show delete
-            let pressTimer;
-            itemBtn.addEventListener('touchstart', () => {
-              pressTimer = setTimeout(() => showDeleteButton(itemBtn, item), 600);
-            });
-            itemBtn.addEventListener('touchend', () => clearTimeout(pressTimer));
-
-            itemScroll.appendChild(itemBtn);
-          });
-        }
-
-        // 🧭 Restore scroll position if previously recorded
-        if (scrollMap[store] !== undefined) {
-          requestAnimationFrame(() => {
-            itemScroll.scrollLeft = scrollMap[store];
-          });
-        }
-
-        row.appendChild(storeCol);
-        row.appendChild(itemScroll);
-        container.appendChild(row);
+        itemScroll.appendChild(btn);
       });
 
-    } catch (err) {
-      console.error('render store and item error:', err);
-      showStatusMessage('Error rendering store and item', 'error');
+      storeRow.appendChild(storeCol);
+      storeRow.appendChild(itemScroll);
+      container.appendChild(storeRow);
+
+      // Make store rows accept item drop off
+      storeRow.addEventListener("dragover", e => {
+        e.preventDefault();
+
+        const btn = storeRow.querySelector(".store-button");
+        btn.classList.add("drag-hover");
+      });
+
+      storeRow.addEventListener("dragleave", () => {
+        const btn = storeRow.querySelector(".store-button");
+        btn.classList.remove("drag-hover");
+      });
+
+      storeRow.addEventListener("drop", async e => {
+        e.preventDefault();
+
+        const btn = storeRow.querySelector(".store-button");
+        btn.classList.remove("drag-hover");
+
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        const draggedName = data.itemName;   // FIXED
+
+        // Find the real item object + its store
+        const found = findItemInStores(groceryData, draggedName);
+        if (!found) return;
+
+        const { storeName: fromStore, itemObj } = found;
+        const toStore = storeRow.dataset.storeName;
+
+        // Remove from old store
+        groceryData.stores[fromStore].items =
+          groceryData.stores[fromStore].items.filter(i =>
+            !(i.item === itemObj.item && i.itemNotes === itemObj.itemNotes)
+          );
+
+        // Add to new store
+        groceryData.stores[toStore].items.push(itemObj);
+
+        await syncGroceryData();
+        renderStoreAndItems();
+      });
     }
   }
 
-  function showDeleteButton(targetBtn, item) {
+  function findItemInStores(groceryData, itemName) {
+    const normalized = itemName.trim().toLowerCase();
+
+    for (const [storeName, storeObj] of Object.entries(groceryData.stores)) {
+      const match = (storeObj.items || []).find(i =>
+        i.item.trim().toLowerCase() === normalized
+      );
+
+      if (match) {
+        return { storeName, itemObj: match };
+      }
+    }
+
+    return null;
+  }
+
+  function showGroceryItemDeleteButton(targetBtn, storeName, itemObj) {
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = '🗑️';
-    deleteBtn.className = 'item-button';
+    deleteBtn.className = 'item-delete-button';   // <-- add second class
     deleteBtn.style.marginLeft = '0.3rem';
+
     deleteBtn.onclick = async () => {
-      csvData = csvData.filter(row => row !== item);
+      groceryData.stores[storeName].items =
+        groceryData.stores[storeName].items.filter(i => i !== itemObj);
+
+      await syncGroceryData();
       renderStoreAndItems();
-      await updateCsvToGitHub();
     };
 
     const existing = targetBtn.nextSibling;
     if (existing?.textContent === '🗑️') return;
 
     targetBtn.insertAdjacentElement('afterend', deleteBtn);
-    setTimeout(() => deleteBtn.remove(), 2000);
+
+    setTimeout(() => deleteBtn.remove(), 2500);
   }
 
   document.getElementById('itemBox').addEventListener('input', () => {
-    const query = document.getElementById('itemBox').value.trim()
+    const query = document.getElementById('itemBox').value.trim();
     const resultsContainer = document.getElementById('searchResults');
     resultsContainer.innerHTML = '';
 
     if (!query) return;
 
-    const matches = csvData.filter(item =>
-      item.SearchHistory?.toLowerCase().includes(query.toLowerCase())
-    )
-      .sort((a, b) => (a.SearchHistory || '').localeCompare(b.SearchHistory || ''));
+    // Collect matches across all stores
+    const matches = [];
+
+    for (const [storeName, storeObj] of Object.entries(groceryData.stores)) {
+      storeObj.items.forEach(itemObj => {
+        if (itemObj.item.toLowerCase().includes(query.toLowerCase())) {
+          matches.push({ storeName, itemObj });
+        }
+      });
+    }
 
     if (matches.length === 0) {
       resultsContainer.textContent = 'No matches found.';
       return;
     }
 
-    matches.forEach(item => {
+    // Sort alphabetically
+    matches.sort((a, b) => a.itemObj.item.localeCompare(b.itemObj.item));
+
+    // Render match buttons
+    matches.forEach(({ storeName, itemObj }) => {
       const btn = document.createElement('button');
       btn.className = 'item-button';
-      btn.textContent = item.SearchHistory || 'Unnamed';
+      btn.textContent = `${itemObj.item}`;
 
-      // Enable drag
+      // Drag support
       btn.draggable = true;
       btn.addEventListener('dragstart', e => {
-        document.getElementById('itemBox').blur(); // hide keyboard
-        const payload = {
-          SearchHistory: item.SearchHistory,
-          IdealPrice: item.IdealPrice,
-          store: null
-        };
-        e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+        document.getElementById('itemBox').blur();
+        e.dataTransfer.setData('text/plain', JSON.stringify({ storeName, itemObj }));
         e.dataTransfer.effectAllowed = 'move';
       });
 
       // Click to load into input
       btn.onclick = async () => {
         resultsContainer.innerHTML = '';
-        document.getElementById('itemBox').value = item.SearchHistory;
-        document.getElementById('notesBox').value = item.IdealPrice;
-        currentItem = item;
+        document.getElementById('itemBox').value = itemObj.item;
+        document.getElementById('notesBox').value = itemObj.itemNotes;
 
-        // ✅ Move item to bottom of csvData
-        csvData = csvData.filter(row => row !== item).concat(item);
+        currentItem = { storeName, itemObj };
 
-        // ✅ Re-render and update CSV
+        // Move item to end of its store list
+        const items = groceryData.stores[storeName].items;
+        groceryData.stores[storeName].items = items.filter(i => i !== itemObj).concat(itemObj);
+
+        await syncGroceryData();
         renderStoreAndItems();
-        await updateCsvToGitHub();
 
-        // 🔗 Open search URL for this store
-        const siteMatch = Websites.find(w => w.SiteName === item.store);
-        if (siteMatch) {
-          window.open(siteMatch.SearchURL1 + encodeURIComponent(item.SearchHistory) + siteMatch.SearchURL2, '_blank');
-        }
+        // Open search URL
+        const store = groceryData.stores[storeName];
+        window.open(store.searchURL1 + encodeURIComponent(itemObj.item) + store.searchURL2, '_blank');
       };
 
       resultsContainer.appendChild(btn);
     });
-
-    // Update store buttons with live search links
-    const storeButtons = document.querySelectorAll('.store-button');
-    storeButtons.forEach(btn => {
-      const storeName = btn.textContent.trim();
-      const siteMatch = Websites.find(w => w.SiteName === storeName);
-
-      btn.onclick = async () => {
-        const itemBox = document.getElementById('itemBox');
-        const notesBox = document.getElementById('notesBox');
-        const query = itemBox.value.trim();
-        const notesText = notesBox.value.trim();
-
-        if (!query) return; // skip if no item entered
-
-        if (siteMatch) {
-          window.open(siteMatch.SearchURL1 + encodeURIComponent(query) + siteMatch.SearchURL2, '_blank');
-        }
-
-        const index = csvData.findIndex(row =>
-          (row.SearchHistory || '').toLowerCase() === query.toLowerCase()
-        );
-
-        if (index !== -1) { // if item exists, update current row
-          csvData[index].store = storeName;
-        } else { // if item doesn't exist, create a new row
-          csvData.push({
-            SearchHistory: query,
-            IdealPrice: notesText,
-            store: storeName
-          });
-        }
-
-        renderStoreAndItems();
-        await updateCsvToGitHub();
-      };
-    });
   });
-
-  fetchCsvFromGitHub();
 }
 window.OpenGrocerySearch = OpenGrocerySearch;
 
@@ -9267,11 +9251,11 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
     if (!ws.inputTransactionTimeRaw) { ws.inputTransactionTimeRaw = {}; }
 
     ws.inputTransactionTimeRaw.yyyy = Number(yyyy);
-    ws.inputTransactionTimeRaw.mm   = Number(mm);
-    ws.inputTransactionTimeRaw.dd   = Number(dd);
-    ws.inputTransactionTimeRaw.hh   = Number(hh);
-    ws.inputTransactionTimeRaw.min  = Number(min);
-    ws.inputTransactionTimeRaw.ss   = Number(ss);
+    ws.inputTransactionTimeRaw.mm = Number(mm);
+    ws.inputTransactionTimeRaw.dd = Number(dd);
+    ws.inputTransactionTimeRaw.hh = Number(hh);
+    ws.inputTransactionTimeRaw.min = Number(min);
+    ws.inputTransactionTimeRaw.ss = Number(ss);
   }
 
   // Total → amount
