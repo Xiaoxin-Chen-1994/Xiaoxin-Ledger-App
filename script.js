@@ -611,7 +611,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
     // Handle merging of incompatible repos
     const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
 
-    for (const sel of mergeSelections) {
+   for (const sel of mergeSelections) {
       const localId = sel.dataset.localId;
       const targetId = sel.value;
 
@@ -619,6 +619,11 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
         // Merge local DB into GitHub repo
         localDbMap[targetId] = localDbMap[localId];
         delete localDbMap[localId];
+      } else {
+        // User chose "Skip syncing"
+        // Mark this repo as intentionally skipped
+        const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
+        if (repo) repo.skipSync = true;
       }
     }
 
@@ -1371,7 +1376,6 @@ async function init() {
     function validateLocalSelectedRepos(ledgerRepos) {
       const incompatible = [];
 
-      // Basic structural checks
       if (!selectedRepos ||
         !Array.isArray(selectedRepos.ledgerRepos) ||
         selectedRepos.ledgerRepos.length === 0) {
@@ -1380,8 +1384,11 @@ async function init() {
 
       const validIds = new Set(ledgerRepos.map(r => r.id));
 
-      // Check each selected repo
       for (const repo of selectedRepos.ledgerRepos) {
+        // If user chose to skip syncing this repo → ignore it
+        if (repo.skipSync) continue;
+
+        // Otherwise validate normally
         if (!validIds.has(repo.id)) {
           incompatible.push(repo);
         }
