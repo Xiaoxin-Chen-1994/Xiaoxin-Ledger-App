@@ -521,6 +521,9 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       )
       .join("")}
     </ul>
+    <p id="noAdditionalReposMsg" style="display:none; opacity:0.7; font-style:italic;">
+      No additional private repositories are available under your GitHub account (including repos shared with you).
+    </p>
 
     <div class="actions">
       <button id="confirmRepoSelection">Confirm</button>
@@ -528,6 +531,41 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
   `;
 
   showPage('repoList', 'Select repos');
+
+  // Hide ledger repos that were selected as merge targets
+  function updateLedgerCheckboxVisibility() {
+    const mergeSelections = document.querySelectorAll(".merge-target");
+    const selectedMergeIds = new Set(
+      Array.from(mergeSelections)
+        .map(sel => sel.value)
+        .filter(v => v !== "")
+    );
+
+    let visibleCount = 0;
+
+    document.querySelectorAll(".ledger-repo").forEach(cb => {
+      const li = cb.closest("li");
+
+      if (selectedMergeIds.has(cb.dataset.id)) {
+        li.style.display = "none";
+      } else {
+        li.style.display = "";
+        visibleCount++;
+      }
+    });
+
+    // Show or hide the "no additional repos" message
+    const msg = document.getElementById("noAdditionalReposMsg");
+    msg.style.display = visibleCount === 0 ? "block" : "none";
+  }
+
+  // Run once initially
+  updateLedgerCheckboxVisibility();
+
+  // Run whenever user changes a merge dropdown
+  document.querySelectorAll(".merge-target").forEach(sel => {
+    sel.addEventListener("change", updateLedgerCheckboxVisibility);
+  });
 
   // Pre-select valid ledger repos
   if (selectedRepos && selectedRepos.ledgerRepos) {
@@ -597,6 +635,22 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       name: r.name,
       ownerId: r.ownerId
     }));
+
+    // Add merge target repos
+    const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
+    for (const sel of mergeSelections) {
+      if (sel.value) {
+        const targetId = Number(sel.value);
+        const targetRepo = ledgerRepos.find(r => r.id === targetId);
+        if (targetRepo && !mergedLedgerRepos.some(x => x.id === targetId)) {
+          mergedLedgerRepos.push({
+            id: targetRepo.id,
+            name: targetRepo.full_name,
+            ownerId: targetRepo.owner.id
+          });
+        }
+      }
+    }
 
     // Save new selectedRepos
     const newSelected = {
