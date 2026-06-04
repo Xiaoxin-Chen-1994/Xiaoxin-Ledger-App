@@ -8749,38 +8749,12 @@ async function OpenGrocerySearch() {
 
           // 📱 Long-press on touch devices to show delete
           let pressTimer;
-          let startX = 0;
-          let startY = 0;
-          const MOVE_THRESHOLD = 100; // px
 
           btn.addEventListener("touchstart", e => {
-            const touch = e.touches[0];
-            startX = touch.clientX;
-            startY = touch.clientY;
-
-            pressTimer = setTimeout(() => {
-              showGroceryItemDeleteButton(btn, storeName, itemObj);
-            }, 600);
+            pressTimer = setTimeout(() => showGroceryItemDeleteButton(btn, storeName, itemObj), 600);
           });
 
-          btn.addEventListener("touchmove", e => {
-            const touch = e.touches[0];
-            const dx = Math.abs(touch.clientX - startX);
-            const dy = Math.abs(touch.clientY - startY);
-showStatusMessage(`dx: ${dx}, dy: ${dy}`);
-            // If finger moved too much → cancel long press
-            if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
-              clearTimeout(pressTimer);
-            }
-          });
-
-          btn.addEventListener("touchend", () => {
-            clearTimeout(pressTimer);
-          });
-
-          btn.addEventListener("touchcancel", () => {
-            clearTimeout(pressTimer);
-          });
+          btn.addEventListener("touchend", () => clearTimeout(pressTimer));
 
           itemScroll.appendChild(btn);
         });

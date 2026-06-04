@@ -480,13 +480,9 @@
     <div class="page" id="utilities-page">
       <div class="scroll">
         <div class="utilities-grid">
-          <button class="util-button" onclick="OpenGrocerySearch()">
-            Grocery Search
-          </button>
-
-          <button class="util-button" id="open-receipt-scan">
-            Scan Receipt
-          </button>
+          <button class="util-button" onclick="OpenGrocerySearch()">Grocery Search</button>
+          <button class="util-button" id="open-receipt-scan">Scan Receipt</button>
+          <button class="util-button" onclick="OpenInterestRateCal()">Calculate Interest Rates</button>
         </div>
       </div>
     </div>
@@ -496,12 +492,12 @@
         <div class="sticky-header">
           <div class="row">
             <label for="itemBox">Item:</label>
-            <input type="text" id="itemBox" />
+            <input type="text" id="itemBox" autocomplete="off"/>
           </div>
           <div id="searchResults" style="padding: 0rem;"></div>
           <div class="row">
             <label for="notesBox">Notes:</label>
-            <input type="text" id="notesBox" />
+            <input type="text" id="notesBox" autocomplete="off"/>
           </div>
           <div class="row">
             <label for="">Ledger history:</label>
