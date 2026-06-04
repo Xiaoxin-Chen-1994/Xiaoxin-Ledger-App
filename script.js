@@ -8541,24 +8541,64 @@ async function OpenGrocerySearch() {
     const localObj = JSON.parse(localJSON);
     const cloudObj = cloudJSON;
 
-    const localTime = new Date(localObj.lastUpdatedAt);
-    const cloudTime = new Date(cloudObj.lastUpdatedAt);
+    // Compare timestamps
+    const sameCreated = localObj.createdAt === cloudObj.createdAt;
+    const sameUpdated = localObj.lastUpdatedAt === cloudObj.lastUpdatedAt;
+
+    // If both timestamps match → same version → skip popup
+    if (sameCreated && sameUpdated) {
+      return false; // use local (or true — they are identical)
+    }
+
+    const localObj = JSON.parse(localJSON);
+    const cloudObj = cloudJSON;
+
+    // Compare timestamps
+    const sameCreated = localObj.createdAt === cloudObj.createdAt;
+    const sameUpdated = localObj.lastUpdatedAt === cloudObj.lastUpdatedAt;
+
+    // If both timestamps match → same version → skip popup
+    if (sameCreated && sameUpdated) {
+      return false; // identical, choose local or cloud doesn't matter
+    }
+
+    const localCreated = new Date(localObj.createdAt);
+    const cloudCreated = new Date(cloudObj.createdAt);
+
+    const localUpdated = new Date(localObj.lastUpdatedAt);
+    const cloudUpdated = new Date(cloudObj.lastUpdatedAt);
+
+    // Build bilingual popup text
+    const title =
+      currentLang === "en"
+        ? "Choose Data Source"
+        : "选择数据来源";
+
+    const message =
+      (currentLang === "en"
+        ? "Cloud and Local data both exist."
+        : "云端和本地数据同时存在。") +
+      "<br><br>" +
+      `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${cloudCreated}<br><br>` +
+      `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${cloudUpdated}<br><br>` +
+      `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${localCreated}<br><br>` +
+      `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${localUpdated}<br><br>` +
+
+      (currentLang === "en"
+        ? "Which version do you want to keep?"
+        : "请选择要保留的版本：");
 
     const useCloud = await new Promise(resolve => {
       showPopupWindow({
-        title: "Choose Data Source",
-        message:
-          `Cloud and Local data both exist.<br><br>` +
-          `<b>Cloud last updated:</b><br>${cloudTime.toUTCString()}<br>${cloudTime}<br><br>` +
-          `<b>Local last updated:</b><br>${localTime.toUTCString()}<br>${localTime}<br><br>` +
-          `Which version do you want to use?`,
+        title,
+        message,
         buttons: [
           {
-            text: "Use Cloud",
+            text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
             onClick: () => resolve(true)
           },
           {
-            text: "Use Local",
+            text: currentLang === "en" ? "Keep Local" : "保留本地数据",
             onClick: () => resolve(false)
           }
         ]
