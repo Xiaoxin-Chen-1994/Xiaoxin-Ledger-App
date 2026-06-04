@@ -8609,7 +8609,22 @@ async function OpenGrocerySearch() {
     await set("grocery_search", JSON.stringify(groceryData));
 
     if (token && !repo.skipSync) {
-      await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
+      try {
+        await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
+
+        showStatusMessage(
+          currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+          "success"
+        );
+
+      } catch (err) {
+        console.error("GitHub write failed:", err);
+
+        showStatusMessage(
+          currentLang === "en" ? "Cloud sync failed." : "云端同步失败。",
+          "error"
+        );
+      }
     }
   }
 
