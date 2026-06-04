@@ -2634,8 +2634,6 @@ emoji-picker {
 }
 
 .item-scroll {
-  overscroll-behavior-x: contain;
-  touch-action: pan-x;
   display: flex;
   flex-wrap: nowrap;
   overflow-x: auto;
