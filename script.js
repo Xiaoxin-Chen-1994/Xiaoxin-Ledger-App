@@ -8662,7 +8662,7 @@ async function OpenGrocerySearch() {
         storeBtn.addEventListener('drop', async e => {
             e.preventDefault();
             const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-            const draggedName = data.itemName;   // FIXED
+            const draggedName = data.item;   // FIXED
 
             // Find the real item object + its store
             const found = findItemInStores(groceryData, draggedName);
