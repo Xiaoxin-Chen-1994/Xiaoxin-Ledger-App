@@ -199,7 +199,7 @@ a {
   height: 100%;
   padding: 0 4% 0;
   box-sizing: border-box;
-  overflow-x: clip;
+  overflow-x: hidden;
   overflow-y: auto;
   /* ✅ vertical scroll works */
   -webkit-overflow-scrolling: touch;
