@@ -8554,11 +8554,11 @@ async function OpenGrocerySearch() {
           `Which version do you want to use?`,
         buttons: [
           {
-            label: "Use Cloud",
+            text: "Use Cloud",
             onClick: () => resolve(true)
           },
           {
-            label: "Use Local",
+            text: "Use Local",
             onClick: () => resolve(false)
           }
         ]
