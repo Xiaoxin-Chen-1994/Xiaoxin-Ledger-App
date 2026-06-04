@@ -8852,6 +8852,8 @@ async function OpenGrocerySearch() {
         const { storeName: fromStore, itemObj } = found;
         const toStore = storeRow.dataset.storeName;
 
+        if (toStore === fromStore) return;
+        
         // Remove from old store
         groceryData.stores[fromStore].items =
           groceryData.stores[fromStore].items.filter(i =>
