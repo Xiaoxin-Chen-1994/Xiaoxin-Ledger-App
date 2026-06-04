@@ -8797,6 +8797,7 @@ async function OpenGrocerySearch() {
 
     if (matches.length === 0) {
       resultsContainer.textContent = 'No matches found.';
+      document.getElementById('notesBox').value = "";
       return;
     }
 
