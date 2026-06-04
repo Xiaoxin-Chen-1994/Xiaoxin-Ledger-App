@@ -8568,8 +8568,9 @@ async function OpenGrocerySearch() {
         ? "Cloud and Local data both exist."
         : "云端和本地数据同时存在。") +
       "<br><br>" +
+      `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
       `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${cloudCreated}<br><br>` +
-      `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${cloudUpdated}<br><br>` +
+      `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${cloudUpdated}<br><br><br>` +
       `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${localCreated}<br><br>` +
       `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${localUpdated}<br><br>` +
 
