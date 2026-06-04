@@ -8541,33 +8541,29 @@ async function OpenGrocerySearch() {
 
         const found = findItemInStores(groceryData, itemName);
 
+        let itemObj;
+
         if (found) {
-          // ✔ Item exists → update notes in THAT store only
-          const { storeName: existingStore, itemObj } = found;
+          // Remove from old store
+          const { storeName: oldStore, itemObj: existingItem } = found;
+          groceryData.stores[oldStore].items =
+            groceryData.stores[oldStore].items.filter(i => i !== existingItem);
+
+          itemObj = existingItem;
           itemObj.itemNotes = notes;
-
-          await syncGroceryData();
-          renderStoreAndItems();
-
-          window.open(
-            storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
-            "_blank"
-          );
-
-          return;
+        } else {
+          // Create new item object
+          itemObj = { item: itemName, itemNotes: notes };
         }
 
-        // ✔ Item does NOT exist → add to THIS store
-        groceryData.stores[storeName].items.push({
-          item: itemName,
-          itemNotes: notes
-        });
+        // ALWAYS push into the clicked store
+        groceryData.stores[storeName].items.push(itemObj);
 
         await syncGroceryData();
         renderStoreAndItems();
 
         window.open(
-          storeObj.searchURL1 + encodeURIComponent(itemName) + storeObj.searchURL2,
+          storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
           "_blank"
         );
       };
@@ -8583,10 +8579,31 @@ async function OpenGrocerySearch() {
         btn.textContent = itemObj.item;
 
         // Load item into input fields
-        btn.onclick = () => {
+        btn.onclick = async () => {
+          // 1. Load into fields
           document.getElementById("itemBox").value = itemObj.item;
           document.getElementById("notesBox").value = itemObj.itemNotes;
           currentItem = { storeName, itemObj };
+
+          // 2. Remove item from current store
+          const arr = groceryData.stores[storeName].items;
+          const idx = arr.indexOf(itemObj);
+          if (idx !== -1) {
+            arr.splice(idx, 1);
+          }
+
+          // 3. Push item to end
+          arr.push(itemObj);
+
+          // 4. Sync + re-render
+          await syncGroceryData();
+          renderStoreAndItems();
+
+          // 5. Execute search
+          window.open(
+            storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
+            "_blank"
+          );
         };
 
         // --- MOUSE DRAG SUPPORT ---
