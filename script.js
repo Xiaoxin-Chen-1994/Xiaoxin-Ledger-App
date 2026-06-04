@@ -166,6 +166,7 @@ const translations = {
     priceOrQuantity: "Price/Quantity",
     notes: "📝Notes",
     save: "✔️Save",
+    savedSuccess: "Save success!",
     personalSettingsTitle: "Personal Settings",
     openPersonalSettings: "Open Personal Settings",
     timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. Please note that, if you are offline, these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
@@ -321,6 +322,7 @@ const translations = {
     priceOrQuantity: "价格/数量",
     notes: "📝备注",
     save: "✔️保存",
+    savedSuccess: "保存成功!",
     personalSettingsTitle: "个人偏好",
     openPersonalSettings: "打开个人偏好",
     timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。请注意，如果您正处于离线状态，这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
@@ -3715,6 +3717,9 @@ function showPage(name, title = latestTitle, options = {}) {
 
       loadEntryIntoWorkspace(entry);
     });
+
+  } else if (latestPage === "grocery-search") {
+    document.getElementById("manage-btn-headerbar").style.display = "block";
 
   } else { // for all other pages
 
@@ -8386,6 +8391,7 @@ updateBtns.forEach(btn => {
 
 async function OpenGrocerySearch() {
   showPage('grocery-search', 'Grocery Search');
+
   let target = document.getElementById("grocery-search-page");
   disablePageSwipe(target);
 
@@ -8393,25 +8399,49 @@ async function OpenGrocerySearch() {
   const repo = selectedRepos.activeLedgerRepo;
   const repoName = repo.name;
 
-  // initialize this list for the first time. After that, users can tweak the links themselves.
-
   const csvFilePath = 'GrocerySearchHistory.csv';
   const jsonFilePath = 'GrocerySearchHistory.json';
 
+  const Websites = { // initialize this list for the first time. After that, users can tweak the links themselves.
+    "Flipp": { searchURL1: "https://flipp.com/search/", searchURL2: "", items: [] },
+    "Sobeys": { searchURL1: "https://www.sobeys.com/?query=", searchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100", items: [] },
+    "Walmart": { searchURL1: "https://www.walmart.ca/en/search?q=", searchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store", items: [] },
+    "Costco": { searchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", searchURL2: "&sortBy=item_location_pricing_salePrice%2Basc", items: [] },
+    "Shoppers Drug Mart": { searchURL1: "https://shop.shoppersdrugmart.ca/search?text=", searchURL2: "", items: [] },
+    "T&T": { searchURL1: "https://www.tntsupermarket.com/eng/search.html?query=", searchURL2: "&sort%5Bfilter%5D=Price%3A+Low+to+High%2Cprice-ASC", items: [] },
+    "Dollarama": { searchURL1: "https://www.google.com/search?q=", searchURL2: " site%3Ainstacart.ca%2Fstore%2Fdollarama", items: [] },
+    "Real Canadian Superstore": { searchURL1: "https://www.realcanadiansuperstore.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+    "No Frills": { searchURL1: "https://www.nofrills.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+    "Zehrs": { searchURL1: "https://www.zehrs.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+    "Valu-mart": { searchURL1: "https://www.valumart.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+    "Giant Tiger": { searchURL1: "https://www.gianttiger.com/search?q=", searchURL2: "&sort_by=price_asc", items: [] },
+    "Wholesale Club": { searchURL1: "https://www.wholesaleclub.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
+    "Amazon.ca": { searchURL1: "https://www.amazon.ca/s?k=", searchURL2: "&s=price-asc-rank", items: [] },
+    "Mark's": { searchURL1: "https://www.marks.com/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
+    "Canadian Tire": { searchURL1: "https://www.canadiantire.ca/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
+    "Home Hardware": { searchURL1: "https://www.homehardware.ca/en/search?query=", searchURL2: "&sortBy=price%2Basc", items: [] },
+    "Stock Track": { searchURL1: "https://stocktrack.ca/?s=", searchURL2: "&search=", items: [] },
+    "Google": { searchURL1: "https://www.google.com/search?q=", searchURL2: "", items: [] }
+  }
+
   const groceryData = await initializeGrocerySearch();
-  // Use groceryData.websites instead of hardcoded Websites
-  console.log(groceryData)
 
   let currentItem = null;
 
   renderStoreAndItems();
 
+  document.getElementById("manage-btn-headerbar").addEventListener("click", () => {
+    document.getElementById("manage-grocery-search-page").style.display = "block";
+    showPage('manage-grocery-search', 'Manage Grocery Stores');
+    renderManageGrocerySearchPage();
+  });
+
   async function initializeGrocerySearch() {
     const localJSON = await get("grocery_search");
-    const cloudJSON = 
+    const cloudJSON =
       token && !repo.skipSync
-      ? await githubReadJson(repoName, "GrocerySearch.json", token)
-      : null;
+        ? await githubReadJson(repoName, "GrocerySearch.json", token)
+        : null;
 
     const hasLocal = !!localJSON;
     const hasCloud = !!cloudJSON;
@@ -8422,27 +8452,7 @@ async function OpenGrocerySearch() {
       const obj = {
         createdAt: now,
         lastUpdatedAt: now,
-        stores: {
-          "Flipp": { searchURL1: "https://flipp.com/search/", searchURL2: "", items: [] },
-          "Sobeys": { searchURL1: "https://www.sobeys.com/?query=", searchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100", items: [] },
-          "Walmart": { searchURL1: "https://www.walmart.ca/en/search?q=", searchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store", items: [] },
-          "Costco": { searchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", searchURL2: "&sortBy=item_location_pricing_salePrice%2Basc", items: [] },
-          "Shoppers Drug Mart": { searchURL1: "https://shop.shoppersdrugmart.ca/search?text=", searchURL2: "", items: [] },
-          "T&T": { searchURL1: "https://www.tntsupermarket.com/eng/search.html?query=", searchURL2: "&sort%5Bfilter%5D=Price%3A+Low+to+High%2Cprice-ASC", items: [] },
-          "Dollarama": { searchURL1: "https://www.google.com/search?q=", searchURL2: " site%3Ainstacart.ca%2Fstore%2Fdollarama", items: [] },
-          "Real Canadian Superstore": { searchURL1: "https://www.realcanadiansuperstore.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
-          "No Frills": { searchURL1: "https://www.nofrills.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
-          "Zehrs": { searchURL1: "https://www.zehrs.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
-          "Valu-mart": { searchURL1: "https://www.valumart.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
-          "Giant Tiger": { searchURL1: "https://www.gianttiger.com/search?q=", searchURL2: "&sort_by=price_asc", items: [] },
-          "Wholesale Club": { searchURL1: "https://www.wholesaleclub.ca/search?search-bar=", searchURL2: "&sort=price-asc", items: [] },
-          "Amazon.ca": { searchURL1: "https://www.amazon.ca/s?k=", searchURL2: "&s=price-asc-rank", items: [] },
-          "Mark's": { searchURL1: "https://www.marks.com/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
-          "Canadian Tire": { searchURL1: "https://www.canadiantire.ca/en/search-results.html?q=", searchURL2: ";m_ct_sort=national-sort-price", items: [] },
-          "Home Hardware": { searchURL1: "https://www.homehardware.ca/en/search?query=", searchURL2: "&sortBy=price%2Basc", items: [] },
-          "Stock Track": { searchURL1: "https://stocktrack.ca/?s=", searchURL2: "&search=", items: [] },
-          "Google": { searchURL1: "https://www.google.com/search?q=", searchURL2: "", items: [] }
-        }
+        stores: Websites
       };
       await set("grocery_search", JSON.stringify(obj));
       if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
@@ -8830,6 +8840,294 @@ async function OpenGrocerySearch() {
       resultsContainer.appendChild(btn);
     });
   });
+
+  function renderManageGrocerySearchPage() {
+    const container = document.getElementById("manage-store-list");
+    container.innerHTML = "";
+
+    const controls = document.getElementById("manage-controls");
+    controls.innerHTML = `
+      <button id="add-store-btn">Add Store</button>
+      <button id="save-store-btn">Save</button>
+      <button id="reset-preset-btn">Reset Preset</button>
+      <button id="delete-store-btn">Delete Selected</button>
+    `;
+
+    const stores = groceryData.stores; // your unified JSON model
+
+    for (const storeName in stores) {
+      const store = stores[storeName];
+
+      const row = document.createElement("div");
+      row.className = "manage-store-row";
+
+      row.innerHTML = `
+        <input type="checkbox" class="store-checkbox" data-store="${storeName}">
+        <input type="text" class="store-name-input" value="${storeName}">
+        <input type="text" class="store-url1-input" value="${store.searchURL1}">
+        <input type="text" class="store-url2-input" value="${store.searchURL2}">
+        <div class="drag-handle" draggable="true">&#9776;</div>
+      `;
+
+      container.appendChild(row);
+    }
+
+    attachManageHandlers();
+    attachFlexExpandHandlers();
+    enableStoreReordering();
+  }
+
+  function attachFlexExpandHandlers() {
+    const inputs = document.querySelectorAll(
+      "#manage-store-list .store-name-input, \
+     #manage-store-list .store-url1-input, \
+     #manage-store-list .store-url2-input"
+    );
+
+    inputs.forEach(input => {
+      input.addEventListener("focus", () => {
+        // shrink all
+        inputs.forEach(i => (i.style.flex = 1));
+
+        // expand clicked
+        input.style.flex = 4;
+      });
+
+      // Optional: restore equal flex on blur
+      input.addEventListener("blur", () => {
+        inputs.forEach(i => (i.style.flex = 2));
+      });
+    });
+  }
+
+  function addStoreRow() {
+    const container = document.getElementById("manage-store-list");
+
+    const row = document.createElement("div");
+    row.className = "manage-store-row";
+
+    row.innerHTML = `
+      <input type="checkbox" class="store-checkbox">
+      <input type="text" class="store-name-input" placeholder="Store name">
+      <input type="text" class="store-url1-input" placeholder="Search URL 1">
+      <input type="text" class="store-url2-input" placeholder="Search URL 2">
+      <div class="drag-handle" draggable="true">&#9776;</div>
+    `;
+
+    container.appendChild(row);
+  }
+
+  async function saveStores() {
+    const t = translations[currentLang];
+    const rows = document.querySelectorAll(".manage-store-row");
+
+    const newStores = {};
+
+    for (const row of rows) {
+      const nameInput = row.querySelector(".store-name-input");
+      const url1Input = row.querySelector(".store-url1-input");
+      const url2Input = row.querySelector(".store-url2-input");
+
+      const name = nameInput.value.trim();
+      const url1 = url1Input.value.trim();
+      const url2 = url2Input.value.trim();
+
+      const oldName = row.querySelector(".store-checkbox")?.dataset.store;
+
+      // 1) Completely empty new row → ignore
+      const isNewRow = !oldName; // or !groceryData.stores[oldName]
+      const isCompletelyEmpty = !name && !url1 && !url2;
+
+      if (isNewRow && isCompletelyEmpty) {
+        // skip this row entirely
+        continue;
+      }
+
+      // 2) For all other rows, name is required
+      if (!name) {
+        showStatusMessage(
+          currentLang === "en" ? "Store name cannot be empty." : "商店名称不能为空。",
+          "error"
+        );
+        return;
+      }
+
+      // 3) Preserve items by old name if exists, otherwise by new name
+      const sourceName = oldName || name;
+
+      newStores[name] = {
+        searchURL1: url1,
+        searchURL2: url2,
+        items: groceryData.stores[sourceName]?.items || []
+      };
+    }
+
+    groceryData.stores = newStores;
+
+    await syncGroceryData();
+    renderStoreAndItems();
+
+    showStatusMessage(t.savedSuccess, "success");
+    goBack();
+  }
+
+  function deleteSelectedStores() {
+    const rows = document.querySelectorAll(".manage-store-row");
+
+    // Collect selected stores
+    const selectedStores = [...rows]
+      .map(row => {
+        const checkbox = row.querySelector(".store-checkbox");
+        return checkbox.checked ? checkbox.dataset.store : null;
+      })
+      .filter(Boolean);
+
+    if (selectedStores.length === 0) return;
+
+    // Check if any selected store has items
+    for (const name of selectedStores) {
+      if (groceryData.stores[name]?.items?.length > 0) {
+        alert(
+          currentLang === "en"
+            ? `Cannot delete "${name}" because it still contains watchlist items.`
+            : `无法删除 "${name}"，因为它仍包含心愿物品。`
+        );
+        return;
+      }
+    }
+
+    // Build confirmation message
+    let message = "";
+
+    if (currentLang === "en") {
+      message += `You selected ${selectedStores.length} store${selectedStores.length > 1 ? "s" : ""}.<br><br>`;
+      message += `Selected stores:<br><b>${selectedStores.join(", ")}</b><br><br>`;
+      message += `Confirm deletion?`;
+    } else {
+      message += `您选择了 ${selectedStores.length} 个商店。<br><br>`;
+      message += `已选商店：<br><b>${selectedStores.join("，")}</b><br><br>`;
+      message += `确认删除？`;
+    }
+
+    // Show confirmation popup
+    showPopupWindow({
+      title: currentLang === "en" ? "Confirm Deletion" : "确认删除",
+      message,
+      buttons: [
+        {
+          text: currentLang === "en" ? "Cancel" : "取消",
+          primary: true,
+          onClick: () => { }
+        },
+        {
+          text: currentLang === "en" ? "Delete" : "删除",
+          onClick: () => {
+            // Perform deletion
+            for (const name of selectedStores) {
+              delete groceryData.stores[name];
+            }
+
+            syncGroceryData();
+            renderStoreAndItems();
+            renderManageGrocerySearchPage();
+          }
+        }
+      ]
+    });
+  }
+
+  function resetPresetStores() {
+    for (const name in Websites) {
+      const preset = Websites[name];
+
+      if (groceryData.stores[name]) {
+        // Reset URLs
+        groceryData.stores[name].searchURL1 = preset.searchURL1;
+        groceryData.stores[name].searchURL2 = preset.searchURL2;
+      } else {
+        // Append new store
+        groceryData.stores[name] = {
+          searchURL1: preset.searchURL1,
+          searchURL2: preset.searchURL2,
+          items: []
+        };
+      }
+    }
+
+    syncGroceryData();
+    renderStoreAndItems();
+    renderManageGrocerySearchPage();
+  }
+
+  function enableStoreReordering() {
+    const list = document.getElementById("manage-store-list");
+    let draggingRow = null;
+
+    list.addEventListener("dragstart", e => {
+      if (!e.target.classList.contains("drag-handle")) return;
+
+      draggingRow = e.target.closest(".manage-store-row");
+      draggingRow.classList.add("dragging");
+
+      // Create ghost clone
+      const ghost = draggingRow.cloneNode(true);
+      ghost.style.width = `${draggingRow.offsetWidth}px`;
+      ghost.style.opacity = "0.7";
+      ghost.style.position = "absolute";
+      ghost.style.top = "-9999px"; // off-screen
+
+      document.body.appendChild(ghost);
+
+      // ⭐ Keep horizontal position fixed
+      const rect = draggingRow.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left; // cursor offset inside the row
+      const offsetY = e.clientY - rect.top;
+
+      // Anchor ghost so it stays aligned horizontally
+      e.dataTransfer.setDragImage(ghost, offsetX, offsetY);
+
+      setTimeout(() => ghost.remove(), 0);
+    });
+
+    list.addEventListener("dragend", () => {
+      if (draggingRow) draggingRow.classList.remove("dragging");
+      draggingRow = null;
+    });
+
+    list.addEventListener("dragover", e => {
+      e.preventDefault();
+
+      const after = getDragAfterElement(list, e.clientY);
+
+      if (after == null) {
+        list.appendChild(draggingRow);
+      } else {
+        list.insertBefore(draggingRow, after);
+      }
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    const rows = [...container.querySelectorAll(".manage-store-row:not(.dragging)")];
+
+    return rows.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  function attachManageHandlers() {
+    document.getElementById("add-store-btn").onclick = addStoreRow;
+    document.getElementById("save-store-btn").onclick = saveStores;
+    document.getElementById("delete-store-btn").onclick = deleteSelectedStores;
+    document.getElementById("reset-preset-btn").onclick = resetPresetStores;
+  }
 }
 window.OpenGrocerySearch = OpenGrocerySearch;
 

@@ -1416,61 +1416,18 @@ select:hover {
   outline: none;
 }
 
-#login-section select option,
+.merge-target select option,
 .settings-section select option {
   color: initial;
-  /* or a specific color you want */
   background: var(--bg);
   /* prevents hover background bleeding into options */
 }
 
-.ledger-repo {
+/* checkbox size */
+.ledger-repo, .store-checkbox {
   width: calc(var(--font-size) * 1.2);
   height: calc(var(--font-size) * 1.2);
   margin-right: 8px;
-}
-
-.login-settings {
-  width: 80%;
-  max-width: 500px;
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  /* center horizontally */
-
-  display: flex;
-  flex-direction: column;
-  /* stack panels vertically */
-  align-items: center;
-  /* center children horizontally */
-  background: var(--card);
-  padding: 0.5rem 1rem;
-  border-radius: 1rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  font-size: calc(var(--font-size) * 0.9);
-
-  /* text handling applies to all children */
-  text-align: center;
-  white-space: normal;
-  word-break: break-word;
-}
-
-.login-settings-row {
-  display: flex;
-  flex-direction: row;
-  /* label left, buttons right */
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  /* match parent width */
-  margin: 0.1rem 0;
-  /* vertical spacing only */
-  gap: 1rem;
-}
-
-.login-settings-row p {
-  width: 20%;
 }
 
 .actions {
@@ -2705,6 +2662,91 @@ emoji-picker {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#manage-store-list {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.manage-store-row {
+  display: flex;
+  gap: 0.1rem;
+  align-items: center;
+  padding: 0.3rem;
+  background: var(--bg-secondary);
+  transition: background 0.2s ease;
+}
+
+.manage-store-row input[type="text"] {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.manage-store-row.dragging {
+  opacity: 0.3;
+}
+
+#manage-grocery-search-page .manage-store-row:hover {
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
+}
+
+#manage-grocery-search-page .store-name-input,
+#manage-grocery-search-page .store-url1-input,
+#manage-grocery-search-page .store-url2-input {
+  flex: 2;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  transition: flex 0.25s ease, background 0.25s ease;
+}
+
+#manage-grocery-search-page .manage-store-row input[type="text"]:focus {
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
+}
+
+#manage-grocery-search-page .drag-handle {
+  flex: 0 0 1.4rem;
+  font-size: calc(var(--font-size) * 1.2);
+  cursor: grab;
+  padding: 0 0.4rem;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+#manage-grocery-search-page .drag-handle:active {
+  cursor: grabbing;
+}
+
+#manage-grocery-search-page .drag-handle:hover {
+  opacity: 1;
+}
+
+#manage-grocery-search-page .sticky-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  gap: 0.6rem;
+}
+
+#manage-controls {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+#manage-controls button {
+  flex: 1;
 }
 
 #receipt-controls {

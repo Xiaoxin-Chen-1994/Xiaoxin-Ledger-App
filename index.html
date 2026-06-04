@@ -21,11 +21,13 @@
   </div>
 
   <div class="header-bar">
-    <button id="return-btn"  onclick="onReturnButton()" style="display: none;">&lt; 返回</button>
+    <button id="return-btn" onclick="onReturnButton()" style="display: none;">&lt; 返回</button>
     <button id="cancel-btn" onclick="resetCreate()" style="display: none;">取消</button>
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
-    <button id="save-btn-headerbar" class="header-right-button" onclick="saveEntry()" style="display: none;">✔️保存</button>
-    <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display: none;">🔍搜索</button>
+    <button id="save-btn-headerbar" class="header-right-button" onclick="saveEntry()"
+      style="display: none;">✔️保存</button>
+    <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()"
+      style="display: none;">🔍搜索</button>
     <button id="manage-btn-headerbar" class="header-right-button" style="display: none;">管理</button>
     <button id="delete-btn-headerbar" class="header-right-button" style="display: none;">删除</button>
   </div>
@@ -58,7 +60,7 @@
     <!-- Accounts Page -->
     <div class="page" id="accounts-page">
       <div class="scroll">
-        
+
       </div>
     </div>
 
@@ -117,7 +119,7 @@
                 <label class="transaction-tags-title">标签</label>
                 <div class="tag-input-container expense-tags">
                   <div class="tag-input-row">
-                    <input type="text" id="expense-tag-input" class="tag-input"/>
+                    <input type="text" id="expense-tag-input" class="tag-input" />
                     <button type="button" id="add-expense-tag-btn" class="add-tag-btn">添加</button>
                     <div id="expense-tag-suggestions" class="tag-suggestions"></div>
                   </div>
@@ -136,7 +138,7 @@
                     <input type="text" class="item-price" placeholder="价格">
                   </div>
                   <button type="button" id="expense-add-item-btn">新增条目</button>
-                </div>                
+                </div>
               </div>
 
               <!-- EXPENSE GENERAL NOTES -->
@@ -193,7 +195,7 @@
                 <label class="transaction-tags-title">标签</label>
                 <div class="tag-input-container income-tags">
                   <div class="tag-input-row">
-                    <input type="text" id="income-tag-input" class="tag-input"/>
+                    <input type="text" id="income-tag-input" class="tag-input" />
                     <button type="button" id="add-income-tag-btn" class="add-tag-btn">添加</button>
                     <div id="income-tag-suggestions" class="tag-suggestions"></div>
                   </div>
@@ -277,7 +279,7 @@
                 <label class="transaction-tags-title">标签</label>
                 <div class="tag-input-container transfer-tags">
                   <div class="tag-input-row">
-                    <input type="text" id="transfer-tag-input" class="tag-input"/>
+                    <input type="text" id="transfer-tag-input" class="tag-input" />
                     <button type="button" id="add-transfer-tag-btn" class="add-tag-btn">添加</button>
                     <div id="transfer-tag-suggestions" class="tag-suggestions"></div>
                   </div>
@@ -336,7 +338,7 @@
                 <label class="transaction-tags-title">标签</label>
                 <div class="tag-input-container balance-tags">
                   <div class="tag-input-row">
-                    <input type="text" id="balance-tag-input" class="tag-input"/>
+                    <input type="text" id="balance-tag-input" class="tag-input" />
                     <button type="button" id="add-balance-tag-btn" class="add-tag-btn">添加</button>
                     <div id="balance-tag-suggestions" class="tag-suggestions"></div>
                   </div>
@@ -429,7 +431,8 @@
     </div>
 
     <div id="account-selector" class="selector">
-      <button id="selector-manage-account-btn" type="button" class="datetime-now" onclick="showPage('manage-labels', translations[currentLang].manageAccounts)">管理</button>
+      <button id="selector-manage-account-btn" type="button" class="datetime-now"
+        onclick="showPage('manage-labels', translations[currentLang].manageAccounts)">管理</button>
       <button type="button" class="selector-close" onclick="closeSelector()">收起 ▼</button>
 
       <div class="dt-col primary-col">
@@ -475,18 +478,18 @@
 
     <!-- Utilities Page -->
     <div class="page" id="utilities-page">
-    <div class="scroll">
-      <div class="utilities-grid">
-        <button class="util-button" onclick="OpenGrocerySearch()">
-          Grocery Search
-        </button>
+      <div class="scroll">
+        <div class="utilities-grid">
+          <button class="util-button" onclick="OpenGrocerySearch()">
+            Grocery Search
+          </button>
 
-        <button class="util-button" id="open-receipt-scan">
-          Scan Receipt
-        </button>
+          <button class="util-button" id="open-receipt-scan">
+            Scan Receipt
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
     <div class="page" id="grocery-search-page">
       <div class="scroll">
@@ -500,7 +503,7 @@
             <label for="notesBox">Notes:</label>
             <input type="text" id="notesBox" />
           </div>
-           <div class="row">
+          <div class="row">
             <label for="">Ledger history:</label>
             <span id="historyBox"></span>
           </div>
@@ -509,6 +512,16 @@
         <div id="storeItemList"></div>
       </div>
     </div>
+
+    <div class="page" id="manage-grocery-search-page">
+      <div class="scroll">
+        <div class="sticky-header">
+          <div id="manage-controls"></div>
+        </div>
+        <div id="manage-store-list"></div>
+      </div>
+    </div>
+
 
     <div class="page" id="scan-receipt-page">
       <div class="scroll">
@@ -580,8 +593,7 @@
         <!-- Basic settings -->
         <section class="settings-section basic-settings">
           <p id="basic-settings-title">个人偏好</p>
-          <button id="open-basic-settings" class="settings-button"
-            onclick="showPage('basic-settings')">打开个人偏好</button>
+          <button id="open-basic-settings" class="settings-button" onclick="showPage('basic-settings')">打开个人偏好</button>
         </section>
 
         <section class="settings-section local-storage">
@@ -604,33 +616,32 @@
         <section class="settings-section labels">
           <p id="labels-title">类别</p>
           <div id="labels-actions">
-              <button id="manage-expense-categories-btn" class="settings-button"
-                      onclick="prepareRepoTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)">
-                管理支出分类
-              </button>
+            <button id="manage-expense-categories-btn" class="settings-button"
+              onclick="prepareRepoTabs('manage-labels', 'expense-categories', translations[currentLang].manageExpenseCategories)">
+              管理支出分类
+            </button>
 
-              <button id="manage-income-categories-btn" class="settings-button"
-                      onclick="prepareRepoTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)">
-                管理收入分类
-              </button>
+            <button id="manage-income-categories-btn" class="settings-button"
+              onclick="prepareRepoTabs('manage-labels', 'income-categories', translations[currentLang].manageIncomeCategories)">
+              管理收入分类
+            </button>
 
-              <button id="manage-collections-btn" class="settings-button"
-                      onclick="prepareRepoTabs('manage-labels', 'collections', translations[currentLang].manageCollections)">
-                管理项目
-              </button>
+            <button id="manage-collections-btn" class="settings-button"
+              onclick="prepareRepoTabs('manage-labels', 'collections', translations[currentLang].manageCollections)">
+              管理项目
+            </button>
 
-              <button id="manage-subjects-btn" class="settings-button"
-                      onclick="prepareRepoTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects)">
-                管理交易对象（交易主体）
-              </button>
+            <button id="manage-subjects-btn" class="settings-button"
+              onclick="prepareRepoTabs('manage-labels', 'subjects', translations[currentLang].manageSubjects)">
+              管理交易对象（交易主体）
+            </button>
           </div>
         </section>
 
         <!-- Bulk data -->
         <section class="settings-section bulk-data">
           <p id="bulk-data-title">批量操作</p>
-          <button id="open-bulk-data" class="settings-button"
-            onclick="showPage('bulk-data')">进入批量操作</button>
+          <button id="open-bulk-data" class="settings-button" onclick="showPage('bulk-data')">进入批量操作</button>
         </section>
 
         <!-- Household -->
@@ -745,11 +756,12 @@
 
         <div class="actions">
           <button type="button" id="login-btn" class="secondary"></button>
-          <button type="button" id="delete-account-btn" class="secondary" onclick="deleteAccount('account')">删除账户</button>
+          <button type="button" id="delete-account-btn" class="secondary"
+            onclick="deleteAccount('account')">删除账户</button>
         </div>
       </div>
     </div>
-  
+
     <div class="page" id="manage-labels-page">
       <div class="scroll">
         <!-- Tabs -->
@@ -774,7 +786,8 @@
         <section id="household-select-section" class="settings-section household-select">
           <p id="bulk-data-household-select-title">选择账本</p>
           <div>
-            <select id="household-select" onchange="document.getElementById('household-select-feedback').textContent = ''"></select>
+            <select id="household-select"
+              onchange="document.getElementById('household-select-feedback').textContent = ''"></select>
             <div id="household-select-feedback"></div>
           </div>
         </section>
@@ -813,7 +826,7 @@
     <div class="page" id="acknowledgements-page">
       <div class="scroll">
         <div id="acknowledgements-content"></div>
-        </div>
+      </div>
     </div>
 
     <div class="page" id="privacy-page">
