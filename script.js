@@ -8751,7 +8751,7 @@ async function OpenGrocerySearch() {
           let pressTimer;
           let startX = 0;
           let startY = 0;
-          const MOVE_THRESHOLD = 10; // px
+          const MOVE_THRESHOLD = 100; // px
 
           btn.addEventListener("touchstart", e => {
             const touch = e.touches[0];
