@@ -550,6 +550,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
       if (selectedMergeIds.has(cb.dataset.id)) {
         li.style.display = "none";
+        cb.checked = false;
       } else {
         li.style.display = "";
         visibleCount++;
@@ -618,7 +619,13 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       if (targetId) {
         // Merge local DB into GitHub repo
         localDbMap[targetId] = localDbMap[localId];
+        localLogMap[targetId] = localLogMap[localId];
+        lastSyncedMap[targetId] = lastSyncedMap[localId];
+        settingsMap[targetId] = settingsMap[localId];
         delete localDbMap[localId];
+        delete localLogMap[localId];
+        delete lastSyncedMap[localId];
+        delete settingsMap[localId];
 
         // Remove skipSync if merging now
         const repo = selectedRepos.ledgerRepos.find(r => r.id == localId);
@@ -632,6 +639,9 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
     }
 
     await set(LOCAL_DB_KEY, localDbMap);
+    await set(LOCAL_LOG_KEY, localLogMap);
+    await set(LAST_SYNC_KEY, lastSyncedMap);
+    await set("ledger_settings", settingsMap);
 
     // Build final ledgerRepos list
     // Start with ALL existing repos (including skipped ones)
@@ -1371,6 +1381,7 @@ async function init() {
   localDbMap = await get(LOCAL_DB_KEY) || {};
   localLogMap = await get(LOCAL_LOG_KEY) || {};
   lastSyncedMap = await get(LAST_SYNC_KEY) || {};
+  settingsMap = await get("ledger_settings") || {};
 
   // Load local repo selections
   selectedRepos = await get("selectedRepos");
@@ -1521,47 +1532,62 @@ async function logout() {
   await del("github_token");
   await del("selectedRepos");
 
-  // check if local has data
-  let ledgerRepos;
+  let ledgerRepos = [];
 
-  const repoIds = Object.keys(localDbMap);
+  // Convert ALL keys to local IDs
+  const oldIds = Object.keys(localDbMap);
 
-  if (repoIds.length > 0) {
-    if (repoIds.length === 1) {
-      // Exactly one local repo → no numbering
-      const rid = repoIds[0];
+  if (oldIds.length > 0) {
+    if (oldIds.length === 1) {
+      // Single local repo
+      const newId = "local";
+
+      renameKey(localDbMap, oldIds[0], newId);
+      renameKey(localLogMap, oldIds[0], newId);
+      renameKey(lastSyncedMap, oldIds[0], newId);
+      renameKey(settingsMap, oldIds[0], newId);
+
       ledgerRepos = [
-        {
-          id: "local",
-          name: "Local Ledger",
-          ownerId: "local"
-        }
+        { id: newId, name: "Local Ledger", ownerId: newId }
       ];
-
-      selectedRepos = {
-        ledgerRepos,
-        activeLedgerRepo: ledgerRepos[0]
-      };
 
     } else {
       // Multiple local repos → number them
-      ledgerRepos = repoIds.map((rid, index) => ({
+      oldIds.forEach((oldId, index) => {
+        const newId = `local ${index + 1}`;
+
+        renameKey(localDbMap, oldId, newId);
+        renameKey(localLogMap, oldId, newId);
+        renameKey(lastSyncedMap, oldId, newId);
+        renameKey(settingsMap, oldId, newId);
+      });
+
+      ledgerRepos = oldIds.map((_, index) => ({
         id: `local ${index + 1}`,
         name: `Local Ledger ${index + 1}`,
         ownerId: `local ${index + 1}`
       }));
-
-      selectedRepos = {
-        ledgerRepos,
-        activeLedgerRepo: ledgerRepos[0]
-      };
     }
   }
 
-  await set("selectedRepos", selectedRepos);
+  await set(LOCAL_DB_KEY, localDbMap);
+  await set(LOCAL_LOG_KEY, localLogMap);
+  await set(LAST_SYNC_KEY, lastSyncedMap);
+  await set("ledger_settings", settingsMap);
+
+  await set("selectedRepos", {
+    ledgerRepos,
+    activeLedgerRepo: ledgerRepos[0]
+  });
 
   window.location.href = "/";
   window.location.reload();
+}
+
+function renameKey(obj, oldKey, newKey) {
+  if (oldKey === newKey) return;
+  obj[newKey] = obj[oldKey];
+  delete obj[oldKey];
 }
 
 function toggleLedgerFormRows() {
