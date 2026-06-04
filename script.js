@@ -8538,17 +8538,6 @@ async function OpenGrocerySearch() {
     }
 
     // Case 4: both exist → ask user which to keep
-    const localObj = JSON.parse(localJSON);
-    const cloudObj = cloudJSON;
-
-    // Compare timestamps
-    const sameCreated = localObj.createdAt === cloudObj.createdAt;
-    const sameUpdated = localObj.lastUpdatedAt === cloudObj.lastUpdatedAt;
-
-    // If both timestamps match → same version → skip popup
-    if (sameCreated && sameUpdated) {
-      return false; // use local (or true — they are identical)
-    }
 
     const localObj = JSON.parse(localJSON);
     const cloudObj = cloudJSON;
