@@ -8548,7 +8548,7 @@ async function OpenGrocerySearch() {
 
     // If both timestamps match → same version → skip popup
     if (sameCreated && sameUpdated) {
-      return false; // identical, choose local or cloud doesn't matter
+      return cloudObj; // identical, choose local or cloud doesn't matter
     }
 
     const localCreated = new Date(localObj.createdAt);
