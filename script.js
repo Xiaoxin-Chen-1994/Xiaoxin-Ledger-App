@@ -645,32 +645,36 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
     // Build final ledgerRepos list
     // Start with ALL existing repos (including skipped ones)
+    // Build final ledgerRepos list
     const mergedLedgerRepos = selectedRepos.ledgerRepos.map(r => ({ ...r }));
 
-    // 1. Add merge-target repos first
     for (const sel of mergeSelections) {
-      if (sel.value) {
-        const targetId = Number(sel.value);
+      const localId = sel.dataset.localId;
+      const targetId = Number(sel.value);
+
+      if (targetId) {
         const targetRepo = ledgerRepos.find(r => r.id === targetId);
 
-        if (targetRepo) {
-          const existing = mergedLedgerRepos.find(r => r.id === targetId);
+        // Find the local repo entry
+        const idx = mergedLedgerRepos.findIndex(r => r.id == localId);
 
-          if (existing) {
-            existing.skipSync = false; // ensure syncing
-          } else {
-            mergedLedgerRepos.push({
-              id: targetRepo.id,
-              name: targetRepo.full_name,
-              ownerId: targetRepo.owner.id,
-              skipSync: false
-            });
-          }
+        if (idx !== -1 && targetRepo) {
+          // ✔ Replace the local repo with the GitHub repo identity
+          mergedLedgerRepos[idx] = {
+            id: targetRepo.id,              // GitHub repo ID
+            name: targetRepo.full_name,     // GitHub repo name
+            ownerId: targetRepo.owner.id,   // GitHub owner ID
+            skipSync: false
+          };
         }
+      } else {
+        // Skip syncing
+        const repo = mergedLedgerRepos.find(r => r.id == localId);
+        if (repo) repo.skipSync = true;
       }
     }
 
-    // 2. Add additional checkbox-selected repos
+    // Add additional checkbox-selected repos
     ledgerSelections.forEach(r => {
       if (!mergedLedgerRepos.some(x => x.id === r.id)) {
         mergedLedgerRepos.push({ ...r, skipSync: false });
