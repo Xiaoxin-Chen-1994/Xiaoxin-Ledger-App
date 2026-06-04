@@ -1703,8 +1703,8 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
     warn.style.marginBottom = "0.8em";
     warn.textContent =
       currentLang === "en"
-        ? "Warning: Local-only data can be easily lost if the browser clears site data (cache, cookies, storage)."
-        : "警告：如果浏览器清除网站数据（缓存、Cookie、本地存储），这些仅存储在本地的账本可能会丢失。";
+        ? "Warning: Local-only data will be lost if the browser clears site data (cache, cookies, storage)."
+        : "警告：如果浏览器清除网站数据（缓存、Cookie、本地存储），这些仅存储在本地的账本将会丢失。";
     msg.appendChild(warn);
 
     // Localized instruction
@@ -8390,7 +8390,8 @@ async function OpenGrocerySearch() {
   disablePageSwipe(target);
 
   const token = await get("github_token");
-  const repoName = selectedRepos.activeLedgerRepo.name;
+  const repo = selectedRepos.activeLedgerRepo;
+  const repoName = repo.name;
 
   // initialize this list for the first time. After that, users can tweak the links themselves.
 
@@ -8407,7 +8408,8 @@ async function OpenGrocerySearch() {
 
   async function initializeGrocerySearch() {
     const localJSON = await get("grocery_search");
-    const cloudJSON = token
+    const cloudJSON = 
+      token && !repo.skipSync
       ? await githubReadJson(repoName, "GrocerySearch.json", token)
       : null;
 
@@ -8443,7 +8445,7 @@ async function OpenGrocerySearch() {
         }
       };
       await set("grocery_search", JSON.stringify(obj));
-      if (token) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
+      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
       return obj;
     }
 
@@ -8455,7 +8457,7 @@ async function OpenGrocerySearch() {
 
     // Case 3: local exists, cloud does not → copy local → cloud
     if (!hasCloud && hasLocal) {
-      if (token) await githubWriteJson(repoName, "GrocerySearch.json", JSON.parse(localJSON), token);
+      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", JSON.parse(localJSON), token);
       return JSON.parse(localJSON);
     }
 
@@ -8491,7 +8493,7 @@ async function OpenGrocerySearch() {
       await set("grocery_search", JSON.stringify(cloudObj));
       return cloudObj;
     } else {
-      if (token) await githubWriteJson(repoName, "GrocerySearch.json", localObj, token);
+      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", localObj, token);
       return localObj;
     }
   }
@@ -8501,7 +8503,7 @@ async function OpenGrocerySearch() {
 
     await set("grocery_search", JSON.stringify(groceryData));
 
-    if (token) {
+    if (token && !repo.skipSync) {
       await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
     }
   }
