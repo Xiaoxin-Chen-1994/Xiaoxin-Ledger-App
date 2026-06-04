@@ -8767,7 +8767,7 @@ async function OpenGrocerySearch() {
             const touch = e.touches[0];
             const dx = Math.abs(touch.clientX - startX);
             const dy = Math.abs(touch.clientY - startY);
-
+showStatusMessage(`dx: ${dx}, dy: ${dy}`);
             // If finger moved too much → cancel long press
             if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
               clearTimeout(pressTimer);
