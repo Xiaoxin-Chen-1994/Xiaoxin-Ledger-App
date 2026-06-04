@@ -8928,6 +8928,14 @@ async function OpenGrocerySearch() {
       return;
     }
 
+    const exact = matches.find(m =>
+      m.itemObj.item.toLowerCase() === query.toLowerCase()
+    );
+
+    if (exact) {
+      document.getElementById('notesBox').value = exact.itemObj.itemNotes || "";
+    }
+
     // Sort alphabetically
     matches.sort((a, b) => a.itemObj.item.localeCompare(b.itemObj.item));
 
