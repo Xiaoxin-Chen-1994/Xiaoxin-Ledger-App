@@ -819,19 +819,15 @@ async function smartSync(selectedRepos, token) {
     let repoHasData = null;
 
     if (token) {
-      const exists = await githubFileExists(repoName, "ledger-settings.json", token);
+      const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
 
-      if (exists) {
-        // Read raw file content
-        const file = await githubReadFile(repoName, "ledger-settings.json", token);
-        const decoded = utf8DecodeBase64(file.content || "");
-
-        // If empty or whitespace → treat as no data
-        if (!decoded.trim()) {
-          repoHasData = null;
-        } else {
-          repoHasData = true;
-        }
+      // githubReadJson returns:
+      // - null  → no file / empty / invalid
+      // - object → valid JSON
+      if (remoteSettings) {
+        repoHasData = true;
+      } else {
+        repoHasData = null;
       }
     }
 
@@ -1297,19 +1293,44 @@ async function githubReadJson(repoName, path, token) {
     headers: { Authorization: `token ${token}` }
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) return null; // file missing
 
   const data = await res.json();
-  const decoded = decodeBase64Utf8(data.content);
-  return JSON.parse(decoded);
+
+  // GitHub may return undefined or empty content
+  const decoded = decodeBase64Utf8(data.content || "");
+
+  // ✔ Empty file → return null (or {} if you prefer)
+  if (!decoded.trim()) {
+    return null;
+  }
+
+  // ✔ Safe JSON parse
+  try {
+    return JSON.parse(decoded);
+  } catch (e) {
+    // File exists but contains invalid JSON
+    return null;
+  }
 }
 
 function decodeBase64Utf8(b64) {
-  const binary = atob(b64);
+  if (!b64 || !b64.trim()) {
+    return ""; // empty file → empty string
+  }
+
+  let binary;
+  try {
+    binary = atob(b64);
+  } catch (e) {
+    return ""; // invalid base64 → treat as empty
+  }
+
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
+
   return new TextDecoder().decode(bytes);
 }
 
