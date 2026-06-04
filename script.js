@@ -8630,240 +8630,174 @@ async function OpenGrocerySearch() {
   }
 
   function renderStoreAndItems() {
-    const container = document.getElementById("storeItemList");
-    container.innerHTML = "";
-
-    for (const [storeName, storeObj] of Object.entries(groceryData.stores)) {
-      const storeRow = document.createElement("div");
-      storeRow.className = "store-row";
-      storeRow.dataset.storeName = storeName;
-
-      const storeCol = document.createElement("div");
-      storeCol.className = "store-col";
-
-      const storeBtn = document.createElement("button");
-      storeBtn.textContent = storeName;
-      storeBtn.className = "store-button";
-
-      storeBtn.onclick = async () => {
-        const itemName = document.getElementById("itemBox").value.trim();
-        const notes = document.getElementById("notesBox").value.trim();
-        if (!itemName) return;
-
-        const found = findItemInStores(groceryData, itemName);
-
-        let itemObj;
-
-        if (found) {
-          // Remove from old store
-          const { storeName: oldStore, itemObj: existingItem } = found;
-          groceryData.stores[oldStore].items =
-            groceryData.stores[oldStore].items.filter(i => i !== existingItem);
-
-          itemObj = existingItem;
-          itemObj.itemNotes = notes;
-        } else {
-          // Create new item object
-          itemObj = { item: itemName, itemNotes: notes };
+    try {
+      const container = document.getElementById("storeItemList");
+      
+      // 🧭 Record scroll positions of all item-scroll containers
+      const scrollMap = {};
+      container.querySelectorAll('.store-row').forEach(row => {
+        const storeName = row.querySelector('.store-button')?.textContent;
+        const scrollDiv = row.querySelector('.item-scroll');
+        if (storeName && scrollDiv) {
+          scrollMap[storeName] = scrollDiv.scrollLeft;
         }
+      });
 
-        // ALWAYS push into the clicked store
-        groceryData.stores[storeName].items.push(itemObj);
+      container.innerHTML = ''; // 🔄 Clear the container before re-rendering
 
-        await syncGroceryData();
-        renderStoreAndItems();
+      for (const [storeName, storeObj] of Object.entries(groceryData.stores)) {
+        const storeRow = document.createElement("div");
+        storeRow.className = "store-row";
+        storeRow.dataset.storeName = storeName;
 
-        window.open(
-          storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
-          "_blank"
-        );
-      };
+        const storeCol = document.createElement("div");
+        storeCol.className = "store-col";
 
-      storeCol.appendChild(storeBtn);
+        const storeBtn = document.createElement("button");
+        storeBtn.textContent = storeName;
+        storeBtn.className = "store-button";
 
-      const itemScroll = document.createElement("div");
-      itemScroll.className = "item-scroll";
+        // 🧲 Enable drag-and-drop to assign items to this store
+        storeBtn.addEventListener('dragover', e => e.preventDefault());
+        storeBtn.addEventListener('drop', async e => {
+            e.preventDefault();
+            const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+            const draggedName = data.itemName;   // FIXED
 
-      storeObj.items.forEach(itemObj => {
-        const btn = document.createElement("button");
-        btn.className = "item-button";
-        btn.textContent = itemObj.item;
+            // Find the real item object + its store
+            const found = findItemInStores(groceryData, draggedName);
+            if (!found) return;
 
-        // Load item into input fields
-        btn.onclick = async () => {
-          // 1. Load into fields
-          document.getElementById("itemBox").value = itemObj.item;
-          document.getElementById("notesBox").value = itemObj.itemNotes;
-          currentItem = { storeName, itemObj };
+            const { storeName: fromStore, itemObj } = found;
+            const toStore = storeRow.dataset.storeName;
+            
+            // Remove from old store
+            groceryData.stores[fromStore].items =
+              groceryData.stores[fromStore].items.filter(i =>
+                !(i.item === itemObj.item && i.itemNotes === itemObj.itemNotes)
+              );
 
-          // 2. Remove item from current store
-          const arr = groceryData.stores[storeName].items;
-          const idx = arr.indexOf(itemObj);
-          if (idx !== -1) {
-            arr.splice(idx, 1);
+            // Add to new store
+            groceryData.stores[toStore].items.push(itemObj);
+
+            await syncGroceryData();
+            renderStoreAndItems();
+          });
+
+        storeBtn.onclick = async () => {
+          const itemName = document.getElementById("itemBox").value.trim();
+          const notes = document.getElementById("notesBox").value.trim();
+          if (!itemName) return;
+
+          const found = findItemInStores(groceryData, itemName);
+
+          let itemObj;
+
+          if (found) {
+            // Remove from old store
+            const { storeName: oldStore, itemObj: existingItem } = found;
+            groceryData.stores[oldStore].items =
+              groceryData.stores[oldStore].items.filter(i => i !== existingItem);
+
+            itemObj = existingItem;
+            itemObj.itemNotes = notes;
+          } else {
+            // Create new item object
+            itemObj = { item: itemName, itemNotes: notes };
           }
 
-          // 3. Push item to end
-          arr.push(itemObj);
+          // ALWAYS push into the clicked store
+          groceryData.stores[storeName].items.push(itemObj);
 
-          // 4. Sync + re-render
           await syncGroceryData();
           renderStoreAndItems();
 
-          // 5. Execute search
           window.open(
             storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
             "_blank"
           );
         };
 
-        // --- MOUSE DRAG SUPPORT ---
-        btn.draggable = true;
+        storeCol.appendChild(storeBtn);
 
-        btn.addEventListener("dragstart", e => {
-          btn.isDragging = true;
+        // 📜 Create scrollable container for item buttons
+        const itemScroll = document.createElement("div");
+        itemScroll.className = "item-scroll";
 
-          e.dataTransfer.setData(
-            "text/plain",
-            JSON.stringify({ itemName: itemObj.item })
-          );
-          e.dataTransfer.effectAllowed = "move";
-        });
+        storeObj.items.forEach(itemObj => {
+          const btn = document.createElement("button");
+          btn.textContent = itemObj.item;
+          btn.className = "item-button";
+          btn.draggable = true;
 
-        btn.addEventListener("dragend", () => {
-          setTimeout(() => (btn.isDragging = false), 50);
-        });
+          // 🚚 Enable drag functionality
+          btn.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', JSON.stringify(itemObj));
+            e.dataTransfer.effectAllowed = 'move';
+          });
 
-        // --- TOUCH DRAG SUPPORT ---
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let moved = false;
-        let pressTimer;
+          // 🖱️ Item button click: populate fields and open store link
+          btn.onclick = async () => {
+            const container = document.getElementById('storeItemList');
+            const scrollY = container.scrollTop; // 🧭 Preserve scroll position
 
-        btn.addEventListener("touchstart", e => {
-          moved = false;
-          btn.isDragging = false;
+            // 1. Load into fields
+            document.getElementById("itemBox").value = itemObj.item;
+            document.getElementById("notesBox").value = itemObj.itemNotes;
+            currentItem = { storeName, itemObj };
 
-          const t = e.touches[0];
-          touchStartX = t.clientX;
-          touchStartY = t.clientY;
-
-          // Long‑press delete (only if NOT dragging)
-          pressTimer = setTimeout(() => {
-            if (!moved) {
-              showGroceryItemDeleteButton(btn, storeName, itemObj);
+            // 2. Remove item from current store
+            const arr = groceryData.stores[storeName].items;
+            const idx = arr.indexOf(itemObj);
+            if (idx !== -1) {
+              arr.splice(idx, 1);
             }
-          }, 600);
-        });
 
-        btn.addEventListener("touchmove", e => {
-          const t = e.touches[0];
-          const dx = Math.abs(t.clientX - touchStartX);
-          const dy = Math.abs(t.clientY - touchStartY);
+            // 3. Push item to end
+            arr.push(itemObj);
 
-          if (dx > 10 || dy > 10) {
-            moved = true;
-            clearTimeout(pressTimer);
+            // 4. Sync + re-render
+            await syncGroceryData();
+            renderStoreAndItems();
+            container.scrollTop = scrollY;
 
-            // Highlight store BUTTON while dragging
-            const elem = document.elementFromPoint(t.clientX, t.clientY);
-            const row = elem?.closest(".store-row");
-            if (row) {
-              const storeBtn = row.querySelector(".store-button");
-              storeBtn.classList.add("drag-hover");
-            }
-          }
-        });
-
-        btn.addEventListener("touchend", async e => {
-          clearTimeout(pressTimer);
-
-          // Remove all highlights
-          document.querySelectorAll(".store-button.drag-hover")
-            .forEach(b => b.classList.remove("drag-hover"));
-
-          if (!moved) return;
-
-          const t = e.changedTouches[0];
-          const elem = document.elementFromPoint(t.clientX, t.clientY);
-          const row = elem?.closest(".store-row");
-          if (!row) return;
-
-          const toStore = row.dataset.storeName;
-
-          // Use helper to find the REAL item object
-          const found = findItemInStores(groceryData, itemObj.item);
-          if (!found) return;
-
-          const { storeName: fromStore, itemObj: realItem } = found;
-
-          // Remove from old store (value-based match)
-          groceryData.stores[fromStore].items =
-            groceryData.stores[fromStore].items.filter(i =>
-              !(i.item === realItem.item && i.itemNotes === realItem.itemNotes)
+            // 5. Execute search
+            window.open(
+              storeObj.searchURL1 + encodeURIComponent(itemObj.item) + storeObj.searchURL2,
+              "_blank"
             );
+          };
 
-          // Add to new store
-          groceryData.stores[toStore].items.push(realItem);
+          // 🗑️ Right-click to show delete option
+          btn.addEventListener("contextmenu", e => {
+            e.preventDefault();
+            showGroceryItemDeleteButton(btn, storeName, itemObj);
+          });
 
-          await syncGroceryData();
-          renderStoreAndItems();
+          // 📱 Long-press on touch devices to show delete
+          let pressTimer;
+          btn.addEventListener('touchstart', () => {
+            pressTimer = setTimeout(() => showGroceryItemDeleteButton(btn, storeName, itemObj), 600);
+          });
+          btn.addEventListener('touchend', () => clearTimeout(pressTimer));
+
+          itemScroll.appendChild(btn);
         });
 
-        // --- RIGHT‑CLICK DELETE ---
-        btn.addEventListener("contextmenu", e => {
-          e.preventDefault();
-          showGroceryItemDeleteButton(btn, storeName, itemObj);
-        });
+        // 🧭 Restore scroll position if previously recorded
+        if (scrollMap[storeName] !== undefined) {
+            requestAnimationFrame(() => {
+            itemScroll.scrollLeft = scrollMap[storeName];
+          });
+        }
 
-        itemScroll.appendChild(btn);
-      });
-
-      storeRow.appendChild(storeCol);
-      storeRow.appendChild(itemScroll);
-      container.appendChild(storeRow);
-
-      // Make store rows accept item drop off
-      storeRow.addEventListener("dragover", e => {
-        e.preventDefault();
-
-        const btn = storeRow.querySelector(".store-button");
-        btn.classList.add("drag-hover");
-      });
-
-      storeRow.addEventListener("dragleave", () => {
-        const btn = storeRow.querySelector(".store-button");
-        btn.classList.remove("drag-hover");
-      });
-
-      storeRow.addEventListener("drop", async e => {
-        e.preventDefault();
-
-        const btn = storeRow.querySelector(".store-button");
-        btn.classList.remove("drag-hover");
-
-        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-        const draggedName = data.itemName;   // FIXED
-
-        // Find the real item object + its store
-        const found = findItemInStores(groceryData, draggedName);
-        if (!found) return;
-
-        const { storeName: fromStore, itemObj } = found;
-        const toStore = storeRow.dataset.storeName;
-        
-        // Remove from old store
-        groceryData.stores[fromStore].items =
-          groceryData.stores[fromStore].items.filter(i =>
-            !(i.item === itemObj.item && i.itemNotes === itemObj.itemNotes)
-          );
-
-        // Add to new store
-        groceryData.stores[toStore].items.push(itemObj);
-
-        await syncGroceryData();
-        renderStoreAndItems();
-      });
+        storeRow.appendChild(storeCol);
+        storeRow.appendChild(itemScroll);
+        container.appendChild(storeRow);
+      }
+    } catch (err) {
+      console.error('render store and item error:', err);
+      showStatusMessage('Error rendering store and item', 'error');
     }
   }
 
