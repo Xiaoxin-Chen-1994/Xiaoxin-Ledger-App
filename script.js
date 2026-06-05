@@ -8871,6 +8871,8 @@ async function OpenGrocerySearch() {
 
     if (exact) {
       document.getElementById('notesBox').value = exact.itemObj.itemNotes || "";
+    } else {
+      document.getElementById('notesBox').value = "";
     }
 
     // Sort alphabetically
