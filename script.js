@@ -8824,7 +8824,6 @@ async function OpenGrocerySearch() {
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = '🗑️';
     deleteBtn.className = 'item-delete-button';   // <-- add second class
-    deleteBtn.style.marginLeft = '0.3rem';
 
     deleteBtn.onclick = async () => {
       groceryData.stores[storeName].items =
@@ -9854,3 +9853,588 @@ function normalizeDate(raw) {
   const d = new Date(raw);
   return d.toISOString().slice(0, 16).replace("T", " ");
 }
+
+function OpenInterestRateCal() {
+  showPage("interest-rate-cal", "利率计算");
+  buildInterestRateCalHome();
+
+  // ---------- UI BUILDERS ----------
+
+  function getCalScroll() {
+    return document.getElementById("interest-rate-cal-scroll");
+  }
+
+  function buildInterestRateCalHome() {
+    const scroll = getCalScroll();
+    scroll.innerHTML = `
+      <div id="mode-selector"></div>
+      <div id="mode-content"></div>
+    `;
+
+    const selector = document.getElementById("mode-selector");
+    selector.innerHTML = "";
+
+    const grid = document.createElement("div");
+    grid.className = "ir-mode-grid";
+    selector.appendChild(grid);
+
+    grid.appendChild(createModeButton("1）基于账本数据", loadMode1));
+    grid.appendChild(createModeButton("2）基于每日余额", loadMode2));
+    grid.appendChild(createModeButton("3）基于每日变动", loadMode3));
+  }
+
+  function createModeButton(text, onClick) {
+    const btn = document.createElement("button");
+    btn.className = "big-button";
+    btn.type = "button";
+    btn.textContent = text;
+    btn.addEventListener("click", onClick);
+    return btn;
+  }
+
+  function makeInstructions(text) {
+    const div = document.createElement("div");
+    div.className = "ir-instructions";
+    div.innerHTML = text;
+    return div;
+  }
+
+  function makeLabel(text) {
+    const div = document.createElement("div");
+    div.className = "label";
+    div.textContent = text;
+    return div;
+  }
+
+  function makeInput(type, placeholder = "") {
+    const input = document.createElement("input");
+    input.type = type;
+    input.placeholder = placeholder;
+    input.className = "text-input";
+
+    input.autocomplete = "off";
+    input.autocorrect = "off";
+    input.autocapitalize = "off";
+    input.spellcheck = false;
+
+    return input;
+  }
+
+  function enableAutoAdvance(input, containerSelector, makeNewRow) {
+    input.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+
+      const container = document.querySelector(containerSelector);
+      const inputs = Array.from(container.querySelectorAll("input"));
+      const index = inputs.indexOf(input);
+
+      // Case 0: If this is a date input and it's empty → fill today immediately
+      if (input.classList.contains("row-date") && !input.value) {
+        input.value = new Date().toISOString().slice(0, 10);
+      }
+
+      // Case 1: Not last input → move to next input inside this container only
+      if (index < inputs.length - 1) {
+        inputs[index + 1].focus();
+        return;
+      }
+
+      // Case 2: Last input → create new row
+      e.preventDefault();
+
+      const newRow = makeNewRow();
+      container.appendChild(newRow);
+
+      // Auto-fill date of new row
+      const dateInput = newRow.querySelector(".row-date");
+      const rows = Array.from(container.children);
+      const rowIndex = rows.indexOf(newRow);
+
+      if (rowIndex > 0) {
+        const prevDate = rows[rowIndex - 1].querySelector(".row-date").value;
+        dateInput.value = prevDate || new Date().toISOString().slice(0, 10);
+      } else {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+      }
+
+      // Focus the date input of the new row
+      dateInput.focus();
+    });
+  }
+
+  // ---------- MODE 1 (PLACEHOLDER) ----------
+
+  function loadMode1() {
+    const content = document.getElementById("mode-content");
+    content.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "ir-card";
+    content.appendChild(card);
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "1) 基于账本数据";
+    card.appendChild(title);
+
+    card.appendChild(makeInstructions(`
+      此模式将根据账本自动计算指定月份的日均余额和利率。<br>
+      功能尚未完成。
+    `));
+
+    const msg = document.createElement("div");
+    msg.style.color = "#666";
+    msg.textContent = "此模式尚未实现。";
+    card.appendChild(msg);
+  }
+
+  // ---------- MODE 2 (DAILY BALANCE) ----------
+
+  function loadMode2() {
+    const content = document.getElementById("mode-content");
+    content.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "ir-card";
+    content.appendChild(card);
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "2) 基于每日余额";
+    card.appendChild(title);
+
+    card.appendChild(makeInstructions(`
+      请输入从开始日到结束日之间的每日余额。<br>
+      只需填写“余额发生变化的日期”。<br>
+      第一行的日期视为开始日期，最后一行视为结束日期。<br>
+      空白行将自动跳过。
+    `));
+
+    const rowsContainer = document.createElement("div");
+    rowsContainer.id = "mode2-balance-rows";
+    rowsContainer.className = "ir-section";
+    card.appendChild(rowsContainer);
+
+    rowsContainer.appendChild(makeBalanceLine());
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "big-button ir-add-btn";
+    addBtn.textContent = "＋ 添加一行";
+    addBtn.onclick = () => rowsContainer.appendChild(makeBalanceLine());
+    card.appendChild(addBtn);
+
+    const interestLabel = makeLabel("收到的利息");
+    card.appendChild(interestLabel);
+
+    const interestInput = makeInput("number", "例如：35.27");
+    interestInput.step = "0.01";
+    card.appendChild(interestInput);
+
+    const calcBtn = document.createElement("button");
+    calcBtn.className = "big-button primary-btn";
+    calcBtn.textContent = "计算利率";
+    calcBtn.onclick = () => {
+      const rows = collectBalanceRows(rowsContainer);
+      if (!rows) return;
+      const result = calculateFromDailyBalances(rows, interestInput.value);
+      if (result) showInterestResult(result);
+    };
+    card.appendChild(calcBtn);
+  }
+
+  function makeBalanceLine() {
+    const line = document.createElement("div");
+    line.className = "ir-field-line";
+
+    const dateInput = makeInput("date");
+    dateInput.classList.add("row-date");
+    enableAutoAdvance(dateInput, "#mode2-balance-rows", makeBalanceLine);
+
+    const balInput = makeInput("number", "余额");
+    balInput.step = "0.01";
+    balInput.classList.add("row-balance");
+    enableAutoAdvance(balInput, "#mode2-balance-rows", makeBalanceLine);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "–";
+    delBtn.className = "delete-row-btn";
+    delBtn.style.color = "white";
+    delBtn.style.background = "red";
+    delBtn.style.border = "none";
+    delBtn.style.borderRadius = "4px";
+    delBtn.style.padding = "0 8px";
+    delBtn.style.marginLeft = "6px";
+    delBtn.style.cursor = "pointer";
+
+    delBtn.addEventListener("click", () => {
+      line.remove();
+    });
+
+    line.appendChild(dateInput);
+    line.appendChild(balInput);
+    line.appendChild(delBtn);
+
+    return line;
+  }
+
+  function collectBalanceRows(container) {
+    const rows = [];
+    const lines = Array.from(container.children);
+
+    for (const line of lines) {
+      const dateInput = line.querySelector(".row-date");
+      const balInput = line.querySelector(".row-balance");
+
+      const date = dateInput.value.trim();
+      const bal = balInput.value.trim();
+
+      // Case 1: both empty → skip
+      if (date === "" && bal === "") continue;
+
+      // Case 2: one empty → error
+      if (date === "" || bal === "") {
+        showStatusMessage("请完整填写日期和余额，或留空整行。");
+        return null;
+      }
+
+      // Case 3: valid row
+      rows.push({
+        date,
+        balance: Number(bal)
+      });
+    }
+
+    rows.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return rows;
+  }
+
+  // ---------- MODE 3 (DAILY CHANGE) ----------
+
+  function makeMode3MethodSelector() {
+    const div = document.createElement("div");
+    div.className = "ir-selector-block";
+
+    div.innerHTML = `
+      <div class="label">请选择计算方式（二选一）</div>
+
+      <label class="ir-radio">
+        <input type="radio" name="m3method" value="start" checked>
+        <span>输入第一天的期初余额</span>
+      </label>
+
+      <label class="ir-radio">
+        <input type="radio" name="m3method" value="end">
+        <span>输入最后一天的期末余额</span>
+      </label>
+    `;
+
+    return div;
+  }
+
+  function loadMode3() {
+    const content = document.getElementById("mode-content");
+    content.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "ir-card";
+    content.appendChild(card);
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "3) 基于每日变动模式";
+    card.appendChild(title);
+
+    card.appendChild(makeInstructions(`
+      请输入第一天初始余额，并填写每天的变动金额（+/-）。<br>
+      只需填写“有变动的日期”。<br>
+      第一行的日期视为开始日期，最后一行视为结束日期。<br>
+      空白行将自动跳过。
+    `));
+
+    card.appendChild(makeMode3MethodSelector());
+
+    // Start balance input
+    const startBalanceLabel = makeLabel("期初余额（仅在选择“期初”时填写）");
+    card.appendChild(startBalanceLabel);
+
+    const startBalanceInput = makeInput("number", "例如：10000");
+    startBalanceInput.step = "0.01";
+    card.appendChild(startBalanceInput);
+
+    // End balance input
+    const endBalanceLabel = makeLabel("期末余额（仅在选择“期末”时填写）");
+    card.appendChild(endBalanceLabel);
+
+    const endBalanceInput = makeInput("number", "例如：15000");
+    endBalanceInput.step = "0.01";
+    card.appendChild(endBalanceInput);
+
+    // Change rows
+    card.appendChild(makeLabel("每日变动（仅输入有变动的日期，但必须包括第一天和最后一天）"));
+
+    const rowsContainer = document.createElement("div");
+    rowsContainer.id = "mode3-change-rows";
+    rowsContainer.className = "ir-section";
+    card.appendChild(rowsContainer);
+
+    rowsContainer.appendChild(makeChangeLine());
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "big-button ir-add-btn";
+    addBtn.textContent = "＋ 添加一行";
+    addBtn.onclick = () => rowsContainer.appendChild(makeChangeLine());
+    card.appendChild(addBtn);
+
+    // Interest
+    card.appendChild(makeLabel("收到的利息"));
+    const interestInput = makeInput("number", "例如：35.27");
+    interestInput.step = "0.01";
+    card.appendChild(interestInput);
+
+    // Calculate button
+    const calcBtn = document.createElement("button");
+    calcBtn.className = "big-button primary-btn";
+    calcBtn.textContent = "计算利率";
+    calcBtn.onclick = () => {
+      const method = document.querySelector('input[name="m3method"]:checked').value;
+
+      const changeRows = collectChangeRows(rowsContainer);
+      if (!changeRows) return;
+
+      let balanceRows;
+
+      if (method === "start") {
+        if (startBalanceInput.value === "") {
+          showStatusMessage("请选择期初方式并填写期初余额。");
+          return;
+        }
+        if (endBalanceInput.value !== "") {
+          showStatusMessage("请不要同时填写期初和期末余额。");
+          return;
+        }
+
+        balanceRows = convertChangesForward(startBalanceInput.value, changeRows);
+
+      } else {
+        if (endBalanceInput.value === "") {
+          showStatusMessage("请选择期末方式并填写期末余额。");
+          return;
+        }
+        if (startBalanceInput.value !== "") {
+          showStatusMessage("请不要同时填写期初和期末余额。");
+          return;
+        }
+
+        balanceRows = convertChangesBackward(endBalanceInput.value, changeRows);
+      }
+
+      if (!balanceRows) return;
+
+      const result = calculateFromDailyBalances(balanceRows, interestInput.value);
+      if (result) {
+        result.openingBalance = balanceRows[0].balance;
+        result.closingBalance = balanceRows[balanceRows.length - 1].balance;
+        showInterestResult(result);
+      }
+
+    };
+    card.appendChild(calcBtn);
+  }
+
+  function makeChangeLine() {
+    const line = document.createElement("div");
+    line.className = "ir-field-line";
+
+    const dateInput = makeInput("date");
+    dateInput.classList.add("row-date");
+
+    const changeInput = makeInput("number", "变动金额（+/-）");
+    changeInput.step = "0.01";
+    changeInput.classList.add("row-change");
+
+    // Delete button
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "–";
+    delBtn.className = "delete-row-btn";
+    delBtn.style.color = "white";
+    delBtn.style.background = "red";
+    delBtn.style.border = "none";
+    delBtn.style.borderRadius = "4px";
+    delBtn.style.padding = "0 8px";
+    delBtn.style.marginLeft = "6px";
+    delBtn.style.cursor = "pointer";
+    delBtn.addEventListener("click", () => line.remove());
+
+    enableAutoAdvance(dateInput, "#mode3-change-rows", makeChangeLine);
+    enableAutoAdvance(changeInput, "#mode3-change-rows", makeChangeLine);
+
+    line.appendChild(dateInput);
+    line.appendChild(changeInput);
+    line.appendChild(delBtn);
+
+    return line;
+  }
+
+  function collectChangeRows(container) {
+    const rows = [];
+    const lines = Array.from(container.children);
+
+    for (const line of lines) {
+      const dateInput = line.querySelector(".row-date");
+      const changeInput = line.querySelector(".row-change");
+
+      const date = dateInput.value.trim();
+      const change = changeInput.value.trim();
+
+      // Case 1: both empty → skip
+      if (date === "" && change === "") continue;
+
+      // Case 2: one empty → error
+      if (date === "" || change === "") {
+        showStatusMessage("请完整填写日期和变动金额，或留空整行。");
+        return null;
+      }
+
+      // Case 3: valid row
+      rows.push({
+        date,
+        change: Number(change)
+      });
+    }
+
+    rows.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return rows;
+  }
+
+  function convertChangesForward(startBalance, changeRows) {
+    let current = Number(startBalance);
+    const result = [];
+
+    result.push({ date: changeRows[0].date, balance: current });
+
+    for (const row of changeRows) {
+      current += row.change;
+      result.push({ date: row.date, balance: current });
+    }
+
+    return result;
+  }
+
+  function convertChangesBackward(endBalance, changeRows) {
+    let current = Number(endBalance);
+    const result = [];
+
+    // Last date = last change row date
+    result.push({ date: changeRows[changeRows.length - 1].date, balance: current });
+
+    // Walk backwards
+    for (let i = changeRows.length - 1; i >= 0; i--) {
+      current -= changeRows[i].change;
+      result.push({ date: changeRows[i].date, balance: current });
+    }
+
+    // Reverse to chronological order
+    result.reverse();
+    return result;
+  }
+
+  // ---------- SHARED CALCULATION ----------
+
+  function calculateFromDailyBalances(balanceRows, interestStr) {
+    if (!balanceRows || balanceRows.length === 0) {
+      showStatusMessage("请至少输入一行余额数据。");
+      return null;
+    }
+
+    // sort rows by date
+    balanceRows.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const startDate = new Date(balanceRows[0].date);
+    const endDate = new Date(balanceRows[balanceRows.length - 1].date);
+
+    const interest = Number(interestStr);
+    if (!Number.isFinite(interest)) {
+      showStatusMessage("请填写有效的利息金额。");
+      return null;
+    }
+
+    // 总天数：首尾都算进去（左闭右闭）
+    const totalDays = diffDays(startDate, addDays(endDate, 1));
+
+    let weightedSum = 0;
+
+    for (let i = 0; i < balanceRows.length; i++) {
+      const currentDate = new Date(balanceRows[i].date);
+      const currentBalance = balanceRows[i].balance;
+
+      let nextDate;
+      if (i + 1 < balanceRows.length) {
+        // 到下一条记录的前一天为止 → nextDate 本身不算
+        nextDate = new Date(balanceRows[i + 1].date);
+      } else {
+        // 最后一段：到 endDate 当天为止 → 用 endDate+1 做右开端点
+        nextDate = addDays(endDate, 1);
+      }
+
+      const days = diffDays(currentDate, nextDate); // 左闭右开
+      // console.log(currentDate, nextDate, days);
+      weightedSum += currentBalance * days;
+    }
+
+    const avgDailyBalance = weightedSum / totalDays;
+    const dailyRate = interest / (totalDays * avgDailyBalance);
+
+    const year = startDate.getFullYear();
+    const annualFactor = isLeapYear(year) ? 366 : 365;
+    const annualRate = dailyRate * annualFactor;
+
+    return {
+      totalDays,
+      avgDailyBalance,
+      dailyRate,
+      annualRate
+    };
+  }
+
+  function addDays(d, n) {
+    const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    r.setDate(r.getDate() + n);
+    return r;
+  }
+
+  function diffDays(d1, d2) {
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const t1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    const t2 = Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate());
+    return Math.floor((t2 - t1) / msPerDay); // 不含 d2 当天
+  }
+
+  function isLeapYear(y) {
+    return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+  }
+
+  // ---------- RESULT DISPLAY ----------
+  function showInterestResult(result) {
+    const content = document.getElementById("mode-content");
+
+    const old = content.querySelector(".ir-result");
+    if (old) old.remove();
+
+    const box = document.createElement("div");
+    box.className = "ir-result";
+
+    box.innerHTML = `
+    <b>期初余额：</b> ${result.openingBalance.toFixed(2)}<br>
+    <b>期末余额：</b> ${result.closingBalance.toFixed(2)}<br><br>
+
+    总天数：${result.totalDays}<br>
+    平均每日余额：${result.avgDailyBalance.toFixed(2)}<br>
+    日利率：${(result.dailyRate * 100).toFixed(6)}%<br>
+    年化利率：${(result.annualRate * 100).toFixed(4)}%
+  `;
+
+    content.appendChild(box);
+    showStatusMessage("计算完成。");
+  }
+}
+window.OpenInterestRateCal = OpenInterestRateCal;
