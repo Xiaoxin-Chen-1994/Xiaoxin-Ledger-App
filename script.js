@@ -8667,20 +8667,22 @@ async function OpenGrocerySearch() {
           let itemObj;
 
           if (found) {
-            // Remove from old store
-            const { storeName: oldStore, itemObj: existingItem } = found;
-            groceryData.stores[oldStore].items =
-              groceryData.stores[oldStore].items.filter(i => i !== existingItem);
+            // ✔ Item exists → update notes and move to end of SAME store
+            const { storeName: existingStore, itemObj } = found;
+            // Remove from its current position
+            groceryData.stores[existingStore].items =
+              groceryData.stores[existingStore].items.filter(i => i !== itemObj);
 
-            itemObj = existingItem;
-            itemObj.itemNotes = notes;
+            itemObj.itemNotes = notes; // Update notes
+
+            // Push to end of the SAME store
+            roceryData.stores[existingStore].items.push(itemObj);
+
           } else {
-            // Create new item object
+            // ✔ Item does NOT exist → create in clicked store
             itemObj = { item: itemName, itemNotes: notes };
-          }
-
-          // ALWAYS push into the clicked store
-          groceryData.stores[storeName].items.push(itemObj);
+            groceryData.stores[storeName].items.push(itemObj);
+          }          
 
           await syncGroceryData();
           renderStoreAndItems();
