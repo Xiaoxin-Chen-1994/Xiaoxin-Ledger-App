@@ -8676,7 +8676,7 @@ async function OpenGrocerySearch() {
             itemObj.itemNotes = notes; // Update notes
 
             // Push to end of the SAME store
-            roceryData.stores[existingStore].items.push(itemObj);
+            groceryData.stores[existingStore].items.push(itemObj);
 
           } else {
             // ✔ Item does NOT exist → create in clicked store
