@@ -8503,7 +8503,7 @@ async function OpenGrocerySearch() {
   });
 
   async function initializeGrocerySearch() {
-    const localJSON = await get("grocery_search");
+    const localJSON = await loadLocalGroceryData();
     const cloudJSON =
       token && !repo.skipSync
         ? await githubReadJson(repoName, "GrocerySearch.json", token)
@@ -8520,26 +8520,26 @@ async function OpenGrocerySearch() {
         lastUpdatedAt: now,
         stores: Websites
       };
-      await set("grocery_search", JSON.stringify(obj));
+      await saveLocalGroceryData(obj);
       if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
       return obj;
     }
 
     // Case 2: cloud exists, local does not → copy cloud → local
     if (hasCloud && !hasLocal) {
-      await set("grocery_search", JSON.stringify(cloudJSON));
+      await saveLocalGroceryData(cloudJSON);
       return cloudJSON;
     }
 
     // Case 3: local exists, cloud does not → copy local → cloud
     if (!hasCloud && hasLocal) {
-      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", JSON.parse(localJSON), token);
-      return JSON.parse(localJSON);
+      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", localJSON, token);
+      return localJSON;
     }
 
     // Case 4: both exist → ask user which to keep
 
-    const localObj = JSON.parse(localJSON);
+    const localObj = localJSON;
     const cloudObj = cloudJSON;
 
     // Compare timestamps
@@ -8596,7 +8596,7 @@ async function OpenGrocerySearch() {
     });
 
     if (useCloud) {
-      await set("grocery_search", JSON.stringify(cloudObj));
+      await saveLocalGroceryData(cloudObj);
       return cloudObj;
     } else {
       if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", localObj, token);
@@ -8604,10 +8604,33 @@ async function OpenGrocerySearch() {
     }
   }
 
+  async function loadLocalGroceryData() {
+    const root = await navigator.storage.getDirectory();
+
+    try {
+      const fileHandle = await root.getFileHandle("grocery.json");
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      return JSON.parse(text);
+    } catch (err) {
+      // File does not exist yet
+      return null;
+    }
+  }
+
+  async function saveLocalGroceryData(data) {
+    const root = await navigator.storage.getDirectory();
+    const fileHandle = await root.getFileHandle("grocery.json", { create: true });
+
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(data));
+    await writable.close();
+  }
+
   async function syncGroceryData() {
     groceryData.lastUpdatedAt = new Date().toISOString();
 
-    await set("grocery_search", JSON.stringify(groceryData));
+    await saveLocalGroceryData(groceryData);
 
     if (token && !repo.skipSync) {
       try {
