@@ -2525,7 +2525,6 @@ emoji-picker {
   align-items: center;
   justify-content: center;
   padding: 0.6em 1em;
-  touch-action: none;
 }
 
 .item-delete-button {

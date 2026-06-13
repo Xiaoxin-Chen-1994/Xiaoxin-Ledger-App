@@ -8887,21 +8887,7 @@ async function OpenGrocerySearch() {
       btn.textContent = `${itemObj.item}`;
 
       // Drag support
-      btn.draggable = false;   // disable drag by default
-
-      let dragTimer;
-
-      btn.addEventListener("touchstart", () => {
-        dragTimer = setTimeout(() => {
-          btn.draggable = true;   // enable drag only after a short hold
-        }, 120);                  // 120ms = scroll feels natural
-      });
-
-      btn.addEventListener("touchend", () => {
-        clearTimeout(dragTimer);
-        btn.draggable = false;    // disable drag again after touch ends
-      });
-
+      btn.draggable = true;
       btn.addEventListener('dragstart', e => {
         document.getElementById('itemBox').blur();
         e.dataTransfer.setData('text/plain', JSON.stringify({ storeName, itemObj }));
