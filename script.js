@@ -671,7 +671,7 @@ return
     await saveLocalJsonData("localDbMap.json", localDbMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
-    await saveLocalJsonData("settingsMap.json", settingsMap);
+    await saveLocalJsonData("ledger-settings.json", settingsMap);
 
     // Build final ledgerRepos list
     // Start with ALL existing repos (including skipped ones)
@@ -1093,7 +1093,6 @@ async function smartSync(selectedRepos, token) {
       // Save ledger settings locally
       settingsMap = await loadLocalJsonData("ledger-settings.json", {});
       settingsMap[repoId] = ledgerSettings;
-      console.log("settingsMap.json", settingsMap)
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
       // Create DB + ledger table
@@ -1430,10 +1429,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    await root.removeEntry(name, { recursive: true });
-  }
+
   let t = translations[currentLang];
 
   // 1. Load token
@@ -1455,7 +1451,7 @@ const root = await navigator.storage.getDirectory();
   localDbMap     = await loadLocalJsonData("localDbMap.json", {});
   localLogMap    = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
-  settingsMap    = await loadLocalJsonData("settingsMap.json", {});
+  settingsMap    = await loadLocalJsonData("ledger-settings.json", {});
 
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
