@@ -1152,7 +1152,7 @@ async function smartSync(selectedRepos, token) {
             await githubAppendChangeLog(repoName, logEntry, token);
           }
 
-          settingsMap = loadLocalJsonData("ledger-settings.json", {});
+          settingsMap = await loadLocalJsonData("ledger-settings.json", {});
           await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
           localLogMap[repoId] = [];
@@ -1168,7 +1168,7 @@ async function smartSync(selectedRepos, token) {
       // ------------------------------------------------------------
       if (repoHasData) {
         const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-        settingsMap = loadLocalJsonData("ledger-settings.json", {});
+        settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
