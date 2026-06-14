@@ -666,6 +666,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       }
     }
 console.log("settingsMap.json", settingsMap)
+return
     await saveLocalJsonData("localDbMap.json", localDbMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
