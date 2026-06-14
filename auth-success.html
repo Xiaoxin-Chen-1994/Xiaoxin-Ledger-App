@@ -5,8 +5,8 @@
   const token = params.get("token");
 
   // Save token in IndexedDB
-  await set("github_token", token);
-
+  await saveLocalJsonData("github_token.json", token);
+  
   // Redirect back to your app
   const redirect = params.get("redirect") || "/";
   window.location.href = redirect;
