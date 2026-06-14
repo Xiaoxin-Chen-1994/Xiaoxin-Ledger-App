@@ -5306,7 +5306,7 @@ async function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
 
-  const token = await loadLocalJsonData("github_token.json", {});
+  const token = await loadLocalJsonData("github_token.json", null);
 
   // Login text
   document.getElementById("return-btn").textContent = "< " + t.back;
