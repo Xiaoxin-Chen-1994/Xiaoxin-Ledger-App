@@ -489,8 +489,6 @@ async function deleteLocalJsonData(filename) {
 }
 
 async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
-  console.log("incompatible", incompatible)
-return
   const container = document.querySelector("#repoList-page .scroll");
 
   const validIds = new Set(ledgerRepos.map(r => r.id));
