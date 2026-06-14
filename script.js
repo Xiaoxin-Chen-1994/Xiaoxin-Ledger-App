@@ -1169,7 +1169,6 @@ async function smartSync(selectedRepos, token) {
       if (repoHasData) {
         const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
         settingsMap = await loadLocalJsonData("ledger-settings.json", {});
-        console.log("settingsMap", settingsMap)
 
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
@@ -1428,7 +1427,10 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-
+const root = await navigator.storage.getDirectory();
+  for await (const name of root.keys()) {
+    await root.removeEntry(name, { recursive: true });
+  }
   let t = translations[currentLang];
 
   // 1. Load token
