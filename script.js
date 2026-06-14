@@ -8644,8 +8644,9 @@ async function OpenGrocerySearch() {
 
         const banner = document.getElementById("offline-banner");
         banner.style.display = "none";
+        banner.textContent = "";
         document.documentElement.style.setProperty("--banner-height", "0px");
-        
+
         showStatusMessage(
           currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
           "success"
@@ -8656,6 +8657,7 @@ async function OpenGrocerySearch() {
 
         const banner = document.getElementById("offline-banner");
         banner.style.display = "block";   // must be visible to measure
+        banner.textContent = "GitHub write failed: " + err;
         const height = banner.offsetHeight;
         document.documentElement.style.setProperty("--banner-height", height + "px");
 
