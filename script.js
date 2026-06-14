@@ -639,7 +639,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
     // Handle merging of incompatible repos
     const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
-
+console.log("settingsMap.json", settingsMap)
     for (const sel of mergeSelections) {
       const localId = sel.dataset.localId;
       console.log("localId", localId)
