@@ -8529,7 +8529,7 @@ async function OpenGrocerySearch() {
   });
 
   async function initializeGrocerySearch() {
-    const localJSON = await loadLocalJsonData("grocery.json", {});
+    const localJSON = await loadLocalJsonData("grocery.json", null);
     const cloudJSON =
       token && !repo.skipSync
         ? await githubReadJson(repoName, "GrocerySearch.json", token)
