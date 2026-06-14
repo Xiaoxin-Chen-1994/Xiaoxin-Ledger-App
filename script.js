@@ -1093,6 +1093,7 @@ async function smartSync(selectedRepos, token) {
       // Save ledger settings locally
       settingsMap = await loadLocalJsonData("ledger-settings.json", {});
       settingsMap[repoId] = ledgerSettings;
+      console.log("settingsMap.json", settingsMap)
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
       // Create DB + ledger table
@@ -1429,7 +1430,10 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-
+const root = await navigator.storage.getDirectory();
+  for await (const name of root.keys()) {
+    await root.removeEntry(name, { recursive: true });
+  }
   let t = translations[currentLang];
 
   // 1. Load token
@@ -1452,7 +1456,7 @@ async function init() {
   localLogMap    = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
   settingsMap    = await loadLocalJsonData("settingsMap.json", {});
-console.log("settingsMap.json", settingsMap)
+
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
 
