@@ -1452,7 +1452,7 @@ async function init() {
   localLogMap    = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
   settingsMap    = await loadLocalJsonData("settingsMap.json", {});
-
+console.log("settingsMap.json", settingsMap)
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
 
