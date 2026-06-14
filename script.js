@@ -1425,6 +1425,21 @@ async function githubAppendChangeLog(repoName, change, token) {
   });
 }
 
+function hideOfflineBanner() {
+  const banner = document.getElementById("offline-banner");
+  banner.style.display = "none";
+  banner.textContent = "";
+  document.documentElement.style.setProperty("--banner-height", "0px");
+}
+
+function showOfflineBanner(text) {
+  const banner = document.getElementById("offline-banner");
+  banner.style.display = "block";   // must be visible to measure
+  banner.textContent = text;
+  const height = banner.offsetHeight;
+  document.documentElement.style.setProperty("--banner-height", height + "px");
+}
+
 async function init() {
   window.scrollTo(0, 0);
 
@@ -8642,11 +8657,7 @@ async function OpenGrocerySearch() {
       try {
         await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
 
-        const banner = document.getElementById("offline-banner");
-        banner.style.display = "none";
-        banner.textContent = "";
-        document.documentElement.style.setProperty("--banner-height", "0px");
-
+        hideOfflineBanner();
         showStatusMessage(
           currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
           "success"
@@ -8655,12 +8666,7 @@ async function OpenGrocerySearch() {
       } catch (err) {
         console.error("GitHub write failed:", err);
 
-        const banner = document.getElementById("offline-banner");
-        banner.style.display = "block";   // must be visible to measure
-        banner.textContent = "GitHub write failed: " + err;
-        const height = banner.offsetHeight;
-        document.documentElement.style.setProperty("--banner-height", height + "px");
-
+        showOfflineBanner("GitHub write failed: " + err);
         showStatusMessage(
           currentLang === "en" ? "Cloud sync failed." : "云端同步失败。",
           "error"
