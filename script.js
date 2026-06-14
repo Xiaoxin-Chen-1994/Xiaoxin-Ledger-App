@@ -1427,10 +1427,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    await root.removeEntry(name, { recursive: true });
-  }
+
   let t = translations[currentLang];
 
   // 1. Load token
@@ -6793,8 +6790,12 @@ async function deleteLocalData(mode) { // This function will not delete github_t
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
   const reposToDelete = await get("reposToDelete") || [];
 
-  // 2. Clear all localStorage
+  // 2. Clear all localStorage and file system
   localStorage.clear();
+  const root = await navigator.storage.getDirectory();
+  for await (const name of root.keys()) {
+    await root.removeEntry(name, { recursive: true });
+  }
 
   // 3. Restore the values you want to keep
   if (token) await saveLocalJsonData("github_token.json", token);
