@@ -8642,6 +8642,7 @@ async function OpenGrocerySearch() {
       try {
         await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
 
+        document.getElementById("offline-banner").style.display = "none";
         showStatusMessage(
           currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
           "success"
@@ -8649,7 +8650,8 @@ async function OpenGrocerySearch() {
 
       } catch (err) {
         console.error("GitHub write failed:", err);
-
+        
+        document.getElementById("offline-banner").style.display = "block";
         showStatusMessage(
           currentLang === "en" ? "Cloud sync failed." : "云端同步失败。",
           "error"
