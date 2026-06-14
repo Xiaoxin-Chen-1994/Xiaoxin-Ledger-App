@@ -1458,6 +1458,7 @@ async function init() {
   }
 
   localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
+    console.log(localLedgerDataMap)
   localLogMap = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
   settingsMap = await loadLocalJsonData("ledger-settings.json", {});
@@ -2720,7 +2721,7 @@ let saveTimer = null;
 function autoSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    saveItemsToWorkspace();
+    saveItemsNotesToWorkspace();
   }, 150);
 }
 
@@ -2810,13 +2811,13 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
 
   deleteBtn.addEventListener("click", () => {
     row.remove();
-    saveItemsToWorkspace();
+    saveItemsNotesToWorkspace();
   });
 
   return row;
 }
 
-function saveItemsToWorkspace() {
+function saveItemsNotesToWorkspace() {
   let subWorkspace = latestPage.includes("create")
     ? workspace.create
     : workspace.transactions[latestOptions.transactionId];
@@ -2831,11 +2832,16 @@ function saveItemsToWorkspace() {
   const group = activeTab.querySelector(`#${activeForm} .item-group`);
   const rows = group.querySelectorAll(".item-row");
 
+  // Save item rows
   subWorkspace.items = Array.from(rows).map(row => ({
     name: row.querySelector(".item-name")?.value || "",
     unitPrice: row.querySelector(".item-unit-price")?.value || "",
     price: row.querySelector(".item-price")?.value || ""
   }));
+
+  // Save notes (general textarea)
+  const notesEl = activeTab.querySelector(`#${activeForm} .transaction-notes`);
+  subWorkspace.notes = notesEl?.value || "";
 }
 
 // Attach to all add-item buttons
@@ -2844,7 +2850,7 @@ document.querySelectorAll("button[id$='add-item-btn']").forEach(addBtn => {
     const group = addBtn.closest(".item-group");
     const newRow = createItemRow();
     group.insertBefore(newRow, addBtn);
-    saveItemsToWorkspace();
+    saveItemsNotesToWorkspace();
   });
 });
 
@@ -2898,13 +2904,7 @@ document.querySelectorAll("textarea.transaction-notes").forEach(textarea => {
     this.style.height = "auto";
     this.style.height = this.scrollHeight + "px";
 
-    let subWorkspace = latestPage.includes("create")
-      ? workspace.create
-      : workspace.transactions[latestOptions.transactionId];
-
-    subWorkspace.inputNotes = this.value;
-
-    saveItemsToWorkspace();
+    autoSave();
   });
 });
 
@@ -3634,7 +3634,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
 
-function showPage(name, title = latestTitle, options = {}) {
+async function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
   // hide all pages
@@ -3700,7 +3700,7 @@ function showPage(name, title = latestTitle, options = {}) {
 
   let dateTimeBtn = null;
 
-  // transaction page special handling
+  // Page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
     disablePageSwipe(target);
     let subWorkspace = null;
@@ -3748,15 +3748,12 @@ function showPage(name, title = latestTitle, options = {}) {
       }
 
       subWorkspace = workspace.create;
-
     } else { // when loading an existing entry
       subWorkspace = workspace.transactions[options.transactionId];
-
-      const activeForm = subWorkspace.inputType + "-form";
-      dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
-      switchTab(subWorkspace.inputTypeIndex);
     }
 
+    switchTab(subWorkspace.inputTypeIndex);
+    
     // prepare date time selector columns in advance
     ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.inputTransactionTimeRaw.yyyy);
     ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.inputTransactionTimeRaw.mm);
@@ -3783,32 +3780,43 @@ function showPage(name, title = latestTitle, options = {}) {
     deleteBtn.style.display = 'block';
 
   } else if (latestPage === "filtered-entries") {
+    
+    if (options.kanbanIndex == 0) {
+      // Special case: presetToday loads all entries up to today
+      const filters = getDateRange('upToToday');
+      document.getElementById("app-title").textContent = translations[currentLang].today + filters.dateTo;
+
+      let filteredEntries = await getFilteredEntries(filters);
+      
+      showFilteredEntriesToday(filteredEntries);
+    } else {
+      let filteredEntries = await getFilteredEntries(options.filters);
+      showFilteredEntries(filteredEntries);
+    }
 
     target.addEventListener("click", (e) => {
       const block = e.target.closest(".fe-entry-block");
       if (!block) return;
 
+      const entryId = block.dataset.entryId;
+      const repoId = block.dataset.repoId;
+      const entry = localLedgerDataMap[repoId].find(e => e.entryId === entryId);
+      if (!entry) return;
+
       // If clicking Modify
       if (e.target.classList.contains("modify-btn")) {
-        const entryId = block.dataset.entryId;
-        const entry = options.allEntriesMap[entryId];
-        if (entry) loadEntryIntoWorkspace(entry);
+        loadEntryIntoWorkspace(entry);
         return;
       }
 
       // If clicking Delete
       if (e.target.classList.contains("delete-btn")) {
-        const entryId = block.dataset.entryId;
-        deleteEntry(entryId);
+        deleteEntry(repoId, entryId);
         block.remove();
         return;
       }
 
       // Normal click → load entry
-      const entryId = block.dataset.entryId;
-      const entry = options.allEntriesMap[entryId];
-      if (!entry) return;
-
       loadEntryIntoWorkspace(entry);
     });
 
@@ -3848,38 +3856,28 @@ function goBack() {
   }
 }
 
-async function deleteEntry(entryId) {
-  localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
-  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+async function deleteEntry(repoId, entryId) {
+  // Load entries array for this repo
+  const entries = localLedgerDataMap[repoId];
+  if (!entries) return;
 
-  // Find which repo contains this entry
-  const repoIds = Object.keys(localLedgerDataMap);
+  // Find the entry by entryId
+  const idx = entries.findIndex(e => e.entryId === entryId);
+  if (idx === -1) return;
 
-  for (const rid of repoIds) {
-    // Load entries array for this repo
-    const entries = localLedgerDataMap[rid];
-    if (!entries) continue;
+  // Found → remove from local entries
+  const removedEntry = entries[idx];
+  entries.splice(idx, 1);
 
-    // Find the entry by entryId
-    const idx = entries.findIndex(e => e.entryId === entryId);
-    if (idx === -1) continue;
+  // Save updated entries back into the map
+  localLedgerDataMap[repoId] = entries;
 
-    // Found → remove from local entries
-    const removedEntry = entries[idx];
-    entries.splice(idx, 1);
+  // Remove from settings tags
+  removeEntryFromTagMap(settingsMap, repoId, removedEntry);
 
-    // Save updated entries back into the map
-    localLedgerDataMap[rid] = entries;
-
-    // Remove from settings tags
-    removeEntryFromTagMap(settingsMap, rid, removedEntry);
-
-    // Persist both
-    await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
-    await saveLocalJsonData("ledger-settings.json", settingsMap);
-
-    return;
-  }
+  // Persist both
+  await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
 }
 
 function loadEntryIntoWorkspace(e) {
@@ -5693,14 +5691,13 @@ async function getFilteredEntries({
   tags = null,
   notesKeyword = null,
 } = {}) {
-
-  localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
-
   const repoIds = Object.keys(localLedgerDataMap);
   let allEntries = [];
 
-  const from = dateFrom ? dateFrom + " 00:00:00" : null;
-  const to = dateTo ? dateTo + " 23:59:59" : null;
+  let from = dateFrom ? dateFrom + " 00:00:00" : null;
+  let to = dateTo ? dateTo + " 23:59:59" : null;
+  if (from) from = new Date(from).getTime();
+  if (to) to = new Date(to).getTime();
 
   // ------------------------------------------------------------
   // Load entries from each repo's local JSON data
@@ -5713,7 +5710,7 @@ async function getFilteredEntries({
       try {
         allEntries.push(entry);
       } catch (e) {
-        console.warn("Invalid JSON entry in localLedgerDataMap", e);
+        console.warn("Invalid entry in localLedgerDataMap", e);
       }
     }
   }
@@ -5722,8 +5719,11 @@ async function getFilteredEntries({
   // Apply filters
   // ------------------------------------------------------------
   return allEntries.filter(e => {
-    if (from && e.transactionTime < from) return false;
-    if (to && e.transactionTime > to) return false;
+    const t = new Date(e.transactionTime).getTime();
+    
+    if (from && t < from) return false;
+
+    if (to && t > to) return false;
 
     if (types && !types.includes(e.type)) return false;
 
@@ -5883,6 +5883,7 @@ function getDateRange(type) {
   // --- Switch logic ---
   switch (type) {
     case "today": return pack(today, today);
+    case "upToToday": return pack(null, today);
     case "yesterday": const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
     case "last7": const d7 = new Date(today); d7.setDate(today.getDate() - 6); return pack(d7, today);
     case "last30": const d30 = new Date(today); d30.setDate(today.getDate() - 29); return pack(d30, today);
@@ -5947,21 +5948,11 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   `;
 
   row.onclick = async () => {
-    // Special case: presetToday loads all entries up to today 
-    if (title === "presetToday") {
-      const dateTo = filters.dateTo;
-      filteredEntries = await getFilteredEntries({ dateTo });
-      const dateRangeStr = filters.dateRangeStr;
-      showFilteredEntriesToday(filteredEntries, dateTo, dateRangeStr)
-
-    } else {
-      showFilteredEntries(filteredEntries, title, dateRangeStr);
-    }
+    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr});
   };
-
 }
 
-function showFilteredEntries(entries, title, dateRangeStr) {
+function showFilteredEntries(entries) {
   const page = document.getElementById("filtered-entries-page");
   const scroll = page.querySelector(".scroll");
 
@@ -5998,19 +5989,11 @@ function showFilteredEntries(entries, title, dateRangeStr) {
       textareas.forEach(autoResizeTextarea);
     });
   }
-
-  // FIXED: use entryId
-  const allEntriesMap = {};
-  entries.forEach(e => allEntriesMap[e.entryId] = e);
-
-  showPage("filtered-entries", title, { allEntriesMap });
 }
 
-function showFilteredEntriesToday(entries, date, dateRangeStr) {
+function showFilteredEntriesToday(entries) {
   const page = document.getElementById("filtered-entries-page");
   const scroll = page.querySelector(".scroll");
-
-  const displayTitle = (currentLang === "zh" ? "今天 " : "Today ") + date;
 
   scroll.innerHTML = ``;
 
@@ -6036,7 +6019,7 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
 
   const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
 
-  const BATCH_SIZE = 1;
+  const BATCH_SIZE = 5;
   let index = 0;
 
   function renderBatch() {
@@ -6083,12 +6066,6 @@ function showFilteredEntriesToday(entries, date, dateRangeStr) {
       renderBatch();
     }
   };
-
-  // FIXED: use entryId
-  const allEntriesMap = {};
-  entries.forEach(e => allEntriesMap[e.entryId] = e);
-
-  showPage("filtered-entries", displayTitle, { allEntriesMap });
 }
 
 function renderEntryGroup(day, entries) {
@@ -6156,7 +6133,7 @@ function renderEntryByType(e) {
     );
 
     return `
-      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
           <div class="fe-entry-icon">${secondaryIcon}</div>
@@ -6184,7 +6161,7 @@ function renderEntryByType(e) {
   // --- Transfer ---
   if (e.type === "transfer") {
     return `
-      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
           <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
@@ -6212,7 +6189,7 @@ function renderEntryByType(e) {
   // --- Balance ---
   if (e.type === "balance") {
     return `
-      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-entry-type="${e.type}">
+      <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
           <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
