@@ -665,7 +665,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
         if (repo) repo.skipSync = true;
       }
     }
-
+console.log("settingsMap.json", settingsMap)
     await saveLocalJsonData("localDbMap.json", localDbMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
@@ -1427,10 +1427,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    await root.removeEntry(name, { recursive: true });
-  }
+
   let t = translations[currentLang];
 
   // 1. Load token
