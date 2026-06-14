@@ -81,7 +81,7 @@ let householdDocs = {}; // this variable will contain all data of each household
 const LOCAL_DB_KEY = "ledger_dbs";
 const LOCAL_LOG_KEY = "ledger_logs";
 const LAST_SYNC_KEY = "ledger_lastSynced";
-let localDbMap = null;
+let localLedgerDataMap = null;
 let localLogMap = null;
 let lastSyncedMap = null;
 
@@ -646,11 +646,11 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
       if (targetId) {
         // Merge local DB into GitHub repo
-        localDbMap[targetId] = localDbMap[localId];
+        localLedgerDataMap[targetId] = localLedgerDataMap[localId];
         localLogMap[targetId] = localLogMap[localId];
         lastSyncedMap[targetId] = lastSyncedMap[localId];
         settingsMap[targetId] = settingsMap[localId];
-        delete localDbMap[localId];
+        delete localLedgerDataMap[localId];
         delete localLogMap[localId];
         delete lastSyncedMap[localId];
         delete settingsMap[localId];
@@ -666,7 +666,7 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
       }
     }
 
-    await saveLocalJsonData("localDbMap.json", localDbMap);
+    await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
     await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -719,7 +719,6 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
     await saveLocalJsonData("selectedRepos.json", newSelected);
 
     window.location.href = "/";
-    window.location.reload();
   };
 }
 
@@ -795,7 +794,7 @@ async function smartSync(selectedRepos, token) {
           const pendingDeleteMode = await get("pendingDelete");
           await deleteLocalData(pendingDeleteMode);
           window.location.href = "/";
-          window.location.reload();
+          return
         }
 
         // -----------------------------------------
@@ -837,7 +836,7 @@ async function smartSync(selectedRepos, token) {
     const repoName = repo.name;
     console.log('reponame', repoName)
 
-    const localDbBytes = localDbMap[repoId] || null;
+    const localLedgerData = localLedgerDataMap[repoId] || null;
     const localLog = localLogMap[repoId] || [];
     const lastSynced = lastSyncedMap[repoId] || 0;
 
@@ -859,7 +858,7 @@ async function smartSync(selectedRepos, token) {
       }
     }
 
-    const localHasData = !!localDbBytes;
+    const localHasData = !!localLedgerData;
 
     // ------------------------------------------------------------
     // 2. No data anywhere → create empty
@@ -1093,12 +1092,8 @@ async function smartSync(selectedRepos, token) {
       settingsMap[repoId] = ledgerSettings;
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
-      // Create DB + ledger table
-      const db = new SQL.Database();
-      db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-
       // Save DB + settings
-      localDbMap[repoId] = db.export();
+      localLedgerDataMap[repoId] = [];   // empty entries array
       localLogMap[repoId] = [];
       lastSyncedMap[repoId] = Date.now();
 
@@ -1138,12 +1133,7 @@ async function smartSync(selectedRepos, token) {
         if (await get("isNewLedger")) {
           console.log(`[${repoName}] Only local has data → pushing all entries`);
 
-          const db = new SQL.Database(localDbBytes);
-          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-          const rows = db.exec("SELECT * FROM ledger")[0]?.values || [];
-
-          for (const row of rows) {
-            const entry = JSON.parse(row[0]);
+          for (const entry of localLedgerData) {
             await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
           }
 
@@ -1173,19 +1163,16 @@ async function smartSync(selectedRepos, token) {
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
 
-          const db = new SQL.Database();
-          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
           const entryIds = await githubListFiles(repoName, "entries", token);
 
           for (const id of entryIds) { // this id name already contains '.json'
             const entry = await githubReadJson(repoName, `entries/${id}`, token);
-            db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(entry)]);
+            localLedgerDataMap[repoId].push(entry);
           }
 
           settingsMap[repoId] = remoteSettings;
           await saveLocalJsonData("ledger-settings.json", settingsMap);
 
-          localDbMap[repoId] = db.export();
           localLogMap[repoId] = [];
           lastSyncedMap[repoId] = Date.now();
           continue;
@@ -1195,9 +1182,6 @@ async function smartSync(selectedRepos, token) {
           // 5. Both have data → MERGE
           // ------------------------------------------------------------
           console.log(`[${repoName}] Both sides have data → merging`);
-
-          const db = new SQL.Database(localDbBytes);
-          db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
 
           // 5a. Load cloud change logs since last sync
           const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
@@ -1225,7 +1209,13 @@ async function smartSync(selectedRepos, token) {
             if (cloudChange && !localChange) {
               const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
               console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
-              db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+
+              const idx = localLedgerData.findIndex(e => e.entryId === cloudEntry.entryId);
+              if (idx !== -1) {
+                localLedgerData[idx] = cloudEntry;
+              } else {
+                localLedgerData.push(cloudEntry);
+              }
               continue;
             }
 
@@ -1255,13 +1245,19 @@ async function smartSync(selectedRepos, token) {
                 console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
                 console.log(`Older local: ${JSON.stringify(localNew)}`);
                 console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
-                db.run("INSERT OR REPLACE INTO ledger VALUES (?)", [JSON.stringify(cloudEntry)]);
+                // Overwrite local with repo
+                const idx = localLedgerData.findIndex(e => e.entryId === cloudEntry.entryId);
+                if (idx !== -1) {
+                  localLedgerData[idx] = cloudEntry;
+                } else {
+                  localLedgerData.push(cloudEntry);
+                }
               }
             }
           }
 
           // 5d. Save merged DB
-          localDbMap[repoId] = db.export();
+          localLedgerDataMap[repoId] = localLedgerData;
 
           // 5e. Clear local change log
           localLogMap[repoId] = [];
@@ -1285,7 +1281,7 @@ async function smartSync(selectedRepos, token) {
   // ------------------------------------------------------------
   // Save everything
   // ------------------------------------------------------------
-  await saveLocalJsonData("localDbMap.json", localDbMap);
+  await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
   await saveLocalJsonData("localLogMap.json", localLogMap);
   await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
 }
@@ -1461,7 +1457,7 @@ async function init() {
     };
   }
 
-  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
   localLogMap = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
   settingsMap = await loadLocalJsonData("ledger-settings.json", {});
@@ -1526,19 +1522,6 @@ async function init() {
       return;
     }
 
-    const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
-    if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
-      const params = new URLSearchParams(window.location.search);
-
-      if (params.get("deleteMode") === "1") {
-        await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
-        return;
-
-      } else {
-        await del("pendingDelete"); // clear this variable to cancel delete account
-      }
-    }
-
   } else { // if not logged in
     if (!selectedRepos) { // if not logged in, and if local data not exist, create new
       let ledgerRepos;
@@ -1560,6 +1543,19 @@ async function init() {
     }
 
     window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
+  }
+
+  const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
+  if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("deleteMode") === "1") {
+      await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
+      return;
+
+    } else {
+      await del("pendingDelete"); // clear this variable to cancel delete account
+    }
   }
 
   // 4. Load ALL ledger DBs
@@ -1617,14 +1613,14 @@ async function logout() {
   let ledgerRepos = [];
 
   // Convert ALL keys to local IDs
-  const oldIds = Object.keys(localDbMap);
+  const oldIds = Object.keys(localLedgerDataMap);
 
   if (oldIds.length > 0) {
     if (oldIds.length === 1) {
       // Single local repo
       const newId = "local";
 
-      renameKey(localDbMap, oldIds[0], newId);
+      renameKey(localLedgerDataMap, oldIds[0], newId);
       renameKey(localLogMap, oldIds[0], newId);
       renameKey(lastSyncedMap, oldIds[0], newId);
       renameKey(settingsMap, oldIds[0], newId);
@@ -1638,7 +1634,7 @@ async function logout() {
       oldIds.forEach((oldId, index) => {
         const newId = `local ${index + 1}`;
 
-        renameKey(localDbMap, oldId, newId);
+        renameKey(localLedgerDataMap, oldId, newId);
         renameKey(localLogMap, oldId, newId);
         renameKey(lastSyncedMap, oldId, newId);
         renameKey(settingsMap, oldId, newId);
@@ -1652,7 +1648,7 @@ async function logout() {
     }
   }
 
-  await saveLocalJsonData("localDbMap.json", localDbMap);
+  await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
   await saveLocalJsonData("localLogMap.json", localLogMap);
   await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
   await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -1663,7 +1659,6 @@ async function logout() {
   });
 
   window.location.href = "/";
-  window.location.reload();
 }
 
 function renameKey(obj, oldKey, newKey) {
@@ -3059,30 +3054,23 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
-    localDbMap = await loadLocalJsonData("localDbMap.json", {});
+    localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
     localLogMap = await loadLocalJsonData("localLogMap.json", {});
 
-    const dbBytes = localDbMap[repoId];
-    const db = new SQL.Database(dbBytes);
+    let localLedgerData = localLedgerDataMap[repoId] || [];
 
-    // If overwriting → delete old row
+    // If overwriting → remove old entry
     if (loadedEntry_original) {
-      const rows = db.exec("SELECT rowid, json FROM ledger")[0]?.values || [];
-      for (const [rowid, jsonStr] of rows) {
-        const obj = JSON.parse(jsonStr);
-
-        if (obj.entryId === loadedEntry_original.entryId) {
-          db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
-          break;
-        }
-      }
+      localLedgerData = localLedgerData.filter(
+        e => e.entryId !== loadedEntry_original.entryId
+      );
     }
 
     // Insert new entry
-    db.run("INSERT INTO ledger (json) VALUES (?)", [JSON.stringify(entryData)]);
+    localLedgerData.push(entryData);
 
-    // Save DB back to memory
-    localDbMap[repoId] = db.export();
+    // Save back to map
+    localLedgerDataMap[repoId] = localLedgerData;
 
     // -----------------------------
     // Append to local change log (inline)
@@ -3105,7 +3093,7 @@ async function saveEntry() {
     // -----------------------------
     // Persist local data + logs
     // -----------------------------
-    await saveLocalJsonData("localDbMap.json", localDbMap);
+    await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
 
     // add or remove tags from tag map
@@ -3861,46 +3849,36 @@ function goBack() {
 }
 
 async function deleteEntry(entryId) {
-  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
   settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
   // Find which repo contains this entry
-  const repoIds = Object.keys(localDbMap);
+  const repoIds = Object.keys(localLedgerDataMap);
 
   for (const rid of repoIds) {
-    const dbBytes = localDbMap[rid];
-    if (!dbBytes) continue;
+    // Load entries array for this repo
+    const entries = localLedgerDataMap[rid];
+    if (!entries) continue;
 
-    const db = new SQL.Database(dbBytes);
+    // Find the entry by entryId
+    const idx = entries.findIndex(e => e.entryId === entryId);
+    if (idx === -1) continue;
 
-    db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
+    // Found → remove from local entries
+    const removedEntry = entries[idx];
+    entries.splice(idx, 1);
 
-    // Load all rows
-    const result = db.exec("SELECT rowid, json FROM ledger");
-    if (result.length === 0) continue;
+    // Save updated entries back into the map
+    localLedgerDataMap[rid] = entries;
 
-    const rows = result[0].values;
+    // Remove from settings tags
+    removeEntryFromTagMap(settingsMap, rid, removedEntry);
 
-    for (const [rowid, jsonStr] of rows) {
-      const entry = JSON.parse(jsonStr);
+    // Persist both
+    await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
+    await saveLocalJsonData("ledger-settings.json", settingsMap);
 
-      if (entry.entryId === entryId) {
-        // Delete from SQLite
-        db.run(`DELETE FROM ledger WHERE rowid = ${rowid}`);
-
-        // Save updated DB back to localDbMap
-        localDbMap[rid] = db.export();
-
-        // Remove from settings tags
-        removeEntryFromTagMap(settingsMap, rid, entry);
-
-        // Persist both
-        await saveLocalJsonData("localDbMap.json", localDbMap);
-        await saveLocalJsonData("ledger-settings.json", settingsMap);
-
-        return;
-      }
-    }
+    return;
   }
 }
 
@@ -5716,37 +5694,26 @@ async function getFilteredEntries({
   notesKeyword = null,
 } = {}) {
 
-  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
 
-  const repoIds = Object.keys(localDbMap);
+  const repoIds = Object.keys(localLedgerDataMap);
   let allEntries = [];
 
   const from = dateFrom ? dateFrom + " 00:00:00" : null;
   const to = dateTo ? dateTo + " 23:59:59" : null;
 
   // ------------------------------------------------------------
-  // Load entries from each repo's local SQLite DB
+  // Load entries from each repo's local JSON data
   // ------------------------------------------------------------
   for (const rid of repoIds) {
-    const dbBytes = localDbMap[rid];
-    if (!dbBytes) continue;
+    const entries = localLedgerDataMap[rid];
+    if (!entries) continue;
 
-    const db = new SQL.Database(dbBytes);
-
-    // Ensure table exists
-    db.run("CREATE TABLE IF NOT EXISTS ledger (json TEXT)");
-
-    const result = db.exec("SELECT json FROM ledger");
-    if (result.length === 0) continue;
-
-    const rows = result[0].values;
-
-    for (const [jsonStr] of rows) {
+    for (const entry of entries) {
       try {
-        const entry = JSON.parse(jsonStr);
         allEntries.push(entry);
       } catch (e) {
-        console.warn("Invalid JSON entry in DB", e);
+        console.warn("Invalid JSON entry in localLedgerDataMap", e);
       }
     }
   }
@@ -6707,7 +6674,7 @@ async function confirmLeaveHousehold(hid) {
   alert("已退出该家庭");
   ({ userDoc, householdDocs } = await syncData(currentUser.uid));
 
-  window.location.reload();
+  window.location.href = "/";
 }
 
 async function deleteAccount(mode) { // mode = "account" (delete all) or mode = "data" (delete just data)
@@ -6733,7 +6700,12 @@ async function deleteAccount(mode) { // mode = "account" (delete all) or mode = 
         onClick: async () => {
           await set("pendingDelete", mode);
           const redirectUrl = `${window.location.origin}/?deleteMode=1`;
-          window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
+          const token = await loadLocalJsonData("github_token.json", null);
+          if (token) {
+            window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
+          } else {
+            window.location.href = redirectUrl;
+          }
         }
       }
     ]
@@ -6773,8 +6745,11 @@ async function performAccountDeletion(mode) {
     4000 // ms
   );
 
-  // 1. Delete GitHub repos owned by this user
-  await deleteLedgerFilesInRepo(mode);
+  const token = await loadLocalJsonData("github_token.json", null);
+  if (token) {
+    // 1. Delete GitHub repos owned by this user
+    await deleteLedgerFilesInRepo(mode, token);
+  }
 
   // 2. Delete local data
   await deleteLocalData(mode);
@@ -6791,11 +6766,10 @@ async function performAccountDeletion(mode) {
   showStatusMessage(successMessage, "success", 4000);
 
   if (mode === "account") {
-    // logout(); // This function will delete github_token and selectedRepos
-  } else {
-    window.location.href = "/";
-    window.location.reload();
+    await deleteLocalJsonData("github_token.json");
+    await deleteLocalJsonData("selectedRepos.json");
   }
+  window.location.href = "/";
 }
 
 async function deleteLocalData(mode) { // This function will not delete github_token and selectedRepos
@@ -6913,9 +6887,7 @@ function showRepoMultiSelectPopup(repos, mode) {
   });
 }
 
-async function deleteLedgerFilesInRepo(mode) {
-  const token = await loadLocalJsonData("github_token.json", null);
-
+async function deleteLedgerFilesInRepo(mode, token) {
   // Load selected repos (array of repo IDs)
   const reposToDelete = await get("reposToDelete") || [];
 
@@ -8481,7 +8453,7 @@ updateBtns.forEach(btn => {
               en: "Service Worker removed. Restarting the app…",
               zh: "Service Worker 已注销，应用将重新启动…"
             }[currentLang]);
-            location.reload();
+            return
           }
         },
         {
