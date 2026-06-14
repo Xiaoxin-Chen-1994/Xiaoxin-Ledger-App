@@ -1169,6 +1169,7 @@ async function smartSync(selectedRepos, token) {
       if (repoHasData) {
         const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
         settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+        console.log("settingsMap", settingsMap)
 
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
