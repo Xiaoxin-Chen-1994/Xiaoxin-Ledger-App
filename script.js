@@ -489,6 +489,8 @@ async function deleteLocalJsonData(filename) {
 }
 
 async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
+  console.log("settingsMap.json", settingsMap)
+return
   const container = document.querySelector("#repoList-page .scroll");
 
   const validIds = new Set(ledgerRepos.map(r => r.id));
@@ -639,13 +641,10 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
     // Handle merging of incompatible repos
     const mergeSelections = Array.from(document.querySelectorAll(".merge-target"));
-console.log("settingsMap.json", settingsMap)
-return
+
     for (const sel of mergeSelections) {
       const localId = sel.dataset.localId;
-      console.log("localId", localId)
       const targetId = sel.value;
-      console.log("targetId", targetId)
 
       if (targetId) {
         // Merge local DB into GitHub repo
@@ -668,8 +667,7 @@ return
         if (repo) repo.skipSync = true;
       }
     }
-console.log("settingsMap.json", settingsMap)
-return
+
     await saveLocalJsonData("localDbMap.json", localDbMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
