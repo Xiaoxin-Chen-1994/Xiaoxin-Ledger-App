@@ -642,7 +642,9 @@ async function showRepoSelectionAndMergeRepos(ledgerRepos, incompatible) {
 
     for (const sel of mergeSelections) {
       const localId = sel.dataset.localId;
+      console.log("localId", localId)
       const targetId = sel.value;
+      console.log("targetId", targetId)
 
       if (targetId) {
         // Merge local DB into GitHub repo
