@@ -5225,12 +5225,18 @@ function enablePageSwipe(pageEl) {
   if (pageEl._swipeEnabled) return;
   pageEl._swipeEnabled = true;
 
-  let startX = 0, currentX = 0, isDragging = false;
+  let startX = 0, startY = 0;
+  let currentX = 0;
+  let isDragging = false;
+  let isVerticalScroll = false;
 
   const EDGE_ZONE = 20; // px from left edge
+  const CANCEL_Y_THRESHOLD = 20; // px vertical movement allowed before cancel
 
   const onStart = e => {
-    const x = e.touches[0].clientX;
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
 
     // If swipe starts at the very edge → let system back gesture handle it
     if (x < EDGE_ZONE) {
@@ -5242,20 +5248,39 @@ function enablePageSwipe(pageEl) {
 
     e.stopPropagation();
     startX = x;
+    startY = y;
     isDragging = true;
+    isVerticalScroll = false;
     pageEl.style.transition = "none";
   };
 
   const onMove = e => {
     e.stopPropagation();
     if (!isDragging) return;
-    currentX = e.touches[0].clientX - startX;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+
+    // If vertical movement is bigger → cancel swipe
+    if (Math.abs(dy) > CANCEL_Y_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+      isVerticalScroll = true;
+      isDragging = false;
+      pageEl.style.transform = "translateX(0)";
+      return;
+    }
+
+    if (isVerticalScroll) return;
+
+    currentX = dx;
     if (currentX > 0) {
+      e.stopPropagation();
       pageEl.style.transform = `translateX(${currentX}px)`;
     }
   };
 
   const onEnd = () => {
+  console.log(isDragging)
     if (!isDragging) return;
     isDragging = false;
     const threshold = window.innerWidth * 2 / 5;
