@@ -1525,7 +1525,7 @@ async function init() {
     }
 
   } else { // if not logged in
-    if (Object.keys(selectedRepos).length === 0) { // if not logged in, and if local data not exist, create new
+    if (!selectedRepos) { // if not logged in, and if local data not exist, create new
       let ledgerRepos;
 
       ledgerRepos = [
