@@ -1446,10 +1446,10 @@ async function init() {
     };
   }
 
-  localDbMap     = await loadLocalJsonData("localDbMap.json", {});
-  localLogMap    = await loadLocalJsonData("localLogMap.json", {});
-  lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
-  settingsMap    = await loadLocalJsonData("ledger-settings.json", {});
+  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  localLogMap = await loadLocalJsonData("localLogMap.json", {});
+  lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
+  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
@@ -3044,8 +3044,8 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
-    localDbMap     = await loadLocalJsonData("localDbMap.json", {});
-    localLogMap    = await loadLocalJsonData("localLogMap.json", {});
+    localDbMap = await loadLocalJsonData("localDbMap.json", {});
+    localLogMap = await loadLocalJsonData("localLogMap.json", {});
 
     const dbBytes = localDbMap[repoId];
     const db = new SQL.Database(dbBytes);
@@ -8642,7 +8642,10 @@ async function OpenGrocerySearch() {
       try {
         await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
 
-        document.getElementById("offline-banner").style.display = "none";
+        const banner = document.getElementById("offline-banner");
+        banner.style.display = "none";
+        document.documentElement.style.setProperty("--banner-height", "0px");
+        
         showStatusMessage(
           currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
           "success"
@@ -8650,8 +8653,12 @@ async function OpenGrocerySearch() {
 
       } catch (err) {
         console.error("GitHub write failed:", err);
-        
-        document.getElementById("offline-banner").style.display = "block";
+
+        const banner = document.getElementById("offline-banner");
+        banner.style.display = "block";   // must be visible to measure
+        const height = banner.offsetHeight;
+        document.documentElement.style.setProperty("--banner-height", height + "px");
+
         showStatusMessage(
           currentLang === "en" ? "Cloud sync failed." : "云端同步失败。",
           "error"
