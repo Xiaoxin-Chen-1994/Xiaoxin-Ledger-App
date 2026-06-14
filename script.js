@@ -1089,7 +1089,7 @@ async function smartSync(selectedRepos, token) {
       };
 
       // Save ledger settings locally
-      settingsMap = await loadLocalJsonData("ledger-settings.json", null);
+      settingsMap = await loadLocalJsonData("ledger-settings.json", {});
       settingsMap[repoId] = ledgerSettings;
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
@@ -1152,7 +1152,7 @@ async function smartSync(selectedRepos, token) {
             await githubAppendChangeLog(repoName, logEntry, token);
           }
 
-          settingsMap = loadLocalJsonData("ledger-settings.json", null);
+          settingsMap = loadLocalJsonData("ledger-settings.json", {});
           await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
           localLogMap[repoId] = [];
@@ -1168,7 +1168,7 @@ async function smartSync(selectedRepos, token) {
       // ------------------------------------------------------------
       if (repoHasData) {
         const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-        settingsMap = loadLocalJsonData("ledger-settings.json", null);
+        settingsMap = loadLocalJsonData("ledger-settings.json", {});
 
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
@@ -1270,7 +1270,7 @@ async function smartSync(selectedRepos, token) {
           lastSyncedMap[repoId] = Date.now();
 
           const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-          settingsMap = await loadLocalJsonData("ledger-settings.json", null);
+          settingsMap = await loadLocalJsonData("ledger-settings.json", {});
           let localSettings = settingsMap[repoId];
           settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
           await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -1280,7 +1280,7 @@ async function smartSync(selectedRepos, token) {
     }
   }
 
-  settingsMap = await loadLocalJsonData("ledger-settings.json", null);
+  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
   // ------------------------------------------------------------
   // Save everything
@@ -1427,10 +1427,7 @@ async function githubAppendChangeLog(repoName, change, token) {
 
 async function init() {
   window.scrollTo(0, 0);
-const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    await root.removeEntry(name, { recursive: true });
-  }
+
   let t = translations[currentLang];
 
   // 1. Load token
@@ -1449,13 +1446,13 @@ const root = await navigator.storage.getDirectory();
     };
   }
 
-  localDbMap     = await loadLocalJsonData("localDbMap.json", null);
-  localLogMap    = await loadLocalJsonData("localLogMap.json", null);
-  lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", null);
-  settingsMap    = await loadLocalJsonData("settingsMap.json", null);
+  localDbMap     = await loadLocalJsonData("localDbMap.json", {});
+  localLogMap    = await loadLocalJsonData("localLogMap.json", {});
+  lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
+  settingsMap    = await loadLocalJsonData("settingsMap.json", {});
 
   // Load local repo selections
-  selectedRepos = loadLocalJsonData("selectedRepos.json", null);
+  selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
 
   if (token) {
     // Get current user login
@@ -1549,7 +1546,6 @@ const root = await navigator.storage.getDirectory();
 
     window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
   }
-
 
   // 4. Load ALL ledger DBs
   await smartSync(selectedRepos, token);
@@ -3048,8 +3044,8 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
-    localDbMap     = await loadLocalJsonData("localDbMap.json", null);
-    localLogMap    = await loadLocalJsonData("localLogMap.json", null);
+    localDbMap     = await loadLocalJsonData("localDbMap.json", {});
+    localLogMap    = await loadLocalJsonData("localLogMap.json", {});
 
     const dbBytes = localDbMap[repoId];
     const db = new SQL.Database(dbBytes);
@@ -3850,8 +3846,8 @@ function goBack() {
 }
 
 async function deleteEntry(entryId) {
-  localDbMap = await loadLocalJsonData("localDbMap.json", null);
-  settingsMap = await loadLocalJsonData("ledger-settings.json", null);
+  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
   // Find which repo contains this entry
   const repoIds = Object.keys(localDbMap);
@@ -5705,7 +5701,7 @@ async function getFilteredEntries({
   notesKeyword = null,
 } = {}) {
 
-  localDbMap = await loadLocalJsonData("localDbMap.json", null);
+  localDbMap = await loadLocalJsonData("localDbMap.json", {});
 
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
