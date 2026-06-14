@@ -460,7 +460,7 @@ if (isMobileBrowser()) { // use a smaller font for mobile
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
 
-async function loadLocalJsonData(filename, defaultValue = {}) {
+async function loadLocalJsonData(filename, defaultValue = null) {
   const root = await navigator.storage.getDirectory();
   try {
     const handle = await root.getFileHandle(filename);
@@ -1089,7 +1089,7 @@ async function smartSync(selectedRepos, token) {
       };
 
       // Save ledger settings locally
-      settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+      settingsMap = await loadLocalJsonData("ledger-settings.json", null);
       settingsMap[repoId] = ledgerSettings;
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
@@ -1152,7 +1152,7 @@ async function smartSync(selectedRepos, token) {
             await githubAppendChangeLog(repoName, logEntry, token);
           }
 
-          settingsMap = loadLocalJsonData("ledger-settings.json", {});
+          settingsMap = loadLocalJsonData("ledger-settings.json", null);
           await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
           localLogMap[repoId] = [];
@@ -1168,7 +1168,7 @@ async function smartSync(selectedRepos, token) {
       // ------------------------------------------------------------
       if (repoHasData) {
         const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-        settingsMap = loadLocalJsonData("ledger-settings.json", {});
+        settingsMap = loadLocalJsonData("ledger-settings.json", null);
 
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
@@ -1270,7 +1270,7 @@ async function smartSync(selectedRepos, token) {
           lastSyncedMap[repoId] = Date.now();
 
           const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-          settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+          settingsMap = await loadLocalJsonData("ledger-settings.json", null);
           let localSettings = settingsMap[repoId];
           settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
           await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -1280,7 +1280,7 @@ async function smartSync(selectedRepos, token) {
     }
   }
 
-  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  settingsMap = await loadLocalJsonData("ledger-settings.json", null);
 
   // ------------------------------------------------------------
   // Save everything
@@ -1446,13 +1446,13 @@ async function init() {
     };
   }
 
-  localDbMap     = await loadLocalJsonData("localDbMap.json", {});
-  localLogMap    = await loadLocalJsonData("localLogMap.json", {});
-  lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", {});
-  settingsMap    = await loadLocalJsonData("settingsMap.json", {});
+  localDbMap     = await loadLocalJsonData("localDbMap.json", null);
+  localLogMap    = await loadLocalJsonData("localLogMap.json", null);
+  lastSyncedMap  = await loadLocalJsonData("lastSyncedMap.json", null);
+  settingsMap    = await loadLocalJsonData("settingsMap.json", null);
 
   // Load local repo selections
-  selectedRepos = loadLocalJsonData("selectedRepos.json", {});
+  selectedRepos = loadLocalJsonData("selectedRepos.json", null);
 
   if (token) {
     // Get current user login
@@ -1561,7 +1561,7 @@ async function init() {
   // Apply profile settings
   displayHomeImage();
 
-  const personal = await loadLocalJsonData("ledger-personal-settings.json", {});
+  const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
   if (personal.language) {
     currentLang = personal.language;
     setLanguage(currentLang);
@@ -1673,7 +1673,7 @@ function toggleLedgerFormRows() {
 }
 
 async function displayHomeImage() {
-  const personal = await loadLocalJsonData("ledger-personal-settings.json", {});
+  const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
   const images = personal.homeImages;
 
   const img = document.getElementById("home-image");
@@ -3045,8 +3045,8 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
-    localDbMap     = await loadLocalJsonData("localDbMap.json", {});
-    localLogMap    = await loadLocalJsonData("localLogMap.json", {});
+    localDbMap     = await loadLocalJsonData("localDbMap.json", null);
+    localLogMap    = await loadLocalJsonData("localLogMap.json", null);
 
     const dbBytes = localDbMap[repoId];
     const db = new SQL.Database(dbBytes);
@@ -3847,8 +3847,8 @@ function goBack() {
 }
 
 async function deleteEntry(entryId) {
-  localDbMap = await loadLocalJsonData("localDbMap.json", {});
-  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  localDbMap = await loadLocalJsonData("localDbMap.json", null);
+  settingsMap = await loadLocalJsonData("ledger-settings.json", null);
 
   // Find which repo contains this entry
   const repoIds = Object.keys(localDbMap);
@@ -5702,7 +5702,7 @@ async function getFilteredEntries({
   notesKeyword = null,
 } = {}) {
 
-  localDbMap = await loadLocalJsonData("localDbMap.json", {});
+  localDbMap = await loadLocalJsonData("localDbMap.json", null);
 
   const repoIds = Object.keys(localDbMap);
   let allEntries = [];
