@@ -1,12 +1,18 @@
 <script type="module">
-  import { set } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
-
+  async function saveLocalJsonData(filename, data) {
+    const root = await navigator.storage.getDirectory();
+    const handle = await root.getFileHandle(filename, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify(data));
+    await writable.close();
+  }
+  
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
 
   // Save token in IndexedDB
   await saveLocalJsonData("github_token.json", token);
-  
+
   // Redirect back to your app
   const redirect = params.get("redirect") || "/";
   window.location.href = redirect;
