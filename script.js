@@ -1449,11 +1449,12 @@ async function init() {
 
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
+  let user;
 
   if (token) {
     try {
       // Get current user login
-      const user = await fetch("https://api.github.com/user", {
+      user = await fetch("https://api.github.com/user", {
         headers: { Authorization: `token ${token}` }
       }).then(r => r.json());
 
