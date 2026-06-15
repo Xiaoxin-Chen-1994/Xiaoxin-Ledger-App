@@ -1128,15 +1128,7 @@ async function smartSync(selectedRepos, token) {
         if (await get("isNewLedger")) {
           console.log(`[${repoName}] Only local has data → pushing all entries`);
 
-          for (const entryId in localLedgerData) {
-            const entry = localLedgerData[entryId];
-            await githubWriteJson(repoName, `entries/${entryId}.json`, entry, token);
-          }
-
-          for (const logEntry of localLog) {
-            console.log('logEntry: ', logEntry)
-            await githubAppendChangeLog(repoName, logEntry, token);
-          }
+          await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
 
           settingsMap = await loadLocalJsonData("ledger-settings.json", {});
           await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
@@ -1159,12 +1151,8 @@ async function smartSync(selectedRepos, token) {
         if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
           console.log(`[${repoName}] Only repo has data → pulling all entries`);
 
-          const entryIds = await githubListFiles(repoName, "entries", token);
-
-          for (const id of entryIds) { // this id name already contains '.json'
-            const entry = await githubReadJson(repoName, `entries/${id}`, token);
-            localLedgerDataMap[repoId][entry.entryId] = entry;
-          }
+          const cloudLedgerData = await githubReadJson(repoName, `ledger-data.json`, token);
+          localLedgerDataMap[repoId] = cloudLedgerData;
 
           settingsMap[repoId] = remoteSettings;
           await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -1175,85 +1163,78 @@ async function smartSync(selectedRepos, token) {
 
         } else {
           // ------------------------------------------------------------
-          // 5. Both have data → MERGE
+          // 5. Both have data → Ask user which version to keep
           // ------------------------------------------------------------
           console.log(`[${repoName}] Both sides have data → merging`);
 
-          // 5a. Load cloud change logs since last sync
-          const cloudLogFiles = await githubListFiles(repoName, `changelog`, token);
-          const cloudChanges = [];
-
-          for (const file of cloudLogFiles) {
-            const ts = Number(file.replace(".json", ""));
-            if (ts > lastSynced) {
-              const change = await githubReadJson(repoName, `changelog/${file}`, token);
-              cloudChanges.push(change);
-            }
-          }
-
-          // 5b. Summarize changed IDs
-          const changedIds = new Set();
-          for (const c of cloudChanges) changedIds.add(c.entryId);
-          for (const c of localLog) changedIds.add(c.entryId);
-
-          // 5c. For each changed ID, merge
-          for (const id of changedIds) {
-            const cloudChange = cloudChanges.find(c => c.entryId === id) || null;
-            const localChange = localLog.find(c => c.entryId === id) || null;
-
-            // Only cloud changed
-            if (cloudChange && !localChange) {
-              const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-              console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
-
-             localLedgerData[cloudEntry.entryId] = cloudEntry;
-              continue;
-            }
-
-            // Only local changed
-            if (!cloudChange && localChange) {
-              const localEntry = localChange.newEntry;
-              console.log(`[${repoName}] ${id} changed on local → overwrite repo`);
-              await githubWriteJson(repoName, `entries/${id}.json`, localEntry, token);
-              await githubAppendChangeLog(repoName, localChange, token);
-              continue;
-            }
-
-            // Both changed → conflict resolution
-            if (cloudChange && localChange) {
-              const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
-              const localOriginal = localChange.original;
-              const localNew = localChange.new;
-
-              // True conflict → compare timestamps
-              if (localChange.timestamp > cloudChange.timestamp) {
-                console.log(`[CONFLICT][${repoName}] ${id}: local newer → overwrite repo`);
-                console.log(`Older repo: ${JSON.stringify(cloudEntry)}`);
-                console.log(`Newer local: ${JSON.stringify(localNew)}`);
-                await githubWriteJson(repoName, `entries/${id}.json`, localNew, token);
-                await githubAppendChangeLog(repoName, localChange, token);
-              } else {
-                console.log(`[CONFLICT][${repoName}] ${id}: repo newer → overwrite local`);
-                console.log(`Older local: ${JSON.stringify(localNew)}`);
-                console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
-                // Overwrite local with repo
-                localLedgerData[cloudEntry.entryId] = cloudEntry;
-              }
-            }
-          }
-
-          // 5d. Save merged DB
-          localLedgerDataMap[repoId] = localLedgerData;
-
-          // 5e. Clear local change log
-          localLogMap[repoId] = [];
-
-          // 5f. Update lastSynced
-          lastSyncedMap[repoId] = Date.now();
+          const cloudLedgerData = await githubReadJson(repoName, `ledger-data.json`, token);
 
           const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
           settingsMap = await loadLocalJsonData("ledger-settings.json", {});
           let localSettings = settingsMap[repoId];
+
+          // Compare timestamps
+          const sameCreated = localSettings.createdAt === remoteSettings.createdAt;
+          const sameUpdated = localSettings.updatedAt === remoteSettings.updatedAt;
+
+          // If identical → no popup needed
+          if (sameCreated && sameUpdated) {
+            console.log(`[${repoName}] Local and cloud identical → using cloud`);
+            localLedgerDataMap[repoId] = cloudLedgerData;
+          } else {
+            // Build bilingual popup text
+            const title =
+              currentLang === "en"
+                ? "Choose Data Source"
+                : "选择数据来源";
+
+            const message =
+              (currentLang === "en"
+                ? "Cloud and Local data both exist."
+                : "云端和本地数据同时存在。") +
+              "<br><br>" +
+              `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
+              `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${new Date(remoteSettings.createdAt)}<br><br>` +
+              `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${new Date(remoteSettings.updatedAt)}<br><br><br>` +
+              `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${new Date(localSettings.createdAt)}<br><br>` +
+              `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${new Date(localSettings.updatedAt)}<br><br>` +
+              (currentLang === "en"
+                ? "Which version do you want to keep?"
+                : "请选择要保留的版本：");
+          }
+
+          const useCloud = await new Promise(resolve => {
+            showPopupWindow({
+              title,
+              message,
+              buttons: [
+                {
+                  text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
+                  onClick: () => resolve(true)
+                },
+                {
+                  text: currentLang === "en" ? "Keep Local" : "保留本地数据",
+                  onClick: () => resolve(false)
+                }
+              ]
+            });
+          });
+
+          if (useCloud) {
+            console.log(`[${repoName}] User chose cloud → overwrite local`);
+            localLedgerDataMap[repoId] = cloudLedgerData;
+          } else {
+            console.log(`[${repoName}] User chose local → overwrite cloud`);
+
+            // Upload entire local DB to cloud
+            if (token && !repo.skipSync) {
+              await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
+            }
+          }
+
+          // Update lastSynced
+          lastSyncedMap[repoId] = Date.now();
+
           settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
           await saveLocalJsonData("ledger-settings.json", settingsMap);
           await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
@@ -2502,7 +2483,7 @@ function switchTab(index) {
   // Cache the add button ONCE
   const addBtn = group.querySelector("button[id$='add-item-btn']");
 
-    // item rows
+  // item rows
   if (Array.isArray(subWorkspace.items) && subWorkspace.items.length > 0) {
     // Insert restored rows
     subWorkspace.items.forEach(item => {
@@ -2597,8 +2578,8 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     const text = e.target.value.trim();
     suggestionsDiv.innerHTML = "";
 
-    if (text.length === 0) return;   
-    
+    if (text.length === 0) return;
+
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
@@ -3761,7 +3742,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     }
 
     switchTab(subWorkspace.inputTypeIndex);
-    
+
     // prepare date time selector columns in advance
     ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.inputTransactionTimeRaw.yyyy);
     ScrollToSelectItem(datetimeSelector.querySelector(".month-col"), subWorkspace.inputTransactionTimeRaw.mm);
@@ -3788,14 +3769,14 @@ async function showPage(name, title = latestTitle, options = {}) {
     deleteBtn.style.display = 'block';
 
   } else if (latestPage === "filtered-entries") {
-    
+
     if (options.kanbanIndex == 0) {
       // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
       document.getElementById("app-title").textContent = translations[currentLang].today + " " + filters.dateTo;
 
       let filteredEntries = await getFilteredEntries(filters);
-      
+
       showFilteredEntriesToday(filteredEntries);
     } else {
       let filteredEntries = await getFilteredEntries(options.filters);
@@ -5720,7 +5701,7 @@ async function getFilteredEntries({
   // ------------------------------------------------------------
   return allEntries.filter(e => {
     const t = new Date(e.transactionTime).getTime();
-    
+
     if (from && t < from) return false;
 
     if (to && t > to) return false;
@@ -5914,8 +5895,8 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
   if (kanbanIndex == 1) {
     const monthNames = {
-      zh: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
-      en: ["January","February","March","April","May","June","July","August","September","October","November","December"]
+      zh: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+      en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     };
 
     const monthIndex = new Date().getMonth();
@@ -5972,7 +5953,7 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   `;
 
   row.onclick = async () => {
-    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr});
+    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr });
   };
 }
 
