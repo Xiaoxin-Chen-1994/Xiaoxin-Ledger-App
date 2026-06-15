@@ -70,6 +70,7 @@
 //       lastModifiedBy: string     // userId
 
 let db = null;
+let token = null;
 let selectedRepos = null;
 let settingsMap = null;
 let currentUser = null;
@@ -721,7 +722,7 @@ const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
 
-async function smartSync(selectedRepos, token) {
+async function smartSync(selectedRepos, token, push=false) {
   // Sync personal settings 
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
@@ -1182,42 +1183,48 @@ async function smartSync(selectedRepos, token) {
             console.log(`[${repoName}] Local and cloud identical → using cloud`);
             localLedgerDataMap[repoId] = cloudLedgerData;
           } else {
-            // Build bilingual popup text
-            const title =
-              currentLang === "en"
-                ? "Choose Data Source"
-                : "选择数据来源";
+            let useCloud;
 
-            const message =
-              (currentLang === "en"
-                ? "Cloud and Local data both exist."
-                : "云端和本地数据同时存在。") +
-              "<br><br>" +
-              `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-              `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${new Date(remoteSettings.createdAt)}<br><br>` +
-              `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${new Date(remoteSettings.updatedAt)}<br><br><br>` +
-              `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${new Date(localSettings.createdAt)}<br><br>` +
-              `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${new Date(localSettings.updatedAt)}<br><br>` +
-              (currentLang === "en"
-                ? "Which version do you want to keep?"
-                : "请选择要保留的版本：");
+            if (push) {
+              useCloud = false; // force pushing to cloud
+            } else {
+              // Build bilingual popup text
+              const title =
+                currentLang === "en"
+                  ? "Choose Data Source"
+                  : "选择数据来源";
 
-            const useCloud = await new Promise(resolve => {
-              showPopupWindow({
-                title,
-                message,
-                buttons: [
-                  {
-                    text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
-                    onClick: () => resolve(true)
-                  },
-                  {
-                    text: currentLang === "en" ? "Keep Local" : "保留本地数据",
-                    onClick: () => resolve(false)
-                  }
-                ]
+              const message =
+                (currentLang === "en"
+                  ? "Cloud and Local data both exist."
+                  : "云端和本地数据同时存在。") +
+                "<br><br>" +
+                `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
+                `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${new Date(remoteSettings.createdAt)}<br><br>` +
+                `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${new Date(remoteSettings.updatedAt)}<br><br><br>` +
+                `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${new Date(localSettings.createdAt)}<br><br>` +
+                `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${new Date(localSettings.updatedAt)}<br><br>` +
+                (currentLang === "en"
+                  ? "Which version do you want to keep?"
+                  : "请选择要保留的版本：");
+
+              const useCloud = await new Promise(resolve => {
+                showPopupWindow({
+                  title,
+                  message,
+                  buttons: [
+                    {
+                      text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
+                      onClick: () => resolve(true)
+                    },
+                    {
+                      text: currentLang === "en" ? "Keep Local" : "保留本地数据",
+                      onClick: () => resolve(false)
+                    }
+                  ]
+                });
               });
-            });
+            }
 
             if (useCloud) {
               console.log(`[${repoName}] User chose cloud → overwrite local`);
@@ -1409,7 +1416,7 @@ async function init() {
   let t = translations[currentLang];
 
   // 1. Load token
-  const token = await loadLocalJsonData("github_token.json", null);
+  token = await loadLocalJsonData("github_token.json", null);
 
   const loginBtn = document.getElementById("login-btn");
   if (token) {
@@ -3130,6 +3137,9 @@ async function saveEntry() {
       delete workspace.transactions[latestOptions.transactionId];
     }
 
+    if (token) {
+      smartSync(selectedRepos, token, push=true);
+    }
     showStatusMessage(t.savedSuccess, "success");
 
     history.back();
@@ -5281,8 +5291,6 @@ async function setLanguage(lang) {
   currentLang = lang;
   const t = translations[lang];
 
-  const token = await loadLocalJsonData("github_token.json", null);
-
   // Login text
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
@@ -6699,7 +6707,6 @@ async function deleteAccount(mode) { // mode = "account" (delete all) or mode = 
         onClick: async () => {
           await set("pendingDelete", mode);
           const redirectUrl = `${window.location.origin}/?deleteMode=1`;
-          const token = await loadLocalJsonData("github_token.json", null);
           if (token) {
             window.location.href = `/api/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
           } else {
@@ -6744,7 +6751,6 @@ async function performAccountDeletion(mode) {
     4000 // ms
   );
 
-  const token = await loadLocalJsonData("github_token.json", null);
   if (token) {
     // 1. Delete GitHub repos owned by this user
     await deleteLedgerFilesInRepo(mode, token);
@@ -8476,7 +8482,6 @@ async function OpenGrocerySearch() {
   let target = document.getElementById("grocery-search-page");
   disablePageSwipe(target);
 
-  const token = await loadLocalJsonData("github_token.json", null);
   const repo = selectedRepos.activeLedgerRepo;
   const repoName = repo.name;
 
