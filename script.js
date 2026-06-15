@@ -120,7 +120,6 @@ let currentBase = "home";
 let latestPage = null;
 let latestTitle = null;
 let latestOptions = null;
-let loadedEntry_original = null;
 
 const translations = {
   en: {
@@ -130,9 +129,7 @@ const translations = {
     search: "🔍Search",
     welcome: "Welcome, ",
     homeTitle: "Home",
-    monthBalance: "Nov · Balance",
     incomeMinusExpense: "Income - Expense",
-    monthlySummary: "Income this month 0 | Expense this month 0",
     today: "Today",
     thisMonth: "This Month",
     thisYear: "This Year",
@@ -163,7 +160,7 @@ const translations = {
     transferTo: "To",
     item: "Item",
     unitPrice: "Unit price",
-    priceOrQuantity: "Price/Quantity",
+    totalPrice: "Total price",
     notes: "📝Notes",
     save: "✔️Save",
     savedSuccess: "Save success!",
@@ -287,9 +284,7 @@ const translations = {
     search: "🔍搜索",
     welcome: "欢迎，",
     homeTitle: "首页",
-    monthBalance: "11月·结余",
     incomeMinusExpense: "收入 - 支出",
-    monthlySummary: "本月收入 0 | 本月支出 0",
     today: "今天",
     thisMonth: "本月",
     thisYear: "本年",
@@ -319,7 +314,7 @@ const translations = {
     transferTo: "转入",
     item: "条目",
     unitPrice: "单价",
-    priceOrQuantity: "价格/数量",
+    totalPrice: "总价",
     notes: "📝备注",
     save: "✔️保存",
     savedSuccess: "保存成功!",
@@ -1093,7 +1088,7 @@ async function smartSync(selectedRepos, token) {
       await saveLocalJsonData("ledger-settings.json", settingsMap);
 
       // Save DB + settings
-      localLedgerDataMap[repoId] = [];   // empty entries array
+      localLedgerDataMap[repoId] = {};   // empty entries array
       localLogMap[repoId] = [];
       lastSyncedMap[repoId] = Date.now();
 
@@ -1133,8 +1128,9 @@ async function smartSync(selectedRepos, token) {
         if (await get("isNewLedger")) {
           console.log(`[${repoName}] Only local has data → pushing all entries`);
 
-          for (const entry of localLedgerData) {
-            await githubWriteJson(repoName, `entries/${entry.entryId}.json`, entry, token);
+          for (const entryId in localLedgerData) {
+            const entry = localLedgerData[entryId];
+            await githubWriteJson(repoName, `entries/${entryId}.json`, entry, token);
           }
 
           for (const logEntry of localLog) {
@@ -1167,7 +1163,7 @@ async function smartSync(selectedRepos, token) {
 
           for (const id of entryIds) { // this id name already contains '.json'
             const entry = await githubReadJson(repoName, `entries/${id}`, token);
-            localLedgerDataMap[repoId].push(entry);
+            localLedgerDataMap[repoId][entry.entryId] = entry;
           }
 
           settingsMap[repoId] = remoteSettings;
@@ -1210,12 +1206,7 @@ async function smartSync(selectedRepos, token) {
               const cloudEntry = await githubReadJson(repoName, `entries/${id}.json`, token);
               console.log(`[${repoName}] ${id} changed on repo → overwrite local`);
 
-              const idx = localLedgerData.findIndex(e => e.entryId === cloudEntry.entryId);
-              if (idx !== -1) {
-                localLedgerData[idx] = cloudEntry;
-              } else {
-                localLedgerData.push(cloudEntry);
-              }
+             localLedgerData[cloudEntry.entryId] = cloudEntry;
               continue;
             }
 
@@ -1246,12 +1237,7 @@ async function smartSync(selectedRepos, token) {
                 console.log(`Older local: ${JSON.stringify(localNew)}`);
                 console.log(`Newer repo: ${JSON.stringify(cloudEntry)}`);
                 // Overwrite local with repo
-                const idx = localLedgerData.findIndex(e => e.entryId === cloudEntry.entryId);
-                if (idx !== -1) {
-                  localLedgerData[idx] = cloudEntry;
-                } else {
-                  localLedgerData.push(cloudEntry);
-                }
+                localLedgerData[cloudEntry.entryId] = cloudEntry;
               }
             }
           }
@@ -1458,7 +1444,6 @@ async function init() {
   }
 
   localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
-    console.log(localLedgerDataMap)
   localLogMap = await loadLocalJsonData("localLogMap.json", {});
   lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
   settingsMap = await loadLocalJsonData("ledger-settings.json", {});
@@ -2468,6 +2453,7 @@ function switchTab(index) {
       document.getElementById("exchange-transfer-amount-row").style.display = "grid";
     }
   }
+
   // datetime
   const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
   const [yyyy, mm, dd, hh, min, ss] = parseDateFromString(subWorkspace.inputTransactionTime);
@@ -2496,22 +2482,28 @@ function switchTab(index) {
     setDefaultCollection(collectionEl, subWorkspace);
   }
 
+  // tag input
+  const tagInputEl = activeTab.querySelector(`#${activeForm} .tag-input`);
+  if (subWorkspace.tagInput !== undefined) {
+    tagInputEl.value = subWorkspace.tagInput;
+  } else {
+    tagInputEl.value = ""; // reset
+  }
+
   if (!Array.isArray(subWorkspace.tags)) {
     subWorkspace.tags = [];
   }
 
   addTag(subWorkspace.tags, subWorkspace);
 
-  // item rows
-  if (Array.isArray(subWorkspace.items)) {
-    const group = activeTab.querySelector(`#${activeForm} .item-group`);
+  const group = activeTab.querySelector(`#${activeForm} .item-group`);
+  // Remove existing rows
+  group.querySelectorAll(".item-row").forEach(r => r.remove());
+  // Cache the add button ONCE
+  const addBtn = group.querySelector("button[id$='add-item-btn']");
 
-    // Remove existing rows
-    group.querySelectorAll(".item-row").forEach(r => r.remove());
-
-    // Cache the add button ONCE
-    const addBtn = group.querySelector("button[id$='add-item-btn']");
-    console.log("subWorkspace.items", subWorkspace.items)
+    // item rows
+  if (Array.isArray(subWorkspace.items) && subWorkspace.items.length > 0) {
     // Insert restored rows
     subWorkspace.items.forEach(item => {
       const row = createItemRow(
@@ -2522,7 +2514,11 @@ function switchTab(index) {
 
       group.insertBefore(row, addBtn);
     });
+  } else {
+    const row = createItemRow("", "", "");
+    group.insertBefore(row, addBtn);
   }
+
   // notes
   if (subWorkspace.notes !== undefined) {
     const notesEl = activeTab.querySelector(`#${activeForm} textarea[id$='notes']`);
@@ -2596,11 +2592,13 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
 
   // Listen for typing
   input.addEventListener("input", async (e) => {
+    autoSave();
+
     const text = e.target.value.trim();
     suggestionsDiv.innerHTML = "";
 
-    if (text.length === 0) return;
-
+    if (text.length === 0) return;   
+    
     let subWorkspace = null;
 
     if (latestPage.includes("create")) { // when creating an entry
@@ -2608,6 +2606,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     } else {
       subWorkspace = workspace.transactions[latestOptions.transactionId];
     }
+
     const inputType = subWorkspace.inputType;
     const repoId = subWorkspace[inputType].repoId;
     const settings = settingsMap[repoId];
@@ -2616,23 +2615,25 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
 
     Object.keys(tags).forEach(tag => {
       if (tag && tag.includes(text)) {
-        const span = document.createElement("span");
-        span.textContent = tag;
-        span.addEventListener("click", () => {
-          // Add to subWorkspace.tags if not already present
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tag-suggestion-btn";
+        btn.textContent = tag;
+
+        btn.addEventListener("click", () => {
           if (!Array.isArray(subWorkspace.tags)) {
             subWorkspace.tags = [];
           }
           if (!subWorkspace.tags.includes(tag)) {
             subWorkspace.tags.push(tag);
+            addTag(tag, subWorkspace);
           }
 
-          addTag(tag, subWorkspace);
-          input.value = null; // Clear input
-          suggestionsDiv.innerHTML = ""; // Clear suggestions
+          input.value = null;
+          suggestionsDiv.innerHTML = "";
         });
 
-        suggestionsDiv.appendChild(span);
+        suggestionsDiv.appendChild(btn);
       }
     });
   });
@@ -2704,7 +2705,6 @@ function addTag(tag, subWorkspace) {
 
     tag.forEach(t => {
       const tagEl = createTagElement(t);
-      console.log(tagEl)
       container.appendChild(tagEl);
     });
 
@@ -2746,7 +2746,7 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const priceInput = document.createElement("input");
   priceInput.type = "text";
   priceInput.className = "item-price";
-  priceInput.placeholder = t.priceOrQuantity;
+  priceInput.placeholder = t.totalPrice;
   priceInput.value = priceValue;
 
   row.appendChild(nameInput);
@@ -2829,10 +2829,14 @@ function saveItemsNotesToWorkspace() {
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
 
+  // Save tag inputs
+  const tagInputEl = activeTab.querySelector(`#${activeForm} .tag-input`);
+  subWorkspace.tagInput = tagInputEl?.value || "";
+
+  // Save item rows
   const group = activeTab.querySelector(`#${activeForm} .item-group`);
   const rows = group.querySelectorAll(".item-row");
 
-  // Save item rows
   subWorkspace.items = Array.from(rows).map(row => ({
     name: row.querySelector(".item-name")?.value || "",
     unitPrice: row.querySelector(".item-unit-price")?.value || "",
@@ -2989,6 +2993,7 @@ async function saveEntry() {
 
   let entryId = null;
   let writeMode = null;
+  let loadedEntry_original = null;
   // -----------------------------
   // Generate entryId inline
   // -----------------------------
@@ -2999,11 +3004,22 @@ async function saveEntry() {
         .toString()
         .padStart(6, "0");
     writeMode = "create";
-    loadedEntry_original = null;
   } else {
-    entryId = loadedEntry_original.entryId;
+    entryId = ws.entryId;
     writeMode = "overwrite";
   }
+
+  // remove empty item rows
+  const cleanedItems = (ws.items ?? []).filter(item => {
+    if (!item) return false;
+
+    const name = item.name?.trim();
+    const unitPrice = item.unitPrice?.toString().trim();
+    const price = item.price?.toString().trim();
+
+    // keep only rows with at least one non‑empty field
+    return name || unitPrice || price;
+  });
 
   // -----------------------------
   // Build entryData inline
@@ -3014,6 +3030,7 @@ async function saveEntry() {
     amount: ws.amount ?? 0,
     repoId,
     transactionTime: ws.inputTransactionTime,
+    items: cleanedItems,
     tags: ws.tags ?? [],
     notes: ws.notes ?? "",
     createdTimestamp: getFormattedTime(),
@@ -3054,20 +3071,13 @@ async function saveEntry() {
     // -----------------------------
     // Write entry to local SQLite DB (inline)
     // -----------------------------
-    localLedgerDataMap = await loadLocalJsonData("localLedgerDataMap.json", {});
-    localLogMap = await loadLocalJsonData("localLogMap.json", {});
 
-    let localLedgerData = localLedgerDataMap[repoId] || [];
-
-    // If overwriting → remove old entry
-    if (loadedEntry_original) {
-      localLedgerData = localLedgerData.filter(
-        e => e.entryId !== loadedEntry_original.entryId
-      );
+    let localLedgerData = localLedgerDataMap[repoId] || {};
+    if (localLedgerData[entryData.entryId]) {
+      loadedEntry_original = localLedgerData[entryData.entryId]; // store a copy of the original entry
     }
 
-    // Insert new entry
-    localLedgerData.push(entryData);
+    localLedgerData[entryData.entryId] = entryData; // overwrite with the new entry
 
     // Save back to map
     localLedgerDataMap[repoId] = localLedgerData;
@@ -3128,7 +3138,6 @@ async function saveEntry() {
 
     // Persist
     await saveLocalJsonData("ledger-settings.json", settingsMap);
-
     // -----------------------------
     // Cleanup workspace
     // -----------------------------
@@ -3137,7 +3146,6 @@ async function saveEntry() {
     } else if (latestPage.includes("transaction")) {
       delete workspace.transactions[latestOptions.transactionId];
     }
-    loadedEntry_original = null;
 
     showStatusMessage(t.savedSuccess, "success");
 
@@ -3784,7 +3792,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     if (options.kanbanIndex == 0) {
       // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
-      document.getElementById("app-title").textContent = translations[currentLang].today + filters.dateTo;
+      document.getElementById("app-title").textContent = translations[currentLang].today + " " + filters.dateTo;
 
       let filteredEntries = await getFilteredEntries(filters);
       
@@ -3800,7 +3808,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
       const entryId = block.dataset.entryId;
       const repoId = block.dataset.repoId;
-      const entry = localLedgerDataMap[repoId].find(e => e.entryId === entryId);
+      const entry = localLedgerDataMap[repoId][entryId];
       if (!entry) return;
 
       // If clicking Modify
@@ -3858,19 +3866,13 @@ function goBack() {
 
 async function deleteEntry(repoId, entryId) {
   // Load entries array for this repo
-  const entries = localLedgerDataMap[repoId];
-  if (!entries) return;
+  const localLedgerData = localLedgerDataMap[repoId];
+  if (!localLedgerData) return;
 
-  // Find the entry by entryId
-  const idx = entries.findIndex(e => e.entryId === entryId);
-  if (idx === -1) return;
-
-  // Found → remove from local entries
-  const removedEntry = entries[idx];
-  entries.splice(idx, 1);
-
-  // Save updated entries back into the map
-  localLedgerDataMap[repoId] = entries;
+  // If the entry exists, remove it
+  if (localLedgerData[entryId]) {
+    delete localLedgerData[entryId];
+  }
 
   // Remove from settings tags
   removeEntryFromTagMap(settingsMap, repoId, removedEntry);
@@ -3883,11 +3885,11 @@ async function deleteEntry(repoId, entryId) {
 function loadEntryIntoWorkspace(e) {
   let ws = {};
 
-  loadedEntry_original = e;
-
+  ws.entryId = e.entryId;
   ws.amount = Number(e.amount) || 0;
   ws.notes = e.notes || "";
-  ws.tags = e.tags || [];
+  ws.items = [...(e.items || [])];
+  ws.tags = [...(e.tags || [])];
   ws.inputTransactionTime = e.transactionTime;
   ws.repoId = e.repoId;
 
@@ -5304,9 +5306,7 @@ async function setLanguage(lang) {
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
 
   // Home text
-  document.getElementById("home-month").textContent = t.monthBalance;
   document.getElementById("home-balance").textContent = t.incomeMinusExpense;
-  document.getElementById("home-summary").textContent = t.monthlySummary;
 
   // Transaction page
   document.getElementById("save-btn-expense").textContent = t.save;
@@ -5706,7 +5706,7 @@ async function getFilteredEntries({
     const entries = localLedgerDataMap[rid];
     if (!entries) continue;
 
-    for (const entry of entries) {
+    for (const entry of Object.values(entries)) {
       try {
         allEntries.push(entry);
       } catch (e) {
@@ -5912,6 +5912,30 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
   const { income, expense } = summarizeIncomeExpense(filteredEntries);
 
+  if (kanbanIndex == 1) {
+    const monthNames = {
+      zh: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
+      en: ["January","February","March","April","May","June","July","August","September","October","November","December"]
+    };
+
+    const monthIndex = new Date().getMonth();
+
+    const monthText =
+      currentLang === "zh"
+        ? `${monthNames.zh[monthIndex]} · 结余`
+        : `${monthNames.en[monthIndex]} · Balance`;
+
+    document.getElementById("home-month").textContent = monthText;
+
+    const summaryEl = document.getElementById("home-summary");
+
+    if (currentLang === "zh") {
+      summaryEl.textContent = `本月收入 ${income} | 本月支出 ${expense}`;
+    } else {
+      summaryEl.textContent = `Income this month ${income} | Expense this month ${expense}`;
+    }
+  }
+
   const dateRangeStr = filters.dateRangeStr;
 
   const displayTitle = (title === "presetToday")
@@ -5983,11 +6007,6 @@ function showFilteredEntries(entries) {
   for (const day of groupKeys) {
     const dayEntries = groups[day];
     scroll.innerHTML += renderEntryGroup(day, dayEntries);
-
-    requestAnimationFrame(() => {
-      const textareas = scroll.querySelectorAll(".fe-notes-textarea");
-      textareas.forEach(autoResizeTextarea);
-    });
   }
 }
 
@@ -6049,11 +6068,6 @@ function showFilteredEntriesToday(entries) {
         }
       });
     });
-
-    requestAnimationFrame(() => {
-      const textareas = scroll.querySelectorAll(".fe-notes-textarea");
-      textareas.forEach(autoResizeTextarea);
-    });
   }
 
   renderBatch();
@@ -6108,6 +6122,8 @@ function renderEntryGroup(day, entries) {
     }
   });
 
+  html += `<hr class="fe-group-divider">`;
+
   html += `</div>`;
   return html;
 }
@@ -6121,7 +6137,12 @@ function renderEntryByType(e) {
   const account = e.account || e.fromAccount || e.toAccount || "";
   const subject = e.subject || "";
   const collection = e.collection || "";
+  const items = e.items || [];
   const notes = e.notes || "";
+
+  const tagStr = (e.tags && e.tags.length > 0)
+    ? e.tags.map(t => `#${t}`).join(" ")
+    : "";
 
   // --- Income / Expense ---
   if (e.type === "income" || e.type === "expense") {
@@ -6139,13 +6160,15 @@ function renderEntryByType(e) {
           <div class="fe-entry-icon">${secondaryIcon}</div>
 
           <div class="fe-entry-main">
-            <div class="fe-entry-title">${e.secondaryCategory}</div>
-            ${renderNotes(notes)}
+            <div class="fe-entry-title-row">
+              <div class="fe-entry-title">${e.secondaryCategory}</div>
+              <div class="fe-entry-amount-right ${e.type}">
+                ${Number(e.amount).toFixed(2)}
+              </div>
+            </div>
+            ${renderNotesItemsTags(notes, items)}
+            <div class="fe-entry-meta">${tagStr ? tagStr : ""}</div>
             <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
-          </div>
-
-          <div class="fe-entry-amount-right ${e.type}">
-            ${Number(e.amount).toFixed(2)}
           </div>
         </div>
 
@@ -6167,13 +6190,14 @@ function renderEntryByType(e) {
           <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
 
           <div class="fe-entry-main">
-            <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
-            ${renderNotes(notes)}
+            <div class="fe-entry-title-row">
+              <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
+              <div class="fe-entry-amount-right">
+                ${Number(e.amount).toFixed(2)}
+              </div>
+            </div>
+            ${renderNotesItemsTags(notes, items)}
             <div class="fe-entry-meta">${time}</div>
-          </div>
-
-          <div class="fe-entry-amount-right">
-            ${Number(e.amount).toFixed(2)}
           </div>
         </div>
 
@@ -6195,13 +6219,14 @@ function renderEntryByType(e) {
           <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
 
           <div class="fe-entry-main">
-            <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
-            ${renderNotes(notes)}
+            <div class="fe-entry-title-row">
+              <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
+              <div class="fe-entry-amount-right">
+                ${Number(e.amount).toFixed(2)}
+              </div>
+            </div>
+            ${renderNotesItemsTags(notes, items)}
             <div class="fe-entry-meta">${time}</div>
-          </div>
-
-          <div class="fe-entry-amount-right">
-            ${Number(e.amount).toFixed(2)}
           </div>
         </div>
 
@@ -6217,18 +6242,32 @@ function renderEntryByType(e) {
   return "";
 }
 
-function renderNotes(notes) {
-  if (!notes || notes.trim() === "") return "";
-  return `
-    <div class="fe-entry-notes">
-      <textarea class="fe-notes-textarea" readonly>${notes}</textarea>
-    </div>
-  `;
-}
+function renderNotesItemsTags(notes, items) {
+  const hasNotes = notes && notes.trim() !== "";
+  const hasItems = Array.isArray(items) && items.length > 0;
 
-function autoResizeTextarea(el) {
-  el.style.height = "auto";          // reset
-  el.style.height = el.scrollHeight + "px"; // fit content
+  if (!hasNotes && !hasItems) return "";
+
+  const lines = [];
+
+  // Notes
+  if (hasNotes) {
+    lines.push(notes.trim());
+  }
+
+  // Items: "name unitPrice price"
+  if (hasItems) {
+    items.forEach(it => {
+      const name = it.name || "";
+      const unitPrice = it.unitPrice || "";
+      const price = it.price || "";
+      lines.push(`${name} ${unitPrice} ${price}`.trim());
+    });
+  }
+
+  const combinedText = lines.join("\n").trim();
+
+  return `<div class="fe-notes-text">${combinedText}</div>`;
 }
 
 function getCategoryIcon(repoId, type, primary, secondary) {
@@ -9735,6 +9774,7 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
     if (!workspace.transactions[entryId]) { // initialize
       workspace.transactions[entryId] = {};
 
+      workspace.transactions[entryId].entryId = entryId;
       workspace.transactions[entryId].inputTypeIndex = 0;
       workspace.transactions[entryId].inputType = transactionTypes[0]; // start with expense
       workspace.transactions[entryId].amount = 0;

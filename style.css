@@ -176,7 +176,7 @@ a {
 .base-page,
 .page {
   position: absolute;
-  top: calc(3.5rem + var(--banner-height));
+  top: calc(4rem + var(--banner-height));
   /* header bar height */
   left: 0;
   right: 0;
@@ -761,9 +761,24 @@ input[type="url"],
 
 /* Suggestions stay on the same row but wrap inside their own space */
 .tag-suggestions {
-  flex: 0 1 auto;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;     /* keep buttons on one line */
+  overflow-x: auto;      /* horizontal scroll */
+  padding-left: 0.5rem;
+  gap: 0.1rem;
+  scrollbar-width: thin;   /* Firefox */
+  max-width: 40%;          /* adjust as needed */
+}
+
+.tag-suggestion-btn {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.5rem;
+  gap: 0rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
 }
 
 /* Row 2: tags */
@@ -771,15 +786,20 @@ input[type="url"],
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .tag {
-  display: flex;
+  flex: 0 0 auto;              /* do NOT stretch */
+  width: auto;                 /* size to content */
+  max-width: max-content;      /* ensure content width */
+  display: inline-flex;        /* shrink to content */
   align-items: center;
-  background: color-mix(in srgb, var(--primary) 20%, var(--bg));
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   gap: 0.25rem;
+  white-space: nowrap;         /* prevent breaking inside tag */
 }
 
 .tag span {
@@ -797,6 +817,9 @@ input[type="url"],
   padding: 0;
 }
 
+.delete-tag:hover {
+  background: transparent;
+}
 
 .delete-btn {
   position: absolute;
@@ -2236,15 +2259,6 @@ emoji-picker {
   font-size: calc(var(--font-size) * 1);
 }
 
-/* Container for each date group */
-.fe-date-group {
-  padding: 15px 0 10px 0;
-  /* top + bottom spacing */
-  margin-bottom: 10px;
-  /* extra gap between dates */
-  border-bottom: 3px solid var(--border-color, #e5e5e5);
-}
-
 /* Entry divider */
 .fe-entry-divider {
   border: none;
@@ -2253,16 +2267,25 @@ emoji-picker {
   opacity: 0.6;
 }
 
+.fe-group-divider {
+  border: none;
+  border-bottom: 3px solid var(--border-color, #e5e5e5);
+  margin: 25px 0 20px 0;
+  opacity: 0.6;
+}
+
 /* Big date or "Today" */
 .fe-date-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 0 16px 8px 16px;
+  gap: 10px;
+  padding: 0 0 8px 0;
 }
 
 .fe-date-big {
   font-size: calc(var(--font-size) * 1.5);
+  width: calc(var(--font-size) * 3);
+  text-align: center;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -2280,6 +2303,7 @@ emoji-picker {
 
 /* Wrap original content so actions can slide under it */
 .fe-entry-content {
+  gap: 10px;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -2313,13 +2337,14 @@ emoji-picker {
 
 /* Left column: icon */
 .fe-entry-icon {
-  width: calc(var(--font-size) * 1.5);
+  width: calc(var(--font-size) * 1.3);
   /* fixed width for alignment */
-  padding-right: calc(var(--font-size) * 0.6);
+  padding-left: calc(var(--font-size) * 0.85);
+  padding-right: calc(var(--font-size) * 0.85);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  font-size: calc(var(--font-size) * 1.4);
+  font-size: calc(var(--font-size) * 1.2);
 }
 
 /* Middle column: main content */
@@ -2341,45 +2366,27 @@ emoji-picker {
   justify-content: flex-end;
 }
 
+.fe-entry-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between; /* pushes amount to the right */
+  width: 100%;
+}
+
 .fe-entry-title {
   font-size: calc(var(--font-size) * 1);
   font-weight: 600;
 }
 
-.fe-entry-notes {
-  margin-top: 2px;
-}
-
-/* Make textarea look like plain multi-line text */
-.fe-notes-textarea {
-  width: 100%;
-  /* expand fully */
-  resize: none;
-  /* no resize handle */
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-
+.fe-notes-text {
+  white-space: pre-wrap;   /* preserves newlines */
   font: inherit;
   font-size: calc(var(--font-size) * 0.65);
   color: color-mix(in srgb, var(--text) 60%, var(--bg));
+  padding: 0;
+  margin: 0;
   line-height: 1.4;
-
-  overflow: clip;
-  /* hide scrollbars */
-  pointer-events: none;
-  /* non-interactive */
-  display: block;
-  /* ensures width behaves predictably */
-  box-sizing: border-box;
-  /* prevents overflow */
-}
-
-/* Optional: prevent pointer cursor so it feels non-interactive */
-.fe-notes-textarea {
-  pointer-events: none;
 }
 
 .fe-entry-meta {
