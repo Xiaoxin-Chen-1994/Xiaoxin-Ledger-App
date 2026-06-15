@@ -723,6 +723,30 @@ const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
 
+function highlightDiff(a, b) {
+  const aStr = String(a);
+  const bStr = String(b);
+  let resultA = "";
+  let resultB = "";
+
+  const maxLen = Math.max(aStr.length, bStr.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const ca = aStr[i] || "";
+    const cb = bStr[i] || "";
+
+    if (ca !== cb) {
+      resultA += `<span style="color:#d66">${ca}</span>`;
+      resultB += `<span style="color:#d66">${cb}</span>`;
+    } else {
+      resultA += ca;
+      resultB += cb;
+    }
+  }
+
+  return { a: resultA, b: resultB };
+}
+
 async function smartSync(selectedRepos, token, options = {}) {
   // Sync personal settings 
   if (!token || selectedRepos.personalSettingsRepo) {
@@ -742,9 +766,9 @@ async function smartSync(selectedRepos, token, options = {}) {
         cloudDeleted = cloud?.deletedAtTimestamp || 0;
         offline = false;
       } catch (err) {
-        console.error("GitHub write failed:", err);
+        console.error("GitHub sync failed:", err);
 
-        showOfflineBanner("GitHub write failed: " + err);
+        showOfflineBanner("GitHub sync failed: " + err);
         offline = true;
       }
     }
@@ -1199,6 +1223,15 @@ async function smartSync(selectedRepos, token, options = {}) {
             if (push) {
               useCloud = false; // force pushing to cloud
             } else {
+              const cloudCreatedStr = new Date(remoteSettings.createdAt).toString();
+              const localCreatedStr = new Date(localSettings.createdAt).toString();
+
+              const cloudUpdatedStr = new Date(remoteSettings.updatedAt).toString();
+              const localUpdatedStr = new Date(localSettings.updatedAt).toString();
+
+              const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
+              const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
+
               // Build bilingual popup text
               const title =
                 currentLang === "en"
@@ -1211,10 +1244,13 @@ async function smartSync(selectedRepos, token, options = {}) {
                   : "云端和本地数据同时存在。") +
                 "<br><br>" +
                 `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-                `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${new Date(remoteSettings.createdAt)}<br><br>` +
-                `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${new Date(remoteSettings.updatedAt)}<br><br><br>` +
-                `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${new Date(localSettings.createdAt)}<br><br>` +
-                `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${new Date(localSettings.updatedAt)}<br><br>` +
+
+                `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
+                `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
+
+                `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
+                `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
+
                 (currentLang === "en"
                   ? "Which version do you want to keep?"
                   : "请选择要保留的版本：");
