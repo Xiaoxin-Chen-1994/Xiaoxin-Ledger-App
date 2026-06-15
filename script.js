@@ -3117,6 +3117,8 @@ async function saveEntry() {
       }
     }
 
+    settingsMap[repoId].updatedAt = Date.now();
+
     // Persist
     await saveLocalJsonData("ledger-settings.json", settingsMap);
     // -----------------------------
