@@ -70,6 +70,7 @@
 //       lastModifiedBy: string     // userId
 
 let db = null;
+let offline = false;
 let token = null;
 let selectedRepos = null;
 let settingsMap = null;
@@ -732,12 +733,20 @@ async function smartSync(selectedRepos, token, options = {}) {
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
-      const cloudExists = await githubFileExists(repoName, "ledger-personal-settings.json", token);
-      cloud = cloudExists
-        ? await githubReadJson(repoName, "ledger-personal-settings.json", token)
-        : null;
+      try {
+        const cloudExists = await githubFileExists(repoName, "ledger-personal-settings.json", token);
+        cloud = cloudExists
+          ? await githubReadJson(repoName, "ledger-personal-settings.json", token)
+          : null;
 
-      cloudDeleted = cloud?.deletedAtTimestamp || 0;
+        cloudDeleted = cloud?.deletedAtTimestamp || 0;
+        offline = false;
+      } catch (err) {
+        console.error("GitHub write failed:", err);
+
+        showOfflineBanner("GitHub write failed: " + err);
+        offline = true;
+      }
     }
 
     const local = await loadLocalJsonData("ledger-personal-settings.json", null); // may be null 
@@ -756,12 +765,12 @@ async function smartSync(selectedRepos, token, options = {}) {
       };
 
       await saveLocalJsonData("ledger-personal-settings.json", defaults);
-      if (token) {
+      if (token && !offline) {
         await githubWriteJson(repoName, "ledger-personal-settings.json", defaults, token);
       }
     }
 
-    if (token) {
+    if (token && !offline) {
       // -----------------------------------------
       // Rule 2 — local null, cloud exists → pull
       // -----------------------------------------
@@ -841,7 +850,7 @@ async function smartSync(selectedRepos, token, options = {}) {
     // ------------------------------------------------------------
     let repoHasData = null;
 
-    if (token) {
+    if (token && !offline) {
       const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
 
       // githubReadJson returns:
@@ -1096,7 +1105,7 @@ async function smartSync(selectedRepos, token, options = {}) {
       continue;
     }
 
-    if (token) {
+    if (token && !offline) {
       // ------------------------------------------------------------
       // 3. Only local has data → push everything
       // ------------------------------------------------------------
@@ -1442,11 +1451,24 @@ async function init() {
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
 
   if (token) {
-    // Get current user login
-    const user = await fetch("https://api.github.com/user", {
-      headers: { Authorization: `token ${token}` }
-    }).then(r => r.json());
+    try {
+      // Get current user login
+      const user = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `token ${token}` }
+      }).then(r => r.json());
 
+      hideOfflineBanner();
+      offline = false;
+    } catch (err) {
+      console.error("GitHub fetch failed:", err);
+
+      showOfflineBanner("GitHub fetch failed: " + err);
+      offline = true;
+    }
+  }
+
+
+  if (token && !offline) {
     window.currentUserLogin = user.login;
     window.currentUserId = user.id;
 
@@ -3142,7 +3164,6 @@ async function saveEntry() {
     if (token) {
       smartSync(selectedRepos, token, { push: true });
     }
-    showStatusMessage(t.savedSuccess, "success");
 
     history.back();
 
@@ -9069,7 +9090,6 @@ async function OpenGrocerySearch() {
     await syncGroceryData();
     renderStoreAndItems();
 
-    showStatusMessage(t.savedSuccess, "success");
     goBack();
   }
 
