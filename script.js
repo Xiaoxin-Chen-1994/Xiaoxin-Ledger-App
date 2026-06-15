@@ -1208,7 +1208,7 @@ async function smartSync(selectedRepos, token, push=false) {
                   ? "Which version do you want to keep?"
                   : "请选择要保留的版本：");
 
-              const useCloud = await new Promise(resolve => {
+              useCloud = await new Promise(resolve => {
                 showPopupWindow({
                   title,
                   message,
