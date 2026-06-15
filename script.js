@@ -1201,34 +1201,34 @@ async function smartSync(selectedRepos, token) {
               (currentLang === "en"
                 ? "Which version do you want to keep?"
                 : "请选择要保留的版本：");
-          }
 
-          const useCloud = await new Promise(resolve => {
-            showPopupWindow({
-              title,
-              message,
-              buttons: [
-                {
-                  text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
-                  onClick: () => resolve(true)
-                },
-                {
-                  text: currentLang === "en" ? "Keep Local" : "保留本地数据",
-                  onClick: () => resolve(false)
-                }
-              ]
+            const useCloud = await new Promise(resolve => {
+              showPopupWindow({
+                title,
+                message,
+                buttons: [
+                  {
+                    text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
+                    onClick: () => resolve(true)
+                  },
+                  {
+                    text: currentLang === "en" ? "Keep Local" : "保留本地数据",
+                    onClick: () => resolve(false)
+                  }
+                ]
+              });
             });
-          });
 
-          if (useCloud) {
-            console.log(`[${repoName}] User chose cloud → overwrite local`);
-            localLedgerDataMap[repoId] = cloudLedgerData;
-          } else {
-            console.log(`[${repoName}] User chose local → overwrite cloud`);
+            if (useCloud) {
+              console.log(`[${repoName}] User chose cloud → overwrite local`);
+              localLedgerDataMap[repoId] = cloudLedgerData;
+            } else {
+              console.log(`[${repoName}] User chose local → overwrite cloud`);
 
-            // Upload entire local DB to cloud
-            if (token && !repo.skipSync) {
-              await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
+              // Upload entire local DB to cloud
+              if (token && !repo.skipSync) {
+                await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
+              }
             }
           }
 
