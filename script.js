@@ -722,7 +722,7 @@ const SQL = await initSqlJs({
   locateFile: file => `https://sql.js.org/dist/${file}`
 });
 
-async function smartSync(selectedRepos, token, push=false) {
+async function smartSync(selectedRepos, token, options = {}) {
   // Sync personal settings 
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
@@ -1183,6 +1183,8 @@ async function smartSync(selectedRepos, token, push=false) {
             console.log(`[${repoName}] Local and cloud identical → using cloud`);
             localLedgerDataMap[repoId] = cloudLedgerData;
           } else {
+            const push = push = options.push ?? false;
+            
             let useCloud;
 
             if (push) {
@@ -3138,7 +3140,7 @@ async function saveEntry() {
     }
 
     if (token) {
-      smartSync(selectedRepos, token, push=true);
+      smartSync(selectedRepos, token, { push: true });
     }
     showStatusMessage(t.savedSuccess, "success");
 
