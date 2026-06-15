@@ -1183,8 +1183,8 @@ async function smartSync(selectedRepos, token, options = {}) {
             console.log(`[${repoName}] Local and cloud identical → using cloud`);
             localLedgerDataMap[repoId] = cloudLedgerData;
           } else {
-            const push = push = options.push ?? false;
-            
+            const push = options.push ?? false;
+
             let useCloud;
 
             if (push) {
