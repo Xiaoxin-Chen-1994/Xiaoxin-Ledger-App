@@ -1244,10 +1244,8 @@ async function smartSync(selectedRepos, token, options = {}) {
                   : "云端和本地数据同时存在。") +
                 "<br><br>" +
                 `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-
                 `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
                 `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
-
                 `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
                 `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
 
@@ -1601,7 +1599,7 @@ async function init() {
   toggleLedgerFormRows();
 
   // UI updates
-  document.querySelector(".bottom-nav").style.display = "flex";
+  document.getElementById("home-nav").style.display = "flex";
 
   // Apply profile settings
   displayHomeImage();
@@ -3705,6 +3703,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
   document.getElementById("delete-btn-headerbar").style.display = "none";
+  document.getElementById("transaction-nav").style.display = "none";
 
   let target = null;
   let latest = null;
@@ -3746,11 +3745,11 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   if (historyStack.length > 1) { // if not at base
     document.getElementById("return-btn").style.display = "block";
-    document.querySelector(".bottom-nav").style.display = "none";
+    document.getElementById("home-nav").style.display = "none";
 
   } else { // at home page
     document.getElementById("search-btn-headerbar").style.display = "block";
-    document.querySelector(".bottom-nav").style.display = "flex";
+    document.getElementById("home-nav").style.display = "flex";
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
@@ -3765,6 +3764,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
     disablePageSwipe(target);
     let subWorkspace = null;
+    let activeForm;
 
     if (latestPage.includes("create")) { // when creating an entry
       document.getElementById("return-btn").textContent = "< " + t.cancel;
@@ -3779,7 +3779,7 @@ async function showPage(name, title = latestTitle, options = {}) {
         workspace.create.calculation = "";
         workspace.create.tags = [];
         workspace.create.notes = "";
-        const activeForm = workspace.create.inputType + "-form";
+        activeForm = workspace.create.inputType + "-form";
         dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
         let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
         let categoryBtn = document.querySelector(`#${activeForm} .selector-button[data-type='category']`);
@@ -3806,11 +3806,32 @@ async function showPage(name, title = latestTitle, options = {}) {
         taggedEl.innerHTML = "";
         const notesEl = document.querySelector(`#${activeForm} textarea[id$='notes']`);
         notesEl.value = workspace.create.notes;
+      } else {
+        activeForm = workspace.create.inputType + "-form";
       }
+
+      // Automatically bring up amount-selector
+      const amountRowEl = document.querySelector(`#${activeForm} .amount-row`);
+      prevLastButton = lastButton; // keep track of the previous button pressed
+      lastButton = amountRowEl;
+      setTimeout(() => {
+        showSelector('amount');
+        lastButton.style.borderWidth = "3px";
+      }, 10);
+
+      const secondBtn = document.getElementById("second-btn-nav");
+      secondBtn.textContent = currentLang === "en" ? "Reset" : "重置";
+      secondBtn.style.background = "rgb(from var(--light-grey) r g b / 1)";
+      secondBtn.style.color = "var(--text)";
 
       subWorkspace = workspace.create;
     } else { // when loading an existing entry
       subWorkspace = workspace.transactions[options.transactionId];
+
+      const secondBtn = document.getElementById("second-btn-nav");
+      secondBtn.textContent = currentLang === "en" ? "Delete" : "删除";
+      secondBtn.style.background = "color-mix(in srgb, var(--red) 5%, var(--bg) 95%)";
+      secondBtn.style.color = "var(--red)";
     }
 
     switchTab(subWorkspace.inputTypeIndex);
@@ -3822,8 +3843,9 @@ async function showPage(name, title = latestTitle, options = {}) {
     ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
     ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
     ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
-
+    
     document.getElementById("save-btn-headerbar").style.display = "block";
+    document.getElementById("transaction-nav").style.display = "flex";
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
@@ -5360,10 +5382,7 @@ async function setLanguage(lang) {
   document.getElementById("home-balance").textContent = t.incomeMinusExpense;
 
   // Transaction page
-  document.getElementById("save-btn-expense").textContent = t.save;
-  document.getElementById("save-btn-income").textContent = t.save;
-  document.getElementById("save-btn-transfer").textContent = t.save;
-  document.getElementById("save-btn-balance").textContent = t.save;
+  document.getElementById("save-btn-nav").textContent = t.save;
   const tabs = document.querySelectorAll('.transaction-tabs .tab-btn');
   tabs[0].textContent = t.expense;
   tabs[1].textContent = t.income;
@@ -8457,6 +8476,24 @@ document.querySelectorAll(".selector-button[data-type='collection']")
 document.addEventListener("click", e => {
   if (!openSelector) return; // nothing open → do nothing
 
+  // Ignore clicks on tab buttons for closing selector
+  if (e.target.closest(".tab-btn")) {
+    // If amount selector is open, update lastButton to the new form's amount-row
+    if (openSelector === "amount") {
+      const btn = e.target.closest(".tab-btn");
+      const index = parseInt(btn.dataset.index, 10);
+
+      const inputType = transactionTypes[index];  // e.g. "expense", "income", "transfer"
+      const activeForm = inputType + "-form";
+
+      const amountRowEl = document.querySelector(`#${activeForm} .amount-row`);
+      if (amountRowEl) {
+        lastButton = amountRowEl;
+      }
+    }
+    return; // IMPORTANT: do not close amount selector when switching tabs
+  }
+
   const sel = document.getElementById(openSelector + "-selector");
   if (sel && !sel.contains(e.target)) {
     // Click was outside the currently open selector
@@ -8637,6 +8674,15 @@ async function OpenGrocerySearch() {
     const localUpdated = new Date(localObj.lastUpdatedAt);
     const cloudUpdated = new Date(cloudObj.lastUpdatedAt);
 
+    const cloudCreatedStr = new Date(cloudObj.createdAt).toString();
+    const localCreatedStr = new Date(localObj.createdAt).toString();
+
+    const cloudUpdatedStr = new Date(cloudObj.lastUpdatedAt).toString();
+    const localUpdatedStr = new Date(localObj.lastUpdatedAt).toString();
+
+    const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
+    const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
+
     // Build bilingual popup text
     const title =
       currentLang === "en"
@@ -8649,10 +8695,10 @@ async function OpenGrocerySearch() {
         : "云端和本地数据同时存在。") +
       "<br><br>" +
       `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-      `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${cloudCreated}<br><br>` +
-      `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${cloudUpdated}<br><br><br>` +
-      `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${localCreated}<br><br>` +
-      `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${localUpdated}<br><br>` +
+      `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
+      `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
+      `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
+      `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
 
       (currentLang === "en"
         ? "Which version do you want to keep?"

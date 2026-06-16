@@ -147,9 +147,6 @@
                 <textarea id="expense-notes" rows="5" class="transaction-notes"></textarea>
               </div>
 
-              <div class="actions">
-                <button id="save-btn-expense" type="button" onclick="saveEntry()">保存</button>
-              </div>
             </form>
           </div>
 
@@ -219,10 +216,6 @@
               <div class="form-row" id="income-notes-form">
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="income-notes" rows="5" class="transaction-notes"></textarea>
-              </div>
-
-              <div class="actions">
-                <button id="save-btn-income" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
@@ -304,10 +297,6 @@
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="transfer-notes" rows="5" class="transaction-notes"></textarea>
               </div>
-
-              <div class="actions">
-                <button id="save-btn-transfer" type="button" onclick="saveEntry()">保存</button>
-              </div>
             </form>
           </div>
 
@@ -362,10 +351,6 @@
               <div class="form-row" id="balance-notes-form">
                 <label class="transaction-notes-title">备注</label>
                 <textarea id="balance-notes" rows="5" class="transaction-notes"></textarea>
-              </div>
-
-              <div class="actions">
-                <button id="save-btn-balance" type="button" onclick="saveEntry()">保存</button>
               </div>
             </form>
           </div>
@@ -846,12 +831,17 @@
   </div> <!-- Put all pages above this line -->
 
   <!-- Bottom Navigation Bar -->
-  <nav class="bottom-nav" style="display:none;">
+  <nav id="home-nav" class="bottom-nav" style="display:none;">
     <button id="nav-home" onclick="showPage('home', 'homeTitle')">首页</button>
     <button id="nav-accounts" onclick="showPage('accounts', 'navAccounts')">账户</button>
     <button id="nav-transaction" onclick="showPage('create', 'navTransaction')">记一笔</button>
     <button id="nav-utilities" onclick="showPage('utilities', 'navUtilities')">工具</button>
     <button id="nav-settings" onclick="showPage('settings', 'settings')">设置</button>
+  </nav>
+
+  <nav id="transaction-nav" class="transaction-nav" style="display:none;">
+    <button id="save-btn-nav" type="button" onclick="saveEntry()">保存</button>
+    <button id="second-btn-nav" type="button">删除/重置</button>
   </nav>
 
   <div id="statusMessage"></div>
