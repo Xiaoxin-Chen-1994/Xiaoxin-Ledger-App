@@ -839,6 +839,20 @@ function highlightDiff(a, b) {
   return { a: resultA, b: resultB };
 }
 
+async function readOPFSFileAsBlob(opfsPath) {
+  // opfsPath example: "opfs://homeImages/photo.jpg"
+  const parts = opfsPath.replace("opfs://", "").split("/");
+  const folderName = parts[0];
+  const filename = parts[1];
+
+  const root = await navigator.storage.getDirectory();
+  const folder = await root.getDirectoryHandle(folderName, { create: false });
+  const fileHandle = await folder.getFileHandle(filename, { create: false });
+  const file = await fileHandle.getFile();
+
+  return file; // File is a Blob subclass
+}
+
 async function pushFolderToCloud(folderName, repoName, localPaths, token) {
   for (const path of localPaths) {
     if (!path.startsWith(`opfs://${folderName}/`)) continue;
