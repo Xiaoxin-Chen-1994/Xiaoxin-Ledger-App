@@ -1585,18 +1585,16 @@ async function downloadFileFromGitHub(repoName, path, token) {
 async function githubUploadFile(repoName, path, data, token, message = null) {
   const url = `https://api.github.com/repos/${repoName}/contents/${path}`;
 
-  // Convert data → Base64
   let base64;
 
   if (data instanceof Blob) {
-    const buffer = await data.arrayBuffer();
-    base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    base64 = await blobToBase64(data);
   } else if (typeof data === "string") {
-    base64 = btoa(unescape(encodeURIComponent(data)));
+    base64 = encodeBase64Utf8(data);
   } else {
     // JSON object
     const json = JSON.stringify(data, null, 2);
-    base64 = btoa(unescape(encodeURIComponent(json)));
+    base64 = encodeBase64Utf8(json);
   }
 
   // Check if file exists → get SHA
@@ -1610,7 +1608,7 @@ async function githubUploadFile(repoName, path, data, token, message = null) {
     sha = existing.sha;
   }
 
-  // Upload (create or update)
+  // Upload
   const body = {
     message: message || `update ${path}`,
     content: base64,
@@ -1626,6 +1624,18 @@ async function githubUploadFile(repoName, path, data, token, message = null) {
   if (!putRes.ok) {
     console.error("GitHub upload failed:", await putRes.text());
   }
+}
+
+async function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result.split(",")[1]; // remove data:... prefix
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 function encodeBase64Utf8(str) {
