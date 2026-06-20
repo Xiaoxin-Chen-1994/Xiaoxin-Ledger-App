@@ -853,14 +853,17 @@ async function readOPFSFileAsBlob(opfsPath) {
 }
 
 async function pushFolderToCloud(folderName, repoName, localPaths, token) {
-  for (const path of localPaths) {
-    if (!path.startsWith(`opfs://${folderName}/`)) continue;
+  // Create an array of upload tasks
+  const tasks = localPaths
+    .filter(path => path.startsWith(`opfs://${folderName}/`))
+    .map(async path => {
+      const filename = path.split("/").pop();
+      const blob = await readOPFSFileAsBlob(path);
+      await githubUploadFile(repoName, `${folderName}/${filename}`, blob, token);
+    });
 
-    const filename = path.split("/").pop();
-    const blob = await readOPFSFileAsBlob(path);
-
-    await githubUploadFile(repoName, `${folderName}/${filename}`, blob, token);
-  }
+  // Run all uploads in parallel
+  await Promise.all(tasks);
 }
 
 async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
@@ -5987,7 +5990,7 @@ async function saveHomeImages() {
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true, syncHomeImages: true });
 
-  await displayHomeImage();
+  displayHomeImage();
 }
 window.saveHomeImages = saveHomeImages;
 
