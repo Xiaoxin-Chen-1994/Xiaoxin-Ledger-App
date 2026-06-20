@@ -720,13 +720,13 @@
         <section class="settings-section home-image">
           <p id="home-image-title">首页图</p>
           <div id="home-image-actions">
-            <button id="manage-home-image-btn" class="settings-button">管理</button>
+            <button id="manage-home-image-btn" class="settings-button" onclick="toggleHomeImageEditor()">管理</button>
             <div id="home-image-panel" style="display:none;">
               <p id="home-image-instruction">您可在此处添加您想要使用的在线图片链接。</p>
               <div id="home-image-list"></div>
               <div class="home-image-controls">
-                <button id="add-home-image-btn" type="button">增加</button>
-                <button id="save-home-image-btn" type="button">保存</button>
+                <button id="add-home-image-btn" type="button" onclick="addHomeImageRow()">增加</button>
+                <button id="save-home-image-btn" type="button" onclick="saveHomeImages()">保存</button>
               </div>
             </div>
           </div>
