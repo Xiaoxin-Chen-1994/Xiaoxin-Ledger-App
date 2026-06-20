@@ -864,22 +864,19 @@ async function pushFolderToCloud(folderName, repoName, localPaths, token) {
 }
 
 async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
-
-  // Normalize cloud paths (convert OPFS → GitHub)
   const normalized = cloudPaths.map(p =>
     p.startsWith(`opfs://${folderName}/`)
       ? `${folderName}/${p.split("/").pop()}`
       : p
   );
 
-  for (const cloudPath of normalized) {
+  const tasks = normalized.map(async cloudPath => {
     const filename = cloudPath.split("/").pop();
-
     const blob = await downloadFileFromGitHub(repoName, cloudPath, token);
-    if (!blob) continue;
+    if (blob) await saveFileToOPFS(folderName, blob, filename);
+  });
 
-    await saveFileToOPFS(folderName, blob, filename);
-  }
+  await Promise.all(tasks); // run in parallel
 }
 
 async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
@@ -1867,7 +1864,6 @@ async function init() {
   document.getElementById("home-nav").style.display = "flex";
 
   // Apply profile settings
-  displayHomeImage();
 
   const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
   if (personal.language) {
@@ -3983,6 +3979,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
     updateKanbanRow({ en: "This Year", zh: "本年" }[currentLang], 2, getDateRange('thisYear'));
+
+    displayHomeImage();
   };
 
   document.getElementById("app-title").textContent = translations[currentLang][latestTitle] ?? latestTitle;
