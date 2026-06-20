@@ -517,37 +517,36 @@ async function resizeImage(file, { maxWidth, maxHeight, quality = 0.9, type = "i
   );
 }
 
-async function saveFileToOPFS(folderName, file) {
+async function saveFileToOPFS(folderName, blob, filename) {
   let resizedBlob;
 
   if (folderName === "homeImages") {
-    resizedBlob = await resizeImage(file, {
+    resizedBlob = await resizeImage(blob, {
       maxWidth: 1600,
       maxHeight: 1600,
       quality: 0.85,
       type: "image/jpeg"
     });
   } else if (folderName === "icons") {
-    resizedBlob = await resizeImage(file, {
+    resizedBlob = await resizeImage(blob, {
       maxWidth: 256,
       maxHeight: 256,
       quality: 0.9,
       type: "image/png"
     });
   } else {
-    // default: no resize
-    resizedBlob = file;
+    resizedBlob = blob;
   }
 
   const root = await navigator.storage.getDirectory();
   const folder = await root.getDirectoryHandle(folderName, { create: true });
 
-  const fileHandle = await folder.getFileHandle(file.name, { create: true });
+  const fileHandle = await folder.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(await resizedBlob.arrayBuffer());
   await writable.close();
 
-  return `opfs://${folderName}/${file.name}`;
+  return `opfs://${folderName}/${filename}`;
 }
 
 async function deleteOPFSFile(folderName, filename) {
@@ -866,7 +865,7 @@ async function pushFolderToCloud(folderName, repoName, localPaths, token) {
 
 async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
 
-  // Normalize paths
+  // Normalize cloud paths (convert OPFS → GitHub)
   const normalized = cloudPaths.map(p =>
     p.startsWith(`opfs://${folderName}/`)
       ? `${folderName}/${p.split("/").pop()}`
@@ -877,10 +876,9 @@ async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
     const filename = cloudPath.split("/").pop();
 
     const blob = await downloadFileFromGitHub(repoName, cloudPath, token);
+    if (!blob) continue;
 
-    if (blob) {
-      await saveFileToOPFS(folderName, blob, filename);
-    }
+    await saveFileToOPFS(folderName, blob, filename);
   }
 }
 
@@ -5936,14 +5934,37 @@ async function saveFolderImages(folderName, inputs) {
     const fileObj = input._file || null;
     const rawValue = input.value.trim();
 
+    // Skip empty rows
     if (!fileObj && !rawValue) continue;
 
+    // Case 1 — user uploaded a new file
     if (fileObj instanceof File) {
-      const localPath = await saveFileToOPFS(folderName, fileObj);
-      newPaths.push(localPath);
-    } else {
-      newPaths.push(rawValue);
+      const filename = fileObj.name;
+      const localPath = await saveFileToOPFS(folderName, fileObj, filename);
+      newPaths.push(localPath); // always OPFS path
+      continue;
     }
+
+    // Case 2 — existing OPFS path
+    if (rawValue.startsWith(`opfs://${folderName}/`)) {
+      newPaths.push(rawValue);
+      continue;
+    }
+
+    // Case 3 — existing GitHub path (convert → OPFS path)
+    if (rawValue.startsWith(`${folderName}/`)) {
+      const filename = rawValue.split("/").pop();
+      newPaths.push(`opfs://${folderName}/${filename}`);
+      continue;
+    }
+
+    // Case 4 — external URL (keep as-is)
+    if (/^https?:\/\//.test(rawValue)) {
+      newPaths.push(rawValue);
+      continue;
+    }
+
+    // Unknown format → ignore
   }
 
   // Cleanup OPFS folder (remove files not referenced)
