@@ -840,6 +840,7 @@ function highlightDiff(a, b) {
 }
 
 async function pushFolderToCloud(folderName, localPaths, selectedRepos, token) {
+  console.log(selectedRepos.personalSettingsRepo)
   const repo = selectedRepos.personalSettingsRepo.name;
 
   for (const path of localPaths) {
