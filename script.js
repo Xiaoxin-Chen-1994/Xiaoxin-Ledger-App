@@ -880,19 +880,25 @@ async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
 }
 
 async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
+  // Extract only OPFS-based filenames
   const usedNames = new Set(
     usedPaths
       .filter(p => p.startsWith(`opfs://${folderName}/`))
       .map(p => p.split("/").pop())
   );
 
+  // List all files currently in the cloud folder
   const cloudFiles = await githubListDirectory(repoName, folderName, token);
 
-  for (const file of cloudFiles) {
+  // Delete unused files IN PARALLEL
+  const tasks = cloudFiles.map(file => {
     if (!usedNames.has(file.name)) {
-      await githubDeleteIfExists(repoName, `${folderName}/${file.name}`, token);
+      // Use SHA directly → avoids extra GET call
+      return githubDeleteFile(repoName, `${folderName}/${file.name}`, file.sha, token );
     }
-  }
+  });
+
+  await Promise.all(tasks);
 }
 
 async function smartSync(selectedRepos, token, options = {}) {
