@@ -864,10 +864,18 @@ async function pushFolderToCloud(folderName, repoName, localPaths, token) {
   }
 }
 
-async function pullFolderFromCloud(folderName, repoName, cloudFileList, token) {
-  for (const file of cloudFileList) {
-    const blob = await downloadFileFromGitHub(repoName, `${folderName}/${file}`, token);
-    await saveFileToOPFS(folderName, new File([blob], file));
+async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
+  for (const cloudPath of cloudPaths) {
+
+    // Extract filename from OPFS-style path
+    const filename = cloudPath.replace(`opfs://${folderName}/`, "");
+
+    // Download from GitHub
+    const blob = await downloadFileFromGitHub(repoName, `${folderName}/${filename}`, token);
+
+    if (blob) {
+      await saveFileToOPFS(folderName, blob, filename);
+    }
   }
 }
 
