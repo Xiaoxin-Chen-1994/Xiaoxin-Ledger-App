@@ -839,43 +839,36 @@ function highlightDiff(a, b) {
   return { a: resultA, b: resultB };
 }
 
-async function pushFolderToCloud(folderName, localPaths, selectedRepos, token) {
-  console.log(selectedRepos.personalSettingsRepo)
-  const repo = selectedRepos.personalSettingsRepo.name;
-
+async function pushFolderToCloud(folderName, repoName, localPaths, token) {
   for (const path of localPaths) {
     if (!path.startsWith(`opfs://${folderName}/`)) continue;
 
     const filename = path.split("/").pop();
     const blob = await readOPFSFileAsBlob(path);
 
-    await uploadFileToGitHub(repo, `${folderName}/${filename}`, blob, token);
+    await uploadFileToGitHub(repoName, `${folderName}/${filename}`, blob, token);
   }
 }
 
-async function pullFolderFromCloud(folderName, cloudFileList, selectedRepos, token) {
-  const repo = selectedRepos.personalSettingsRepo.name;
-
+async function pullFolderFromCloud(folderName, repoName, cloudFileList, token) {
   for (const file of cloudFileList) {
-    const blob = await downloadFileFromGitHub(repo, `${folderName}/${file}`, token);
+    const blob = await downloadFileFromGitHub(repoName, `${folderName}/${file}`, token);
     await saveFileToOPFS(folderName, new File([blob], file));
   }
 }
 
-async function cleanupCloudFolder(folderName, usedPaths, selectedRepos, token) {
-  const repo = selectedRepos.personalSettingsRepo.name;
-
+async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
   const usedNames = new Set(
     usedPaths
       .filter(p => p.startsWith(`opfs://${folderName}/`))
       .map(p => p.split("/").pop())
   );
 
-  const cloudFiles = await listGitHubFolder(repo, folderName, token);
+  const cloudFiles = await listGitHubFolder(repoName, folderName, token);
 
   for (const file of cloudFiles) {
     if (!usedNames.has(file)) {
-      await deleteFileFromGitHub(repo, `${folderName}/${file}`, token);
+      await deleteFileFromGitHub(repoName, `${folderName}/${file}`, token);
     }
   }
 }
