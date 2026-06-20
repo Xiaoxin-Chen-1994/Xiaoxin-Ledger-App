@@ -860,7 +860,7 @@ async function pushFolderToCloud(folderName, repoName, localPaths, token) {
     const filename = path.split("/").pop();
     const blob = await readOPFSFileAsBlob(path);
 
-    await uploadFileToGitHub(repoName, `${folderName}/${filename}`, blob, token);
+    await githubUploadFile(repoName, `${folderName}/${filename}`, blob, token);
   }
 }
 
@@ -878,11 +878,11 @@ async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
       .map(p => p.split("/").pop())
   );
 
-  const cloudFiles = await listGitHubFolder(repoName, folderName, token);
+  const cloudFiles = await githubListDirectory(repoName, folderName, token);
 
   for (const file of cloudFiles) {
-    if (!usedNames.has(file)) {
-      await deleteFileFromGitHub(repoName, `${folderName}/${file}`, token);
+    if (!usedNames.has(file.name)) {
+      await githubDeleteIfExists(repoName, `${folderName}/${file.name}`, token);
     }
   }
 }
@@ -938,7 +938,7 @@ async function smartSync(selectedRepos, token, options = {}) {
 
       await saveLocalJsonData("ledger-personal-settings.json", defaults);
       if (token && !offline) {
-        await githubWriteJson(repoName, "ledger-personal-settings.json", defaults, token);
+        await githubUploadFile(repoName, "ledger-personal-settings.json", defaults, token);
       }
     }
 
@@ -959,7 +959,7 @@ async function smartSync(selectedRepos, token, options = {}) {
       // Rule 3 — local exists, cloud null → push
       // -----------------------------------------
       if ((push && syncPersonalSettings) || (local && !cloud)) {
-        await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
+        await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
         if ((push && syncHomeImages) || !push) {
           // Push OPFS images → GitHub
@@ -993,7 +993,7 @@ async function smartSync(selectedRepos, token, options = {}) {
           (cloudDeleted > 0 && cloudDeleted < local.createdAt) ||
           (cloud.createdAt < local.createdAt)
         ) {
-          await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
+          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
           // Push OPFS images → GitHub
           const localImages = local?.homeImages || [];
@@ -1007,7 +1007,7 @@ async function smartSync(selectedRepos, token, options = {}) {
         if (local.createdAt === cloud.createdAt) {
           // local newer --> push to cloud
           if (local.updatedAt > cloud.updatedAt) {
-            await githubWriteJson(repoName, "ledger-personal-settings.json", local, token);
+            await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
             const localImages = local?.homeImages || [];
             await pushFolderToCloud("homeImages", repoName, localImages, token);
@@ -1336,10 +1336,10 @@ async function smartSync(selectedRepos, token, options = {}) {
           if (await get("isNewLedger")) {
             console.log(`[${repoName}] Only local has data → pushing all entries`);
 
-            await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
+            await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
 
             settingsMap = await loadLocalJsonData("ledger-settings.json", {});
-            await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
+            await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
             localLogMap[repoId] = [];
             lastSyncedMap[repoId] = Date.now();
@@ -1451,7 +1451,7 @@ async function smartSync(selectedRepos, token, options = {}) {
 
                 // Upload entire local DB to cloud
                 if (token && !repo.skipSync) {
-                  await githubWriteJson(repoName, "ledger-data.json", localLedgerData, token);
+                  await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
                 }
               }
             }
@@ -1461,7 +1461,7 @@ async function smartSync(selectedRepos, token, options = {}) {
 
             settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
             await saveLocalJsonData("ledger-settings.json", settingsMap);
-            await githubWriteJson(repoName, "ledger-settings.json", settingsMap[repoId], token);
+            await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
           }
         }
       }
@@ -1550,13 +1550,56 @@ function decodeBase64Utf8(b64) {
   return new TextDecoder().decode(bytes);
 }
 
-async function githubWriteJson(repoName, path, obj, token) {
-  const json = JSON.stringify(obj, null, 2);
-  const content = encodeBase64Utf8(json);
-
+async function downloadFileFromGitHub(repoName, path, token) {
   const url = `https://api.github.com/repos/${repoName}/contents/${path}`;
 
-  // Step 1: check if file exists → get SHA
+  const res = await fetch(url, {
+    headers: { Authorization: `token ${token}` }
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+
+  // GitHub returns Base64 content
+  const byteCharacters = atob(data.content || "");
+  const byteNumbers = new Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+
+  const byteArray = new Uint8Array(byteNumbers);
+
+  // Infer MIME type from filename
+  const ext = path.split(".").pop().toLowerCase();
+  const mime =
+    ext === "png" ? "image/png" :
+    ext === "webp" ? "image/webp" :
+    ext === "jpg" || ext === "jpeg" ? "image/jpeg" :
+    "application/octet-stream";
+
+  return new Blob([byteArray], { type: mime });
+}
+
+async function githubUploadFile(repoName, path, data, token, message = null) {
+  const url = `https://api.github.com/repos/${repoName}/contents/${path}`;
+
+  // Convert data → Base64
+  let base64;
+
+  if (data instanceof Blob) {
+    const buffer = await data.arrayBuffer();
+    base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  } else if (typeof data === "string") {
+    base64 = btoa(unescape(encodeURIComponent(data)));
+  } else {
+    // JSON object
+    const json = JSON.stringify(data, null, 2);
+    base64 = btoa(unescape(encodeURIComponent(json)));
+  }
+
+  // Check if file exists → get SHA
   let sha = undefined;
   const getRes = await fetch(url, {
     headers: { Authorization: `token ${token}` }
@@ -1567,10 +1610,10 @@ async function githubWriteJson(repoName, path, obj, token) {
     sha = existing.sha;
   }
 
-  // Step 2: PUT with SHA (if exists)
+  // Upload (create or update)
   const body = {
-    message: `update ${path}`,
-    content,
+    message: message || `update ${path}`,
+    content: base64,
     ...(sha ? { sha } : {})
   };
 
@@ -1581,7 +1624,7 @@ async function githubWriteJson(repoName, path, obj, token) {
   });
 
   if (!putRes.ok) {
-    console.error("GitHub PUT failed:", await putRes.text());
+    console.error("GitHub upload failed:", await putRes.text());
   }
 }
 
@@ -7257,7 +7300,7 @@ async function deleteLedgerFilesInRepo(mode, token) {
 
   // ⭐ Only full account deletion wipes ledger-personal-settings.json
   if (mode === "account") {
-    await githubWriteJson(
+    await githubUploadFile(
       selectedRepos.personalSettingsRepo.name,
       "ledger-personal-settings.json",
       { deleted: true, deletedAtTimestamp: Date.now() },
@@ -8891,7 +8934,7 @@ async function OpenGrocerySearch() {
         stores: Websites
       };
       await saveLocalJsonData("grocery.json", obj);
-      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", obj, token);
+      if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", obj, token);
       return obj;
     }
 
@@ -8903,7 +8946,7 @@ async function OpenGrocerySearch() {
 
     // Case 3: local exists, cloud does not → copy local → cloud
     if (!hasCloud && hasLocal) {
-      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", localJSON, token);
+      if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localJSON, token);
       return localJSON;
     }
 
@@ -8978,7 +9021,7 @@ async function OpenGrocerySearch() {
       await saveLocalJsonData("grocery.json", cloudObj);
       return cloudObj;
     } else {
-      if (token && !repo.skipSync) await githubWriteJson(repoName, "GrocerySearch.json", localObj, token);
+      if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localObj, token);
       return localObj;
     }
   }
@@ -8990,7 +9033,7 @@ async function OpenGrocerySearch() {
 
     if (token && !repo.skipSync) {
       try {
-        await githubWriteJson(repoName, "GrocerySearch.json", groceryData, token);
+        await githubUploadFile(repoName, "GrocerySearch.json", groceryData, token);
 
         hideOfflineBanner();
         showStatusMessage(
