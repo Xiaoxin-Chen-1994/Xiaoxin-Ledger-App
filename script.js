@@ -517,25 +517,25 @@ async function resizeImage(file, { maxWidth, maxHeight, quality = 0.9, type = "i
   );
 }
 
-async function saveFileToOPFS(folderName, blob, filename) {
-  let resizedBlob;
+async function saveFileToOPFS(folderName, blob, filename, skipResize = false) {
+  let finalBlob = blob;
 
-  if (folderName === "homeImages") {
-    resizedBlob = await resizeImage(blob, {
-      maxWidth: 1600,
-      maxHeight: 1600,
-      quality: 0.85,
-      type: "image/jpeg"
-    });
-  } else if (folderName === "icons") {
-    resizedBlob = await resizeImage(blob, {
-      maxWidth: 256,
-      maxHeight: 256,
-      quality: 0.9,
-      type: "image/png"
-    });
-  } else {
-    resizedBlob = blob;
+  if (!skipResize) {
+    if (folderName === "homeImages") {
+      finalBlob = await resizeImage(blob, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.85,
+        type: "image/jpeg"
+      });
+    } else if (folderName === "icons") {
+      finalBlob = await resizeImage(blob, {
+        maxWidth: 256,
+        maxHeight: 256,
+        quality: 0.9,
+        type: "image/png"
+      });
+    }
   }
 
   const root = await navigator.storage.getDirectory();
@@ -543,7 +543,7 @@ async function saveFileToOPFS(folderName, blob, filename) {
 
   const fileHandle = await folder.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
-  await writable.write(await resizedBlob.arrayBuffer());
+  await writable.write(await finalBlob.arrayBuffer());
   await writable.close();
 
   return `opfs://${folderName}/${filename}`;
@@ -876,7 +876,7 @@ async function pullFolderFromCloud(folderName, repoName, cloudPaths, token) {
   const tasks = normalized.map(async cloudPath => {
     const filename = cloudPath.split("/").pop();
     const blob = await downloadFileFromGitHub(repoName, cloudPath, token);
-    if (blob) await saveFileToOPFS(folderName, blob, filename);
+    if (blob) await saveFileToOPFS(folderName, blob, filename, true); // skipResize = true
   });
 
   await Promise.all(tasks); // run in parallel
