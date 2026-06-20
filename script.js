@@ -3851,6 +3851,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     });
 
   } else if (latestPage === "manage-labels") {
+    loadLabels(options.activeRepoId, options.task, options.type, options.title);
 
     const orderBtn = document.getElementById("manage-btn-headerbar");
     orderBtn.style.display = "block";
@@ -3859,6 +3860,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     };
 
   } else if (latestPage === "order-labels") {
+    loadLabels(options.activeRepoId, options.task, options.type, options.title);
+
     const deleteBtn = document.getElementById("delete-btn-headerbar");
     deleteBtn.style.display = 'block';
 
@@ -4010,7 +4013,7 @@ function loadEntryIntoWorkspace(e) {
   showPage("transaction", "编辑", { 'transactionId': e.entryId })
 }
 
-function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.ledgerRepos[0].id) {
+function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeLedgerRepo.id) {
 
   const repoList = selectedRepos.ledgerRepos;
 
@@ -4056,8 +4059,7 @@ function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.ledgerR
 
   // Auto-load labels for these tasks
   if (task === "manage-labels" || task === "order-labels") {
-    loadLabels(activeRepoId, task, type, title);
-    showPage(task, title, { type, title });
+    showPage(task, title, { activeRepoId, task, type, title });
   }
 }
 window.prepareRepoTabs = prepareRepoTabs;
@@ -4618,7 +4620,7 @@ function hideWrapper(wrapper) {
   wrapper.addEventListener("transitionend", () => wrapper.remove(), { once: true });
 }
 
-function handleDeleteClick(block, hasSecondary) {
+function handleDeleteClick(block, activeRepoId, task, type, title, hasSecondary) {
   const primaryChecked = block.querySelectorAll('.order-checkbox[data-type="primary"]:checked').length;
   const secondaryChecked = block.querySelectorAll('.order-checkbox[data-type="secondary"]:checked').length;
 
@@ -4672,9 +4674,42 @@ function handleDeleteClick(block, hasSecondary) {
       },
       {
         text: currentLang === "en" ? "Delete" : "删除",
-        onClick: () => {
-          console.log("Perform deletion here");
-          // TODO: delete from Firestore + update UI
+        onClick: async () => {
+          const primaryToDelete = [...block.querySelectorAll('.order-checkbox[data-type="primary"]:checked')]
+            .map(cb => cb.dataset.name);
+
+          const secondaryToDelete = [...block.querySelectorAll('.order-checkbox[data-type="secondary"]:checked')]
+            .map(cb => ({
+              parent: cb.dataset.parent,
+              name: cb.dataset.name
+            }));
+          
+          const categories = settingsMap[activeRepoId][type];
+
+          for (const pName of primaryToDelete) {
+            let idx;
+            if (type === "collections" || type === "subjects") {
+              idx = categories.findIndex(p => p.name === pName);
+            } else {
+              idx = categories.findIndex(p => p.primary === pName);
+            }
+            if (idx !== -1) categories.splice(idx, 1);
+          }
+
+          for (const { parent, name } of secondaryToDelete) {
+            const parentObj = categories.find(p => p.primary === parent);
+            if (!parentObj) continue;
+
+            const arr = parentObj.secondaries;
+            const idx = arr.findIndex(s => s.name === name);
+            if (idx !== -1) arr.splice(idx, 1);
+          }
+
+          settingsMap[activeRepoId][type] = categories;
+          await saveLocalJsonData("ledger-settings.json", settingsMap);
+          await smartSync(selectedRepos, token);
+
+          loadLabels(activeRepoId, task, type, title);
         }
       }
     ]
@@ -4698,7 +4733,11 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.classList.add("order-checkbox");
+    checkbox.dataset.name = name;
     checkbox.dataset.type = isSecondary ? "secondary" : "primary";
+    if (isSecondary) {
+      checkbox.dataset.parent = parentName;
+    }
 
     checkboxWrapper.appendChild(checkbox);
     rowContent.appendChild(checkboxWrapper);
@@ -4748,7 +4787,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
       }
 
       // Create a fresh listener
-      deleteBtn._deleteListener = () => handleDeleteClick(block, hasSecondary);
+      deleteBtn._deleteListener = () => handleDeleteClick(block, activeRepoId, task, type, title, hasSecondary);
 
       // Add it again
       deleteBtn.addEventListener("click", deleteBtn._deleteListener);
@@ -4907,7 +4946,6 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
       dragInfo = null;
 
       // Refresh UI
-      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
       loadLabels(activeRepoId, task, type, title);
     });
 
@@ -5183,7 +5221,9 @@ async function reorderCategory({
 
       categories.splice(newIndex, 0, draggedObj);
 
-      await saveSettings(activeRepoId);
+      settingsMap[activeRepoId][type] = categories;
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await smartSync(selectedRepos, token);
       return true;
     }
 
@@ -5207,7 +5247,9 @@ async function reorderCategory({
 
         toPrimary.secondaries.splice(0, 0, draggedObj);
 
-        await saveSettings(activeRepoId);
+        settingsMap[activeRepoId][type] = categories;
+        await saveLocalJsonData("ledger-settings.json", settingsMap);
+        await smartSync(selectedRepos, token);
         return true;
       }
 
@@ -5224,7 +5266,9 @@ async function reorderCategory({
 
       toArr.splice(newIndex, 0, draggedObj);
 
-      await saveSettings(activeRepoId);
+      settingsMap[activeRepoId][type] = categories;
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await smartSync(selectedRepos, token);
       return true;
     }
   }
@@ -5244,7 +5288,9 @@ async function reorderCategory({
 
   categories.splice(newIndex, 0, draggedObj);
 
-  await saveSettings(activeRepoId);
+  settingsMap[activeRepoId][type] = categories;
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  await smartSync(selectedRepos, token);
   return true;
 }
 
