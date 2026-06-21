@@ -5495,14 +5495,20 @@ function enablePageSwipe(pageEl) {
   if (pageEl._swipeEnabled) return;
   pageEl._swipeEnabled = true;
 
-  let startX = 0, currentX = 0, isDragging = false;
+  let startX = 0, startY = 0;
+  let currentX = 0;
+  let isDragging = false;
+  let cancelledByY = false;
 
-  const EDGE_ZONE = 20; // px from left edge
+  const EDGE_ZONE = 20;      // px from left edge
+  const MIN_X = 40;          // must move at least 10px horizontally before sliding
+  const MAX_Y = 20;          // if vertical movement > 20px → cancel swipe
 
   const onStart = e => {
     const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
 
-    // If swipe starts at the very edge → let system back gesture handle it
+    // Let system back gesture handle true edge swipes
     if (x < EDGE_ZONE) {
       isDragging = false;
       return;
@@ -5512,22 +5518,40 @@ function enablePageSwipe(pageEl) {
 
     e.stopPropagation();
     startX = x;
+    startY = y;
+    cancelledByY = false;
     isDragging = true;
     pageEl.style.transition = "none";
   };
 
   const onMove = e => {
+    if (!isDragging || cancelledByY) return;
     e.stopPropagation();
-    if (!isDragging) return;
-    currentX = e.touches[0].clientX - startX;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = Math.abs(touch.clientY - startY);
+
+    // Cancel swipe if vertical movement too large
+    if (dy > MAX_Y) {
+      cancelledByY = true;
+      pageEl.style.transform = "translateX(0)";
+      return;
+    }
+
+    // Do not translate until horizontal movement is meaningful
+    if (dx < MIN_X) return;
+
+    currentX = dx;
     if (currentX > 0) {
       pageEl.style.transform = `translateX(${currentX}px)`;
     }
   };
 
   const onEnd = () => {
-    if (!isDragging) return;
+    if (!isDragging || cancelledByY) return;
     isDragging = false;
+
     const threshold = window.innerWidth * 2 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
@@ -5537,10 +5561,10 @@ function enablePageSwipe(pageEl) {
     } else {
       pageEl.style.transform = "translateX(0)";
     }
+
     currentX = 0;
   };
 
-  // Save handlers so we can remove them later
   pageEl._swipeHandlers = { onStart, onMove, onEnd };
 
   pageEl.addEventListener("touchstart", onStart);
