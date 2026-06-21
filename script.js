@@ -4690,67 +4690,74 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
     const statementDay = account.statementDate;
     const dueDay = account.dueDate;
 
-    const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
+    // Only calculate if both dates exist
+    const canCalculate = statementDay && dueDay;
 
-    const currentMonthIndex = cycleStart.getMonth(); // 0–11
-    const nextMonthIndex = cycleEnd.getMonth();      // 0–11
+    let cycleStart, cycleEnd, dueDate;
+    let currentMonth, nextMonth;
+    let paid = false;
 
-    let currentMonth;
-    let nextMonth;
-
-    if (currentLang === "en") {
-      currentMonth = monthNamesEN[currentMonthIndex];
-      nextMonth = monthNamesEN[nextMonthIndex];
-    } else {
-      currentMonth = currentMonthIndex + 1; // 1–12
-      nextMonth = nextMonthIndex + 1;       // 1–12
-    }
-
-    const paid = isCyclePaid(account, cycleStart);
-
-    // --- STATEMENT PROGRESS ---
+    // --- DEFAULT VALUES (used when dates missing) ---
     let statementProgress = 0;
     let statementText = "-";
 
-    // always show days to next cycle
-    const total = (cycleEnd - cycleStart) / 86400000;
-    const passed = (today - cycleStart) / 86400000;
-    statementProgress = Math.max(0, Math.min(passed / total, 1));
-
-    const daysToCycleEnd = Math.ceil((cycleEnd - today) / 86400000);
-    statementText = t.statementDistance(nextMonth, daysToCycleEnd);
-
-    // --- DUE PROGRESS ---
     let dueProgress = 0;
     let dueText = "-";
     let isOverdue = false;
-    let redness;
+    let redness = 0;
 
-    if (!paid) {
-      if (today < dueDate) {
-        const total = (dueDate - cycleStart) / 86400000;
-        const passed = (today - cycleStart) / 86400000;
-        dueProgress = Math.max(0, Math.min(passed / total, 1));
-        const daysToDue = Math.ceil((dueDate - today) / 86400000);
-        dueText = t.dueDistance(currentMonth, daysToDue);
+    if (canCalculate) {
+      // --- REAL CALCULATIONS ---
+      ({ cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay));
 
-        // starting from 15 days before due date, gradually paint with as red
-        redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+      const currentMonthIndex = cycleStart.getMonth();
+      const nextMonthIndex = cycleEnd.getMonth();
+
+      if (currentLang === "en") {
+        currentMonth = monthNamesEN[currentMonthIndex];
+        nextMonth = monthNamesEN[nextMonthIndex];
       } else {
-        isOverdue = today > dueDate;
-
-        const daysPastDue = Math.ceil((today - dueDate) / 86400000);
-        dueProgress = 1;
-        dueText = t.overdue(currentMonth, daysPastDue);
-        redness = 1; // red color
+        currentMonth = currentMonthIndex + 1;
+        nextMonth = nextMonthIndex + 1;
       }
-    } else {
-      dueProgress = 0;
-      dueText = t.paid(currentMonth);
-      redness = 0;
+
+      paid = isCyclePaid(account, cycleStart);
+
+      // --- STATEMENT PROGRESS ---
+      const total = (cycleEnd - cycleStart) / 86400000;
+      const passed = (today - cycleStart) / 86400000;
+      statementProgress = Math.max(0, Math.min(passed / total, 1));
+
+      const daysToCycleEnd = Math.ceil((cycleEnd - today) / 86400000);
+      statementText = t.statementDistance(nextMonth, daysToCycleEnd);
+
+      // --- DUE PROGRESS ---
+      if (!paid) {
+        if (today < dueDate) {
+          const total = (dueDate - cycleStart) / 86400000;
+          const passed = (today - cycleStart) / 86400000;
+          dueProgress = Math.max(0, Math.min(passed / total, 1));
+
+          const daysToDue = Math.ceil((dueDate - today) / 86400000);
+          dueText = t.dueDistance(currentMonth, daysToDue);
+
+          redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+        } else {
+          isOverdue = today > dueDate;
+
+          const daysPastDue = Math.ceil((today - dueDate) / 86400000);
+          dueProgress = 1;
+          dueText = t.overdue(currentMonth, daysPastDue);
+          redness = 1;
+        }
+      } else {
+        dueProgress = 0;
+        dueText = t.paid(currentMonth);
+        redness = 0;
+      }
     }
 
-    // --- CREDIT LIMIT ---
+    // --- CREDIT LIMIT (always shown) ---
     const creditLimit = account.creditLimit ?? null;
     const formattedCreditLimit = creditLimit != null
       ? getFormattedAmount(creditLimit)
@@ -4760,6 +4767,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
     const available = creditLimit != null ? creditLimit - used : "-";
     const usagePercent = paid ? 0 : (creditLimit ? used / creditLimit : 0);
 
+    // --- RENDER SECTION (always rendered) ---
     const ccSection = document.createElement("div");
     ccSection.className = "cc-rows";
 
@@ -4793,7 +4801,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       <div class="cc-middle">
         <div class="cc-progress-bar">
           <div class="cc-progress-fill ${isOverdue ? "overdue" : ""}"
-            style="width: ${dueProgress * 100}%; --redness: ${redness}""></div>
+            style="width: ${dueProgress * 100}%; --redness: ${redness}"></div>
         </div>
       </div>
 
@@ -4821,27 +4829,30 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       </div>
     </div>
 
-    <!-- Paid checkbox -->
-    <label class="cc-paid">
-      <input type="checkbox" id="cc-paid-checkbox" ${paid ? "checked" : ""}>
-      ${t.paidCheckbox}
-    </label>
+    ${canCalculate ? `
+      <label class="cc-paid">
+        <input type="checkbox" id="cc-paid-checkbox" ${paid ? "checked" : ""}>
+        ${t.paidCheckbox}
+      </label>
+    ` : ""}
   `;
 
     wrapper.appendChild(ccSection);
 
-    // Checkbox handler
-    setTimeout(() => {
-      const checkbox = document.getElementById("cc-paid-checkbox");
-      checkbox.onchange = async () => {
-        setCyclePaid(account, cycleStart, checkbox.checked);
+    // Checkbox handler (only if dates exist)
+    if (canCalculate) {
+      setTimeout(() => {
+        const checkbox = document.getElementById("cc-paid-checkbox");
+        checkbox.onchange = async () => {
+          setCyclePaid(account, cycleStart, checkbox.checked);
 
-        await saveLocalJsonData("ledger-settings.json", settingsMap);
-        await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-        console.log(settingsMap[repoId])
-        renderAccountDetailContent(repoId, accountType, account);
-      };
-    });
+          await saveLocalJsonData("ledger-settings.json", settingsMap);
+          await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+
+          renderAccountDetailContent(repoId, accountType, account);
+        };
+      });
+    }
   }
 
   content.appendChild(wrapper);
