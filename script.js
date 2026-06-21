@@ -5495,20 +5495,18 @@ function enablePageSwipe(pageEl) {
   if (pageEl._swipeEnabled) return;
   pageEl._swipeEnabled = true;
 
-  let startX = 0, startY = 0;
-  let currentX = 0;
-  let isDragging = false;
-  let cancelledByY = false;
+  let startX = 0, currentX = 0, isDragging = false;
+  let startY = 0, currentY = 0;
+  let isHorizontal = false;
 
-  const EDGE_ZONE = 20;      // px from left edge
-  const MIN_X = 40;          // must move at least 10px horizontally before sliding
-  const MAX_Y = 40;          // if vertical movement > 20px → cancel swipe
+  const EDGE_ZONE = 20; // px from left edge
+  const MAX_Y = 100;
 
   const onStart = e => {
     const x = e.touches[0].clientX;
     const y = e.touches[0].clientY;
 
-    // Let system back gesture handle true edge swipes
+    // If swipe starts at the very edge → let system back gesture handle it
     if (x < EDGE_ZONE) {
       isDragging = false;
       return;
@@ -5519,53 +5517,38 @@ function enablePageSwipe(pageEl) {
     e.stopPropagation();
     startX = x;
     startY = y;
-    cancelledByY = false;
     isDragging = true;
+    isHorizontal = false;
     pageEl.style.transition = "none";
   };
 
   const onMove = e => {
-    if (!isDragging || cancelledByY) return;
     e.stopPropagation();
-
+    if (!isDragging) return;
     const touch = e.touches[0];
-    const dx = touch.clientX - startX;
-    const dy = Math.abs(touch.clientY - startY);
-
-    // Cancel swipe if vertical movement too large
-    if (dy > MAX_Y) {
-      cancelledByY = true;
-      pageEl.style.transition = "transform 0.3s ease";
-      pageEl.style.transform = "translateX(0)";
-      return;
-    }
-
-    // Do not translate until horizontal movement is meaningful
-    if (dx < MIN_X) return;
-
-    currentX = dx;
+    currentX = touch.clientX - startX;
+    currentY = Math.abs(touch.clientY - startY);
     if (currentX > 0) {
       pageEl.style.transform = `translateX(${currentX}px)`;
     }
   };
 
   const onEnd = () => {
-    if (!isDragging || cancelledByY) return;
+    if (!isDragging) return;
     isDragging = false;
-
     const threshold = window.innerWidth * 2 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
-    if (currentX > threshold) {
+    if (currentX > threshold && currentY < MAX_Y) {
       pageEl.style.transform = "translateX(110%)";
       setTimeout(() => history.back(), 300);
     } else {
       pageEl.style.transform = "translateX(0)";
     }
-
     currentX = 0;
   };
 
+  // Save handlers so we can remove them later
   pageEl._swipeHandlers = { onStart, onMove, onEnd };
 
   pageEl.addEventListener("touchstart", onStart);
