@@ -4664,6 +4664,20 @@ function setCyclePaid(account, cycleStart, paid) {
   const key = getPaidKey(cycleStart);
   if (!account.paidStatus) account.paidStatus = {};
   account.paidStatus[key] = paid;
+
+  // --- Limit to 12 entries ---
+  const keys = Object.keys(account.paidStatus);
+
+  if (keys.length > 12) {
+    // Sort keys by date (oldest first)
+    keys.sort((a, b) => new Date(a) - new Date(b));
+
+    // Remove oldest entries until only 12 remain
+    const excess = keys.length - 12;
+    for (let i = 0; i < excess; i++) {
+      delete account.paidStatus[keys[i]];
+    }
+  }
 }
 
 function renderAccountDetailContent(repoId, accountType, account, tabKey = "all") {
