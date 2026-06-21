@@ -937,7 +937,7 @@ async function smartSync(selectedRepos, token, options = {}) {
       // Sync personal settings
       if (token && !offline) {
         const local = await loadLocalJsonData("ledger-personal-settings.json", null);
-        
+
         const repoName = selectedRepos.personalSettingsRepo.name;
         // -----------------------------------------
         // cloud null OR cloud deleted → push
@@ -5739,6 +5739,7 @@ async function setLanguage(lang) {
 
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
   personalSettings.language = currentLang;
+  personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
@@ -5782,6 +5783,7 @@ async function adjustFontsize(delta) {
   } else {
     personalSettings.fontsizeDesktop = newSize;
   }
+  personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
@@ -5847,6 +5849,7 @@ async function applyThemeColor(color) {
 
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
   personalSettings.themeColor = color;
+  personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
@@ -5988,6 +5991,7 @@ async function saveHomeImages() {
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
 
   personalSettings.homeImages = newPaths;
+  personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true, syncHomeImages: true });
 
@@ -6750,6 +6754,7 @@ async function setColorScheme(scheme) {
 
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
   personalSettings.colorScheme = scheme;
+  personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
