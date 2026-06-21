@@ -5502,7 +5502,7 @@ function enablePageSwipe(pageEl) {
 
   const EDGE_ZONE = 20;      // px from left edge
   const MIN_X = 40;          // must move at least 10px horizontally before sliding
-  const MAX_Y = 20;          // if vertical movement > 20px → cancel swipe
+  const MAX_Y = 40;          // if vertical movement > 20px → cancel swipe
 
   const onStart = e => {
     const x = e.touches[0].clientX;
