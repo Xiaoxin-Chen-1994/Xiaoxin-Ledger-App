@@ -897,7 +897,7 @@ async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
   const tasks = cloudFiles.map(file => {
     if (!usedNames.has(file.name)) {
       // Use SHA directly → avoids extra GET call
-      return githubDeleteFile(repoName, `${folderName}/${file.name}`, file.sha, token );
+      return githubDeleteFile(repoName, `${folderName}/${file.name}`, file.sha, token);
     }
   });
 
@@ -912,20 +912,19 @@ async function smartSync(selectedRepos, token, options = {}) {
   const syncLedgerData = options.syncLedgerData ?? false;
   const repoId = options.repoId ?? null;
 
-  // Sync personal settings
+  // Use personal settings file to determine offline
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
     let cloud = null;
     let cloudDeleted = null;
 
+    const local = await loadLocalJsonData("ledger-personal-settings.json", null);
+
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
       try {
-        const cloudExists = await githubFileExists(repoName, "ledger-personal-settings.json", token);
-        cloud = cloudExists
-          ? await githubReadJson(repoName, "ledger-personal-settings.json", token)
-          : null;
+        const cloud = await githubReadJson(repoName, "ledger-settings.json", token);
 
         cloudDeleted = cloud?.deletedAtTimestamp || 0;
         offline = false;
@@ -936,140 +935,9 @@ async function smartSync(selectedRepos, token, options = {}) {
         offline = true;
       }
     }
-
-    const local = await loadLocalJsonData("ledger-personal-settings.json", null); // may be null 
-
-    // -----------------------------------------
-    // Rule 1 — local null AND (cloud null OR cloud deleted)
-    // -----------------------------------------
-    if (!push && !local && (!cloud || cloudDeleted > 0)) {
-      const defaults = {
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        language: currentLang,
-        homeImages: [],
-        fontsizeDesktop: "",
-        fontsizeMobile: "",
-        themeColor: "",
-      };
-
-      await saveLocalJsonData("ledger-personal-settings.json", defaults);
-      if (token && !offline) {
-        await githubUploadFile(repoName, "ledger-personal-settings.json", defaults, token);
-      }
-    }
-
-    if (token && !offline) {
-      // -----------------------------------------
-      // Rule 2 — local null, cloud exists → pull
-      // -----------------------------------------
-      if (!push && !local && cloud) {
-        await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-        // Pull homeImages from cloud → OPFS
-        const cloudImages = cloud.homeImages || [];
-        await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-        await cleanupLocalFolder("homeImages", cloudImages); // Cleanup local OPFS folder → remove files not in cloud list
-      }
-
-      // -----------------------------------------
-      // Rule 3 — local exists, cloud null → push
-      // -----------------------------------------
-      if ((push && syncPersonalSettings) || (local && !cloud)) {
-        await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-        if ((push && syncHomeImages) || !push) {
-          // Push OPFS images → GitHub
-          const localImages = local?.homeImages || [];
-          await pushFolderToCloud("homeImages", repoName, localImages, token);
-          await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
-        }
-      }
-
-      // if both local and cloud exists
-      if (!push && local && cloud) {
-
-        const sameCreated = local.createdAt === cloud.createdAt;
-        const sameUpdated = local.updatedAt === cloud.updatedAt;
-
-        // If identical → no popup needed
-        if (sameCreated && sameUpdated) {
-          console.log(`[${repoName}] Local and cloud identical → using cloud`);
-          await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-          const cloudImages = cloud.homeImages || [];
-          await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-          await cleanupLocalFolder("homeImages", cloudImages);
-        }
-        else {
-          // Build bilingual popup
-          const cloudCreatedStr = new Date(cloud.createdAt).toString();
-          const localCreatedStr = new Date(local.createdAt).toString();
-
-          const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
-          const localUpdatedStr = new Date(local.updatedAt).toString();
-
-          const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
-          const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
-
-          const title =
-            currentLang === "en"
-              ? "Choose Data Source"
-              : "选择数据来源";
-
-          const message =
-            (currentLang === "en"
-              ? "Cloud and Local personal settings both exist."
-              : "云端和本地个人设置同时存在。") +
-            "<br><br>" +
-            `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-            `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
-            `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
-            `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
-            `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
-            (currentLang === "en"
-              ? "Which version do you want to keep?"
-              : "请选择要保留的版本：");
-
-          const useCloud = await new Promise(resolve => {
-            showPopupWindow({
-              title,
-              message,
-              buttons: [
-                {
-                  text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
-                  onClick: () => resolve(true)
-                },
-                {
-                  text: currentLang === "en" ? "Keep Local" : "保留本地数据",
-                  onClick: () => resolve(false)
-                }
-              ]
-            });
-          });
-
-          if (useCloud) {
-            console.log(`[${repoName}] User chose cloud → overwrite local`);
-
-            await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-            const cloudImages = cloud.homeImages || [];
-            await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-            await cleanupLocalFolder("homeImages", cloudImages);
-
-          } else {
-            console.log(`[${repoName}] User chose local → overwrite cloud`);
-
-            await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-            const localImages = local.homeImages || [];
-            await pushFolderToCloud("homeImages", repoName, localImages, token);
-            await cleanupCloudFolder("homeImages", repoName, localImages, token);
-          }
-        }
-      }
-    }
   }
+
+  let useCloud;
 
   // Sync ledger data
   for (const repo of selectedRepos.ledgerRepos) {
@@ -1106,243 +974,14 @@ async function smartSync(selectedRepos, token, options = {}) {
         }
       }
 
-      const localHasData = !!localLedgerData;
-
       // ------------------------------------------------------------
       // 2. No data anywhere → create empty
       // ------------------------------------------------------------
-      if ((!token || !repoHasData) && !localHasData) {
+      if ((!token || !repoHasData)) {
         console.log(`[${repoName}] No data anywhere → create empty`);
 
-        // Initialize ledger-level settings
-        const accounts = {
-          cashAccounts: [
-            { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          creditCards: [
-            { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          depositoryAccounts: [
-            { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          storedValueCards: [
-            { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
-          ],
-          investmentAccounts: [
-            { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-          ]
-        };
+        await initializeLedgerSettings(repoId);
 
-        const expenseCategories = [
-          {
-            primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
-              { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
-              { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
-              { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
-              { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
-              { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
-              { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
-              { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
-              { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
-              { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
-              { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
-              { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
-              { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
-              { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
-              { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-              { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
-              { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
-              { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
-              { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
-              { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
-              { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
-              { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
-              { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
-              { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
-              { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
-              { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
-              { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
-              { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
-              { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
-              { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-              { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-              { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
-              { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
-              { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
-            ]
-          }
-        ];
-
-        const incomeCategories = [
-          {
-            primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
-              { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-              { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
-              { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
-              { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
-              { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
-              { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
-              { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
-              { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
-            ]
-          },
-          {
-            primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
-              { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
-            ]
-          }
-        ];
-
-        const collections = [
-          { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
-          { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
-          { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
-          { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
-          { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
-          { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
-          { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
-          { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
-          { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
-          { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
-          { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
-          { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
-          { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
-          { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
-          { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
-          { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
-          { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
-          { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
-          { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
-          { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
-          { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
-        ];
-
-        const subjects = [
-          { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
-          { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
-          { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
-          { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
-          { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
-          { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
-          { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
-        ];
-
-        const firstAccountType = Object.keys(accounts)[0];
-        const firstAccount = accounts[firstAccountType][0];
-
-        const firstExpensePrimary = expenseCategories[0];
-        const firstIncomePrimary = incomeCategories[0];
-
-        // For transfer defaults, pick the second account type if available
-        const secondAccountType = Object.keys(accounts)[1] || firstAccountType;
-        const secondAccount = accounts[secondAccountType][0] || firstAccount;
-
-        const defaults = {
-          expense: {
-            accountType: firstAccountType,
-            account: firstAccount.name,
-            accountIcon: firstAccount.icon,
-            primary: firstExpensePrimary.primary,
-            primaryIcon: firstExpensePrimary.icon,
-            secondary: firstExpensePrimary.secondaries[0].name,
-            secondaryIcon: firstExpensePrimary.secondaries[0].icon,
-            subject: subjects[0].name,
-            subjectIcon: subjects[0].icon,
-            collection: collections[0].name,
-            collectionIcon: collections[0].icon
-          },
-
-          income: {
-            accountType: firstAccountType,
-            account: firstAccount.name,
-            accountIcon: firstAccount.icon,
-            primary: firstIncomePrimary.primary,
-            primaryIcon: firstIncomePrimary.icon,
-            secondary: firstIncomePrimary.secondaries[0].name,
-            secondaryIcon: firstIncomePrimary.secondaries[0].icon,
-            subject: subjects[0].name,
-            subjectIcon: subjects[0].icon,
-            collection: collections[0].name,
-            collectionIcon: collections[0].icon
-          },
-
-          transfer: {
-            fromType: firstAccountType,
-            fromAccount: firstAccount.name,
-            fromAccountIcon: firstAccount.icon,
-            toType: secondAccountType,
-            toAccount: secondAccount.name,
-            toAccountIcon: secondAccount.icon
-          },
-
-          balance: {
-            accountType: firstAccountType,
-            account: firstAccount.name,
-            accountIcon: firstAccount.icon
-          }
-        };
-
-        const ledgerSettings = {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          accounts,
-          "expense-categories": expenseCategories,
-          "income-categories": incomeCategories,
-          collections,
-          subjects,
-          defaults,
-          "tags": {},
-        };
-
-        // Save ledger settings locally
-        settingsMap = await loadLocalJsonData("ledger-settings.json", {});
-        settingsMap[repoId] = ledgerSettings;
-        await saveLocalJsonData("ledger-settings.json", settingsMap);
-
-        // Save DB + settings
-        localLedgerDataMap[repoId] = {};   // empty entries array
-        localLogMap[repoId] = [];
         lastSyncedMap[repoId] = Date.now();
 
         continue;
@@ -1352,7 +991,7 @@ async function smartSync(selectedRepos, token, options = {}) {
         // ------------------------------------------------------------
         // 3. Only local has data → push everything
         // ------------------------------------------------------------
-        if (!repoHasData && localHasData) {
+        if (!repoHasData) {
 
           if (!(await get("isNewLedger"))) { // show popup message if not confirmed yet. 
             showPopupWindow({
@@ -1401,7 +1040,7 @@ async function smartSync(selectedRepos, token, options = {}) {
           const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
           settingsMap = await loadLocalJsonData("ledger-settings.json", {});
 
-          if (!localHasData || remoteSettings.createdAt > settingsMap[repoId].createdAt) {
+          if (remoteSettings.createdAt > settingsMap[repoId].createdAt) {
             console.log(`[${repoName}] Only repo has data → pulling all entries`);
 
             const cloudLedgerData = await githubReadJson(repoName, `ledger-data.json`, token);
@@ -1435,7 +1074,6 @@ async function smartSync(selectedRepos, token, options = {}) {
               console.log(`[${repoName}] Local and cloud identical → using cloud`);
               localLedgerDataMap[repoId] = cloudLedgerData;
             } else {
-              let useCloud;
 
               if (push) {
                 useCloud = false; // force pushing to cloud
@@ -1521,19 +1159,70 @@ async function smartSync(selectedRepos, token, options = {}) {
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
   }
-}
 
-async function githubFileExists(repoName, path, token) {
-  const res = await fetch(
-    `https://api.github.com/repos/${repoName}/contents/${path}`,
-    {
-      headers: {
-        Authorization: `token ${token}`
+  if (token && !offline) {
+    // -----------------------------------------
+    // cloud null OR cloud deleted → push
+    // -----------------------------------------
+    if ((push && syncPersonalSettings) || !cloud || cloudDeleted > 0) {
+      await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+      if ((push && syncHomeImages) || !push) {
+        // Push OPFS images → GitHub
+        const localImages = local?.homeImages || [];
+        await pushFolderToCloud("homeImages", repoName, localImages, token);
+        await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
       }
     }
-  );
 
-  return res.ok; // true if exists, false if not
+    // if both local and cloud exist
+    if (!push && cloud) {
+
+      const sameCreated = local.createdAt === cloud.createdAt;
+
+      if (sameCreated) {
+        // createdAt same → choose the one with newer updatedAt
+        if (local.updatedAt > cloud.updatedAt) {
+          console.log(`[${repoName}] createdAt same → local newer → using local`);
+
+          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+          const localImages = local.homeImages || [];
+          await pushFolderToCloud("homeImages", repoName, localImages, token);
+          await cleanupCloudFolder("homeImages", repoName, localImages, token);
+
+        } else {
+          console.log(`[${repoName}] cloud newer or identical → using cloud`);
+          await saveLocalJsonData("ledger-personal-settings.json", cloud);
+
+          const cloudImages = cloud.homeImages || [];
+          await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+          await cleanupLocalFolder("homeImages", cloudImages);
+        }
+
+      } else {
+        // createdAt different → use the version user chooses
+        if (useCloud) {
+          console.log(`[${repoName}] User chose cloud → overwrite local`);
+
+          await saveLocalJsonData("ledger-personal-settings.json", cloud);
+
+          const cloudImages = cloud.homeImages || [];
+          await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+          await cleanupLocalFolder("homeImages", cloudImages);
+
+        } else {
+          console.log(`[${repoName}] User chose local → overwrite cloud`);
+
+          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+          const localImages = local.homeImages || [];
+          await pushFolderToCloud("homeImages", repoName, localImages, token);
+          await cleanupCloudFolder("homeImages", repoName, localImages, token);
+        }
+      }
+    }
+  }
 }
 
 async function githubListFiles(repoName, path, token) {
@@ -1726,6 +1415,255 @@ function showOfflineBanner(text) {
   document.documentElement.style.setProperty("--banner-height", height + "px");
 }
 
+async function initializePersonalSettings() {
+  const defaults = {
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    language: currentLang,
+    homeImages: [],
+    fontsizeDesktop: "",
+    fontsizeMobile: "",
+    themeColor: "",
+  };
+
+  await saveLocalJsonData("ledger-personal-settings.json", defaults);
+}
+
+async function initializeLedgerSettings(repoId) {
+  // Initialize ledger-level settings
+  const accounts = {
+    cashAccounts: [
+      { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+    ],
+    creditCards: [
+      { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
+    ],
+    depositoryAccounts: [
+      { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+    ],
+    storedValueCards: [
+      { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+    ],
+    investmentAccounts: [
+      { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+    ]
+  };
+
+  const expenseCategories = [
+    {
+      primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
+        { name: currentLang === "en" ? "Offline Expenditure" : "线下消费", icon: "🛒" },
+        { name: currentLang === "en" ? "Online Shopping" : "网购", icon: "🛒" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Travel" : "出行", icon: "🚗", secondaries: [
+        { name: currentLang === "en" ? "Public Transit" : "公共交通", icon: "🚇" },
+        { name: currentLang === "en" ? "Ride Services" : "网约车", icon: "🚕" },
+        { name: currentLang === "en" ? "Fuel Costs" : "燃油费", icon: "⛽" },
+        { name: currentLang === "en" ? "Parking Costs" : "停车费", icon: "🅿️" },
+        { name: currentLang === "en" ? "Auto Insurance" : "车险", icon: "🚗" },
+        { name: currentLang === "en" ? "Vechicle Purchase" : "购车", icon: "🚗" },
+        { name: currentLang === "en" ? "Vechicle Repair" : "车辆维修", icon: "🔧" },
+        { name: currentLang === "en" ? "Flight & Train Tickets" : "机票/火车票", icon: "✈️" },
+        { name: currentLang === "en" ? "Lodging" : "住宿", icon: "🏨" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭", secondaries: [
+        { name: currentLang === "en" ? "Music & Films" : "音乐/电影", icon: "🎬" },
+        { name: currentLang === "en" ? "Sightseeing" : "观光", icon: "🗺️" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄", secondaries: [
+        { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+        { name: currentLang === "en" ? "Streaming" : "流媒体订阅", icon: "📺" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Home" : "家庭", icon: "🏡", secondaries: [
+        { name: currentLang === "en" ? "Housing" : "住房", icon: "🏠" },
+        { name: currentLang === "en" ? "Utilities" : "水电煤气", icon: "💡" },
+        { name: currentLang === "en" ? "Home Insurance" : "家财险", icon: "🏠" },
+        { name: currentLang === "en" ? "Decoration" : "装修/装饰", icon: "🖼️" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Health" : "健康", icon: "🏥", secondaries: [
+        { name: currentLang === "en" ? "Hospitals & Clinics" : "医院/诊所", icon: "🏥" },
+        { name: currentLang === "en" ? "Medication" : "药品", icon: "💊" },
+        { name: currentLang === "en" ? "Health Insurance Premiums" : "医疗保险费", icon: "🛡️" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️", secondaries: [
+        { name: currentLang === "en" ? "Tuition & Exams" : "学费/考试费", icon: "🎓" },
+        { name: currentLang === "en" ? "Tax Payment" : "税款", icon: "🧾" },
+        { name: currentLang === "en" ? "Pension Contribution" : "养老金缴纳", icon: "🪙" },
+        { name: currentLang === "en" ? "Professional Expenses" : "职业相关费用", icon: "🏛️" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Personal Spending" : "个人消费", icon: "💇", secondaries: [
+        { name: currentLang === "en" ? "Haircut" : "理发", icon: "💇" },
+        { name: currentLang === "en" ? "Laundry" : "洗衣", icon: "🧺" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Gifts & Investments" : "礼金与投资", icon: "💸", secondaries: [
+        { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+        { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+        { name: currentLang === "en" ? "Donations" : "捐赠", icon: "🎁" },
+        { name: currentLang === "en" ? "Insurance Payments" : "保险缴费", icon: "💵" },
+        { name: currentLang === "en" ? "Investment Loss" : "投资亏损", icon: "📉" }
+      ]
+    }
+  ];
+
+  const incomeCategories = [
+    {
+      primary: currentLang === "en" ? "Professional Income" : "职业收入", icon: "💼", secondaries: [
+        { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+        { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Floating Income" : "浮动收入", icon: "🎉", secondaries: [
+        { name: currentLang === "en" ? "Investment Earnings" : "投资收益", icon: "📈" },
+        { name: currentLang === "en" ? "Giveaways" : "赠品/抽奖", icon: "🎉" },
+        { name: currentLang === "en" ? "Red Packet Receipts" : "红包收入", icon: "🧧" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Refunds" : "退款", icon: "💰", secondaries: [
+        { name: currentLang === "en" ? "Tax Credits" : "税务退还", icon: "💰" },
+        { name: currentLang === "en" ? "Reimbursement" : "报销", icon: "↩️" },
+        { name: currentLang === "en" ? "Insurance Payout" : "保险理赔", icon: "💰" }
+      ]
+    },
+    {
+      primary: currentLang === "en" ? "Pocket Money" : "零用钱", icon: "🪙", secondaries: [
+        { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" }
+      ]
+    }
+  ];
+
+  const collections = [
+    { name: currentLang === "en" ? "Food & Drinks" : "餐饮", icon: "🍽️" },
+    { name: currentLang === "en" ? "Life Expenditure" : "生活支出", icon: "🧩" },
+    { name: currentLang === "en" ? "Housing" : "住房", icon: "🏡" },
+    { name: currentLang === "en" ? "Pay" : "工资", icon: "💵" },
+    { name: currentLang === "en" ? "Scholarships & Awards" : "奖学金/奖金", icon: "🏅" },
+    { name: currentLang === "en" ? "Tax-Free Investments" : "免税投资", icon: "📈" },
+    { name: currentLang === "en" ? "Taxable Investments" : "应税投资", icon: "📈" },
+    { name: currentLang === "en" ? "Gifts" : "礼物", icon: "🎁" },
+    { name: currentLang === "en" ? "Medical Expenses" : "医疗支出", icon: "🏥" },
+    { name: currentLang === "en" ? "Transportation" : "交通", icon: "🚗" },
+    { name: currentLang === "en" ? "Travel Expenses" : "旅行支出", icon: "✈️" },
+    { name: currentLang === "en" ? "Entertainment" : "娱乐", icon: "🎭" },
+    { name: currentLang === "en" ? "Phone Bills" : "电话费", icon: "📱" },
+    { name: currentLang === "en" ? "Electronic Devices" : "电子设备", icon: "💻" },
+    { name: currentLang === "en" ? "Subscriptions" : "订阅", icon: "🔄" },
+    { name: currentLang === "en" ? "Pension" : "养老金", icon: "💰" },
+    { name: currentLang === "en" ? "Tax & Credits" : "税费与抵扣", icon: "🧾" },
+    { name: currentLang === "en" ? "Public Fees" : "公共费用", icon: "🏛️" },
+    { name: currentLang === "en" ? "Incoming Transfer" : "转账收入", icon: "💰" },
+    { name: currentLang === "en" ? "Outgoing Transfer" : "转账支出", icon: "💸" },
+    { name: currentLang === "en" ? "Refunds" : "退款", icon: "🔄" },
+    { name: currentLang === "en" ? "Work Expenses" : "工作支出", icon: "💼" }
+  ];
+
+  const subjects = [
+    { name: currentLang === "en" ? "Myself" : "自己", icon: "🙂" },
+    { name: currentLang === "en" ? "Partner" : "伴侣", icon: "❤️" },
+    { name: currentLang === "en" ? "Children" : "子女", icon: "🧒" },
+    { name: currentLang === "en" ? "Parents" : "父母", icon: "👨‍👩‍👦" },
+    { name: currentLang === "en" ? "Family" : "家庭", icon: "👪" },
+    { name: currentLang === "en" ? "Friends" : "朋友", icon: "🧑‍🤝‍🧑" },
+    { name: currentLang === "en" ? "Neighbourhood" : "邻里", icon: "🏘️" }
+  ];
+
+  const firstAccountType = Object.keys(accounts)[0];
+  const firstAccount = accounts[firstAccountType][0];
+
+  const firstExpensePrimary = expenseCategories[0];
+  const firstIncomePrimary = incomeCategories[0];
+
+  // For transfer defaults, pick the second account type if available
+  const secondAccountType = Object.keys(accounts)[1] || firstAccountType;
+  const secondAccount = accounts[secondAccountType][0] || firstAccount;
+
+  const defaults = {
+    expense: {
+      accountType: firstAccountType,
+      account: firstAccount.name,
+      accountIcon: firstAccount.icon,
+      primary: firstExpensePrimary.primary,
+      primaryIcon: firstExpensePrimary.icon,
+      secondary: firstExpensePrimary.secondaries[0].name,
+      secondaryIcon: firstExpensePrimary.secondaries[0].icon,
+      subject: subjects[0].name,
+      subjectIcon: subjects[0].icon,
+      collection: collections[0].name,
+      collectionIcon: collections[0].icon
+    },
+
+    income: {
+      accountType: firstAccountType,
+      account: firstAccount.name,
+      accountIcon: firstAccount.icon,
+      primary: firstIncomePrimary.primary,
+      primaryIcon: firstIncomePrimary.icon,
+      secondary: firstIncomePrimary.secondaries[0].name,
+      secondaryIcon: firstIncomePrimary.secondaries[0].icon,
+      subject: subjects[0].name,
+      subjectIcon: subjects[0].icon,
+      collection: collections[0].name,
+      collectionIcon: collections[0].icon
+    },
+
+    transfer: {
+      fromType: firstAccountType,
+      fromAccount: firstAccount.name,
+      fromAccountIcon: firstAccount.icon,
+      toType: secondAccountType,
+      toAccount: secondAccount.name,
+      toAccountIcon: secondAccount.icon
+    },
+
+    balance: {
+      accountType: firstAccountType,
+      account: firstAccount.name,
+      accountIcon: firstAccount.icon
+    }
+  };
+
+  const ledgerSettings = {
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    accounts,
+    "expense-categories": expenseCategories,
+    "income-categories": incomeCategories,
+    collections,
+    subjects,
+    defaults,
+    "tags": {},
+  };
+
+  // Save ledger settings locally
+  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  settingsMap[repoId] = ledgerSettings;
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+
+  // Save DB + settings
+  localLedgerDataMap[repoId] = {};   // empty entries array
+  localLogMap[repoId] = [];
+
+  await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
+  await saveLocalJsonData("localLogMap.json", localLogMap);
+}
+
 async function init() {
   window.scrollTo(0, 0);
 
@@ -1754,30 +1692,30 @@ async function init() {
 
   // Load local repo selections
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
-  let user;
 
-  if (!token) {// if not logged in
-    if (!selectedRepos) { // if not logged in, and if local data not exist, create new
-      let ledgerRepos;
+  if (!selectedRepos) { // if not logged in, and if local data not exist, create new
+    let ledgerRepos;
 
-      ledgerRepos = [
-        {
-          id: "local",
-          name: currentLang === "zh" ? "本地账本" : "Local Ledger",
-          ownerId: "local"
-        }
-      ];
+    ledgerRepos = [
+      {
+        id: "local",
+        name: currentLang === "zh" ? "本地账本" : "Local Ledger",
+        ownerId: "local"
+      }
+    ];
 
-      selectedRepos = {
-        ledgerRepos,
-        activeLedgerRepo: ledgerRepos[0]
-      };
+    selectedRepos = {
+      ledgerRepos,
+      activeLedgerRepo: ledgerRepos[0]
+    };
 
-      await saveLocalJsonData("selectedRepos.json", selectedRepos);
-    }
+    await saveLocalJsonData("selectedRepos.json", selectedRepos);
 
-    window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
+    await initializePersonalSettings();
+    await initializeLedgerSettings(ledgerRepos[0].id);
   }
+
+  window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
 
   const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
   if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
@@ -1792,18 +1730,10 @@ async function init() {
     }
   }
 
-  // Load ALL ledger DBs
-  await smartSync(selectedRepos, null); // this first smart sync is only to initialize local data if not already exist
-
-  // Initialize household selector
-  initLedgerSelector();
-  toggleLedgerFormRows();
-
   // UI updates
   document.getElementById("home-nav").style.display = "flex";
 
   // Apply profile settings
-
   const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
   if (personal.language) {
     currentLang = personal.language;
@@ -1831,6 +1761,8 @@ async function init() {
 
   // ✅ Load main app
   showPage("home", "Xiaoxin's Ledger App");
+
+  let user;
 
   // retrieve github data after page is shown
   if (token) {
@@ -1906,6 +1838,10 @@ async function init() {
 
   // Load ALL ledger DBs
   await smartSync(selectedRepos, token); // this second smart sync actually merges with the cloud data
+
+  // Initialize household selector
+  initLedgerSelector();
+  toggleLedgerFormRows();
 }
 
 init();
