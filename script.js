@@ -5535,6 +5535,7 @@ function enablePageSwipe(pageEl) {
     // Cancel swipe if vertical movement too large
     if (dy > MAX_Y) {
       cancelledByY = true;
+      pageEl.style.transition = "transform 0.3s ease";
       pageEl.style.transform = "translateX(0)";
       return;
     }
