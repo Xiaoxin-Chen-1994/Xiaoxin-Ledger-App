@@ -919,7 +919,7 @@ async function smartSync(selectedRepos, token, options = {}) {
   // Use personal settings file to determine offline
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
-  
+
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
@@ -934,10 +934,121 @@ async function smartSync(selectedRepos, token, options = {}) {
         showOfflineBanner("GitHub sync failed: " + err);
         offline = true;
       }
+
+      // Sync personal settings
+      if (token && !offline) {
+        const repoName = selectedRepos.personalSettingsRepo.name;
+        // -----------------------------------------
+        // cloud null OR cloud deleted → push
+        // -----------------------------------------
+        if ((push && syncPersonalSettings) || !cloud || cloudDeleted > 0) {
+          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+          if ((push && syncHomeImages) || !push) {
+            // Push OPFS images → GitHub
+            const localImages = local?.homeImages || [];
+            await pushFolderToCloud("homeImages", repoName, localImages, token);
+            await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
+          }
+        }
+
+        // if both local and cloud exist
+        if (!push && cloud) {
+
+          const sameCreated = local.createdAt === cloud.createdAt;
+
+          if (sameCreated) {
+            // createdAt same → choose the one with newer updatedAt
+            if (local.updatedAt > cloud.updatedAt) {
+              console.log(`[${repoName}] createdAt same → local newer → using local`);
+
+              await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+              const localImages = local.homeImages || [];
+              await pushFolderToCloud("homeImages", repoName, localImages, token);
+              await cleanupCloudFolder("homeImages", repoName, localImages, token);
+
+            } else {
+              console.log(`[${repoName}] cloud newer or identical → using cloud`);
+              await saveLocalJsonData("ledger-personal-settings.json", cloud);
+
+              const cloudImages = cloud.homeImages || [];
+              await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+              await cleanupLocalFolder("homeImages", cloudImages);
+            }
+
+          } else {
+            // createdAt different → use the version user chooses
+
+            // Build bilingual popup
+            const cloudCreatedStr = new Date(cloud.createdAt).toString();
+            const localCreatedStr = new Date(local.createdAt).toString();
+
+            const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
+            const localUpdatedStr = new Date(local.updatedAt).toString();
+
+            const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
+            const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
+
+            const title =
+              currentLang === "en"
+                ? "Choose Data Source"
+                : "选择数据来源";
+
+            const message =
+              (currentLang === "en"
+                ? "Cloud and Local personal settings both exist."
+                : "云端和本地个人设置同时存在。") +
+              "<br><br>" +
+              `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
+              `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
+              `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
+              `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
+              `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
+              (currentLang === "en"
+                ? "Which version do you want to keep?"
+                : "请选择要保留的版本：");
+
+            const useCloud = await new Promise(resolve => {
+              showPopupWindow({
+                title,
+                message,
+                buttons: [
+                  {
+                    text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
+                    onClick: () => resolve(true)
+                  },
+                  {
+                    text: currentLang === "en" ? "Keep Local" : "保留本地数据",
+                    onClick: () => resolve(false)
+                  }
+                ]
+              });
+            });
+
+            if (useCloud) {
+              console.log(`[${repoName}] User chose cloud → overwrite local`);
+
+              await saveLocalJsonData("ledger-personal-settings.json", cloud);
+
+              const cloudImages = cloud.homeImages || [];
+              await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+              await cleanupLocalFolder("homeImages", cloudImages);
+
+            } else {
+              console.log(`[${repoName}] User chose local → overwrite cloud`);
+
+              await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+              const localImages = local.homeImages || [];
+              await pushFolderToCloud("homeImages", repoName, localImages, token);
+              await cleanupCloudFolder("homeImages", repoName, localImages, token);
+            }
+          }
+        }
+      }
     }
   }
-
-  let useCloud;
 
   // Sync ledger data
   for (const repo of selectedRepos.ledgerRepos) {
@@ -1071,6 +1182,8 @@ async function smartSync(selectedRepos, token, options = {}) {
             const sameCreated = localSettings.createdAt === remoteSettings.createdAt;
             const sameUpdated = localSettings.updatedAt === remoteSettings.updatedAt;
 
+            let useCloud;
+
             // If identical → no popup needed
             if ((remoteSettings.createdAt > localSettings.createdAt) || (sameCreated && sameUpdated)) {
               console.log(`[${repoName}] Cloud newer or identical → using cloud`);
@@ -1160,72 +1273,6 @@ async function smartSync(selectedRepos, token, options = {}) {
     await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
     await saveLocalJsonData("localLogMap.json", localLogMap);
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
-  }
-
-  // Sync personal settings
-  if (token && !offline) {
-    const repoName = selectedRepos.personalSettingsRepo.name;
-    // -----------------------------------------
-    // cloud null OR cloud deleted → push
-    // -----------------------------------------
-    if ((push && syncPersonalSettings) || !cloud || cloudDeleted > 0) {
-      await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-      if ((push && syncHomeImages) || !push) {
-        // Push OPFS images → GitHub
-        const localImages = local?.homeImages || [];
-        await pushFolderToCloud("homeImages", repoName, localImages, token);
-        await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
-      }
-    }
-
-    // if both local and cloud exist
-    if (!push && cloud) {
-
-      const sameCreated = local.createdAt === cloud.createdAt;
-
-      if (sameCreated) {
-        // createdAt same → choose the one with newer updatedAt
-        if (local.updatedAt > cloud.updatedAt) {
-          console.log(`[${repoName}] createdAt same → local newer → using local`);
-
-          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-          const localImages = local.homeImages || [];
-          await pushFolderToCloud("homeImages", repoName, localImages, token);
-          await cleanupCloudFolder("homeImages", repoName, localImages, token);
-
-        } else {
-          console.log(`[${repoName}] cloud newer or identical → using cloud`);
-          await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-          const cloudImages = cloud.homeImages || [];
-          await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-          await cleanupLocalFolder("homeImages", cloudImages);
-        }
-
-      } else {
-        // createdAt different → use the version user chooses
-        if (useCloud) {
-          console.log(`[${repoName}] User chose cloud → overwrite local`);
-
-          await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-          const cloudImages = cloud.homeImages || [];
-          await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-          await cleanupLocalFolder("homeImages", cloudImages);
-
-        } else {
-          console.log(`[${repoName}] User chose local → overwrite cloud`);
-
-          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-          const localImages = local.homeImages || [];
-          await pushFolderToCloud("homeImages", repoName, localImages, token);
-          await cleanupCloudFolder("homeImages", repoName, localImages, token);
-        }
-      }
-    }
   }
 }
 
