@@ -1160,7 +1160,9 @@ async function smartSync(selectedRepos, token, options = {}) {
     await saveLocalJsonData("lastSyncedMap.json", lastSyncedMap);
   }
 
+  // Sync personal settings
   if (token && !offline) {
+    const repoName = selectedRepos.personalSettingsRepo.name;
     // -----------------------------------------
     // cloud null OR cloud deleted → push
     // -----------------------------------------
