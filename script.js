@@ -4337,6 +4337,8 @@ async function deleteEntry(repoId, entryId) {
   // Remove from settings tags
   removeEntryFromTagMap(settingsMap, repoId, removedEntry);
 
+  settingsMap[repoId].updatedAt = Date.now();
+
   // Persist both
   await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
   await saveLocalJsonData("ledger-settings.json", settingsMap);
@@ -4875,6 +4877,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
         checkbox.onchange = async () => {
           setCyclePaid(account, cycleStart, checkbox.checked);
 
+          settingsMap[repoId].updatedAt = Date.now();
           await saveLocalJsonData("ledger-settings.json", settingsMap);
           await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
@@ -5017,6 +5020,7 @@ async function saveAccountEdits(repoId, accountType, account) {
     }
   });
 
+  settingsMap[repoId].updatedAt = Date.now();
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
@@ -5188,6 +5192,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
   // -----------------------------
   // 6. Persist + Sync
   // -----------------------------
+  settingsMap[activeRepoId].updatedAt = Date.now();
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
 
@@ -5697,6 +5702,7 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
       settingsMap[activeRepoId][type] = updated;
     }
 
+    settingsMap[activeRepoId].updatedAt = Date.now();
     await saveLocalJsonData("ledger-settings.json", settingsMap);
     await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
     loadLabels(activeRepoId, task, type, title);
@@ -5801,6 +5807,7 @@ function handleDeleteClick(block, activeRepoId, task, type, title, hasSecondary)
           }
 
           settingsMap[activeRepoId][type] = categories;
+          settingsMap[activeRepoId].updatedAt = Date.now();
           await saveLocalJsonData("ledger-settings.json", settingsMap);
           await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
 
@@ -6098,6 +6105,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
       }
 
       settingsMap[activeRepoId][type] = updatedCategories;
+      settingsMap[activeRepoId].updatedAt = Date.now();
       await saveLocalJsonData("ledger-settings.json", settingsMap);
       await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
 
@@ -6303,6 +6311,7 @@ async function reorderCategory({
       categories.splice(newIndex, 0, draggedObj);
 
       settingsMap[activeRepoId][type] = categories;
+      settingsMap[activeRepoId].updatedAt = Date.now();
       await saveLocalJsonData("ledger-settings.json", settingsMap);
       await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
       return true;
@@ -6329,6 +6338,7 @@ async function reorderCategory({
         toPrimary.secondaries.splice(0, 0, draggedObj);
 
         settingsMap[activeRepoId][type] = categories;
+        settingsMap[activeRepoId].updatedAt = Date.now();
         await saveLocalJsonData("ledger-settings.json", settingsMap);
         await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
         return true;
@@ -6348,6 +6358,7 @@ async function reorderCategory({
       toArr.splice(newIndex, 0, draggedObj);
 
       settingsMap[activeRepoId][type] = categories;
+      settingsMap[activeRepoId].updatedAt = Date.now();
       await saveLocalJsonData("ledger-settings.json", settingsMap);
       await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
       return true;
@@ -6370,6 +6381,7 @@ async function reorderCategory({
   categories.splice(newIndex, 0, draggedObj);
 
   settingsMap[activeRepoId][type] = categories;
+  settingsMap[activeRepoId].updatedAt = Date.now();
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
   return true;
