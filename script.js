@@ -4493,6 +4493,8 @@ function loadAccounts(repoId) {
 }
 
 function createAccountRow(repoId, type, acc) {
+  const t = translations[currentLang];
+
   const row = document.createElement("div");
   row.className = "account-row";
 
@@ -4555,10 +4557,23 @@ function createAccountRow(repoId, type, acc) {
 
   row.innerHTML = `
     <div class="account-left">
-      <div class="account-title">
-        <span class="account-icon">${acc.icon ?? ""}</span>
-        <span class="account-name">${acc.name}</span>
-        ${hasSubs ? `<span class="subaccount-badge">${subs.length}</span>` : ""}
+      <span class="account-icon">${acc.icon ?? ""}</span>
+
+      <div class="account-text">
+        <div class="account-title">
+          <span class="account-name">${acc.name}</span>
+          ${hasSubs ? `<span class="subaccount-badge">${subs.length}</span>` : ""}
+        </div>
+
+        ${type === "creditCards" && acc.statementDate && acc.dueDate ? `
+          <div class="account-notes">
+            ${t.statementLabel} ${acc.statementDate ?? "-"} •
+            ${t.dueLabel} ${acc.dueDate ?? "-"}
+            ${acc.notes ? `• ${acc.notes}` : ""}
+          </div>
+        ` : acc.notes ? `
+          <div class="account-notes">${acc.notes}</div>
+        ` : ""}
       </div>
     </div>
 
