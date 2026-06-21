@@ -962,6 +962,7 @@ async function smartSync(selectedRepos, token, options = {}) {
             // createdAt same → choose the one with newer updatedAt
             if (local.updatedAt > cloud.updatedAt) {
               console.log(`[${repoName}] createdAt same → local newer → using local`);
+              console.log(local.updatedAt, cloud.updatedAt, local.updatedAt > cloud.updatedAt)
 
               await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
