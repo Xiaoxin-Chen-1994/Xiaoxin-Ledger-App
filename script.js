@@ -1793,7 +1793,7 @@ async function init() {
   }
 
   // Load ALL ledger DBs
-  await smartSync(selectedRepos, token); // this first smart sync is only to initialize local data if not already exist
+  await smartSync(selectedRepos, null); // this first smart sync is only to initialize local data if not already exist
 
   // Initialize household selector
   initLedgerSelector();
