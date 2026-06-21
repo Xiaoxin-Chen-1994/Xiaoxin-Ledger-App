@@ -4520,29 +4520,36 @@ function createAccountRow(repoId, type, acc) {
     const statementDay = acc.statementDate;
     const dueDay = acc.dueDate;
 
-    // Use your cycle function
-    const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
+    // Skip aging if either date is missing
+    if (statementDay && dueDay) {
+      const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
 
-    // Paid?
-    const paid = isCyclePaid(acc, cycleStart);
+      // Paid?
+      const paid = isCyclePaid(acc, cycleStart);
 
-    if (!paid) {
-      let redness = 0;
+      if (!paid) {
+        let redness = 0;
 
-      if (today < dueDate) {
-        // Days until due
-        const daysToDue = Math.ceil((dueDate - today) / 86400000);
+        if (today < dueDate) {
+          // Days until due
+          const daysToDue = Math.ceil((dueDate - today) / 86400000);
 
-        if (daysToDue <= 15) {
-          // Same redness formula as detail page
-          redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+          // Only paint when within 15 days
+          if (daysToDue <= 15) {
+            // Same redness formula as detail page
+            redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+          }
+        } else {
+          // Overdue → full red
+          redness = 1;
         }
-      } else {
-        // Overdue → full red
-        redness = 1;
-      }
 
-      agingStyle = `background-color: rgba(255, 0, 0, ${redness});`;
+        // Apply tint only if redness > 0
+        if (redness > 0) {
+          const alpha = redness * 0.25; // same color system as detail page
+          agingStyle = `background-color: rgba(255, 0, 0, ${alpha});`;
+        }
+      }
     }
   }
 
