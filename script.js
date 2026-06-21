@@ -123,6 +123,11 @@ let latestPage = null;
 let latestTitle = null;
 let latestOptions = null;
 
+const monthNamesEN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 const translations = {
   en: {
     loginTitle: "Login or Signup",
@@ -149,6 +154,15 @@ const translations = {
     depositoryAccounts: "Depository Accounts",
     storedValueCards: "Stored-Value Cards",
     investmentAccounts: "Investment Accounts",
+    statementDistance: (month, days) => `${days} days to ${month} statement`,
+    dueDistance: (month, days) => `${days} days to ${month} due date`,
+    overdue: (month, days) => `${month} overdue by ${days} days`,
+    paid: (month) => `${month} statement paid`,
+    available: (amount) => `Available ${amount}`,
+    paidCheckbox: "Paid for this cycle",
+    statementLabel: "Statement Date",
+    dueLabel: "Due Date",
+    creditLimitLabel: "Credit Limit",
     time: "🕒Time",
     now: "Now",
     dismiss: "Dismiss ▼",
@@ -304,6 +318,15 @@ const translations = {
     depositoryAccounts: "银行账户",
     storedValueCards: "储值卡",
     investmentAccounts: "投资账户",
+    statementDistance: (month, days) => `距离 ${month} 月账单还有 ${days} 天`,
+    dueDistance: (month, days) => `距离 ${month} 月还款日还有 ${days} 天`,
+    overdue: (month, days) => `${month} 月账单已逾期 ${days} 天`,
+    paid: (month) => `${month} 月账单已还清`,
+    available: (amount) => `可用 ${amount}`,
+    paidCheckbox: "本期已还清",
+    statementLabel: "账单日",
+    dueLabel: "还款日",
+    creditLimitLabel: "信用额度",
     time: "🕒时间",
     now: "现在",
     dismiss: "收起 ▼",
@@ -904,6 +927,23 @@ async function cleanupCloudFolder(folderName, repoName, usedPaths, token) {
   await Promise.all(tasks);
 }
 
+function updateSyncProgress(percent, clear = false) { // clear=true forces removal of the progress bar
+  const bar = document.getElementById("sync-progress-bar");
+  const fill = document.getElementById("sync-progress-fill");
+
+  if (!clear) {
+    bar.style.display = "block";
+    fill.style.width = percent + "%";
+  }
+
+  if (percent >= 100 || clear) {
+    setTimeout(() => {
+      bar.style.display = "none";
+      fill.style.width = "0%";
+    }, 500);
+  }
+}
+
 async function smartSync(selectedRepos, token, options = {}) {
 
   const push = options.push ?? false;
@@ -912,146 +952,161 @@ async function smartSync(selectedRepos, token, options = {}) {
   const syncLedgerData = options.syncLedgerData ?? false;
   const repoId = options.repoId ?? null;
 
+  // keep track of sync progress
+  let completed = 0;
+  let total = 0;
+
+  // Count steps
+  total += 1; // test offline
+  total += 1; // personal settings
+  total += selectedRepos.ledgerRepos.length; // each ledger
 
   // Use personal settings file to determine offline
-  if (!token || selectedRepos.personalSettingsRepo) {
+  if (token) {
     let repoName = null;
     let cloud = null;
     let cloudDeleted = null;
 
-    if (token) {
-      repoName = selectedRepos.personalSettingsRepo.name;
+    repoName = selectedRepos.personalSettingsRepo.name;
 
-      try {
-        cloud = await githubReadJson(repoName, "ledger-personal-settings.json", token);
+    try {
+      cloud = await githubReadJson(repoName, "ledger-personal-settings.json", token);
 
-        cloudDeleted = cloud?.deletedAtTimestamp || 0;
-        offline = false;
-      } catch (err) {
-        console.error("GitHub sync failed:", err);
+      cloudDeleted = cloud?.deletedAtTimestamp || 0;
+      offline = false;
+    } catch (err) {
+      console.error("GitHub sync failed:", err);
 
-        showOfflineBanner("GitHub sync failed: " + err);
-        offline = true;
+      showOfflineBanner("GitHub sync failed: " + err);
+      offline = true;
+    }
+
+    completed++;
+    updateSyncProgress(Math.round((completed / total) * 100));
+
+    // Sync personal settings
+    if (!offline) {
+      const local = await loadLocalJsonData("ledger-personal-settings.json", null);
+
+      const repoName = selectedRepos.personalSettingsRepo.name;
+      // -----------------------------------------
+      // cloud null OR cloud deleted → push
+      // -----------------------------------------
+      if ((push && syncPersonalSettings) || !cloud || cloudDeleted > 0) {
+        await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+
+        if ((push && syncHomeImages) || !push) {
+          // Push OPFS images → GitHub
+          const localImages = local?.homeImages || [];
+          await pushFolderToCloud("homeImages", repoName, localImages, token);
+          await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
+        }
       }
 
-      // Sync personal settings
-      if (!offline) {
-        const local = await loadLocalJsonData("ledger-personal-settings.json", null);
+      // if both local and cloud exist
+      if (!push && cloud) {
 
-        const repoName = selectedRepos.personalSettingsRepo.name;
-        // -----------------------------------------
-        // cloud null OR cloud deleted → push
-        // -----------------------------------------
-        if ((push && syncPersonalSettings) || !cloud || cloudDeleted > 0) {
-          await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+        const sameCreated = local.createdAt === cloud.createdAt;
 
-          if ((push && syncHomeImages) || !push) {
-            // Push OPFS images → GitHub
-            const localImages = local?.homeImages || [];
-            await pushFolderToCloud("homeImages", repoName, localImages, token);
-            await cleanupCloudFolder("homeImages", repoName, localImages, token); // Remove cloud images no longer referenced
-          }
-        }
-
-        // if both local and cloud exist
-        if (!push && cloud) {
-
-          const sameCreated = local.createdAt === cloud.createdAt;
-
-          if (sameCreated) {
-            // createdAt same → choose the one with newer updatedAt
-            if (local.updatedAt > cloud.updatedAt) {
-              console.log(`[${repoName}] createdAt same → local newer → using local`);
-              const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
-              const localUpdatedStr = new Date(local.updatedAt).toString();
-              console.log(cloudUpdatedStr, localUpdatedStr, local.updatedAt > cloud.updatedAt)
-
-              await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
-
-              const localImages = local.homeImages || [];
-              await pushFolderToCloud("homeImages", repoName, localImages, token);
-              await cleanupCloudFolder("homeImages", repoName, localImages, token);
-
-            } else {
-              console.log(`[${repoName}] cloud newer or identical → using cloud`);
-              await saveLocalJsonData("ledger-personal-settings.json", cloud);
-
-              const cloudImages = cloud.homeImages || [];
-              await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-              await cleanupLocalFolder("homeImages", cloudImages);
-            }
-
-          } else {
-            // createdAt different → use the version user chooses
-
-            // Build bilingual popup
-            const cloudCreatedStr = new Date(cloud.createdAt).toString();
-            const localCreatedStr = new Date(local.createdAt).toString();
-
+        if (sameCreated) {
+          // createdAt same → choose the one with newer updatedAt
+          if (local.updatedAt > cloud.updatedAt) {
+            console.log(`[${repoName}] createdAt same → local newer → using local`);
             const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
             const localUpdatedStr = new Date(local.updatedAt).toString();
+            console.log(cloudUpdatedStr, localUpdatedStr, local.updatedAt > cloud.updatedAt)
 
-            const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
-            const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
+            await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
-            const title =
-              currentLang === "en"
-                ? "Choose Data Source"
-                : "选择数据来源";
+            const localImages = local.homeImages || [];
+            await pushFolderToCloud("homeImages", repoName, localImages, token);
+            await cleanupCloudFolder("homeImages", repoName, localImages, token);
 
-            const message =
-              (currentLang === "en"
-                ? "Cloud and Local personal settings both exist."
-                : "云端和本地个人设置同时存在。") +
-              "<br><br>" +
-              `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
-              `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
-              `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
-              `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
-              `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
-              (currentLang === "en"
-                ? "Which version do you want to keep?"
-                : "请选择要保留的版本：");
+          } else {
+            console.log(`[${repoName}] cloud newer or identical → using cloud`);
+            await saveLocalJsonData("ledger-personal-settings.json", cloud);
 
-            const useCloud = await new Promise(resolve => {
-              showPopupWindow({
-                title,
-                message,
-                buttons: [
-                  {
-                    text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
-                    onClick: () => resolve(true)
-                  },
-                  {
-                    text: currentLang === "en" ? "Keep Local" : "保留本地数据",
-                    onClick: () => resolve(false)
-                  }
-                ]
-              });
+            const cloudImages = cloud.homeImages || [];
+            await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+            await cleanupLocalFolder("homeImages", cloudImages);
+          }
+
+        } else {
+          // createdAt different → use the version user chooses
+
+          // Build bilingual popup
+          const cloudCreatedStr = new Date(cloud.createdAt).toString();
+          const localCreatedStr = new Date(local.createdAt).toString();
+
+          const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
+          const localUpdatedStr = new Date(local.updatedAt).toString();
+
+          const createdDiff = highlightDiff(cloudCreatedStr, localCreatedStr);
+          const updatedDiff = highlightDiff(cloudUpdatedStr, localUpdatedStr);
+
+          const title =
+            currentLang === "en"
+              ? "Choose Data Source"
+              : "选择数据来源";
+
+          const message =
+            (currentLang === "en"
+              ? "Cloud and Local personal settings both exist."
+              : "云端和本地个人设置同时存在。") +
+            "<br><br>" +
+            `<b>${currentLang === "en" ? "Cloud repository:" : "云端仓库："}</b><br>${repoName}<br><br>` +
+            `<b>${currentLang === "en" ? "Cloud created at:" : "云端创建时间："}</b><br>${createdDiff.a}<br><br>` +
+            `<b>${currentLang === "en" ? "Cloud last updated:" : "云端最后更新时间："}</b><br>${updatedDiff.a}<br><br><br>` +
+            `<b>${currentLang === "en" ? "Local created at:" : "本地创建时间："}</b><br>${createdDiff.b}<br><br>` +
+            `<b>${currentLang === "en" ? "Local last updated:" : "本地最后更新时间："}</b><br>${updatedDiff.b}<br><br>` +
+            (currentLang === "en"
+              ? "Which version do you want to keep?"
+              : "请选择要保留的版本：");
+
+          const useCloud = await new Promise(resolve => {
+            showPopupWindow({
+              title,
+              message,
+              buttons: [
+                {
+                  text: currentLang === "en" ? "Keep Cloud" : "保留云端数据",
+                  onClick: () => resolve(true)
+                },
+                {
+                  text: currentLang === "en" ? "Keep Local" : "保留本地数据",
+                  onClick: () => resolve(false)
+                }
+              ]
             });
+          });
 
-            if (useCloud) {
-              console.log(`[${repoName}] User chose cloud → overwrite local`);
+          if (useCloud) {
+            console.log(`[${repoName}] User chose cloud → overwrite local`);
 
-              await saveLocalJsonData("ledger-personal-settings.json", cloud);
+            await saveLocalJsonData("ledger-personal-settings.json", cloud);
 
-              const cloudImages = cloud.homeImages || [];
-              await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
-              await cleanupLocalFolder("homeImages", cloudImages);
+            const cloudImages = cloud.homeImages || [];
+            await pullFolderFromCloud("homeImages", repoName, cloudImages, token);
+            await cleanupLocalFolder("homeImages", cloudImages);
 
-            } else {
-              console.log(`[${repoName}] User chose local → overwrite cloud`);
+          } else {
+            console.log(`[${repoName}] User chose local → overwrite cloud`);
 
-              await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
+            await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
-              const localImages = local.homeImages || [];
-              await pushFolderToCloud("homeImages", repoName, localImages, token);
-              await cleanupCloudFolder("homeImages", repoName, localImages, token);
-            }
+            const localImages = local.homeImages || [];
+            await pushFolderToCloud("homeImages", repoName, localImages, token);
+            await cleanupCloudFolder("homeImages", repoName, localImages, token);
           }
         }
       }
+
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
     }
+  } else { // no need for syncing when token is null
+    completed = completed + 2;
+    updateSyncProgress(Math.round((completed / total) * 100));
   }
 
   // Sync ledger data
@@ -1060,6 +1115,9 @@ async function smartSync(selectedRepos, token, options = {}) {
 
       if (repo.skipSync) {
         console.log(`[${repo.name}] skipSync=true → skipping sync`);
+
+        completed++;
+        updateSyncProgress(Math.round((completed / total) * 100));
         continue;
       }
 
@@ -1101,6 +1159,8 @@ async function smartSync(selectedRepos, token, options = {}) {
 
         lastSyncedMap[repoId] = Date.now();
 
+        completed++;
+        updateSyncProgress(Math.round((completed / total) * 100));
         continue;
       }
 
@@ -1147,6 +1207,9 @@ async function smartSync(selectedRepos, token, options = {}) {
           }
 
           await del("isNewLedger");
+
+          completed++;
+          updateSyncProgress(Math.round((completed / total) * 100));
           continue;
         };
 
@@ -1168,6 +1231,9 @@ async function smartSync(selectedRepos, token, options = {}) {
 
             localLogMap[repoId] = [];
             lastSyncedMap[repoId] = Date.now();
+
+            completed++;
+            updateSyncProgress(Math.round((completed / total) * 100));
             continue;
 
           } else {
@@ -1264,9 +1330,21 @@ async function smartSync(selectedRepos, token, options = {}) {
             settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
             await saveLocalJsonData("ledger-settings.json", settingsMap);
             await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
+
+            completed++;
+            updateSyncProgress(Math.round((completed / total) * 100));
           }
         }
+      } else {
+        if (!token) { // if the above is skipped due to token=null
+          completed++;
+          updateSyncProgress(Math.round((completed / total) * 100));
+        }
       }
+
+    } else { // if skipp
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
     }
 
     settingsMap = await loadLocalJsonData("ledger-settings.json", {});
@@ -3932,6 +4010,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
   document.getElementById("delete-btn-headerbar").style.display = "none";
+  document.getElementById("add-btn-headerbar").style.display = "none";
   document.getElementById("transaction-nav").style.display = "none";
 
   let target = null;
@@ -3994,6 +4073,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   // Page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
     disablePageSwipe(target);
+
     let subWorkspace = null;
     let activeForm;
 
@@ -4075,11 +4155,82 @@ async function showPage(name, title = latestTitle, options = {}) {
     ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
     ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
 
-    document.getElementById("save-btn-headerbar").style.display = "block";
+    const saveBtn = document.getElementById("save-btn-headerbar");
+    saveBtn.style.display = "block";
+    saveBtn.onclick = () => saveEntry();
+
     document.getElementById("transaction-nav").style.display = "flex";
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
+
+  } else if (latestPage === "accounts") {
+    loadAccounts(options.activeRepoId);
+
+    const addBtn = document.getElementById("add-btn-headerbar");
+    addBtn.style.display = "block";
+
+    addBtn.onclick = () => {
+      showPage("account-add", currentLang === "en" ? "Add Account" : "新增账户", {
+        activeRepoId: options.activeRepoId,
+        mode: "main"
+      });
+    };
+
+  } else if (latestPage === "account-detail") {
+    const { activeRepoId, accountType, account } = options;
+
+    renderAccountTabs(activeRepoId, accountType, account);// Build the scrollable tab row
+    renderAccountDetailContent(activeRepoId, accountType, account);
+
+    const manageBtn = document.getElementById("manage-btn-headerbar");
+    manageBtn.style.display = "block";
+
+    manageBtn.onclick = () => {
+      showPage("account-edit", "Edit " + account.name, { activeRepoId, accountType, account });
+    };
+
+    const addBtn = document.getElementById("add-btn-headerbar");
+    addBtn.style.display = "block";
+
+    addBtn.onclick = () => {
+      showPage("account-add",
+        currentLang === "en"
+          ? `Add Sub‑Account`
+          : `新增子账户`,
+        {
+          activeRepoId,
+          mode: "sub",
+          accountType,
+          account
+        }
+      );
+    };
+
+  } else if (latestPage === "account-edit") {
+    const { activeRepoId, accountType, account } = options;
+
+    // Render the edit UI
+    renderAccountEditPage(activeRepoId, accountType, account);
+
+    // Show Save button
+    const saveBtn = document.getElementById("save-btn-headerbar");
+    saveBtn.style.display = "block";
+    saveBtn.onclick = async () => {
+      await saveAccountEdits(activeRepoId, accountType, account);
+    };
+
+  } else if (latestPage === "account-add") {
+
+    const { activeRepoId, mode, accountType, account } = options;
+    renderAccountAddPage({ activeRepoId, mode, accountType, account });
+
+    // Show Save button
+    const saveBtn = document.getElementById("save-btn-headerbar");
+    saveBtn.style.display = "block";
+    saveBtn.onclick = async () => {
+      await saveAccountAdd({ activeRepoId, mode, accountType, account });
+    };
 
   } else if (latestPage === "manage-labels") {
     loadLabels(options.activeRepoId, options.task, options.type, options.title);
@@ -4289,11 +4440,699 @@ function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeL
   page.dataset.activeRepoId = activeRepoId;
 
   // Auto-load labels for these tasks
-  if (task === "manage-labels" || task === "order-labels") {
+  if (task === "accounts" || task === "manage-labels" || task === "order-labels") {
     showPage(task, title, { activeRepoId, task, type, title });
   }
 }
 window.prepareRepoTabs = prepareRepoTabs;
+
+function loadAccounts(repoId) {
+  const target = document.getElementById("accounts-container");
+  target.innerHTML = "";
+
+  const repoSettings = settingsMap[repoId];
+  if (!repoSettings || !repoSettings.accounts) return;
+
+  const accounts = repoSettings.accounts;
+
+  accountTypes.forEach((type, typeIndex) => {
+    const list = accounts[type];
+    if (!list || list.length === 0) return;
+
+    const headerText = translations[currentLang][type];
+
+    const header = document.createElement("div");
+    header.className = "account-type-header";
+    header.textContent = headerText;
+    target.appendChild(header);
+
+    list.forEach((acc, index) => {
+      const row = createAccountRow(repoId, type, acc);
+      target.appendChild(row);
+
+      if (acc.notes?.trim()) {
+        const notes = document.createElement("div");
+        notes.className = "account-notes";
+        notes.textContent = acc.notes;
+        target.appendChild(notes);
+      }
+
+      if (index < list.length - 1) {
+        target.appendChild(document.createElement("hr"));
+      }
+    });
+
+    const isLastType = typeIndex === accountTypes.length - 1;
+
+    if (!isLastType) {
+      const wide = document.createElement("hr");
+      wide.className = "hr-wide";
+      target.appendChild(wide);
+    }
+  });
+}
+
+function createAccountRow(repoId, type, acc) {
+  const row = document.createElement("div");
+  row.className = "account-row";
+
+  row.addEventListener("click", () => {
+    showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, account: acc });
+  });
+
+  // Sub-accounts
+  const subs = acc["sub-accounts"] ?? [];
+  const hasSubs = subs.length > 0;
+
+  // Multi-currency detection
+  const currencies = new Set([acc.currency, ...subs.map(s => s.currency)]);
+  const multiCurrency = currencies.size > 1;
+
+  // Placeholder sum (you will compute later)
+  const sumPlaceholder = "--";
+
+  // Credit card red-aging
+  let agingStyle = "";
+  if (type === "creditCards" && !acc.paid) {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    const statementDate = acc.statementDate ? new Date(year, month, acc.statementDate) : null;
+    const dueDate = acc.dueDate ? new Date(year, month, acc.dueDate) : null;
+
+    if (statementDate && dueDate && today >= statementDate) {
+      const daysSince = (today - statementDate) / 86400000;
+      const daysBetween = (dueDate - statementDate) / 86400000;
+
+      let progress = Math.min(Math.max(daysSince / daysBetween, 0), 1);
+      if (today >= dueDate) progress = 1;
+
+      agingStyle = `background-color: rgba(255, 0, 0, ${progress * 0.25});`;
+    }
+  }
+
+  row.innerHTML = `
+    <div class="account-left">
+      <div class="account-title">
+        <span class="account-icon">${acc.icon ?? ""}</span>
+        <span class="account-name">${acc.name}</span>
+        ${hasSubs ? `<span class="subaccount-badge">${subs.length}</span>` : ""}
+      </div>
+    </div>
+
+    <div class="account-right ${multiCurrency ? "multi" : ""}">
+      <div class="account-sum">${sumPlaceholder}</div>
+      ${multiCurrency ? `<div class="account-multi-currency">Multiple currencies</div>` : ""}
+    </div>
+  `;
+
+  if (agingStyle) row.style = agingStyle;
+
+  return row;
+}
+
+function renderAccountTabs(repoId, accountType, account) {
+  const tabRow = document.getElementById("account-detail-tabs");
+  tabRow.innerHTML = "";
+
+  // "All" tab
+  tabRow.appendChild(
+    createAccountTabButton(repoId, accountType, account, "all", "All", true)
+  );
+
+  // Sub-account tabs
+  const subs = account["sub-accounts"] ?? [];
+  subs.forEach(sub => {
+    tabRow.appendChild(
+      createAccountTabButton(repoId, accountType, account, sub.name, sub.name, false)
+    );
+  });
+}
+
+function createAccountTabButton(repoId, accountType, account, key, label, active) {
+  const btn = document.createElement("button");
+  btn.className = "account-tab-btn";
+  if (active) btn.classList.add("active");
+  btn.textContent = label;
+
+  btn.addEventListener("click", () => {
+    btn.parentElement.querySelectorAll(".account-tab-btn")
+      .forEach(b => b.classList.remove("active"));
+
+    btn.classList.add("active");
+
+    renderAccountDetailContent(repoId, accountType, account, key);
+  });
+
+  return btn;
+}
+
+function getCycleDates(statementDay, dueDay) {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = today.getMonth();
+
+  const thisStatement = new Date(y, m, statementDay);
+
+  // If today is before this month's statement day,
+  // we are still in the previous cycle.
+  const baseMonth = today >= thisStatement ? m : m - 1;
+
+  const cycleStart = new Date(y, baseMonth, statementDay);
+  const cycleEnd = new Date(y, baseMonth + 1, statementDay);
+
+  // Due date must fall between cycleStart and cycleEnd
+  let dueDate;
+  if (dueDay >= statementDay) {
+    // later in the same cycle month
+    dueDate = new Date(y, baseMonth, dueDay);
+  } else {
+    // early in the next month of the same cycle
+    dueDate = new Date(y, baseMonth + 1, dueDay);
+  }
+
+  return { cycleStart, cycleEnd, dueDate };
+}
+
+function getPaidKey(cycleStart) {
+  return `${cycleStart.toISOString().slice(0, 10)}`;
+}
+
+function isCyclePaid(account, cycleStart) {
+  const key = getPaidKey(cycleStart);
+  return account.paidStatus?.[key] === true;
+}
+
+function setCyclePaid(account, cycleStart, paid) {
+  const key = getPaidKey(cycleStart);
+  if (!account.paidStatus) account.paidStatus = {};
+  account.paidStatus[key] = paid;
+}
+
+function renderAccountDetailContent(repoId, accountType, account, tabKey = "all") {
+  const t = translations[currentLang];
+
+  const content = document.getElementById("account-detail-content");
+  content.innerHTML = "";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "account-detail-summary";
+
+  // Placeholder values — you will compute real ones later
+  const totalSum = "--";
+  const inflow = "--";
+  const outflow = "--";
+
+  // --- COMMON SUMMARY (all accounts) ---
+  wrapper.innerHTML = `
+    <div class="summary-row">
+      <div class="summary-item">
+        <div class="summary-label">总额</div>
+        <div class="summary-value">${totalSum}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">流入</div>
+        <div class="summary-value summary-inflow">${inflow}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">流出</div>
+        <div class="summary-value summary-outflow">${outflow}</div>
+      </div>
+    </div>
+  `;
+
+  // --- CREDIT CARD SPECIAL SECTION ---
+  if (accountType === "creditCards") {
+    const today = new Date();
+
+    const statementDay = account.statementDate;
+    const dueDay = account.dueDate;
+
+    const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
+
+    const currentMonthIndex = cycleStart.getMonth(); // 0–11
+    const nextMonthIndex = cycleEnd.getMonth();      // 0–11
+
+    let currentMonth;
+    let nextMonth;
+
+    if (currentLang === "en") {
+      currentMonth = monthNamesEN[currentMonthIndex];
+      nextMonth = monthNamesEN[nextMonthIndex];
+    } else {
+      currentMonth = currentMonthIndex + 1; // 1–12
+      nextMonth = nextMonthIndex + 1;       // 1–12
+    }
+
+
+    const paid = isCyclePaid(account, cycleStart);
+
+    // --- STATEMENT PROGRESS ---
+    let statementProgress = 0;
+    let statementText = "-";
+
+    // always show days to next cycle
+    const total = (cycleEnd - cycleStart) / 86400000;
+    const passed = (today - cycleStart) / 86400000;
+    statementProgress = Math.max(0, Math.min(passed / total, 1));
+
+    const daysToCycleEnd = Math.ceil((cycleEnd - today) / 86400000);
+    statementText = t.statementDistance(nextMonth, daysToCycleEnd);
+
+    // --- DUE PROGRESS ---
+    let dueProgress = 0;
+    let dueText = "-";
+    let isOverdue = false;
+    let redness;
+
+    if (!paid) {
+      if (today < dueDate) {
+        const total = (dueDate - cycleStart) / 86400000;
+        const passed = (today - cycleStart) / 86400000;
+        dueProgress = Math.max(0, Math.min(passed / total, 1));
+        const daysToDue = Math.ceil((dueDate - today) / 86400000);
+        dueText = t.dueDistance(currentMonth, daysToDue);
+
+        // starting from 15 days before due date, gradually paint with as red
+        redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+      } else {
+        isOverdue = today > dueDate;
+
+        const daysPastDue = Math.ceil((today - dueDate) / 86400000);
+        dueProgress = 1;
+        dueText = t.overdue(currentMonth, daysPastDue);
+        redness = 1; // red color
+      }
+    } else {
+      dueProgress = 0;
+      dueText = t.paid(currentMonth);
+      redness = 0;
+    }
+
+    // --- CREDIT LIMIT ---
+    const creditLimit = account.creditLimit ?? null;
+    const formattedCreditLimit = creditLimit != null
+      ? getFormattedAmount(creditLimit)
+      : "-";
+
+    const used = 0; // compute later
+    const available = creditLimit != null ? creditLimit - used : "-";
+    const usagePercent = paid ? 0 : (creditLimit ? used / creditLimit : 0);
+
+    const ccSection = document.createElement("div");
+    ccSection.className = "cc-rows";
+
+    ccSection.innerHTML = `
+    <!-- Row 1: Statement Date -->
+    <div class="cc-row">
+      <div class="cc-left">
+        <span class="cc-label">${t.statementLabel}</span>
+        <span class="cc-value">${statementDay ?? "-"}</span>
+      </div>
+
+      <div class="cc-middle">
+        <div class="cc-progress-bar">
+          <div class="cc-progress-fill"
+            style="width: ${statementProgress * 100}%; --redness: 0"></div>
+        </div>
+      </div>
+
+      <div class="cc-right">
+        ${statementText}
+      </div>
+    </div>
+
+    <!-- Row 2: Due Date -->
+    <div class="cc-row">
+      <div class="cc-left">
+        <span class="cc-label">${t.dueLabel}</span>
+        <span class="cc-value">${dueDay ?? "-"}</span>
+      </div>
+
+      <div class="cc-middle">
+        <div class="cc-progress-bar">
+          <div class="cc-progress-fill ${isOverdue ? "overdue" : ""}"
+            style="width: ${dueProgress * 100}%; --redness: ${redness}""></div>
+        </div>
+      </div>
+
+      <div class="cc-right ${dueText.includes("逾期") || dueText.includes("overdue") ? "cc-text-overdue" : ""}">
+        ${dueText}
+      </div>
+    </div>
+
+    <!-- Row 3: Credit Limit -->
+    <div class="cc-row">
+      <div class="cc-left">
+        <span class="cc-label">${t.creditLimitLabel}</span>
+        <span class="cc-value">${formattedCreditLimit ?? "-"}</span>
+      </div>
+
+      <div class="cc-middle">
+        <div class="cc-progress-bar">
+          <div class="cc-progress-fill"
+            style="width: ${usagePercent * 100}%; --redness: 0"></div>
+        </div>
+      </div>
+
+      <div class="cc-right">
+        ${t.available(getFormattedAmount(available))}
+      </div>
+    </div>
+
+    <!-- Paid checkbox -->
+    <label class="cc-paid">
+      <input type="checkbox" id="cc-paid-checkbox" ${paid ? "checked" : ""}>
+      ${t.paidCheckbox}
+    </label>
+  `;
+
+    wrapper.appendChild(ccSection);
+
+    // Checkbox handler
+    setTimeout(() => {
+      const checkbox = document.getElementById("cc-paid-checkbox");
+      checkbox.onchange = async () => {
+        setCyclePaid(account, cycleStart, checkbox.checked);
+
+        await saveLocalJsonData("ledger-settings.json", settingsMap);
+        await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+        console.log(settingsMap[repoId])
+        renderAccountDetailContent(repoId, accountType, account);
+      };
+    });
+  }
+
+  content.appendChild(wrapper);
+}
+
+function renderAccountEditPage(repoId, accountType, account) {
+  const container = document.getElementById("account-edit-content");
+  container.innerHTML = "";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "account-edit-wrapper";
+
+  // MAIN ACCOUNT FIELDS
+  wrapper.appendChild(createSectionHeader("主账户信息"));
+  wrapper.appendChild(createInputRow("名称", "name", account.name));
+  wrapper.appendChild(createInputRow("图标", "icon", account.icon));
+  wrapper.appendChild(createInputRow("币种", "currency", account.currency));
+  wrapper.appendChild(createCheckboxRow("不计入资产", "exclude", account.exclude));
+  wrapper.appendChild(createTextareaRow("备注", "notes", account.notes));
+
+  // CREDIT CARD FIELDS
+  if (accountType === "creditCards") {
+    wrapper.appendChild(createSectionHeader("信用卡信息"));
+    wrapper.appendChild(createInputRow("账单日", "statementDate", account.statementDate ?? ""));
+    wrapper.appendChild(createInputRow("还款日", "dueDate", account.dueDate ?? ""));
+    wrapper.appendChild(createInputRow("信用额度", "creditLimit", account.creditLimit ?? ""));
+  }
+
+  // STORED VALUE CARD FIELDS
+  if (accountType === "storedValueCards") {
+    wrapper.appendChild(createSectionHeader("储值卡信息"));
+    wrapper.appendChild(createInputRow("卡号", "cardNumber", account.cardNumber ?? ""));
+    wrapper.appendChild(createInputRow("密码", "pin", account.pin ?? ""));
+  }
+
+  // SUB-ACCOUNTS
+  const subs = account["sub-accounts"] ?? [];
+  if (subs.length > 0) {
+    wrapper.appendChild(createSectionHeader("子账户"));
+
+    subs.forEach((sub, index) => {
+      const block = document.createElement("div");
+      block.className = "subaccount-block";
+
+      block.appendChild(createInputRow("名称", `sub-${index}-name`, sub.name));
+      block.appendChild(createInputRow("图标", `sub-${index}-icon`, sub.icon));
+      block.appendChild(createInputRow("币种", `sub-${index}-currency`, sub.currency));
+      block.appendChild(createTextareaRow("备注", `sub-${index}-notes`, sub.notes));
+
+      if (accountType === "storedValueCards") {
+        block.appendChild(createInputRow("卡号", `sub-${index}-cardNumber`, sub.cardNumber ?? ""));
+        block.appendChild(createInputRow("密码", `sub-${index}-pin`, sub.pin ?? ""));
+      }
+
+      wrapper.appendChild(block);
+    });
+  }
+
+  container.appendChild(wrapper);
+}
+
+function createSectionHeader(text) {
+  const h = document.createElement("div");
+  h.className = "edit-section-header";
+  h.textContent = text;
+  return h;
+}
+
+function createInputRow(label, key, value) {
+  const row = document.createElement("div");
+  row.className = "edit-row";
+  row.innerHTML = `
+    <label>${label}</label>
+    <input type="text" data-key="${key}" value="${value ?? ""}">
+  `;
+  return row;
+}
+
+function createCheckboxRow(label, key, checked) {
+  const row = document.createElement("div");
+  row.className = "edit-row";
+  row.innerHTML = `
+    <label>${label}</label>
+    <input type="checkbox" data-key="${key}" ${checked ? "checked" : ""}>
+  `;
+  return row;
+}
+
+function createTextareaRow(label, key, value) {
+  const row = document.createElement("div");
+  row.className = "edit-row";
+  row.innerHTML = `
+    <label>${label}</label>
+    <textarea data-key="${key}">${value ?? ""}</textarea>
+  `;
+  return row;
+}
+
+async function saveAccountEdits(repoId, accountType, account) {
+  const container = document.getElementById("account-edit-content");
+
+  // MAIN FIELDS
+  account.name = container.querySelector('[data-key="name"]').value.trim();
+  account.icon = container.querySelector('[data-key="icon"]').value.trim();
+  account.currency = container.querySelector('[data-key="currency"]').value.trim();
+  account.exclude = container.querySelector('[data-key="exclude"]').checked;
+  account.notes = container.querySelector('[data-key="notes"]').value.trim();
+
+  // CREDIT CARD FIELDS
+  if (accountType === "creditCards") {
+    account.statementDate = parseInt(container.querySelector('[data-key="statementDate"]').value) || null;
+    account.dueDate = parseInt(container.querySelector('[data-key="dueDate"]').value) || null;
+    account.creditLimit = parseFloat(container.querySelector('[data-key="creditLimit"]').value) || null;
+  }
+
+  // STORED VALUE CARD FIELDS
+  if (accountType === "storedValueCards") {
+    account.cardNumber = container.querySelector('[data-key="cardNumber"]').value.trim();
+    account.pin = container.querySelector('[data-key="pin"]').value.trim();
+  }
+
+  // SUB-ACCOUNTS
+  const subs = account["sub-accounts"] ?? [];
+  subs.forEach((sub, index) => {
+    sub.name = container.querySelector(`[data-key="sub-${index}-name"]`).value.trim();
+    sub.icon = container.querySelector(`[data-key="sub-${index}-icon"]`).value.trim();
+    sub.currency = container.querySelector(`[data-key="sub-${index}-currency"]`).value.trim();
+    sub.notes = container.querySelector(`[data-key="sub-${index}-notes"]`).value.trim();
+
+    if (accountType === "storedValueCards") {
+      sub.cardNumber = container.querySelector(`[data-key="sub-${index}-cardNumber"]`).value.trim();
+      sub.pin = container.querySelector(`[data-key="sub-${index}-pin"]`).value.trim();
+    }
+  });
+
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+
+  goBack();
+}
+
+function renderAccountAddPage({ activeRepoId, mode, accountType, account }) {
+  const container = document.getElementById("account-add-content");
+
+  const isSub = mode === "sub";
+
+  container.innerHTML = `
+    <div class="account-add">
+
+      ${isSub ? `
+        <div class="field-label">${currentLang === "en" ? "Parent Account" : "父账户"}</div>
+        <div class="field-value">${account.name}</div>
+      ` : ""}
+
+      ${!isSub ? `
+        <label class="field-label">${currentLang === "en" ? "Account Type" : "账户类型"}</label>
+        <select id="add-account-type" class="field-input">
+          <option value="">Select…</option>
+          <option value="bank">Bank</option>
+          <option value="cash">Cash</option>
+          <option value="creditCards">Credit Card</option>
+          <option value="storedValueCards">Stored Value Card</option>
+          <option value="investment">Investment</option>
+        </select>
+      ` : ""}
+
+      <div id="add-account-fields"></div>
+    </div>
+  `;
+
+  const typeSelect = document.getElementById("add-account-type");
+
+  // For main accounts: wait for user to pick type
+  // For sub-accounts: immediately render fields
+  if (isSub) {
+    renderAccountAddFields(accountType, true);
+  } else {
+    typeSelect.onchange = () => {
+      renderAccountAddFields(typeSelect.value, false);
+    };
+  }
+}
+
+function renderAccountAddFields(type, isSub) {
+  const container = document.getElementById("add-account-fields");
+
+  if (!type) {
+    container.innerHTML = "";
+    return;
+  }
+
+  let html = `
+    <label class="field-label">${currentLang === "en" ? "Name" : "名称"}</label>
+    <input id="acc-name" class="field-input">
+
+    <label class="field-label">${currentLang === "en" ? "Icon" : "图标"}</label>
+    <input id="acc-icon" class="field-input">
+
+    <label class="field-label">${currentLang === "en" ? "Currency" : "货币"}</label>
+    <input id="acc-currency" class="field-input">
+
+    <label class="field-label">${currentLang === "en" ? "Notes" : "备注"}</label>
+    <textarea id="acc-notes" class="field-input"></textarea>
+  `;
+
+  if (type === "creditCards" && !isSub) {
+    html += `
+      <label class="field-label">${currentLang === "en" ? "Statement Date" : "账单日"}</label>
+      <input id="acc-statement" type="number" class="field-input">
+
+      <label class="field-label">${currentLang === "en" ? "Due Date" : "还款日"}</label>
+      <input id="acc-due" type="number" class="field-input">
+
+      ${!isSub ? `
+      <label class="field-label">${currentLang === "en" ? "Credit Limit" : "信用额度"}</label>
+      <input id="acc-limit" type="number" class="field-input">
+      ` : ""}
+    `;
+  }
+
+  if (type === "storedValueCards") {
+    html += `
+      <label class="field-label">${currentLang === "en" ? "Card Number" : "卡号"}</label>
+      <input id="acc-cardnum" class="field-input">
+
+      <label class="field-label">${currentLang === "en" ? "PIN" : "密码"}</label>
+      <input id="acc-pin" class="field-input">
+    `;
+  }
+
+  html += `
+    <label class="field-label">${currentLang === "en" ? "Exclude from totals" : "不计入资产"}</label>
+    <input id="acc-exclude" type="checkbox" class="field-checkbox">
+  `;
+
+  container.innerHTML = html;
+}
+
+async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
+
+  // -----------------------------
+  // 1. Read common fields
+  // -----------------------------
+  const name = document.getElementById("acc-name")?.value.trim();
+  const icon = document.getElementById("acc-icon")?.value.trim();
+  const currency = document.getElementById("acc-currency")?.value.trim();
+  const notes = document.getElementById("acc-notes")?.value.trim();
+  const exclude = document.getElementById("acc-exclude")?.checked || false;
+
+  if (!name) {
+    alert(currentLang === "en" ? "Name is required" : "名称不能为空");
+    return;
+  }
+
+  // Base object for both main + sub
+  const base = { name, icon, currency, notes, exclude };
+
+  // -----------------------------
+  // 2. Determine account type
+  // -----------------------------
+  const type = mode === "main"
+    ? document.getElementById("add-account-type").value
+    : accountType;
+
+  if (!type) {
+    alert(currentLang === "en" ? "Select an account type" : "请选择账户类型");
+    return;
+  }
+
+  // -----------------------------
+  // 3. Type-specific fields
+  // -----------------------------
+  if (type === "creditCards") {
+    base.statementDate = parseInt(document.getElementById("acc-statement")?.value) || null;
+    base.dueDate = parseInt(document.getElementById("acc-due")?.value) || null;
+
+    if (mode === "main") {
+      base.creditLimit = parseFloat(document.getElementById("acc-limit")?.value) || null;
+    }
+  }
+
+  if (type === "storedValueCards") {
+    base.cardNumber = document.getElementById("acc-cardnum")?.value.trim() || "";
+    base.pin = document.getElementById("acc-pin")?.value.trim() || "";
+  }
+
+  // -----------------------------
+  // 4. Save MAIN account
+  // -----------------------------
+  if (mode === "main") {
+    base.exclude = false;
+    base["sub-accounts"] = [];
+
+    settingsMap[activeRepoId].accounts[type].push(base);
+  }
+
+  // -----------------------------
+  // 5. Save SUB account
+  // -----------------------------
+  if (mode === "sub") {
+    account["sub-accounts"].push(base);
+  }
+
+  // -----------------------------
+  // 6. Persist + Sync
+  // -----------------------------
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
+
+  goBack;
+}
 
 async function loadLabels(activeRepoId, task, type, title) {
   const t = translations[currentLang];
@@ -4311,11 +5150,6 @@ async function loadLabels(activeRepoId, task, type, title) {
 
   const block = document.createElement("div");
   block.classList.add("repo-block");
-
-  // Repo name header
-  const header = document.createElement("h3");
-  header.textContent = repoInfo ? repoInfo.name : "(Unknown Repo)";
-  block.appendChild(header);
 
   let primaryCategories = repoSettings[type];
 
@@ -5183,40 +6017,29 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
     // === DELETE HANDLER ===
     deleteBtn.addEventListener("click", async () => {
       if (!confirm("Delete this category?")) return;
+
       const categories = settingsMap[activeRepoId][type];
-      const householdRef = doc(db, "households", activeRepoId)
 
-      try {
-        if (isSecondary) {
+      let updatedCategories;
 
-          const updatedCategories = categories.map(cat => {
-            if (cat.primary === parentName) {
-              return {
-                ...cat,
-                secondaries: cat.secondaries.filter(sec => sec.name !== name)
-              };
-            }
-            return cat;
-          });
+      if (isSecondary) { // Remove secondary from its parent
+        updatedCategories = categories.map(cat => {
+          if (cat.primary === parentName) {
+            return {
+              ...cat,
+              secondaries: cat.secondaries.filter(sec => sec.name !== name)
+            };
+          }
+          return cat;
+        });
 
-          await updateDoc(householdRef, {
-            [type]: updatedCategories,
-            lastSynced: getFormattedTime()
-          });
-
-        } else {
-          const updatedCategories = categories.filter(cat => cat.primary !== name);
-
-          await updateDoc(householdRef, {
-            [type]: updatedCategories,
-            lastSynced: getFormattedTime()
-          });
-        }
-      } catch (err) {
-        console.error("Error deleting category:", err);
+      } else { // Remove entire primary category
+        updatedCategories = categories.filter(cat => cat.primary !== name);
       }
 
-      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
+      settingsMap[activeRepoId][type] = updatedCategories;
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
 
       loadLabels(activeRepoId, task, type, title);
     });
@@ -5374,10 +6197,7 @@ function createCategoryRow(name, icon, parentWrapper, block, activeRepoId, task,
       isDragging = false;
       btn.classList.remove("dragging");
 
-      ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-
       loadLabels(activeRepoId, task, type, title);
-
     });
   }
 
@@ -5624,7 +6444,7 @@ function disablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-async function setLanguage(lang, sync=true) {
+async function setLanguage(lang, sync = true) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -5754,16 +6574,16 @@ function isMobileBrowser() {
 }
 
 function increaseFontsize() {
-  adjustFontsize(0.05, false); // increase fontsize
+  adjustFontsize(0.05, true); // increase fontsize
 }
 window.increaseFontsize = increaseFontsize;
 
 function decreaseFontsize() {
-  adjustFontsize(-0.05, false); // decrease fontsize
+  adjustFontsize(-0.05, true); // decrease fontsize
 }
 window.decreaseFontsize = decreaseFontsize;
 
-async function adjustFontsize(delta, sync=true) {
+async function adjustFontsize(delta, sync = true) {
   const t = translations[currentLang];
 
   // Get current value from CSS variable
@@ -5820,7 +6640,7 @@ function openColorPicker() {
   picker.oninput = function () {
     const chosenColor = picker.value;
     applyThemeColor(chosenColor);
-    
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(async () => {
       const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
@@ -6570,11 +7390,11 @@ function renderEntryGroup(day, entries) {
 
     // Add <hr> between entries, but not after the last one 
     if (i < entries.length - 1) {
-      html += `<hr class="fe-entry-divider">`;
+      html += `<hr>`;
     }
   });
 
-  html += `<hr class="fe-group-divider">`;
+  html += `<hr class="hr-wide">`;
 
   html += `</div>`;
   return html;
@@ -6759,7 +7579,7 @@ function getTodayYYYYMMDD() {
 }
 
 // --- Color Scheme ---
-async function setColorScheme(scheme, sync=true) {
+async function setColorScheme(scheme, sync = true) {
   const t = translations[currentLang];
 
   if (scheme === "alt") {

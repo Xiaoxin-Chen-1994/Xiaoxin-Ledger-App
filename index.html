@@ -21,15 +21,24 @@
   </div>
 
   <div class="header-bar">
-    <button id="return-btn" onclick="onReturnButton()" style="display: none;">&lt; 返回</button>
-    <button id="cancel-btn" onclick="resetCreate()" style="display: none;">取消</button>
+    <button id="return-btn" onclick="onReturnButton()" style="display:none;">&lt; 返回</button>
+    <button id="cancel-btn" onclick="resetCreate()" style="display:none;">取消</button>
+
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
-    <button id="save-btn-headerbar" class="header-right-button" onclick="saveEntry()"
-      style="display: none;">✔️保存</button>
-    <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()"
-      style="display: none;">🔍搜索</button>
-    <button id="manage-btn-headerbar" class="header-right-button" style="display: none;">管理</button>
-    <button id="delete-btn-headerbar" class="header-right-button" style="display: none;">删除</button>
+
+    <div class="header-right-group">
+      <button id="save-btn-headerbar" class="header-right-button" style="display:none;">✔️保存</button>
+      <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display:none;">🔍搜索</button>
+      <button id="manage-btn-headerbar" class="header-right-button" style="display:none;">管理</button>
+      <button id="delete-btn-headerbar" class="header-right-button" style="display:none;">删除</button>
+      <button id="add-btn-headerbar" class="header-right-button" style="display:none;">➕</button>
+    </div>
+
+    <div id="sync-progress-bar">
+      <div id="sync-progress-fill">
+        <div id="sync-progress-beam"></div>
+      </div>
+    </div>
   </div>
 
   <div class="pages-wrapper" id="pages-wrapper">
@@ -60,7 +69,28 @@
     <!-- Accounts Page -->
     <div class="page" id="accounts-page">
       <div class="scroll">
+        <!-- Tabs -->
+        <div id="accounts-repo-tabs" class="transaction-tabs"></div>
+        <div id="accounts-container"></div>
+      </div>
+    </div>
 
+    <div id="account-detail-page" class="page">
+      <div class="scroll">
+        <div id="account-detail-tabs" class="account-detail-tabs"></div>
+        <div id="account-detail-content"></div>
+      </div>
+    </div>
+
+    <div id="account-edit-page" class="page">
+      <div class="scroll">
+        <div id="account-edit-content"></div>
+      </div>
+    </div>
+
+    <div id="account-add-page" class="page">
+      <div class="scroll">
+        <div id="account-add-content"></div>
       </div>
     </div>
 
@@ -477,12 +507,12 @@
         <div class="sticky-header">
           <div class="row">
             <label for="itemBox">Item:</label>
-            <input type="text" id="itemBox" autocomplete="off"/>
+            <input type="text" id="itemBox" autocomplete="off" />
           </div>
           <div id="searchResults" style="padding: 0rem;"></div>
           <div class="row">
             <label for="notesBox">Notes:</label>
-            <input type="text" id="notesBox" autocomplete="off"/>
+            <input type="text" id="notesBox" autocomplete="off" />
           </div>
           <div class="row">
             <label for="">Ledger history:</label>
@@ -751,14 +781,14 @@
     <div class="page" id="manage-labels-page">
       <div class="scroll">
         <!-- Tabs -->
-        <div id="manage-labels-household-tabs" class="transaction-tabs"></div>
+        <div id="manage-labels-repo-tabs" class="transaction-tabs"></div>
         <div id="manage-labels-labels-container"></div>
       </div>
     </div>
 
     <div class="page" id="order-labels-page">
       <div class="scroll">
-        <div id="order-labels-household-tabs" class="transaction-tabs"></div>
+        <div id="order-labels-repo-tabs" class="transaction-tabs"></div>
         <div id="order-labels-labels-container"></div>
       </div>
     </div>
@@ -833,7 +863,8 @@
   <!-- Bottom Navigation Bar -->
   <nav id="home-nav" class="bottom-nav" style="display:none;">
     <button id="nav-home" onclick="showPage('home', 'homeTitle')">首页</button>
-    <button id="nav-accounts" onclick="showPage('accounts', 'navAccounts')">账户</button>
+    <button id="nav-accounts"
+      onclick="prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)">账户</button>
     <button id="nav-transaction" onclick="showPage('create', 'navTransaction')">记一笔</button>
     <button id="nav-utilities" onclick="showPage('utilities', 'navUtilities')">工具</button>
     <button id="nav-settings" onclick="showPage('settings', 'settings')">设置</button>

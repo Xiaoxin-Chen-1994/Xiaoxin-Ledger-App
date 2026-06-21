@@ -155,6 +155,102 @@ a {
   text-align: center;
 }
 
+#return-btn,
+#cancel-btn {
+  position: absolute;
+  /* pin button to the left */
+  left: 1rem;
+  text-align: left;
+  padding-left: 0;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: calc(var(--font-size) * 1);
+  /* a percentage of the base font size */
+  cursor: pointer;
+  font-weight: bold;
+  /* make text bold */
+}
+
+#return-btn:hover,
+#cancel-btn:hover {
+  background: transparent;
+  color: var(--primary);
+}
+
+/* Right button container */
+.header-right-group {
+  position: absolute;
+  right: 1rem;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center; /* vertically center text inside full-height buttons */
+  gap: 0.75rem;
+}
+
+/* Buttons fill full height and size to content width */
+.header-right-button {
+  height: 100%;          /* <-- full header height */
+  display: flex;         /* <-- center text vertically */
+  align-items: center;   /* <-- center text vertically */
+  padding: 0 0.25rem;    /* <-- small horizontal padding */
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: calc(var(--font-size) * 1);
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;   /* <-- prevent wrapping */
+}
+
+.header-right-button:hover {
+  background: transparent;
+  color: var(--primary);
+}
+
+#sync-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(0,0,0,0.1);
+  display: none;
+  overflow: hidden;
+}
+
+#sync-progress-fill {
+  position: relative;
+  width: 0%; /* JS updates this */
+  height: 100%;
+  background: var(--primary-base);
+  transition: width 0.15s linear;
+  overflow: hidden; /* required so beam stays inside */
+}
+
+/* The moving beam */
+#sync-progress-beam {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.7) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  animation: beamSweep 1.2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes beamSweep {
+  0%   { left: -40%; }
+  100% { left: 100%; }
+}
+
 .section {
   background: var(--card);
   border: 0.0625rem solid var(--border);
@@ -222,51 +318,6 @@ a {
   transition: transform 0.3s ease;
 }
 
-
-#return-btn,
-#cancel-btn {
-  position: absolute;
-  /* pin button to the left */
-  left: 1rem;
-  text-align: left;
-  padding-left: 0;
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  font-size: calc(var(--font-size) * 1);
-  /* a percentage of the base font size */
-  cursor: pointer;
-  font-weight: bold;
-  /* make text bold */
-}
-
-#return-btn:hover,
-#cancel-btn:hover {
-  background: transparent;
-  color: var(--primary);
-}
-
-.header-right-button {
-  position: absolute;
-  /* pin button to the right */
-  right: 1rem;
-  text-align: right;
-  padding-right: 0;
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  font-size: calc(var(--font-size) * 1);
-  /* a percentage of the base font size */
-  cursor: pointer;
-  font-weight: bold;
-  /* make text bold */
-}
-
-.header-right-button:hover {
-  background: transparent;
-  color: var(--primary);
-}
-
 h2 {
   font-size: calc(var(--font-size) * 1.1);
   margin: 0.5rem 0;
@@ -277,6 +328,268 @@ label {
   margin-top: 0.75rem;
   font-size: calc(var(--font-size) * 1);
   font-weight: 600;
+}
+
+.account-type-header {
+  color: rgba(127, 127, 127);
+  font-size: calc(var(--font-size) * 0.8);
+  margin: 0.4rem 0 0.8rem 0; /* optional spacing */
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0.6rem 0.4rem;
+}
+
+.account-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.account-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--font-size);
+}
+
+.account-icon {
+  font-size: 1.2em;
+}
+
+.subaccount-badge {
+  background: var(--primary);
+  color: white;
+  padding: 0 0.4rem;
+  border-radius: 0.4rem;
+  font-size: calc(var(--font-size) * 0.75);
+}
+
+.account-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: right;
+  min-width: 80px;
+}
+
+.account-right.multi {
+  justify-content: space-between;
+}
+
+.account-sum {
+  font-size: calc(var(--font-size) * 1.1);
+  font-weight: 600;
+}
+
+.account-multi-currency {
+  font-size: calc(var(--font-size) * 0.75);
+  color: var(--muted);
+}
+
+/* Scrollable container */
+.account-detail-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  scrollbar-width: none; /* Firefox */
+}
+
+.account-detail-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Tab buttons — identical to transaction tabs */
+.account-tab-btn {
+  flex: 0 0 auto; /* important: do NOT stretch, allow scrolling */
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+  white-space: nowrap; /* prevent wrapping */
+}
+
+/* Active state — same as transaction tabs */
+.account-tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: bold;
+}
+
+.account-detail-summary {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* --- Common summary --- */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-item {
+  flex: 1;
+  text-align: center;
+}
+
+.summary-label {
+  color: var(--muted);
+  font-size: calc(var(--font-size) * 0.8);
+}
+
+.summary-value {
+  font-size: calc(var(--font-size) * 1.2);
+  font-weight: bold;
+}
+
+.summary-inflow {
+  color: var(--green);
+}
+
+.summary-outflow {
+  color: var(--red);
+}
+
+.cc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.cc-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* left | middle | right */
+  align-items: center;
+  column-gap: 0.5rem;
+}
+
+.cc-left {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: calc(var(--font-size) * 9); /* FIXED WIDTH */
+}
+
+.cc-label {
+  font-size: calc(var(--font-size) * 0.9);
+  color: var(--muted);
+}
+
+.cc-value {
+  font-size: calc(var(--font-size) * 0.9);
+  font-weight: bold;
+}
+
+.cc-middle {
+  width: 100%; /* important for grid */
+}
+
+.cc-right {
+  font-size: calc(var(--font-size) * 0.9);
+  white-space: nowrap;
+  width: calc(var(--font-size) * 9); /* FIXED WIDTH */
+  text-align: left;
+}
+
+.cc-progress-bar {
+  width: 100%;
+  height: 0.4rem;
+  background: var(--border);
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.cc-progress-fill {
+  height: 100%;
+  background: color-mix(in srgb, var(--red) calc(var(--redness) * 100%), var(--primary));
+  transition: width 0.3s ease;
+}
+
+.cc-progress-fill.overdue {
+  background: var(--red);
+}
+
+.cc-text-overdue {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.account-edit-wrapper {
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* tighter spacing */
+}
+
+/* Section header */
+.edit-section-header {
+  font-size: calc(var(--font-size) * 0.95);
+  font-weight: bold;
+  color: var(--primary);
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+/* Compact row */
+.edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.edit-row:last-child {
+  border-bottom: none;
+}
+
+.edit-row label {
+  flex: 0 0 5.5rem; /* fixed label width */
+  color: var(--muted);
+  font-size: calc(var(--font-size) * 0.85);
+}
+
+/* Compact input */
+.edit-row input,
+.edit-row textarea {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  font-size: calc(var(--font-size) * 0.9);
+}
+
+.edit-row textarea {
+  height: 3rem; /* small */
+  resize: vertical;
+}
+
+/* Checkbox row */
+.edit-row input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* Sub-account block */
+.subaccount-block {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .transaction-tabs {
@@ -1346,6 +1659,12 @@ hr {
   margin: 0.3rem 0;
 }
 
+.hr-wide {
+  border: none;
+  border-top: 3px solid var(--border);
+  margin: 0.8rem 0;
+}
+
 #statusMessage {
   position: fixed;
   bottom: 0;
@@ -2307,21 +2626,6 @@ emoji-picker {
   text-align: center;
   color: var(--text-secondary, #666);
   font-size: calc(var(--font-size) * 1);
-}
-
-/* Entry divider */
-.fe-entry-divider {
-  border: none;
-  border-bottom: 1px solid var(--border-color, #e5e5e5);
-  margin: 10px 0;
-  opacity: 0.6;
-}
-
-.fe-group-divider {
-  border: none;
-  border-bottom: 3px solid var(--border-color, #e5e5e5);
-  margin: 25px 0 20px 0;
-  opacity: 0.6;
 }
 
 /* Big date or "Today" */
