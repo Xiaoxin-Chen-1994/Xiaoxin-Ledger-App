@@ -5815,7 +5815,7 @@ function openColorPicker() {
     applyThemeColor(chosenColor);
     
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
+    debounceTimer = setTimeout(async () => {
       const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
       personalSettings.themeColor = chosenColor;
       personalSettings.updatedAt = Date.now();
@@ -5834,7 +5834,7 @@ function rgbToHex(rgb) {
   ).join('');
 }
 
-function resetThemeColor() {
+async function resetThemeColor() {
   // Define your default color (same as in CSS :root)
   const defaultColor = "#e88b1a";
   applyThemeColor(defaultColor);
@@ -5847,7 +5847,7 @@ function resetThemeColor() {
 }
 window.resetThemeColor = resetThemeColor;
 
-async function applyThemeColor(color) {
+function applyThemeColor(color) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
