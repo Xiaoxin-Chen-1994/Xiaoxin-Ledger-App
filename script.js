@@ -962,7 +962,9 @@ async function smartSync(selectedRepos, token, options = {}) {
             // createdAt same → choose the one with newer updatedAt
             if (local.updatedAt > cloud.updatedAt) {
               console.log(`[${repoName}] createdAt same → local newer → using local`);
-              console.log(local.updatedAt, cloud.updatedAt, local.updatedAt > cloud.updatedAt)
+              const cloudUpdatedStr = new Date(cloud.updatedAt).toString();
+              const localUpdatedStr = new Date(local.updatedAt).toString();
+              console.log(cloudUpdatedStr, localUpdatedStr, local.updatedAt > cloud.updatedAt)
 
               await githubUploadFile(repoName, "ledger-personal-settings.json", local, token);
 
@@ -1790,7 +1792,7 @@ async function init() {
   const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
   if (personal.language) {
     currentLang = personal.language;
-    setLanguage(currentLang);
+    setLanguage(currentLang, false); // do not sync to cloud
   }
 
   if (isMobileBrowser()) {
@@ -1808,7 +1810,7 @@ async function init() {
   }
 
   if (personal.colorScheme) {
-    setColorScheme(personal.colorScheme);
+    setColorScheme(personal.colorScheme, false); // do not sync to cloud
     document.getElementById("color-scheme-select").value = personal.colorScheme;
   }
 
@@ -5622,7 +5624,7 @@ function disablePageSwipe(pageEl) {
 }
 
 // --- Language Switcher ---
-async function setLanguage(lang) {
+async function setLanguage(lang, sync=true) {
   currentLang = lang;
   const t = translations[lang];
 
@@ -5737,11 +5739,13 @@ async function setLanguage(lang) {
   document.getElementById("nav-utilities").textContent = t.navUtilities;
   document.getElementById("nav-settings").textContent = t.settings;
 
-  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
-  personalSettings.language = currentLang;
-  personalSettings.updatedAt = Date.now();
-  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
-  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+  if (sync) {
+    const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+    personalSettings.language = currentLang;
+    personalSettings.updatedAt = Date.now();
+    await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+    await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+  }
 }
 window.setLanguage = setLanguage;
 
@@ -5750,16 +5754,16 @@ function isMobileBrowser() {
 }
 
 function increaseFontsize() {
-  adjustFontsize(0.05); // increase fontsize
+  adjustFontsize(0.05, false); // increase fontsize
 }
 window.increaseFontsize = increaseFontsize;
 
 function decreaseFontsize() {
-  adjustFontsize(-0.05); // decrease fontsize
+  adjustFontsize(-0.05, false); // decrease fontsize
 }
 window.decreaseFontsize = decreaseFontsize;
 
-async function adjustFontsize(delta) {
+async function adjustFontsize(delta, sync=true) {
   const t = translations[currentLang];
 
   // Get current value from CSS variable
@@ -5776,15 +5780,17 @@ async function adjustFontsize(delta) {
   // Apply to CSS variable
   document.documentElement.style.setProperty("--font-size", newSize);
 
-  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
-  if (isMobileBrowser()) {
-    personalSettings.fontsizeMobile = newSize;
-  } else {
-    personalSettings.fontsizeDesktop = newSize;
+  if (sync) {
+    const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+    if (isMobileBrowser()) {
+      personalSettings.fontsizeMobile = newSize;
+    } else {
+      personalSettings.fontsizeDesktop = newSize;
+    }
+    personalSettings.updatedAt = Date.now();
+    await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+    await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
   }
-  personalSettings.updatedAt = Date.now();
-  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
-  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
 
 function openColorPicker() {
@@ -6753,7 +6759,7 @@ function getTodayYYYYMMDD() {
 }
 
 // --- Color Scheme ---
-async function setColorScheme(scheme) {
+async function setColorScheme(scheme, sync=true) {
   const t = translations[currentLang];
 
   if (scheme === "alt") {
@@ -6762,11 +6768,13 @@ async function setColorScheme(scheme) {
     document.documentElement.classList.remove("alt-scheme");
   }
 
-  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
-  personalSettings.colorScheme = scheme;
-  personalSettings.updatedAt = Date.now();
-  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
-  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+  if (sync) {
+    const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+    personalSettings.colorScheme = scheme;
+    personalSettings.updatedAt = Date.now();
+    await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+    await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+  }
 }
 window.setColorScheme = setColorScheme;
 
