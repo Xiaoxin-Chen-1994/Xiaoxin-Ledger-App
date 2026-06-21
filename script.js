@@ -912,6 +912,7 @@ async function smartSync(selectedRepos, token, options = {}) {
   const syncLedgerData = options.syncLedgerData ?? false;
   const repoId = options.repoId ?? null;
 
+  const local = await loadLocalJsonData("ledger-personal-settings.json", null);
   let cloud = null;
   let cloudDeleted = null;
 
@@ -919,8 +920,6 @@ async function smartSync(selectedRepos, token, options = {}) {
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
   
-    const local = await loadLocalJsonData("ledger-personal-settings.json", null);
-
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
