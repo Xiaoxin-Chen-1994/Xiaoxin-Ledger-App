@@ -1731,7 +1731,7 @@ async function init() {
 
   let t = translations[currentLang];
 
-  // 1. Load token
+  // Load token
   token = await loadLocalJsonData("github_token.json", null);
 
   const loginBtn = document.getElementById("login-btn");
@@ -1756,6 +1756,83 @@ async function init() {
   selectedRepos = await loadLocalJsonData("selectedRepos.json", null);
   let user;
 
+  if (!token) {// if not logged in
+    if (!selectedRepos) { // if not logged in, and if local data not exist, create new
+      let ledgerRepos;
+
+      ledgerRepos = [
+        {
+          id: "local",
+          name: currentLang === "zh" ? "本地账本" : "Local Ledger",
+          ownerId: "local"
+        }
+      ];
+
+      selectedRepos = {
+        ledgerRepos,
+        activeLedgerRepo: ledgerRepos[0]
+      };
+
+      await saveLocalJsonData("selectedRepos.json", selectedRepos);
+    }
+
+    window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
+  }
+
+  const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
+  if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("deleteMode") === "1") {
+      await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
+      return;
+
+    } else {
+      await del("pendingDelete"); // clear this variable to cancel delete account
+    }
+  }
+
+  // Load ALL ledger DBs
+  await smartSync(selectedRepos, token); // this first smart sync is only to initialize local data if not already exist
+
+  // Initialize household selector
+  initLedgerSelector();
+  toggleLedgerFormRows();
+
+  // UI updates
+  document.getElementById("home-nav").style.display = "flex";
+
+  // Apply profile settings
+
+  const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
+  if (personal.language) {
+    currentLang = personal.language;
+    setLanguage(currentLang);
+  }
+
+  if (isMobileBrowser()) {
+    if (personal.fontsizeMobile) {
+      document.documentElement.style.setProperty("--font-size", personal.fontsizeMobile);
+    }
+  } else {
+    if (personal.fontsizeDesktop) {
+      document.documentElement.style.setProperty("--font-size", personal.fontsizeDesktop);
+    }
+  }
+
+  if (personal.themeColor) {
+    applyThemeColor(personal.themeColor)
+  }
+
+  if (personal.colorScheme) {
+    setColorScheme(personal.colorScheme);
+    document.getElementById("color-scheme-select").value = personal.colorScheme;
+  }
+
+  // ✅ Load main app
+  showPage("home", "Xiaoxin's Ledger App");
+
+  // retrieve github data after page is shown
   if (token) {
     try {
       // Get current user login
@@ -1778,12 +1855,12 @@ async function init() {
     window.currentUserLogin = user.login;
     window.currentUserId = user.id;
 
-    // 2. Get all private repos
+    // Get all private repos
     const repos = await fetch("https://api.github.com/user/repos?visibility=private", {
       headers: { Authorization: `token ${token}` }
     }).then(r => r.json());
 
-    // 3. Filter ledger repos (any repo user can push to)
+    // Filter ledger repos (any repo user can push to)
     const ledgerRepos = repos.filter(r => r.permissions.push);
 
     function validateLocalSelectedRepos(ledgerRepos) {
@@ -1825,82 +1902,10 @@ async function init() {
       showRepoSelectionAndMergeRepos(ledgerRepos, incompatible);
       return;
     }
-
-  } else { // if not logged in
-    if (!selectedRepos) { // if not logged in, and if local data not exist, create new
-      let ledgerRepos;
-
-      ledgerRepos = [
-        {
-          id: "local",
-          name: currentLang === "zh" ? "本地账本" : "Local Ledger",
-          ownerId: "local"
-        }
-      ];
-
-      selectedRepos = {
-        ledgerRepos,
-        activeLedgerRepo: ledgerRepos[0]
-      };
-
-      await saveLocalJsonData("selectedRepos.json", selectedRepos);
-    }
-
-    window.currentUserLogin = selectedRepos.activeLedgerRepo.name; // for local ledger
   }
 
-  const pendingDeleteMode = await get("pendingDelete"); // this is a flag for account deletion
-  if (pendingDeleteMode === "account" || pendingDeleteMode === "data") {
-    const params = new URLSearchParams(window.location.search);
-
-    if (params.get("deleteMode") === "1") {
-      await performAccountDeletion(pendingDeleteMode); // pendingDelete variable is cleared when deleting localStorage
-      return;
-
-    } else {
-      await del("pendingDelete"); // clear this variable to cancel delete account
-    }
-  }
-
-  // 4. Load ALL ledger DBs
-  await smartSync(selectedRepos, token);
-
-  // Initialize household selector
-  initLedgerSelector();
-  toggleLedgerFormRows();
-
-  // UI updates
-  document.getElementById("home-nav").style.display = "flex";
-
-  // Apply profile settings
-
-  const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
-  if (personal.language) {
-    currentLang = personal.language;
-    setLanguage(currentLang);
-  }
-
-  if (isMobileBrowser()) {
-    if (personal.fontsizeMobile) {
-      document.documentElement.style.setProperty("--font-size", personal.fontsizeMobile);
-    }
-  } else {
-    if (personal.fontsizeDesktop) {
-      document.documentElement.style.setProperty("--font-size", personal.fontsizeDesktop);
-    }
-  }
-
-  if (personal.themeColor) {
-    applyThemeColor(personal.themeColor)
-  }
-
-  if (personal.colorScheme) {
-    setColorScheme(personal.colorScheme);
-    document.getElementById("color-scheme-select").value = personal.colorScheme;
-  }
-
-  // ✅ Load main app
-  showPage("home", "Xiaoxin's Ledger App");
+  // Load ALL ledger DBs
+  await smartSync(selectedRepos, token); // this second smart sync actually merges with the cloud data
 }
 
 init();
