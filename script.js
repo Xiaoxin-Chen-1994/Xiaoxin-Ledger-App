@@ -4513,22 +4513,36 @@ function createAccountRow(repoId, type, acc) {
 
   // Credit card red-aging
   let agingStyle = "";
-  if (type === "creditCards" && !acc.paid) {
+
+  if (type === "creditCards") {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
 
-    const statementDate = acc.statementDate ? new Date(year, month, acc.statementDate) : null;
-    const dueDate = acc.dueDate ? new Date(year, month, acc.dueDate) : null;
+    const statementDay = acc.statementDate;
+    const dueDay = acc.dueDate;
 
-    if (statementDate && dueDate && today >= statementDate) {
-      const daysSince = (today - statementDate) / 86400000;
-      const daysBetween = (dueDate - statementDate) / 86400000;
+    // Use your cycle function
+    const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
 
-      let progress = Math.min(Math.max(daysSince / daysBetween, 0), 1);
-      if (today >= dueDate) progress = 1;
+    // Paid?
+    const paid = isCyclePaid(acc, cycleStart);
 
-      agingStyle = `background-color: rgba(255, 0, 0, ${progress * 0.25});`;
+    if (!paid) {
+      let redness = 0;
+
+      if (today < dueDate) {
+        // Days until due
+        const daysToDue = Math.ceil((dueDate - today) / 86400000);
+
+        if (daysToDue <= 15) {
+          // Same redness formula as detail page
+          redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
+        }
+      } else {
+        // Overdue → full red
+        redness = 1;
+      }
+
+      agingStyle = `background-color: rgba(255, 0, 0, ${redness});`;
     }
   }
 
@@ -4684,7 +4698,6 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       currentMonth = currentMonthIndex + 1; // 1–12
       nextMonth = nextMonthIndex + 1;       // 1–12
     }
-
 
     const paid = isCyclePaid(account, cycleStart);
 
