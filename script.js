@@ -923,7 +923,7 @@ async function smartSync(selectedRepos, token, options = {}) {
       repoName = selectedRepos.personalSettingsRepo.name;
 
       try {
-        cloud = await githubReadJson(repoName, "ledger-settings.json", token);
+        cloud = await githubReadJson(repoName, "ledger-personal-settings.json", token);
 
         cloudDeleted = cloud?.deletedAtTimestamp || 0;
         offline = false;
