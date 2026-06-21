@@ -5812,10 +5812,15 @@ function openColorPicker() {
 
   picker.oninput = function () {
     const chosenColor = picker.value;
-
+    applyThemeColor(chosenColor);
+    
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      applyThemeColor(chosenColor);
+      const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+      personalSettings.themeColor = chosenColor;
+      personalSettings.updatedAt = Date.now();
+      await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+      await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
     }, 500); // adjust delay as needed
   };
 }
@@ -5833,6 +5838,12 @@ function resetThemeColor() {
   // Define your default color (same as in CSS :root)
   const defaultColor = "#e88b1a";
   applyThemeColor(defaultColor);
+
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  personalSettings.themeColor = chosenColor;
+  personalSettings.updatedAt = Date.now();
+  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
 window.resetThemeColor = resetThemeColor;
 
@@ -5850,13 +5861,6 @@ async function applyThemeColor(color) {
     metaThemeColor.content = color;
     document.head.appendChild(metaThemeColor);
   }
-
-  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
-  console.log(personalSettings)
-  personalSettings.themeColor = color;
-  personalSettings.updatedAt = Date.now();
-  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
-  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 }
 
 async function toggleHomeImageEditor() {
