@@ -974,10 +974,12 @@ async function smartSync(selectedRepos, token, options = {}) {
         }
       }
 
+      const localHasData = !!localLedgerData;
+
       // ------------------------------------------------------------
       // 2. No data anywhere → create empty
       // ------------------------------------------------------------
-      if ((!token || !repoHasData)) {
+      if ((!token || !repoHasData) && !localHasData) {
         console.log(`[${repoName}] No data anywhere → create empty`);
 
         await initializeLedgerSettings(repoId);
@@ -1070,8 +1072,8 @@ async function smartSync(selectedRepos, token, options = {}) {
             const sameUpdated = localSettings.updatedAt === remoteSettings.updatedAt;
 
             // If identical → no popup needed
-            if (sameCreated && sameUpdated) {
-              console.log(`[${repoName}] Local and cloud identical → using cloud`);
+            if ((remoteSettings.createdAt > localSettings.createdAt) || (sameCreated && sameUpdated)) {
+              console.log(`[${repoName}] Cloud newer or identical → using cloud`);
               localLedgerDataMap[repoId] = cloudLedgerData;
             } else {
 
@@ -3375,7 +3377,7 @@ async function saveEntry() {
       delete workspace.transactions[latestOptions.transactionId];
     }
 
-    await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+    smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
     history.back();
 
