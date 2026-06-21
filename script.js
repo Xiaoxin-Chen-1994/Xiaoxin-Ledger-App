@@ -912,7 +912,7 @@ async function smartSync(selectedRepos, token, options = {}) {
   const syncLedgerData = options.syncLedgerData ?? false;
   const repoId = options.repoId ?? null;
 
-  
+
   // Use personal settings file to determine offline
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
@@ -935,7 +935,7 @@ async function smartSync(selectedRepos, token, options = {}) {
       }
 
       // Sync personal settings
-      if (token && !offline) {
+      if (!offline) {
         const local = await loadLocalJsonData("ledger-personal-settings.json", null);
 
         const repoName = selectedRepos.personalSettingsRepo.name;
@@ -1833,7 +1833,6 @@ async function init() {
       offline = true;
     }
   }
-
 
   if (token && !offline) {
     window.currentUserLogin = user.login;
@@ -5777,7 +5776,6 @@ async function adjustFontsize(delta) {
   document.documentElement.style.setProperty("--font-size", newSize);
 
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
-  console.log(personalSettings)
   if (isMobileBrowser()) {
     personalSettings.fontsizeMobile = newSize;
   } else {
@@ -5810,9 +5808,15 @@ function openColorPicker() {
 
   picker.click(); // open native color palette
 
+  let debounceTimer = null;
+
   picker.oninput = function () {
     const chosenColor = picker.value;
-    applyThemeColor(chosenColor);
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      applyThemeColor(chosenColor);
+    }, 500); // adjust delay as needed
   };
 }
 window.openColorPicker = openColorPicker;
@@ -5848,6 +5852,7 @@ async function applyThemeColor(color) {
   }
 
   const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  console.log(personalSettings)
   personalSettings.themeColor = color;
   personalSettings.updatedAt = Date.now();
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
