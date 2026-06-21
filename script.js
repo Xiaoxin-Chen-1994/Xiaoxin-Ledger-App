@@ -912,13 +912,12 @@ async function smartSync(selectedRepos, token, options = {}) {
   const syncLedgerData = options.syncLedgerData ?? false;
   const repoId = options.repoId ?? null;
 
-  const local = await loadLocalJsonData("ledger-personal-settings.json", null);
-  let cloud = null;
-  let cloudDeleted = null;
-
+  
   // Use personal settings file to determine offline
   if (!token || selectedRepos.personalSettingsRepo) {
     let repoName = null;
+    let cloud = null;
+    let cloudDeleted = null;
 
     if (token) {
       repoName = selectedRepos.personalSettingsRepo.name;
@@ -937,6 +936,8 @@ async function smartSync(selectedRepos, token, options = {}) {
 
       // Sync personal settings
       if (token && !offline) {
+        const local = await loadLocalJsonData("ledger-personal-settings.json", null);
+        
         const repoName = selectedRepos.personalSettingsRepo.name;
         // -----------------------------------------
         // cloud null OR cloud deleted → push
