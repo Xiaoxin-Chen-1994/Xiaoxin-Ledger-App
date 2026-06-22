@@ -1914,7 +1914,7 @@ async function init() {
       return;
     }
 
-    const user = await res.json();
+    user = await res.json();
 
     if (!user.login) {
       offline = true;
