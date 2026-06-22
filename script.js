@@ -1198,9 +1198,11 @@ async function smartSync(selectedRepos, token, options = {}) {
             console.log(`[${repoName}] Only local has data → pushing all entries`);
 
             await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
-
+            
             settingsMap = await loadLocalJsonData("ledger-settings.json", {});
             await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
+            
+            showStatusMessage('Local data successfully synced to cloud', "success");
 
             localLogMap[repoId] = [];
             lastSyncedMap[repoId] = Date.now();
@@ -1228,6 +1230,7 @@ async function smartSync(selectedRepos, token, options = {}) {
 
             settingsMap[repoId] = remoteSettings;
             await saveLocalJsonData("ledger-settings.json", settingsMap);
+            showStatusMessage('Successfully retrieved data from cloud', "success");
 
             localLogMap[repoId] = [];
             lastSyncedMap[repoId] = Date.now();
@@ -1260,7 +1263,8 @@ async function smartSync(selectedRepos, token, options = {}) {
               localLedgerDataMap[repoId] = cloudLedgerData;
               settingsMap[repoId] = remoteSettings;
               await saveLocalJsonData("ledger-settings.json", settingsMap);
-            
+              showStatusMessage('Successfully retrieved data from cloud', "success");
+
             } else {
 
               if (push) {
@@ -1319,12 +1323,14 @@ async function smartSync(selectedRepos, token, options = {}) {
                 localLedgerDataMap[repoId] = cloudLedgerData;
                 settingsMap[repoId] = remoteSettings;
                 await saveLocalJsonData("ledger-settings.json", settingsMap);
+                showStatusMessage('Successfully retrieved data from cloud', "success");
 
               } else {
                 console.log(`[${repoName}] User chose local → overwrite cloud`);
 
                 settingsMap[repoId] = localSettings;
                 await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
+                showStatusMessage('Local data successfully synced to cloud', "success");
                 
                 // Upload entire local DB to cloud
                 if (token && !repo.skipSync) {
