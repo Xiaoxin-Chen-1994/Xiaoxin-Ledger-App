@@ -1255,7 +1255,7 @@ async function smartSync(selectedRepos, token, options = {}) {
             let useCloud;
 
             // If identical → no popup needed
-            if ((remoteSettings.createdAt > localSettings.createdAt) || (sameCreated && sameUpdated)) {
+            if ((remoteSettings.createdAt > localSettings.createdAt) || (sameCreated && (remoteSettings.updatedAt >= localSettings.updatedAt))) {
               console.log(`[${repoName}] Cloud newer or identical → using cloud`);
               localLedgerDataMap[repoId] = cloudLedgerData;
               settingsMap[repoId] = remoteSettings;
