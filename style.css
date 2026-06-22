@@ -1666,7 +1666,7 @@ button {
   /* keep aspect ratio */
   min-height: calc(var(--font-size) * 8);
   /* don’t shrink below this */
-  max-height: calc(var(--font-size) * 16);
+  max-height: calc(var(--font-size) * 12);
   /* don’t grow taller than this */
   background: var(--border);
   /* blank placeholder */
