@@ -563,46 +563,92 @@ label {
   margin: 0.5rem 0 0.25rem 0;
 }
 
-/* Compact row */
-.edit-row {
+/* Wrapper spacing */
+.account-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* ───────────────────────────────────────────────
+   ROW TYPE 1 — ICON + NAME
+   ─────────────────────────────────────────────── */
+.labels-input-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.labels-input-row > label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Icon button */
+.icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1.3rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg2);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.35rem 0;
-  border-bottom: 1px solid var(--border);
+  justify-content: center;
+  cursor: pointer;
 }
 
-.edit-row:last-child {
-  border-bottom: none;
+.icon img.icon-img {
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
-.edit-row label {
-  flex: 0 0 5.5rem; /* fixed label width */
-  color: var(--muted);
-  font-size: calc(var(--font-size) * 0.85);
+/* ───────────────────────────────────────────────
+   ROW TYPE 2 — INLINE ROW (currency + exclude)
+   ─────────────────────────────────────────────── */
+.account-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-/* Compact input */
-.edit-row input,
-.edit-row textarea {
+.account-inline-row > label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.account-inline-row input[type="text"] {
   flex: 1;
-  padding: 0.35rem 0.5rem;
+  min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 0.35rem;
-  background: var(--surface);
-  font-size: calc(var(--font-size) * 0.9);
+  border-radius: 0.5rem;
 }
 
-.edit-row textarea {
-  height: 3rem; /* small */
-  resize: vertical;
+.account-inline-row select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
 }
 
-/* Checkbox row */
-.edit-row input[type="checkbox"] {
-  width: 1.1rem;
-  height: 1.1rem;
+.account-inline-row select:focus, 
+.account-inline-row input:focus {
+  background: color-mix(in srgb, var(--primary) 20%, var(--bg));
 }
+
+/* Inline checkbox */
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────────────────────────
+   SUBACCOUNT BLOCK
+   ─────────────────────────────────────────────── */
 
 /* Sub-account block */
 .subaccount-block {
@@ -1823,9 +1869,7 @@ hr {
 }
 
 /* Hover/focus states */
-#login-section select:hover,
-.settings-section button:hover,
-select:hover {
+.settings-section button:hover {
   background: #f8f8f8;
   border-color: #ccc;
   outline: none;
@@ -2118,8 +2162,7 @@ select:hover {
   }
 
   /* Hover/focus states */
-  .settings-section button:hover,
-  select:hover {
+  .settings-section button:hover {
     background: var(--primary-category-bg);
     border-color: #ccc;
     outline: none;

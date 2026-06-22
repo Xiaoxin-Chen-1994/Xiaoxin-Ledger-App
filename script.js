@@ -1198,10 +1198,10 @@ async function smartSync(selectedRepos, token, options = {}) {
             console.log(`[${repoName}] Only local has data → pushing all entries`);
 
             await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
-            
+
             settingsMap = await loadLocalJsonData("ledger-settings.json", {});
             await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
-            
+
             showStatusMessage('Local data successfully synced to cloud', "success");
 
             localLogMap[repoId] = [];
@@ -1331,7 +1331,7 @@ async function smartSync(selectedRepos, token, options = {}) {
                 settingsMap[repoId] = localSettings;
                 await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
                 showStatusMessage('Local data successfully synced to cloud', "success");
-                
+
                 // Upload entire local DB to cloud
                 if (token && !repo.skipSync) {
                   await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
@@ -4694,18 +4694,20 @@ function renderAccountTabs(repoId, accountType, account) {
   const tabRow = document.getElementById("account-detail-tabs");
   tabRow.innerHTML = "";
 
-  // "All" tab
-  tabRow.appendChild(
-    createAccountTabButton(repoId, accountType, account, "all", "All", true)
-  );
-
-  // Sub-account tabs
-  const subs = account["sub-accounts"] ?? [];
-  subs.forEach(sub => {
+  if (account["sub-accounts"].length > 0) {
+    // "All" tab
     tabRow.appendChild(
-      createAccountTabButton(repoId, accountType, account, sub.name, sub.name, false)
+      createAccountTabButton(repoId, accountType, account, "all", "All", true)
     );
-  });
+    
+    // Sub-account tabs
+    const subs = account["sub-accounts"] ?? [];
+    subs.forEach(sub => {
+      tabRow.appendChild(
+        createAccountTabButton(repoId, accountType, account, sub.name, sub.name, false)
+      );
+    });
+  }
 }
 
 function createAccountTabButton(repoId, accountType, account, key, label, active) {
@@ -4992,47 +4994,265 @@ function renderAccountEditPage(repoId, accountType, account) {
   const wrapper = document.createElement("div");
   wrapper.className = "account-edit-wrapper";
 
-  // MAIN ACCOUNT FIELDS
   wrapper.appendChild(createSectionHeader("主账户信息"));
-  wrapper.appendChild(createInputRow("名称", "name", account.name));
-  wrapper.appendChild(createInputRow("图标", "icon", account.icon));
-  wrapper.appendChild(createInputRow("币种", "currency", account.currency));
-  wrapper.appendChild(createCheckboxRow("不计入资产", "exclude", account.exclude));
+
+  // ───────────────────────────────────────────────
+  // ROW 1 — NAME ONLY
+  // ───────────────────────────────────────────────
+  const row1 = document.createElement("div");
+  row1.classList.add("account-inline-row");
+
+  const nameLabel = document.createElement("label");
+  nameLabel.textContent = "账户名";
+  row1.appendChild(nameLabel);
+
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.name = "name";
+  nameInput.value = account.name || "";
+  row1.appendChild(nameInput);
+
+  wrapper.appendChild(row1);
+
+  // ───────────────────────────────────────────────
+  // ROW 2 — ICON + CURRENCY
+  const row2 = document.createElement("div");
+  row2.classList.add("account-inline-row");
+
+  // Icon label
+  const iconLabel = document.createElement("label");
+  iconLabel.textContent = "图标";
+  row2.appendChild(iconLabel);
+
+  // Icon button
+  const iconBtn = document.createElement("button");
+  iconBtn.classList.add("icon");
+  iconBtn.innerHTML = account.icon || "Icon";
+  row2.appendChild(iconBtn);
+
+  const hiddenIcon = document.createElement("input");
+  hiddenIcon.type = "hidden";
+  hiddenIcon.name = "icon";
+  hiddenIcon.value = account.icon || "";
+  row2.appendChild(hiddenIcon);
+
+  iconBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const picker = showIconPicker(iconBtn, hiddenIcon);
+    row2.insertAdjacentElement("afterend", picker);
+  });
+
+  // Currency
+  const currencyLabel = document.createElement("label");
+  currencyLabel.textContent = "币种";
+  row2.appendChild(currencyLabel);
+
+  const currencySelect = document.createElement("select");
+  currencySelect.name = "currency";
+
+  ["CNY", "USD", "CAD", "HKD", "JPY", "EUR"].forEach(cur => {
+    const opt = document.createElement("option");
+    opt.value = cur;
+    opt.textContent = cur;
+    if (cur === account.currency) opt.selected = true;
+    currencySelect.appendChild(opt);
+  });
+
+  row2.appendChild(currencySelect);
+
+  wrapper.appendChild(row2);
+
+  // ───────────────────────────────────────────────
+  // ROW 3 — CREDIT CARD OR STORED VALUE FIELDS
+  // ───────────────────────────────────────────────
+  if (accountType === "creditCards") {
+    // Row 3 — statement + due
+    const row3 = document.createElement("div");
+    row3.classList.add("account-inline-row");
+
+    const label1 = document.createElement("label");
+    label1.textContent = "账单日";
+    row3.appendChild(label1);
+
+    const statement = document.createElement("select");
+    statement.name = "statementDate";
+
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      if (Number(account.statementDate) === d) opt.selected = true;
+      statement.appendChild(opt);
+    }
+
+    row3.appendChild(statement);
+
+    const label2 = document.createElement("label");
+    label2.textContent = "还款日";
+    row3.appendChild(label2);
+
+    const due = document.createElement("input");
+    due.type = "text";
+    due.name = "dueDate";
+    due.value = account.dueDate ?? "";
+    row3.appendChild(due);
+
+    wrapper.appendChild(row3);
+
+    // Row 4 — credit limit
+    const row4 = document.createElement("div");
+    row4.classList.add("account-inline-row");
+
+    const label3 = document.createElement("label");
+    label3.textContent = "信用额度";
+    row4.appendChild(label3);
+
+    const limit = document.createElement("input");
+    limit.type = "text";
+    limit.name = "creditLimit";
+    limit.value = account.creditLimit ?? "";
+    row4.appendChild(limit);
+
+    wrapper.appendChild(row4);
+  }
+
+  if (accountType === "storedValueCards") {
+    const row3 = document.createElement("div");
+    row3.classList.add("account-inline-row");
+
+    const label1 = document.createElement("label");
+    label1.textContent = "卡号";
+    row3.appendChild(label1);
+
+    const cardNum = document.createElement("input");
+    cardNum.type = "text";
+    cardNum.name = "cardNumber";
+    cardNum.value = account.cardNumber ?? "";
+    row3.appendChild(cardNum);
+
+    const label2 = document.createElement("label");
+    label2.textContent = "密码";
+    row3.appendChild(label2);
+
+    const pin = document.createElement("input");
+    pin.type = "text";
+    pin.name = "pin";
+    pin.value = account.pin ?? "";
+    row3.appendChild(pin);
+
+    wrapper.appendChild(row3);
+  }
+
+  // ───────────────────────────────────────────────
+  // ROW 4 — EXCLUDE (moved here)
+  // ───────────────────────────────────────────────
+  const rowExclude = document.createElement("div");
+  rowExclude.classList.add("account-inline-row");
+
+  const excludeLabel = document.createElement("label");
+  excludeLabel.classList.add("checkbox-inline");
+
+  const excludeInput = document.createElement("input");
+  excludeInput.type = "checkbox";
+  excludeInput.name = "exclude";
+  excludeInput.checked = !!account.exclude;
+
+  excludeLabel.appendChild(excludeInput);
+  excludeLabel.append(" 不计入资产");
+
+  rowExclude.appendChild(excludeLabel);
+  wrapper.appendChild(rowExclude);
+
+  // ───────────────────────────────────────────────
+  // ROW 5 — NOTES
+  // ───────────────────────────────────────────────
   wrapper.appendChild(createTextareaRow("备注", "notes", account.notes));
 
-  // CREDIT CARD FIELDS
-  if (accountType === "creditCards") {
-    wrapper.appendChild(createSectionHeader("信用卡信息"));
-    wrapper.appendChild(createInputRow("账单日", "statementDate", account.statementDate ?? ""));
-    wrapper.appendChild(createInputRow("还款日", "dueDate", account.dueDate ?? ""));
-    wrapper.appendChild(createInputRow("信用额度", "creditLimit", account.creditLimit ?? ""));
-  }
-
-  // STORED VALUE CARD FIELDS
-  if (accountType === "storedValueCards") {
-    wrapper.appendChild(createSectionHeader("储值卡信息"));
-    wrapper.appendChild(createInputRow("卡号", "cardNumber", account.cardNumber ?? ""));
-    wrapper.appendChild(createInputRow("密码", "pin", account.pin ?? ""));
-  }
-
-  // SUB-ACCOUNTS
+  // ───────────────────────────────────────────────
+  // SUB‑ACCOUNTS
+  // ───────────────────────────────────────────────
   const subs = account["sub-accounts"] ?? [];
   if (subs.length > 0) {
-    wrapper.appendChild(createSectionHeader("子账户"));
-
     subs.forEach((sub, index) => {
+      wrapper.appendChild(createSectionHeader(`子账户 ${index + 1}`));
+
       const block = document.createElement("div");
       block.className = "subaccount-block";
 
-      block.appendChild(createInputRow("名称", `sub-${index}-name`, sub.name));
-      block.appendChild(createInputRow("图标", `sub-${index}-icon`, sub.icon));
-      block.appendChild(createInputRow("币种", `sub-${index}-currency`, sub.currency));
-      block.appendChild(createTextareaRow("备注", `sub-${index}-notes`, sub.notes));
+      // Sub row 1 — NAME ONLY
+      const srow1 = document.createElement("div");
+      srow1.classList.add("account-inline-row");
 
-      if (accountType === "storedValueCards") {
-        block.appendChild(createInputRow("卡号", `sub-${index}-cardNumber`, sub.cardNumber ?? ""));
-        block.appendChild(createInputRow("密码", `sub-${index}-pin`, sub.pin ?? ""));
-      }
+      const slbl = document.createElement("label");
+      slbl.textContent = "账户名";
+      srow1.appendChild(slbl);
+
+      const sNameInput = document.createElement("input");
+      sNameInput.type = "text";
+      sNameInput.name = `sub-${index}-name`;
+      sNameInput.value = sub.name || "";
+      srow1.appendChild(sNameInput);
+
+      block.appendChild(srow1);
+
+      // Sub row 2 — ICON + CURRENCY
+      const srow2 = document.createElement("div");
+      srow2.classList.add("account-inline-row");
+
+      // Icon label
+      const siconLabel = document.createElement("label");
+      siconLabel.textContent = "图标";
+      srow2.appendChild(siconLabel);
+
+      const sIconBtn = document.createElement("button");
+      sIconBtn.classList.add("icon");
+      sIconBtn.innerHTML = sub.icon || "Icon";
+      srow2.appendChild(sIconBtn);
+
+      const sHiddenIcon = document.createElement("input");
+      sHiddenIcon.type = "hidden";
+      sHiddenIcon.name = `sub-${index}-icon`;
+      sHiddenIcon.value = sub.icon || "";
+      srow2.appendChild(sHiddenIcon);
+
+      sIconBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const picker = showIconPicker(sIconBtn, sHiddenIcon);
+        srow2.insertAdjacentElement("afterend", picker);
+      });
+
+      const sCurrencyLabel = document.createElement("label");
+      sCurrencyLabel.textContent = "币种";
+      srow2.appendChild(sCurrencyLabel);
+
+      const sCurrency = document.createElement("input");
+      sCurrency.type = "text";
+      sCurrency.name = `sub-${index}-currency`;
+      sCurrency.value = sub.currency || "";
+      srow2.appendChild(sCurrency);
+
+      block.appendChild(srow2);
+
+      // Sub row 3 — exclude checkbox
+      const srowExclude = document.createElement("div");
+      srowExclude.classList.add("account-inline-row");
+
+      const sExcludeLabel = document.createElement("label");
+      sExcludeLabel.classList.add("checkbox-inline");
+
+      const sExcludeInput = document.createElement("input");
+      sExcludeInput.type = "checkbox";
+      sExcludeInput.name = `sub-${index}-exclude`;
+      sExcludeInput.checked = !!sub.exclude;
+
+      sExcludeLabel.appendChild(sExcludeInput);
+      sExcludeLabel.append(" 不计入资产");
+
+      srowExclude.appendChild(sExcludeLabel);
+      block.appendChild(srowExclude);
+
+      // Sub row 4 — notes
+      block.appendChild(createTextareaRow("备注", `sub-${index}-notes`, sub.notes));
 
       wrapper.appendChild(block);
     });
@@ -5048,29 +5268,9 @@ function createSectionHeader(text) {
   return h;
 }
 
-function createInputRow(label, key, value) {
-  const row = document.createElement("div");
-  row.className = "edit-row";
-  row.innerHTML = `
-    <label>${label}</label>
-    <input type="text" data-key="${key}" value="${value ?? ""}">
-  `;
-  return row;
-}
-
-function createCheckboxRow(label, key, checked) {
-  const row = document.createElement("div");
-  row.className = "edit-row";
-  row.innerHTML = `
-    <label>${label}</label>
-    <input type="checkbox" data-key="${key}" ${checked ? "checked" : ""}>
-  `;
-  return row;
-}
-
 function createTextareaRow(label, key, value) {
   const row = document.createElement("div");
-  row.className = "edit-row";
+  row.className = "form-row";
   row.innerHTML = `
     <label>${label}</label>
     <textarea data-key="${key}">${value ?? ""}</textarea>
@@ -5540,106 +5740,9 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
   iconBtn.addEventListener("click", (e) => {
     e.stopPropagation();
 
-    // Always remove any existing wrapper before creating a new one
-    const existingWrapper = document.querySelector(".icon-picker-wrapper");
-    if (existingWrapper) existingWrapper.remove();
-
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("icon-picker-wrapper");
-
-    // --- TAB BUTTONS ---
-    const tabRow = document.createElement("div");
-    tabRow.style.display = "flex";
-    tabRow.style.gap = "0.5rem";
-    tabRow.style.marginBottom = "0.5rem";
-
-    const emojiTab = document.createElement("button");
-    emojiTab.textContent = "Emoji";
-    emojiTab.classList.add("glass-popup-btn", "primary");
-
-    const iconTab = document.createElement("button");
-    iconTab.textContent = "Icon";
-    iconTab.classList.add("glass-popup-btn");
-
-    // --- CANCEL BUTTON --- 
-    const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = t.cancel;
-    cancelBtn.addEventListener("click", () => hideWrapper(wrapper));
-
-    tabRow.appendChild(emojiTab);
-    tabRow.appendChild(iconTab);
-    tabRow.appendChild(cancelBtn);
-
-    // --- CONTENT AREA --- 
-    const contentArea = document.createElement("div");
-
-    const emojiPicker = document.createElement("emoji-picker");
-    emojiPicker.addEventListener("emoji-click", event => {
-      iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
-      iconBtn.classList.add("selected");
-      hideWrapper(wrapper);
-    });
-
-    // --- ICON PICKER --- 
-    const iconGrid = document.createElement("div");
-    iconGrid.classList.add("icon-picker-grid");
-
-    fetch("/icons/manifest.json")
-      .then(res => res.json())
-      .then(files => {
-        files.forEach(file => {
-          const item = document.createElement("div");
-          item.classList.add("icon-picker-item");
-
-          const img = document.createElement("img");
-          img.src = `/icons/${file}`;
-          console.log(file)
-          item.appendChild(img);
-
-          item.addEventListener("click", () => {
-            iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
-            iconBtn.classList.add("selected");
-            hideWrapper(wrapper);
-          });
-
-          iconGrid.appendChild(item);
-        });
-      });
-
-
-    // --- INITIAL CONTENT ---
-    contentArea.appendChild(emojiPicker);
-
-    // --- TAB SWITCHING ---
-    emojiTab.addEventListener("click", () => {
-      emojiTab.classList.add("primary");
-      iconTab.classList.remove("primary");
-      contentArea.innerHTML = "";
-      contentArea.appendChild(emojiPicker);
-    });
-
-    iconTab.addEventListener("click", () => {
-      iconTab.classList.add("primary");
-      emojiTab.classList.remove("primary");
-      contentArea.innerHTML = "";
-      contentArea.appendChild(iconGrid);
-    });
-
-    // --- BUILD WRAPPER ---
-    wrapper.appendChild(tabRow);
-    wrapper.appendChild(contentArea);
+    const wrapper = showIconPicker(iconBtn);
 
     inputRow.insertAdjacentElement("afterend", wrapper);
-    requestAnimationFrame(() => wrapper.classList.add("show"));
-
-    // --- OUTSIDE CLICK ---
-    const outsideClickHandler = (ev) => {
-      if (!wrapper.contains(ev.target) && ev.target !== iconBtn) {
-        hideWrapper(wrapper);
-        document.removeEventListener("click", outsideClickHandler);
-      }
-    };
-    document.addEventListener("click", outsideClickHandler);
   });
 
   // Text input
@@ -5809,6 +5912,112 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
   inputRow.appendChild(cancelBtn);
 
   return inputRow;
+}
+
+function showIconPicker(iconBtn) {
+  const t = translations[currentLang];
+
+  // Always remove any existing wrapper before creating a new one
+  const existingWrapper = document.querySelector(".icon-picker-wrapper");
+  if (existingWrapper) existingWrapper.remove();
+
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("icon-picker-wrapper");
+
+  // --- TAB BUTTONS ---
+  const tabRow = document.createElement("div");
+  tabRow.style.display = "flex";
+  tabRow.style.gap = "0.5rem";
+  tabRow.style.marginBottom = "0.5rem";
+
+  const emojiTab = document.createElement("button");
+  emojiTab.textContent = "Emoji";
+  emojiTab.classList.add("glass-popup-btn", "primary");
+
+  const iconTab = document.createElement("button");
+  iconTab.textContent = "Icon";
+  iconTab.classList.add("glass-popup-btn");
+
+  // --- CANCEL BUTTON --- 
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = t.cancel;
+  cancelBtn.addEventListener("click", () => hideWrapper(wrapper));
+
+  tabRow.appendChild(emojiTab);
+  tabRow.appendChild(iconTab);
+  tabRow.appendChild(cancelBtn);
+
+  // --- CONTENT AREA --- 
+  const contentArea = document.createElement("div");
+
+  const emojiPicker = document.createElement("emoji-picker");
+  emojiPicker.addEventListener("emoji-click", event => {
+    iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
+    iconBtn.classList.add("selected");
+    hideWrapper(wrapper);
+  });
+
+  // --- ICON PICKER --- 
+  const iconGrid = document.createElement("div");
+  iconGrid.classList.add("icon-picker-grid");
+
+  fetch("/icons/manifest.json")
+    .then(res => res.json())
+    .then(files => {
+      files.forEach(file => {
+        const item = document.createElement("div");
+        item.classList.add("icon-picker-item");
+
+        const img = document.createElement("img");
+        img.src = `/icons/${file}`;
+        console.log(file)
+        item.appendChild(img);
+
+        item.addEventListener("click", () => {
+          iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
+          iconBtn.classList.add("selected");
+          hideWrapper(wrapper);
+        });
+
+        iconGrid.appendChild(item);
+      });
+    });
+
+
+  // --- INITIAL CONTENT ---
+  contentArea.appendChild(emojiPicker);
+
+  // --- TAB SWITCHING ---
+  emojiTab.addEventListener("click", () => {
+    emojiTab.classList.add("primary");
+    iconTab.classList.remove("primary");
+    contentArea.innerHTML = "";
+    contentArea.appendChild(emojiPicker);
+  });
+
+  iconTab.addEventListener("click", () => {
+    iconTab.classList.add("primary");
+    emojiTab.classList.remove("primary");
+    contentArea.innerHTML = "";
+    contentArea.appendChild(iconGrid);
+  });
+
+  // --- BUILD WRAPPER ---
+  wrapper.appendChild(tabRow);
+  wrapper.appendChild(contentArea);
+
+  requestAnimationFrame(() => wrapper.classList.add("show"));
+
+  // --- OUTSIDE CLICK ---
+  const outsideClickHandler = (ev) => {
+    if (!wrapper.contains(ev.target) && ev.target !== iconBtn) {
+      hideWrapper(wrapper);
+      document.removeEventListener("click", outsideClickHandler);
+    }
+  };
+  document.addEventListener("click", outsideClickHandler);
+
+  return wrapper
 }
 
 function hideWrapper(wrapper) {
