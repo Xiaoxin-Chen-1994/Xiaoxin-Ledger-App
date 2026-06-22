@@ -340,7 +340,7 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: stretch;
-  padding: 0.6rem 0.4rem;
+  padding: 0.3rem 0.3rem;
 }
 
 .account-left {
@@ -372,9 +372,8 @@ label {
 }
 
 .account-notes {
-  font-size: calc(var(--font-size) * 0.8);
+  font-size: calc(var(--font-size) * 0.7);
   color: var(--muted);
-  margin-top: 0.15rem;
   max-width: 100%; /* now works correctly */
   white-space: nowrap;
   overflow: hidden;
@@ -386,7 +385,7 @@ label {
   color: white;
   padding: 0 0.4rem;
   border-radius: 0.4rem;
-  font-size: calc(var(--font-size) * 0.75);
+  font-size: calc(var(--font-size) * 0.7);
 }
 
 .account-right {
@@ -402,12 +401,11 @@ label {
 }
 
 .account-sum {
-  font-size: calc(var(--font-size) * 1.1);
   font-weight: 600;
 }
 
 .account-multi-currency {
-  font-size: calc(var(--font-size) * 0.75);
+  font-size: calc(var(--font-size) * 0.7);
   color: var(--muted);
 }
 
