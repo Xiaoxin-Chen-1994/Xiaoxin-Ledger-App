@@ -128,6 +128,8 @@ const monthNamesEN = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const supportedCurrencies = ["CNY", "USD", "CAD", "HKD", "JPY", "EUR"];
+
 const translations = {
   en: {
     loginTitle: "Login or Signup",
@@ -4281,7 +4283,13 @@ async function showPage(name, title = latestTitle, options = {}) {
   } else if (latestPage === "account-detail") {
     const { activeRepoId, accountType, account } = options;
 
-    renderAccountTabs(activeRepoId, accountType, account);// Build the scrollable tab row
+    renderAccountTabs(account, "account-detail-tabs", {
+      mode: "detail",
+      onTabClick: (key) => {
+        renderAccountDetailContent(activeRepoId, accountType, account, key);
+      }
+    });
+    
     renderAccountDetailContent(activeRepoId, accountType, account);
 
     const manageBtn = document.getElementById("manage-btn-headerbar");
@@ -4616,8 +4624,8 @@ function createAccountRow(repoId, type, acc) {
   // Placeholder sum (you will compute later)
   const sumPlaceholder = "--";
 
-  // Credit card red-aging
-  let agingStyle = "";
+  // CREDIT CARD WARNING TEXT
+  let dueWarning = "";
 
   if (type === "creditCards") {
     const today = new Date();
@@ -4625,33 +4633,46 @@ function createAccountRow(repoId, type, acc) {
     const statementDay = acc.statementDate;
     const dueDay = acc.dueDate;
 
-    // Skip aging if either date is missing
     if (statementDay && dueDay) {
       const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
-
-      // Paid?
       const paid = isCyclePaid(acc, cycleStart);
 
       if (!paid) {
+        const diffDays = Math.ceil((dueDate - today) / 86400000);
+
         let redness = 0;
 
-        if (today < dueDate) {
-          // Days until due
-          const daysToDue = Math.ceil((dueDate - today) / 86400000);
+        if (diffDays < 0) {
+          // Overdue
+          const daysOver = Math.abs(diffDays);
 
-          // Only paint when within 15 days
-          if (daysToDue <= 15) {
-            // Same redness formula as detail page
-            redness = Math.max(0, Math.min((15 - daysToDue) / 15, 1));
-          }
-        } else {
-          // Overdue → full red
-          redness = 1;
-        }
+          const text = currentLang === "zh"
+            ? `已逾期 ${daysOver} 天`
+            : `Overdue ${daysOver} days`;
 
-        // Apply tint only if redness > 0
-        if (redness > 0) {
-          agingStyle = `background-color: color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg));`;
+          dueWarning = `
+            <span class="due-warning" style="background-color: var(--red); color: white;">
+              ${text}
+            </span>
+          `;
+
+        } else if (diffDays <= 15) {
+          // Due soon with redness
+          redness = Math.max(0, Math.min((15 - diffDays) / 15, 1));
+          const bg = `color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg))`;
+
+          const text = currentLang === "zh"
+            ? `${diffDays} 天后到期`
+            : `Due in ${diffDays} days`;
+
+          // Decide text color based on redness
+          const textColor = redness > 0.6 ? "white" : "var(--text)";
+
+          dueWarning = `
+            <span class="due-warning" style="background-color: ${bg}; color: ${textColor};">
+              ${text}
+            </span>
+          `;
         }
       }
     }
@@ -4665,6 +4686,7 @@ function createAccountRow(repoId, type, acc) {
         <div class="account-title">
           <span class="account-name">${acc.name}</span>
           ${hasSubs ? `<span class="subaccount-badge">${subs.length}</span>` : ""}
+          ${dueWarning}
         </div>
 
         ${type === "creditCards" && acc.statementDate && acc.dueDate ? `
@@ -4685,45 +4707,74 @@ function createAccountRow(repoId, type, acc) {
     </div>
   `;
 
-  if (agingStyle) row.style = agingStyle;
-
   return row;
 }
 
-function renderAccountTabs(repoId, accountType, account) {
-  const tabRow = document.getElementById("account-detail-tabs");
+function renderAccountTabs(account, elementId, options = {}) {
+  const { mode = "detail", onTabClick = null } = options;
+  const tabRow = document.getElementById(elementId);
   tabRow.innerHTML = "";
 
-  if (account["sub-accounts"].length > 0) {
-    // "All" tab
-    tabRow.appendChild(
-      createAccountTabButton(repoId, accountType, account, "all", "All", true)
-    );
-    
-    // Sub-account tabs
-    const subs = account["sub-accounts"] ?? [];
-    subs.forEach(sub => {
+  const subs = account["sub-accounts"] ?? [];
+
+  if (mode === "detail") {
+    // existing behavior
+    if (subs.length > 0) {
       tabRow.appendChild(
-        createAccountTabButton(repoId, accountType, account, sub.name, sub.name, false)
+        createAccountTabButton("all", "All", true, onTabClick, false)
+      );
+      subs.forEach(sub => {
+        tabRow.appendChild(
+          createAccountTabButton(sub.name, sub.name, false, onTabClick)
+        );
+      });
+    }
+  }
+
+  if (mode === "edit") {
+    // IMPORTANT: keys must match data-tab on panels
+    tabRow.appendChild(
+      createAccountTabButton("main", "主账户", true, onTabClick)
+    );
+
+    subs.forEach((sub, index) => {
+      tabRow.appendChild(
+        createAccountTabButton(`sub-${index}`, sub.name, false, onTabClick, true)
       );
     });
   }
 }
 
-function createAccountTabButton(repoId, accountType, account, key, label, active) {
+function createAccountTabButton(key, label, active, onClick, draggable = false) {
   const btn = document.createElement("button");
   btn.className = "account-tab-btn";
   if (active) btn.classList.add("active");
   btn.textContent = label;
+  btn.dataset.tab = key;
 
+  // click behavior
   btn.addEventListener("click", () => {
     btn.parentElement.querySelectorAll(".account-tab-btn")
       .forEach(b => b.classList.remove("active"));
-
     btn.classList.add("active");
-
-    renderAccountDetailContent(repoId, accountType, account, key);
+    if (onClick) onClick(key);
   });
+
+  // drag behavior (edit mode only)
+  if (draggable) {
+    btn.draggable = true;
+
+    btn.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", key);
+      btn.classList.add("dragging");
+    });
+
+    btn.addEventListener("dragend", () => {
+      btn.classList.remove("dragging");
+    });
+  } else {
+    btn.draggable = false;
+  }
 
   return btn;
 }
@@ -4793,6 +4844,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
   const wrapper = document.createElement("div");
   wrapper.className = "account-detail-summary";
 
+  
   // Placeholder values — you will compute real ones later
   const totalSum = "--";
   const inflow = "--";
@@ -4987,18 +5039,81 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
   content.appendChild(wrapper);
 }
 
+function getDragAfterElement(container, x) {
+  const els = [...container.querySelectorAll(".account-tab-btn:not(.dragging)")];
+
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = x - (box.left + box.width / 2);
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 function renderAccountEditPage(repoId, accountType, account) {
+  account._pendingSubOrder = null; // this temporary variable will store drag order
+  
   const container = document.getElementById("account-edit-content");
   container.innerHTML = "";
 
   const wrapper = document.createElement("div");
   wrapper.className = "account-edit-wrapper";
 
-  wrapper.appendChild(createSectionHeader("主账户信息"));
+  // ───────────────────────────────────────────────
+  // TAB BUTTONS
+  // ───────────────────────────────────────────────
+  const tabRow = document.createElement("div");
+  tabRow.className = "account-detail-tabs";
+  tabRow.id = "account-edit-tabs";
+  wrapper.appendChild(tabRow);
+  container.appendChild(wrapper);
+
+  renderAccountTabs(account, "account-edit-tabs", {
+    mode: "edit",
+    onTabClick: (key) => activateTab(key)
+  });
+
+  tabRow.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const dragging = tabRow.querySelector(".dragging");
+    if (!dragging) return;
+
+    const after = getDragAfterElement(tabRow, e.clientX);
+
+    // Prevent dragging before MAIN
+    const first = tabRow.querySelector('[data-tab="main"]');
+
+    if (after === first) {
+      tabRow.insertBefore(dragging, first.nextSibling);
+    } else if (after == null) {
+      tabRow.appendChild(dragging);
+    } else {
+      tabRow.insertBefore(dragging, after);
+    }
+  });
+
+  tabRow.addEventListener("dragend", () => {
+    const newOrder = [...tabRow.querySelectorAll(".account-tab-btn")]
+      .map(btn => btn.dataset.tab)
+      .filter(key => key !== "main"); // ignore main
+
+    // ["sub-2", "sub-0", "sub-1"] → [2, 0, 1]
+    const orderIndexes = newOrder.map(key => Number(key.replace("sub-", "")));
+
+    account._pendingSubOrder = orderIndexes;
+  });
 
   // ───────────────────────────────────────────────
-  // ROW 1 — NAME ONLY
+  // MAIN ACCOUNT PANEL
   // ───────────────────────────────────────────────
+  const mainPanel = document.createElement("div");
+  mainPanel.className = "edit-panel";
+  mainPanel.dataset.tab = "main";
+
+  // ROW 1 — NAME
   const row1 = document.createElement("div");
   row1.classList.add("account-inline-row");
 
@@ -5012,19 +5127,16 @@ function renderAccountEditPage(repoId, accountType, account) {
   nameInput.value = account.name || "";
   row1.appendChild(nameInput);
 
-  wrapper.appendChild(row1);
+  mainPanel.appendChild(row1);
 
-  // ───────────────────────────────────────────────
   // ROW 2 — ICON + CURRENCY
   const row2 = document.createElement("div");
   row2.classList.add("account-inline-row");
 
-  // Icon label
   const iconLabel = document.createElement("label");
   iconLabel.textContent = "图标";
   row2.appendChild(iconLabel);
 
-  // Icon button
   const iconBtn = document.createElement("button");
   iconBtn.classList.add("icon");
   iconBtn.innerHTML = account.icon || "Icon";
@@ -5042,7 +5154,6 @@ function renderAccountEditPage(repoId, accountType, account) {
     row2.insertAdjacentElement("afterend", picker);
   });
 
-  // Currency
   const currencyLabel = document.createElement("label");
   currencyLabel.textContent = "币种";
   row2.appendChild(currencyLabel);
@@ -5050,7 +5161,7 @@ function renderAccountEditPage(repoId, accountType, account) {
   const currencySelect = document.createElement("select");
   currencySelect.name = "currency";
 
-  ["CNY", "USD", "CAD", "HKD", "JPY", "EUR"].forEach(cur => {
+  supportedCurrencies.forEach(cur => {
     const opt = document.createElement("option");
     opt.value = cur;
     opt.textContent = cur;
@@ -5059,14 +5170,10 @@ function renderAccountEditPage(repoId, accountType, account) {
   });
 
   row2.appendChild(currencySelect);
+  mainPanel.appendChild(row2);
 
-  wrapper.appendChild(row2);
-
-  // ───────────────────────────────────────────────
-  // ROW 3 — CREDIT CARD OR STORED VALUE FIELDS
-  // ───────────────────────────────────────────────
+  // ROW 3 — CREDIT CARD FIELDS
   if (accountType === "creditCards") {
-    // Row 3 — statement + due
     const row3 = document.createElement("div");
     row3.classList.add("account-inline-row");
 
@@ -5091,15 +5198,21 @@ function renderAccountEditPage(repoId, accountType, account) {
     label2.textContent = "还款日";
     row3.appendChild(label2);
 
-    const due = document.createElement("input");
-    due.type = "text";
+    const due = document.createElement("select");
     due.name = "dueDate";
-    due.value = account.dueDate ?? "";
+
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      if (Number(account.dueDate) === d) opt.selected = true;
+      due.appendChild(opt);
+    }
+
     row3.appendChild(due);
+    mainPanel.appendChild(row3);
 
-    wrapper.appendChild(row3);
-
-    // Row 4 — credit limit
+    // ROW 4 — CREDIT LIMIT
     const row4 = document.createElement("div");
     row4.classList.add("account-inline-row");
 
@@ -5110,12 +5223,39 @@ function renderAccountEditPage(repoId, accountType, account) {
     const limit = document.createElement("input");
     limit.type = "text";
     limit.name = "creditLimit";
-    limit.value = account.creditLimit ?? "";
-    row4.appendChild(limit);
+    limit.inputMode = "decimal";
 
-    wrapper.appendChild(row4);
+    if (account.creditLimit != null) {
+      limit.value = getFormattedAmount(account.creditLimit);
+    } else {
+      limit.value = "";
+    }
+
+    let rawValue = account.creditLimit ?? null;
+
+    limit.addEventListener("input", () => {
+      const cleaned = limit.value.replace(/[^\d.]/g, "");
+      const parts = cleaned.split(".");
+      if (parts.length > 2) {
+        limit.value = parts[0] + "." + parts.slice(1).join("");
+        return;
+      }
+      rawValue = cleaned === "" ? null : Number(cleaned);
+    });
+
+    limit.addEventListener("blur", () => {
+      if (rawValue != null && !isNaN(rawValue)) {
+        limit.value = getFormattedAmount(rawValue);
+      } else {
+        limit.value = "";
+      }
+    });
+
+    row4.appendChild(limit);
+    mainPanel.appendChild(row4);
   }
 
+  // STORED VALUE CARD FIELDS
   if (accountType === "storedValueCards") {
     const row3 = document.createElement("div");
     row3.classList.add("account-inline-row");
@@ -5140,12 +5280,10 @@ function renderAccountEditPage(repoId, accountType, account) {
     pin.value = account.pin ?? "";
     row3.appendChild(pin);
 
-    wrapper.appendChild(row3);
+    mainPanel.appendChild(row3);
   }
 
-  // ───────────────────────────────────────────────
-  // ROW 4 — EXCLUDE (moved here)
-  // ───────────────────────────────────────────────
+  // EXCLUDE
   const rowExclude = document.createElement("div");
   rowExclude.classList.add("account-inline-row");
 
@@ -5161,25 +5299,24 @@ function renderAccountEditPage(repoId, accountType, account) {
   excludeLabel.append(" 不计入资产");
 
   rowExclude.appendChild(excludeLabel);
-  wrapper.appendChild(rowExclude);
+  mainPanel.appendChild(rowExclude);
+
+  // NOTES
+  mainPanel.appendChild(createTextareaRow("备注", "notes", account.notes));
+
+  wrapper.appendChild(mainPanel);
 
   // ───────────────────────────────────────────────
-  // ROW 5 — NOTES
-  // ───────────────────────────────────────────────
-  wrapper.appendChild(createTextareaRow("备注", "notes", account.notes));
-
-  // ───────────────────────────────────────────────
-  // SUB‑ACCOUNTS
+  // SUB‑ACCOUNT PANELS
   // ───────────────────────────────────────────────
   const subs = account["sub-accounts"] ?? [];
   if (subs.length > 0) {
     subs.forEach((sub, index) => {
-      wrapper.appendChild(createSectionHeader(`子账户 ${index + 1}`));
+      const panel = document.createElement("div");
+      panel.className = "edit-panel";
+      panel.dataset.tab = `sub-${index}`;
 
-      const block = document.createElement("div");
-      block.className = "subaccount-block";
-
-      // Sub row 1 — NAME ONLY
+      // NAME
       const srow1 = document.createElement("div");
       srow1.classList.add("account-inline-row");
 
@@ -5193,13 +5330,12 @@ function renderAccountEditPage(repoId, accountType, account) {
       sNameInput.value = sub.name || "";
       srow1.appendChild(sNameInput);
 
-      block.appendChild(srow1);
+      panel.appendChild(srow1);
 
-      // Sub row 2 — ICON + CURRENCY
+      // ICON + CURRENCY
       const srow2 = document.createElement("div");
       srow2.classList.add("account-inline-row");
 
-      // Icon label
       const siconLabel = document.createElement("label");
       siconLabel.textContent = "图标";
       srow2.appendChild(siconLabel);
@@ -5225,15 +5361,21 @@ function renderAccountEditPage(repoId, accountType, account) {
       sCurrencyLabel.textContent = "币种";
       srow2.appendChild(sCurrencyLabel);
 
-      const sCurrency = document.createElement("input");
-      sCurrency.type = "text";
+      const sCurrency = document.createElement("select");
       sCurrency.name = `sub-${index}-currency`;
-      sCurrency.value = sub.currency || "";
+
+      supportedCurrencies.forEach(cur => {
+        const opt = document.createElement("option");
+        opt.value = cur;
+        opt.textContent = cur;
+        if (cur === sub.currency) opt.selected = true;
+        sCurrency.appendChild(opt);
+      });
+
       srow2.appendChild(sCurrency);
+      panel.appendChild(srow2);
 
-      block.appendChild(srow2);
-
-      // Sub row 3 — exclude checkbox
+      // EXCLUDE
       const srowExclude = document.createElement("div");
       srowExclude.classList.add("account-inline-row");
 
@@ -5249,16 +5391,46 @@ function renderAccountEditPage(repoId, accountType, account) {
       sExcludeLabel.append(" 不计入资产");
 
       srowExclude.appendChild(sExcludeLabel);
-      block.appendChild(srowExclude);
+      panel.appendChild(srowExclude);
 
-      // Sub row 4 — notes
-      block.appendChild(createTextareaRow("备注", `sub-${index}-notes`, sub.notes));
+      // NOTES
+      panel.appendChild(createTextareaRow("备注", `sub-${index}-notes`, sub.notes));
 
-      wrapper.appendChild(block);
+      wrapper.appendChild(panel);
     });
   }
 
-  container.appendChild(wrapper);
+  // ───────────────────────────────────────────────
+  // AUTOCOMPLETE SUPPRESSION
+  // ───────────────────────────────────────────────
+  wrapper.querySelectorAll("input, select, textarea").forEach(el => {
+    el.autocomplete = "off";
+    el.autocorrect = "off";
+    el.autocapitalize = "off";
+    el.spellcheck = false;
+    el.setAttribute("autocomplete", "new-password");
+  });
+
+  // ───────────────────────────────────────────────
+  // TAB SWITCHING
+  // ───────────────────────────────────────────────
+  function activateTab(key) {
+    wrapper.querySelectorAll(".edit-panel").forEach(p => {
+      p.style.display = (p.dataset.tab === key) ? "block" : "none";
+    });
+
+    wrapper.querySelectorAll(".account-tab-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.tab === key);
+    });
+  }
+
+  activateTab("main");
+
+  wrapper.querySelectorAll(".account-tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activateTab(btn.dataset.tab);
+    });
+  });
 }
 
 function createSectionHeader(text) {
@@ -5282,42 +5454,64 @@ async function saveAccountEdits(repoId, accountType, account) {
   const container = document.getElementById("account-edit-content");
 
   // MAIN FIELDS
-  account.name = container.querySelector('[data-key="name"]').value.trim();
-  account.icon = container.querySelector('[data-key="icon"]').value.trim();
-  account.currency = container.querySelector('[data-key="currency"]').value.trim();
-  account.exclude = container.querySelector('[data-key="exclude"]').checked;
-  account.notes = container.querySelector('[data-key="notes"]').value.trim();
+  account.name = container.querySelector('input[name="name"]').value.trim();
+  account.icon = container.querySelector('input[name="icon"]').value.trim();
+  account.currency = container.querySelector('select[name="currency"]').value.trim();
+  account.exclude = container.querySelector('input[name="exclude"]').checked;
+  account.notes = container.querySelector('textarea[data-key="notes"]').value.trim();
 
   // CREDIT CARD FIELDS
   if (accountType === "creditCards") {
-    account.statementDate = parseInt(container.querySelector('[data-key="statementDate"]').value) || null;
-    account.dueDate = parseInt(container.querySelector('[data-key="dueDate"]').value) || null;
-    account.creditLimit = parseFloat(container.querySelector('[data-key="creditLimit"]').value) || null;
+    const sd = container.querySelector('select[name="statementDate"]').value.trim();
+    const dd = container.querySelector('select[name="dueDate"]').value.trim();
+    const cl = container.querySelector('input[name="creditLimit"]').value.trim();
+    const cleaned = cl.replace(/,/g, "");
+
+    account.statementDate = sd ? parseInt(sd) : null;
+    account.dueDate = dd ? parseInt(dd) : null;
+    account.creditLimit = cleaned ? parseFloat(cleaned) : null;
+
+    // Normalize invalid values
+    if (account.statementDate < 1 || account.statementDate > 31) account.statementDate = null;
+    if (account.dueDate < 1 || account.dueDate > 31) account.dueDate = null;
+    if (isNaN(account.creditLimit)) account.creditLimit = null;
   }
 
   // STORED VALUE CARD FIELDS
   if (accountType === "storedValueCards") {
-    account.cardNumber = container.querySelector('[data-key="cardNumber"]').value.trim();
-    account.pin = container.querySelector('[data-key="pin"]').value.trim();
+    account.cardNumber = container.querySelector('input[name="cardNumber"]').value.trim();
+    account.pin = container.querySelector('input[name="pin"]').value.trim();
   }
 
   // SUB-ACCOUNTS
   const subs = account["sub-accounts"] ?? [];
   subs.forEach((sub, index) => {
-    sub.name = container.querySelector(`[data-key="sub-${index}-name"]`).value.trim();
-    sub.icon = container.querySelector(`[data-key="sub-${index}-icon"]`).value.trim();
-    sub.currency = container.querySelector(`[data-key="sub-${index}-currency"]`).value.trim();
-    sub.notes = container.querySelector(`[data-key="sub-${index}-notes"]`).value.trim();
-
-    if (accountType === "storedValueCards") {
-      sub.cardNumber = container.querySelector(`[data-key="sub-${index}-cardNumber"]`).value.trim();
-      sub.pin = container.querySelector(`[data-key="sub-${index}-pin"]`).value.trim();
-    }
+    sub.name = container.querySelector(`input[name="sub-${index}-name"]`).value.trim();
+    sub.icon = container.querySelector(`input[name="sub-${index}-icon"]`).value.trim();
+    sub.currency = container.querySelector(`select[name="sub-${index}-currency"]`).value.trim();
+    sub.exclude = container.querySelector(`input[name="sub-${index}-exclude"]`).checked;
+    sub.notes = container.querySelector(`textarea[data-key="sub-${index}-notes"]`).value.trim();
   });
 
+  if (account._pendingSubOrder) {
+    const newSubs = [];
+    account._pendingSubOrder.forEach(i => {
+      newSubs.push(account["sub-accounts"][i]);
+    });
+    account["sub-accounts"] = newSubs;
+    delete account._pendingSubOrder;
+  }
+
+  // UPDATE TIMESTAMP
   settingsMap[repoId].updatedAt = Date.now();
+
+  // SAVE + SYNC
   await saveLocalJsonData("ledger-settings.json", settingsMap);
-  await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+  await smartSync(selectedRepos, token, {
+    push: true,
+    syncLedgerData: true,
+    repoId
+  });
 
   goBack();
 }

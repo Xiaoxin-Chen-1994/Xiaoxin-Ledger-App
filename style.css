@@ -388,6 +388,15 @@ label {
   font-size: calc(var(--font-size) * 0.7);
 }
 
+.due-warning {
+  font-size: 0.85rem;
+  margin-left: 0.4rem;
+  font-weight: 600;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+}
+
+
 .account-right {
   display: flex;
   flex-direction: column;
@@ -440,6 +449,11 @@ label {
   background: var(--primary);
   color: #fff;
   font-weight: bold;
+}
+
+.account-tab-btn.dragging,
+.account-tab-btn.dragging:hover {
+  background: var(--bg);
 }
 
 .account-detail-summary {
@@ -612,6 +626,7 @@ label {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin: 1%;
 }
 
 .account-inline-row > label {
@@ -622,6 +637,7 @@ label {
 .account-inline-row input[type="text"] {
   flex: 1;
   min-width: 0;
+  margin: 0;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
 }
@@ -652,9 +668,6 @@ label {
 
 /* Sub-account block */
 .subaccount-block {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
   background: var(--bg);
   display: flex;
   flex-direction: column;
