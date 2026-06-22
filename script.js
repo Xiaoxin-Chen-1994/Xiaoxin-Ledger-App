@@ -1904,20 +1904,26 @@ async function init() {
 
   // retrieve github data after page is shown
   if (token) {
-    try {
-      // Get current user login
-      user = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `token ${token}` }
-      }).then(r => r.json());
+    const res = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `token ${token}` }
+    });
 
-      hideOfflineBanner();
-      offline = false;
-    } catch (err) {
-      console.error("GitHub fetch failed:", err);
-
-      showOfflineBanner("GitHub fetch failed: " + err);
+    if (!res.ok) {
       offline = true;
+      showOfflineBanner("GitHub error: " + res.status);
+      return;
     }
+
+    const user = await res.json();
+
+    if (!user.login) {
+      offline = true;
+      showOfflineBanner("GitHub returned invalid user object");
+      return;
+    }
+
+    offline = false;
+    hideOfflineBanner();
   }
 
   if (token && !offline) {
