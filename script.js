@@ -1991,9 +1991,93 @@ async function init() {
   // Initialize household selector
   initLedgerSelector();
   toggleLedgerFormRows();
+
+  const creditCards = getAllCreditCardAccounts();
+  showDueNotification(creditCards);
 }
 
 init();
+
+function getAllCreditCardAccounts() {
+  const result = [];
+
+  for (const repoId in settingsMap) {
+    const repoSettings = settingsMap[repoId];
+    if (!repoSettings?.accounts) continue;
+
+    const ccList = repoSettings.accounts.creditCards;
+    if (Array.isArray(ccList)) {
+      for (const acc of ccList) {
+        result.push(acc);
+      }
+    }
+  }
+
+  return result;
+}
+
+async function showDueNotification(accounts) {
+  const allowed = await requestNotificationPermission();
+  if (!allowed) return;
+
+  const { dueSoon, overdue } = getDueSummary(accounts);
+
+  if (dueSoon.length === 0 && overdue.length === 0) return;
+
+  let body = "";
+
+  if (overdue.length > 0) {
+    body += `Overdue: ${overdue.length} account(s)\n`;
+  }
+
+  if (dueSoon.length > 0) {
+    body += `Due within 7 days: ${dueSoon.length} account(s)\n`;
+  }
+
+  new Notification("Credit Card Summary", {
+    body,
+    icon: "/icons/creditcard.png"
+  });
+}
+
+function getDueSummary(accounts) {
+  const today = new Date();
+  const dueSoon = [];
+  const overdue = [];
+
+  for (const acc of accounts) {
+    if (acc.type !== "creditCards") continue;
+    if (!acc.statementDate || !acc.dueDate) continue;
+
+    const { dueDate } = getCycleDates(acc.statementDate, acc.dueDate);
+    const paid = isCyclePaid(acc, dueDate);
+
+    if (paid) continue;
+
+    const days = Math.ceil((dueDate - today) / 86400000);
+
+    if (days < 0) {
+      overdue.push({ acc, daysPast: -days });
+    } else if (days <= 7) {
+      dueSoon.push({ acc, daysLeft: days });
+    }
+  }
+
+  return { dueSoon, overdue };
+}
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return false;
+
+  if (Notification.permission === "granted") return true;
+
+  if (Notification.permission !== "denied") {
+    const result = await Notification.requestPermission();
+    return result === "granted";
+  }
+
+  return false;
+}
 
 // if (navigator.serviceWorker.controller) {
 //   navigator.serviceWorker.controller.postMessage({ type: "UPDATE_CACHE" });
@@ -4567,8 +4651,7 @@ function createAccountRow(repoId, type, acc) {
 
         // Apply tint only if redness > 0
         if (redness > 0) {
-          const alpha = redness * 0.25; // same color system as detail page
-          agingStyle = `background-color: rgba(255, 0, 0, ${alpha});`;
+          agingStyle = `background-color: color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg));`;
         }
       }
     }
