@@ -4820,70 +4820,65 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
     ccSection.className = "cc-rows";
 
     ccSection.innerHTML = `
-    <!-- Row 1: Statement Date -->
-    <div class="cc-row">
-      <div class="cc-left">
-        <span class="cc-label">${t.statementLabel}</span>
-        <span class="cc-value">${statementDay ?? "-"}</span>
-      </div>
+      <!-- Row 1: Statement Date -->
+      <div class="cc-row">
+        <div class="cc-left">
+          <span class="cc-label">${t.statementLabel}</span>
+          <span class="cc-value">${statementDay ?? "-"}</span>
+        </div>
 
-      <div class="cc-middle">
-        <div class="cc-progress-bar">
-          <div class="cc-progress-fill"
-            style="width: ${statementProgress * 100}%; --redness: 0"></div>
+        <div class="cc-right">
+          <div class="cc-right-text">${statementText}</div>
+          <div class="cc-progress-bar">
+            <div class="cc-progress-fill"
+              style="width: ${statementProgress * 100}%; --redness: 0"></div>
+          </div>
         </div>
       </div>
 
-      <div class="cc-right">
-        ${statementText}
-      </div>
-    </div>
+      <!-- Row 2: Due Date -->
+      <div class="cc-row">
+        <div class="cc-left">
+          <span class="cc-label">${t.dueLabel}</span>
+          <span class="cc-value">${dueDay ?? "-"}</span>
+        </div>
 
-    <!-- Row 2: Due Date -->
-    <div class="cc-row">
-      <div class="cc-left">
-        <span class="cc-label">${t.dueLabel}</span>
-        <span class="cc-value">${dueDay ?? "-"}</span>
-      </div>
-
-      <div class="cc-middle">
-        <div class="cc-progress-bar">
-          <div class="cc-progress-fill ${isOverdue ? "overdue" : ""}"
-            style="width: ${dueProgress * 100}%; --redness: ${redness}"></div>
+        <div class="cc-right">
+          <div class="cc-right-text ${dueText.includes("逾期") || dueText.includes("overdue") ? "cc-text-overdue" : ""}">
+            ${dueText}
+          </div>
+          <div class="cc-progress-bar">
+            <div class="cc-progress-fill ${isOverdue ? "overdue" : ""}"
+              style="width: ${dueProgress * 100}%; --redness: ${redness}"></div>
+          </div>
         </div>
       </div>
 
-      <div class="cc-right ${dueText.includes("逾期") || dueText.includes("overdue") ? "cc-text-overdue" : ""}">
-        ${dueText}
-      </div>
-    </div>
+      <!-- Row 3: Credit Limit -->
+      <div class="cc-row">
+        <div class="cc-left">
+          <span class="cc-label">${t.creditLimitLabel}</span>
+          <span class="cc-value">${formattedCreditLimit ?? "-"}</span>
+        </div>
 
-    <!-- Row 3: Credit Limit -->
-    <div class="cc-row">
-      <div class="cc-left">
-        <span class="cc-label">${t.creditLimitLabel}</span>
-        <span class="cc-value">${formattedCreditLimit ?? "-"}</span>
-      </div>
-
-      <div class="cc-middle">
-        <div class="cc-progress-bar">
-          <div class="cc-progress-fill"
-            style="width: ${usagePercent * 100}%; --redness: 0"></div>
+        <div class="cc-right">
+          <div class="cc-right-text">
+            ${t.available(getFormattedAmount(available))}
+          </div>
+          <div class="cc-progress-bar">
+            <div class="cc-progress-fill"
+              style="width: ${usagePercent * 100}%; --redness: 0"></div>
+          </div>
         </div>
       </div>
 
-      <div class="cc-right">
-        ${t.available(getFormattedAmount(available))}
-      </div>
-    </div>
-
-    ${canCalculate ? `
-      <label class="cc-paid">
-        <input type="checkbox" id="cc-paid-checkbox" ${paid ? "checked" : ""}>
-        ${t.paidCheckbox}
-      </label>
-    ` : ""}
-  `;
+      ${canCalculate ? `
+        <label class="cc-paid">
+          <input type="checkbox" id="cc-paid-checkbox" ${paid ? "checked" : ""}>
+          ${t.paidCheckbox}
+        </label>
+      ` : ""}
+    `;
 
     wrapper.appendChild(ccSection);
 

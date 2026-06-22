@@ -510,15 +510,19 @@ label {
   font-weight: bold;
 }
 
-.cc-middle {
-  width: 100%; /* important for grid */
-}
 
 .cc-right {
-  font-size: calc(var(--font-size) * 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cc-right-text {
   white-space: nowrap;
-  width: calc(var(--font-size) * 9); /* FIXED WIDTH */
-  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cc-progress-bar {
