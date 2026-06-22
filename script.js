@@ -1258,6 +1258,9 @@ async function smartSync(selectedRepos, token, options = {}) {
             if ((remoteSettings.createdAt > localSettings.createdAt) || (sameCreated && sameUpdated)) {
               console.log(`[${repoName}] Cloud newer or identical → using cloud`);
               localLedgerDataMap[repoId] = cloudLedgerData;
+              settingsMap[repoId] = remoteSettings;
+              await saveLocalJsonData("ledger-settings.json", settingsMap);
+            
             } else {
 
               if (push) {
@@ -1314,9 +1317,15 @@ async function smartSync(selectedRepos, token, options = {}) {
               if (useCloud) {
                 console.log(`[${repoName}] User chose cloud → overwrite local`);
                 localLedgerDataMap[repoId] = cloudLedgerData;
+                settingsMap[repoId] = remoteSettings;
+                await saveLocalJsonData("ledger-settings.json", settingsMap);
+
               } else {
                 console.log(`[${repoName}] User chose local → overwrite cloud`);
 
+                settingsMap[repoId] = localSettings;
+                await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
+                
                 // Upload entire local DB to cloud
                 if (token && !repo.skipSync) {
                   await githubUploadFile(repoName, "ledger-data.json", localLedgerData, token);
@@ -1326,10 +1335,6 @@ async function smartSync(selectedRepos, token, options = {}) {
 
             // Update lastSynced
             lastSyncedMap[repoId] = Date.now();
-
-            settingsMap[repoId] = (remoteSettings.updatedAt > localSettings.updatedAt) ? remoteSettings : localSettings;
-            await saveLocalJsonData("ledger-settings.json", settingsMap);
-            await githubUploadFile(repoName, "ledger-settings.json", settingsMap[repoId], token);
 
             completed++;
             updateSyncProgress(Math.round((completed / total) * 100));
