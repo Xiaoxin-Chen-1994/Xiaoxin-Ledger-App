@@ -7,7 +7,7 @@
   /* user choice */
   --primary: var(--primary-base);
   --primary-hover: color-mix(in srgb, var(--primary) 80%, black);
-  --border: #ececec;
+  --border: #f5f5f5;
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.06);
   --radius: 0.75rem;
@@ -51,7 +51,7 @@
     --muted: #a1a7b3;
     --primary: color-mix(in srgb, var(--primary-base) 80%, white);
     --primary-hover: color-mix(in srgb, var(--primary) 80%, white);
-    --border: #262a32;
+    --border: #0f0f0f;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.35);
     --light-grey: rgb(20, 20, 20);
