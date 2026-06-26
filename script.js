@@ -10377,6 +10377,7 @@ async function OpenGrocerySearch() {
   const Websites = { // initialize this list for the first time. After that, users can tweak the links themselves.
     "Flipp": { searchURL1: "https://flipp.com/search/", searchURL2: "", items: [] },
     "Sobeys": { searchURL1: "https://www.sobeys.com/?query=", searchURL2: "&tab=products&sort=Price%3A+Low+to+High&itemsPerPage=100", items: [] },
+    "Food Basics": { searchURL1: "https://www.foodbasics.ca/search?sortOrder=price-asc&filter=", searchURL2: "", items: [] },
     "Walmart": { searchURL1: "https://www.walmart.ca/en/search?q=", searchURL2: "&sort=price_low&facet=fulfillment_method_in_store%3AIn-store", items: [] },
     "Costco": { searchURL1: "https://www.costco.ca/CatalogSearch?dept=All&keyword=", searchURL2: "&sortBy=item_location_pricing_salePrice%2Basc", items: [] },
     "Shoppers Drug Mart": { searchURL1: "https://shop.shoppersdrugmart.ca/search?text=", searchURL2: "", items: [] },
