@@ -5018,7 +5018,8 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
     `;
 
     wrapper.appendChild(ccSection);
-
+    content.appendChild(wrapper);
+  
     // Checkbox handler (only if dates exist)
     if (canCalculate) {
       const checkbox = document.getElementById("cc-paid-checkbox");
@@ -5033,8 +5034,6 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       };
     }
   }
-
-  content.appendChild(wrapper);
 }
 
 function getDragAfterElement(container, x) {
