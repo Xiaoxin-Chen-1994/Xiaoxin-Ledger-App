@@ -5024,12 +5024,15 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       setTimeout(() => {
         const checkbox = document.getElementById("cc-paid-checkbox");
         checkbox.onchange = async () => {
+           console.log("1: setCyclePaid");
           setCyclePaid(account, cycleStart, checkbox.checked);
 
           settingsMap[repoId].updatedAt = Date.now();
+          console.log("2: before save");
           await saveLocalJsonData("ledger-settings.json", settingsMap);
+          console.log("3: after save");
           await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-
+console.log("4: render");
           renderAccountDetailContent(repoId, accountType, account);
         };
       });
