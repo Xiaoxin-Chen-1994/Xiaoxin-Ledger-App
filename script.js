@@ -4560,7 +4560,7 @@ window.prepareRepoTabs = prepareRepoTabs;
 function loadAccounts(repoId) {
   const target = document.getElementById("accounts-container");
   target.innerHTML = "";
-
+console.log(settingsMap[repoId].accounts)
   const repoSettings = settingsMap[repoId];
   if (!repoSettings || !repoSettings.accounts) return;
 
@@ -5024,23 +5024,11 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       setTimeout(() => {
         const checkbox = document.getElementById("cc-paid-checkbox");
         checkbox.onchange = async () => {
-           console.log("1: setCyclePaid");
-          console.log("paidStatus before setCyclePaid =", JSON.stringify(account.paidStatus));
-
           setCyclePaid(account, cycleStart, checkbox.checked);
-          console.log("paidStatus after setCyclePaid =", JSON.stringify(account.paidStatus));
 
           settingsMap[repoId].updatedAt = Date.now();
-          console.log("2: before save");
-          console.log("paidStatus after settingsMapUpdatedAt =", JSON.stringify(account.paidStatus));
-
           await saveLocalJsonData("ledger-settings.json", settingsMap);
-          console.log("3: after save");
-          console.log("paidStatus after saveLocal =", JSON.stringify(account.paidStatus));
-
           await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-console.log("4: render");
-console.log("paidStatus after smartSync =", JSON.stringify(account.paidStatus));
 
           renderAccountDetailContent(repoId, accountType, account);
         };
