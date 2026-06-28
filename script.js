@@ -5021,18 +5021,16 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
 
     // Checkbox handler (only if dates exist)
     if (canCalculate) {
-      setTimeout(() => {
-        const checkbox = document.getElementById("cc-paid-checkbox");
-        checkbox.onchange = async () => {
-          setCyclePaid(account, cycleStart, checkbox.checked);
+      const checkbox = document.getElementById("cc-paid-checkbox");
+      checkbox.onchange = async () => {
+        setCyclePaid(account, cycleStart, checkbox.checked);
 
-          settingsMap[repoId].updatedAt = Date.now();
-          await saveLocalJsonData("ledger-settings.json", settingsMap);
-          smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+        settingsMap[repoId].updatedAt = Date.now();
+        await saveLocalJsonData("ledger-settings.json", settingsMap);
+        await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
-          renderAccountDetailContent(repoId, accountType, account);
-        };
-      });
+        renderAccountDetailContent(repoId, accountType, account);
+      };
     }
   }
 
