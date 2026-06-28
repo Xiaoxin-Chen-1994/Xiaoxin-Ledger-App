@@ -4560,7 +4560,7 @@ window.prepareRepoTabs = prepareRepoTabs;
 function loadAccounts(repoId) {
   const target = document.getElementById("accounts-container");
   target.innerHTML = "";
-console.log(settingsMap[repoId].accounts)
+
   const repoSettings = settingsMap[repoId];
   if (!repoSettings || !repoSettings.accounts) return;
 
@@ -5028,8 +5028,8 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
 
           settingsMap[repoId].updatedAt = Date.now();
           await saveLocalJsonData("ledger-settings.json", settingsMap);
-          await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-console.log('settingsMap inside checkbox onchange: ', settingsMap[repoId].accounts)
+          smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+
           renderAccountDetailContent(repoId, accountType, account);
         };
       });
