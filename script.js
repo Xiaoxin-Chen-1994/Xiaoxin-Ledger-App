@@ -6939,18 +6939,20 @@ function enablePageSwipe(pageEl) {
   if (pageEl._swipeEnabled) return;
   pageEl._swipeEnabled = true;
 
-  let startX = 0, currentX = 0, isDragging = false;
-  let startY = 0, currentY = 0;
-  let isHorizontal = false;
+  let startX = 0, startY = 0;
+  let dx = 0, dy = 0;
+  let isDragging = false;
+  let direction = null; // "horizontal" | "vertical"
 
-  const EDGE_ZONE = 20; // px from left edge
-  const MAX_Y = 100;
+  const EDGE_ZONE = 20;
+  const LOCK_THRESHOLD = 12;   // px before locking direction
+  const MAX_VERTICAL = 100;    // max vertical movement allowed for back swipe
 
   const onStart = e => {
-    const x = e.touches[0].clientX;
-    const y = e.touches[0].clientY;
+    const t = e.touches[0];
+    const x = t.clientX;
+    const y = t.clientY;
 
-    // If swipe starts at the very edge → let system back gesture handle it
     if (x < EDGE_ZONE) {
       isDragging = false;
       return;
@@ -6961,35 +6963,54 @@ function enablePageSwipe(pageEl) {
     e.stopPropagation();
     startX = x;
     startY = y;
+    dx = dy = 0;
+    direction = null;
     isDragging = true;
-    isHorizontal = false;
     pageEl.style.transition = "none";
   };
 
   const onMove = e => {
-    e.stopPropagation();
     if (!isDragging) return;
-    const touch = e.touches[0];
-    currentX = touch.clientX - startX;
-    currentY = Math.abs(touch.clientY - startY);
-    if (currentX > 0) {
-      pageEl.style.transform = `translateX(${currentX}px)`;
+
+    const t = e.touches[0];
+    dx = t.clientX - startX;
+    dy = Math.abs(t.clientY - startY);
+
+    // Not enough movement yet → don't decide
+    if (!direction && dx < LOCK_THRESHOLD && dy < LOCK_THRESHOLD) {
+      return;
+    }
+
+    // Decide direction once
+    if (!direction) {
+      direction = Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+    }
+
+    // Vertical → cancel swipe, allow scroll
+    if (direction === "vertical") {
+      isDragging = false;
+      return;
+    }
+
+    // Horizontal swipe
+    if (dx > 0) {
+      pageEl.style.transform = `translateX(${dx}px)`;
     }
   };
 
   const onEnd = () => {
     if (!isDragging) return;
     isDragging = false;
+
     const threshold = window.innerWidth * 2 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
-    if (currentX > threshold && currentY < MAX_Y) {
+    if (dx > threshold && dy < MAX_VERTICAL) {
       pageEl.style.transform = "translateX(110%)";
       setTimeout(() => history.back(), 300);
     } else {
       pageEl.style.transform = "translateX(0)";
     }
-    currentX = 0;
   };
 
   // Save handlers so we can remove them later
