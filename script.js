@@ -5026,14 +5026,11 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
       checkbox.onchange = async () => {
         setCyclePaid(account, cycleStart, checkbox.checked);
 
-        settingsMap[repoId].updatedAt = Date.now();
-        await saveLocalJsonData("ledger-settings.json", settingsMap);
-        await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-
         renderAccountDetailContent(repoId, accountType, account);
       };
     }
   }
+
 }
 
 function getDragAfterElement(container, x) {
