@@ -5029,7 +5029,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
           settingsMap[repoId].updatedAt = Date.now();
           await saveLocalJsonData("ledger-settings.json", settingsMap);
           await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-
+console.log('settingsMap inside checkbox onchange: ', settingsMap[repoId].accounts)
           renderAccountDetailContent(repoId, accountType, account);
         };
       });
