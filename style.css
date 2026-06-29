@@ -733,9 +733,7 @@ label {
 
 input[list],
 input[type="text"],
-input[type="url"],
-#rename-household,
-#invite-email {
+input[type="url"] {
   width: 98%;
   margin: 1%;
   padding: 0.75rem;
@@ -1846,6 +1844,12 @@ hr {
   text-align: center;
 }
 
+#last-synced-notes,
+#manage-household-notes {
+  font-style: italic;
+  color: var(--muted);
+}
+
 /* Controls: take remaining space on the right */
 .settings-section select,
 .settings-section button,
@@ -2035,11 +2039,7 @@ hr {
   background: var(--primary-hover);
 }
 
-#home-image-panel,
-#rename-panel,
-#invite-panel,
-#manage-panel,
-#leave-household-panel {
+#home-image-panel {
   margin: 12px 12px;
   padding: 12px;
   border-radius: 6px;
@@ -2069,96 +2069,10 @@ hr {
   font-weight: 600;
 }
 
-#rename-household:focus,
-#invite-email:focus,
 .home-image-row input[type="url"]:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 1px var(--primary);
-}
-
-/* Confirm button overrides */
-#rename-confirm,
-#invite-confirm {
-  margin-top: 8px;
-  width: auto;
-  background: var(--primary);
-  border-color: var(--bg);
-  color: #fff;
-  text-align: center;
-}
-
-#rename-confirm:hover,
-#invite-confirm:hover {
-  background: var(--primary-hover);
-  border-color: var(--bg);
-}
-
-/* Panel headings */
-#manage-panel h4,
-#leave-household-panel h4 {
-  margin: 0 0 8px 0;
-  font-size: calc(var(--font-size) * 0.9);
-  /* a percentage of the base font size */
-  ;
-  font-weight: 600;
-  color: #333;
-}
-
-/* Member & household lists */
-#member-list,
-#leave-household-list {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 0 0;
-}
-
-#member-list li,
-#leave-household-list li {
-  position: relative;
-  padding: 12px 10px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
-  cursor: pointer;
-  font-size: calc(var(--font-size) * 0.9);
-  /* a percentage of the base font size */
-  ;
-  color: #444;
-  user-select: none;
-  overflow: clip;
-}
-
-#member-list li:last-child,
-#leave-household-list li:last-child {
-  border-bottom: none;
-}
-
-#member-list li:hover,
-#leave-household-list li:hover {
-  background: #fafafa;
-}
-
-/* Delete button */
-#member-list .delete-btn,
-#leave-household-list .delete-btn {
-  position: absolute;
-  right: -1rem;
-  top: 0;
-  height: 100%;
-  width: 3rem;
-  background: #d32f2f;
-  color: #fff;
-  border: none;
-  font-size: calc(var(--font-size) * 0.9);
-  /* a percentage of the base font size */
-  ;
-  cursor: pointer;
-  transition: right 0.3s ease;
-}
-
-#member-list .delete-btn:hover,
-#leave-household-list .delete-btn:hover {
-  background: #b71c1c;
 }
 
 /* Dark mode support */
@@ -2204,11 +2118,7 @@ hr {
     outline: none;
   }
 
-  #home-image-panel,
-  #rename-panel,
-  #invite-panel,
-  #manage-panel,
-  #leave-household-panel {
+  #home-image-panel {
     background: #2a2a2a;
     border-color: #444;
   }
@@ -2217,43 +2127,10 @@ hr {
     color: var(--text);
   }
 
-  #invite-panel p {
-    color: #ed6f6f;
-  }
-
-  #rename-household,
-  #invite-email,
   .home-image-row input[type="url"] {
     background: #1e1e1e;
     border-color: #555;
     color: #eee;
-  }
-
-  #manage-panel h4,
-  #leave-household-panel h4 {
-    color: #eee;
-  }
-
-  #member-list li,
-  #leave-household-list li {
-    background: #2a2a2a;
-    color: #eee;
-    border-bottom: 1px solid #444;
-  }
-
-  #member-list li:hover,
-  #leave-household-list li:hover {
-    background: #333;
-  }
-
-  #member-list .delete-btn,
-  #leave-household-list .delete-btn {
-    background: #d32f2f;
-  }
-
-  #member-list .delete-btn:hover,
-  #leave-household-list .delete-btn:hover {
-    background: #b71c1c;
   }
 }
 

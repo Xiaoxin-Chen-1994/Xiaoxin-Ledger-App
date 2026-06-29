@@ -665,30 +665,8 @@
         <section class="settings-section household-row">
           <p id="households-title">我的家庭</p>
           <div id="household-actions">
-            <button id="rename-btn" class="settings-button">重命名我的家庭</button>
-            <div id="rename-panel" class="panel hidden">
-              <input id="rename-household">
-              <button id="rename-confirm" class="settings-button primary">确认修改</button>
-            </div>
-
-            <button id="invite-btn" class="settings-button">邀请加入我的家庭</button>
-            <div id="invite-panel" class="panel hidden">
-              <p id="invite-panel-notes">注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。</p>
-              <input id="invite-email" type="email" placeholder="输入对方的邮箱">
-              <button id="invite-confirm" class="settings-button primary">确认邀请</button>
-            </div>
-
-            <button id="manage-btn" class="settings-button">从我的家庭中移除用户</button>
-            <div id="manage-panel" class="panel hidden">
-              <h4>成员管理</h4>
-              <ul id="member-list" class="household-list"></ul>
-            </div>
-
-            <button id="leave-btn" class="settings-button">将我从他人的家庭中移除</button>
-            <div id="leave-household-panel" class="panel hidden">
-              <h4>他人的家庭</h4>
-              <ul id="leave-household-list" class="household-list"></ul>
-            </div>
+            <button id="manage-household-btn" class="settings-button">邀请或移除用户</button>
+            <div id="manage-household-notes" style="display:none">如需邀请用户至您的账本，或从账本中移除用户，请在GitHub上将相应仓库共享给指定用户。如需加入他人账本，请让对方将仓库共享给您。</div>
           </div>
         </section>
 

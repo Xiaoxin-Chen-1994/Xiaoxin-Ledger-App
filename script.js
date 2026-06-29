@@ -203,19 +203,7 @@ const translations = {
       <p>Drag the ≡ icon on the right to <strong>reorder items</strong>. Use the checkboxes on the left to <strong>select multiple items for deletion</strong>.</p>
       <p><strong>Please note:</strong> deleting a label will <strong>permanently remove all associated transactions</strong>. Deleting a <strong>primary category</strong> will also <strong>permanently remove all of its secondary categories and their associated transactions</strong>.</p>`,
     myHouseholdsTitle: "My Households",
-    renameHousehold: "Rename My household",
-    confirmRename: "Confirm",
-    householdRenamed: "Your household has been renamed",
-    householdRenameFailed: "Failed to rename household",
-    inviteHousehold: "Invite users to my household",
-    inviteNote: "Note: Invitees may only join the household that you created, not the ones that you were invited to.",
-    inviteEmailPlaceholder: "Enter invitee email",
-    confirmInvite: "Confirm invitation",
-    manageHousehold: "Remove users from my household",
-    memberManagement: "Manage members",
-    leaveHousehold: "Remove myself from other users' households",
-    othersHousehold: "Other users' households",
-    leave: "Leave",
+    manageHousehold: "Invite or remove users",
     language: "Language",
     languageSwitched: "Language switched to English",
     languageSwitchFailed: "Failed to save language",
@@ -266,8 +254,7 @@ const translations = {
       <h2>Acknowledgements</h2>
       <p>This web app would not have been possible without the following services:</p>
       <ul>
-        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> — for hosting the webpage code repository</li>
-        <li><strong><a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer">Firebase</a></strong> — for hosting and managing user data</li>
+        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> — for hosting the webpage code repository and user data</li>
         <li><strong><a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Vercel</a></strong> — for deploying and hosting the live web app</li>
         <li><strong><a href="https://copilot.microsoft.com" target="_blank" rel="noopener noreferrer">Copilot</a></strong> — for assisting with coding and development</li>
       </ul>
@@ -275,23 +262,9 @@ const translations = {
     privacy: "Privacy Statement",
     privacyContent: `
       <h2>Privacy Statement</h2>
-      <p>User data are <strong>securely stored in Firebase</strong>. Access permissions are as follows:</p>
-      <ul>
-        <li><strong>Personal preferences</strong> — visible only to the individual user and the project owner (Xiaoxin Chen).</li>
-        <li><strong>Household data</strong> — visible to users within the same household and the project owner (Xiaoxin Chen).</li>
-      </ul>
+      <p>Your data is securely stored in your GitHub repository. Anyone you grant repository access to will be able to view and modify your data.</p>
       <p>
-        Xiaoxin Chen is currently the sole administrator of this app and therefore the only person with access to data through the Firebase Console. 
-        By <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase’s design and policy</a>, the project owner <strong>must have full administrative access</strong> to all hosted data. 
-        Therefore, Xiaoxin Chen can access all data through the console. 
-        However, he is committed to strictly following his personal ethical code and <strong>will not view or disclose any user or household data</strong>.
-      </p>
-      <p>
-        To protect against unauthorized access, the project owner’s Firebase account is secured through Google login with 
-        <strong>two‑step verification enabled</strong>. This means that even if hackers attempt to break in, they cannot gain access without the second verification step.
-      </p>
-      <p>
-        For any concerns or questions, please contact the project owner at: 
+        The project owner has no access to your data. For any questions regarding the project, please contact the project owner (Xiaoxin Chen) at: 
         <a href="mailto:jerryc1994@hotmail.com" target="_blank" rel="noopener noreferrer">jerryc1994@hotmail.com</a>.
       </p>
     `
@@ -367,19 +340,7 @@ const translations = {
       <p>拖动右侧的 ≡ 图标即可<strong>重新排序</strong>。使用左侧的复选框可<strong>一次选择多个项目进行删除</strong>。</p>
       <p><strong>请注意：</strong> 删除标签将<strong>永久删除其关联的所有交易</strong>。删除<strong>一级分类</strong>时，其下所有<strong>二级分类</strong>及其关联的交易也会被<strong>永久删除</strong>。</p>`,
     myHouseholdsTitle: "我的家庭",
-    renameHousehold: "重命名我的家庭",
-    confirmRename: "确认修改",
-    householdRenamed: "家庭名称已修改",
-    householdRenameFailed: "家庭名称保存出错",
-    inviteHousehold: "邀请加入我的家庭",
-    inviteNote: "注意：受邀用户只能加入您创建的家庭，不能加入您受邀参与的家庭。",
-    inviteEmailPlaceholder: "输入对方的邮箱",
-    confirmInvite: "确认邀请",
-    manageHousehold: "从我的家庭中移除用户",
-    memberManagement: "成员管理",
-    leaveHousehold: "将我从他人的家庭中移除",
-    othersHousehold: "他人的家庭",
-    leave: "离开",
+    manageHousehold: "邀请或移除用户",
     language: "语言",
     languageSwitched: "语言已切换为 中文",
     languageSwitchFailed: "语言保存出错",
@@ -430,8 +391,7 @@ const translations = {
       <h2>致谢</h2>
       <p>本网页应用的实现离不开以下服务：</p>
       <ul>
-        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> —— 用于托管网页代码仓库</li>
-        <li><strong><a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer">Firebase</a></strong> —— 用于托管和管理用户数据</li>
+        <li><strong><a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a></strong> —— 用于托管网页代码仓库和用户数据</li>
         <li><strong><a href="https://vercel.com" target="_blank" rel="noopener noreferrer">Vercel</a></strong> —— 用于部署和托管线上网页应用</li>
         <li><strong><a href="https://copilot.microsoft.com" target="_blank" rel="noopener noreferrer">Copilot</a></strong> —— 用于协助编码与开发</li>
       </ul>
@@ -439,23 +399,9 @@ const translations = {
     privacy: "隐私",
     privacyContent: `
       <h2>隐私声明</h2>
-      <p>用户数据<strong>安全地存储在 Firebase</strong>。访问权限如下：</p>
-      <ul>
-        <li><strong>个人偏好</strong> —— 仅用户本人和项目所有者（Xiaoxin Chen）可见。</li>
-        <li><strong>家庭数据</strong> —— 同一家庭的用户以及项目所有者（Xiaoxin Chen）可见。</li>
-      </ul>
+      <p>用户数据安全地存储在您的 GitHub 仓库中。任何被您授予仓库访问权限的用户都可以查看和修改这些数据。</p>
       <p>
-        Xiaoxin Chen 目前是本应用的唯一管理员，因此也是唯一能够通过 Firebase 控制台访问数据的人。 
-        根据 <a href="https://firebase.google.com/docs/projects/iam/roles-basic" target="_blank" rel="noopener noreferrer">Firebase 的设计和政策</a>，项目所有者<strong>必须拥有对所有托管数据的完整管理权限</strong>。 
-        因此，Xiaoxin Chen 可以通过控制台访问所有数据。 
-        然而，他承诺严格遵守个人的道德准则，<strong>不会查看或泄露任何用户或家庭数据</strong>。
-      </p>
-      <p>
-        为防止未经授权的访问，项目所有者的 Firebase 帐号通过 Google 登录并启用了<strong>双重验证</strong>。 
-        这意味着即使黑客尝试入侵，没有第二步验证也无法获得帐号访问权限。
-      </p>
-      <p>
-        如有任何疑问或问题，请联系项目所有者： 
+        项目所有者无权访问您的数据。如有任何项目相关的问题，请联系项目所有者（Xiaoxin Chen）： 
         <a href="mailto:jerryc1994@hotmail.com" target="_blank" rel="noopener noreferrer">jerryc1994@hotmail.com</a>。
       </p>
     `
@@ -2259,8 +2205,7 @@ document.getElementById("display-last-synced").addEventListener("click", () => {
 
     // Localized instruction
     const note = document.createElement("div");
-    note.style.fontStyle = "italic";
-    note.style.color = "var(--muted)";
+    note.id = "last-synced-notes",
     note.textContent =
       currentLang === "en"
         ? "To sync these ledgers, log out and re‑login, then select a GitHub repo to merge the local data into."
@@ -4175,7 +4120,6 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   // Page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
-    disablePageSwipe(target);
 
     let subWorkspace = null;
     let activeForm;
@@ -7087,17 +7031,7 @@ async function setLanguage(lang, sync = true) {
   document.getElementById("manage-collections-btn").textContent = t.manageCollections;
   document.getElementById("manage-subjects-btn").textContent = t.manageSubjects;
   document.getElementById("households-title").textContent = t.myHouseholdsTitle;
-  document.getElementById("rename-btn").textContent = t.renameHousehold;
-  document.getElementById("rename-confirm").textContent = t.confirmRename;
-  document.getElementById("invite-btn").textContent = t.inviteHousehold;
-  document.getElementById("invite-panel-notes").textContent = t.inviteNote;
-  document.getElementById("invite-email").setAttribute("placeholder", t.inviteEmailPlaceholder);
-  document.getElementById("invite-confirm").textContent = t.confirmInvite;
-  document.getElementById("manage-btn").textContent = t.manageHousehold;
-  document.querySelector("#manage-panel h4").textContent = t.memberManagement;
-  document.getElementById("leave-btn").textContent = t.leaveHousehold;
-  document.querySelector("#leave-household-panel h4").textContent = t.othersHousehold;
-  document.querySelectorAll('.leave-btn').forEach(el => el.textContent = t.leave);
+  document.getElementById("manage-household-btn").textContent = t.manageHousehold;
   document.getElementById("about-title").textContent = t.about;
   document.getElementById("open-help").textContent = t.help;
   document.getElementById("help-content").innerHTML = t.helpContent;
@@ -7491,48 +7425,6 @@ async function displayHomeImage() {
 
   preloader.src = finalUrl;
 }
-
-async function queryFirestoreForRange({
-  dateFrom,
-  dateTo,
-  types,
-  collections,
-  accounts,
-  tags,
-  notesKeyword,
-  householdIds
-}) {
-  const results = [];
-
-  for (const hid of householdIds) {
-    const entriesRef = collection(db, "households", hid, "entries");
-
-    let q = entriesRef;
-
-    // --- Date filters ---
-    if (dateFrom) q = query(q, where("transactionTime", ">=", dateFrom + " 00:00:00"));
-    if (dateTo) q = query(q, where("transactionTime", "<=", dateTo + " 23:59:59"));
-
-    // --- Type filter (only if single) ---
-    if (types?.length === 1) {
-      q = query(q, where("type", "==", types[0]));
-    }
-
-    // --- Collection filter (only if single AND acceptable) ---
-    if (collections?.length === 1) {
-      q = query(q, where("collection", "==", collections[0]));
-    }
-
-    const snap = await getDocs(q);
-
-    snap.forEach(doc => {
-      results.push(doc.data());
-    });
-  }
-
-  return results;
-}
-
 
 async function getFilteredEntries({
   dateFrom = null,
@@ -8187,380 +8079,16 @@ async function setColorScheme(scheme, sync = true) {
 }
 window.setColorScheme = setColorScheme;
 
-document.getElementById("rename-btn").onclick = () => {
-  const panel = document.getElementById("rename-panel");
-  const isVisible = panel.style.display === "block";
-
-  // hide all panels first
-  document.getElementById("invite-panel").style.display = "none";
-  document.getElementById("manage-panel").style.display = "none";
-  document.getElementById("leave-household-panel").style.display = "none";
+document.getElementById("manage-household-btn").onclick = () => {
+  const notes = document.getElementById("manage-household-notes");
+  const isVisible = notes.style.display === "block";
 
   if (isVisible) {
-    panel.style.display = "none"; // toggle off
+    notes.style.display = "none"; // toggle off
   } else {
-    panel.style.display = "block"; // toggle on
-    document.getElementById("rename-household").value = householdDocs[userDoc.personalHouseholdId].name;
+    notes.style.display = "block"; // toggle on
   }
 };
-
-document.getElementById("invite-btn").onclick = () => {
-  const panel = document.getElementById("invite-panel");
-  const isVisible = panel.style.display === "block";
-
-  document.getElementById("rename-panel").style.display = "none";
-  document.getElementById("manage-panel").style.display = "none";
-  document.getElementById("leave-household-panel").style.display = "none";
-
-  panel.style.display = isVisible ? "none" : "block";
-};
-
-document.getElementById("manage-btn").onclick = () => {
-  const panel = document.getElementById("manage-panel");
-  const isVisible = panel.style.display === "block";
-
-  document.getElementById("rename-panel").style.display = "none";
-  document.getElementById("invite-panel").style.display = "none";
-  document.getElementById("leave-household-panel").style.display = "none";
-
-  if (isVisible) {
-    panel.style.display = "none";
-  } else {
-    panel.style.display = "block";
-    loadHouseholdMembers();
-  }
-};
-
-document.getElementById("leave-btn").onclick = () => {
-  const panel = document.getElementById("leave-household-panel");
-  const isVisible = panel.style.display === "block";
-
-  document.getElementById("rename-panel").style.display = "none";
-  document.getElementById("invite-panel").style.display = "none";
-  document.getElementById("manage-panel").style.display = "none";
-
-  if (isVisible) {
-    panel.style.display = "none";
-  } else {
-    panel.style.display = "block";
-    loadMyHouseholds();
-  }
-};
-
-
-document.getElementById("rename-confirm").addEventListener("click", async () => {
-  const t = translations[currentLang];
-
-  const newName = document.getElementById("rename-household").value.trim();
-
-  if (!newName) {
-    alert("请输入新的家庭名称");
-    return;
-  }
-
-  try {
-    // Reference to the household document
-    const householdRef = doc(db, "households", userDoc.personalHouseholdId);
-    await updateDoc(householdRef, {
-      name: newName,
-      lastSynced: getFormattedTime()
-    });
-
-    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-    console.log("Household renamed successfully!");
-    showStatusMessage(t.householdRenamed, "success");
-  } catch (err) {
-    showStatusMessage(t.householdRenameFailed, "error");
-    console.error("Error renaming household:", err);
-  }
-});
-
-document.getElementById("invite-confirm").onclick = async () => {
-  const email = document.getElementById("invite-email").value.trim();
-  if (!email) {
-    alert("请输入邮箱");
-    return;
-  }
-
-  if (email === userDoc.profile.email) {
-    alert("您已在自己的家庭中，无需邀请");
-    return;
-  }
-
-  const myHouseholdId = userDoc.personalHouseholdId;
-
-  try {
-    // 1. Find user by email
-    const profilesRef = collection(db, "profiles");
-    const q = query(profilesRef, where("email", "==", email));
-    const userQuery = await getDocs(q);
-
-    if (userQuery.empty) {
-      alert("未找到该用户");
-      return;
-    }
-
-    const invitedUserProfileDoc = userQuery.docs[0];
-    const invitedUserId = invitedUserProfileDoc.id;
-
-    if (householdDocs[myHouseholdId].members.includes(invitedUserId)) {
-      alert("对方已在您的家庭中，无需再次邀请");
-      return;
-    }
-
-    const userRef = doc(db, "users", currentUser.uid);
-
-    // 2. Add household to invited user
-    const invitedUserRef = doc(db, "users", invitedUserId);
-    await updateDoc(invitedUserRef, {
-      households: arrayUnion(myHouseholdId),
-      orderedHouseholds: arrayUnion(myHouseholdId),
-      lastHouseholdChange: myHouseholdId
-    });
-
-    // 3. Add invited user to household members
-    const householdRef = doc(db, "households", myHouseholdId);
-    await updateDoc(householdRef, {
-      members: arrayUnion(invitedUserId),
-      lastSynced: getFormattedTime()
-    });
-
-    alert("邀请成功，对方已加入您的 household");
-    ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-    document.getElementById("invite-email").value = "";
-
-  } catch (err) {
-    console.error("Error inviting user:", err);
-    alert("邀请失败，请稍后再试");
-  }
-};
-
-async function loadHouseholdMembers() {
-  const list = document.getElementById("member-list");
-  list.innerHTML = "";
-
-  const myHouseholdId = userDoc.personalHouseholdId;
-  const members = householdDocs[myHouseholdId].members.slice(1); // slice(1) excludes the household owner
-
-  // ✅ If no other user in the household
-  if (members.length < 1) {
-    const msg = document.createElement("div");
-    msg.textContent = "您的家庭中没有其他成员";
-    msg.style.padding = "12px";
-    msg.style.color = "#666";
-    msg.style.textAlign = "center";
-    msg.style.fontSize = "calc(var(--font-size) * 0.9)";
-    list.appendChild(msg);
-    return; // ✅ Stop here — nothing else to load
-  }
-
-  for (const uid of members) {
-    const profileRef = doc(db, "profiles", uid);
-    const userProfileDoc = await getDoc(profileRef);
-
-    if (!userProfileDoc.exists()) {
-      console.warn(`Profile missing for uid: ${uid}`);
-      continue; // skip this one
-    }
-
-    const email = userProfileDoc.data().email;
-
-    const li = document.createElement("li");
-    li.textContent = email;
-    li.style.padding = "10px";
-    li.style.borderBottom = "1px solid #eee";
-    li.style.position = "relative";
-
-    // Right-click to show delete
-    li.oncontextmenu = e => {
-      e.preventDefault();   // stop the browser from scrolling the page
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      showDeleteButton(li, uid);
-    };
-
-    li.onclick = () => {
-      hideDeleteButton(li);
-    };
-
-    // Swipe left (mobile)
-    li.addEventListener("touchstart", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      li._startX = e.touches[0].clientX;
-    });
-
-    li.addEventListener("touchend", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      const dx = e.changedTouches[0].clientX - li._startX;
-      if (dx < -50) showDeleteButton(li, uid); // swipe left
-      if (dx > 50) hideDeleteButton(li); // swipe right
-    });
-
-    list.appendChild(li);
-  }
-}
-
-function showDeleteButton(li, uid) {
-  const t = translations[currentLang];
-
-  let btn = li.querySelector(".delete-btn");
-  if (btn) {
-    btn.style.display = "block"; // display again
-    return;
-  }
-
-  btn = document.createElement("button");
-  btn.textContent = t.delete;
-  btn.className = "delete-btn";
-  btn.style.width = "4rem";
-  btn.style.transform = "translateX(-1rem)"; // display
-  btn.style.alignItems = "center";      /* vertical centering */
-  btn.style.justifyContent = "center";  /* horizontal centering */
-
-
-  btn.onclick = () => confirmRemoveMember(uid);
-
-  li.appendChild(btn);
-}
-
-function hideDeleteButton(li) {
-  const btn = li.querySelector(".delete-btn");
-  if (btn) {
-    btn.style.display = "none";   // ✅ slide out of view
-  }
-}
-
-async function confirmRemoveMember(uid) {
-  if (!confirm("确定要将该成员移出 household 吗？")) return;
-
-  const myHouseholdId = userDoc.personalHouseholdId;
-  const householdRef = doc(db, "households", myHouseholdId);
-
-  // 1. Remove user from household members
-  await updateDoc(householdRef, {
-    members: arrayRemove(uid),
-    lastSynced: getFormattedTime()
-  });
-
-  // 2. Remove household from user
-  await updateDoc(doc(db, "users", uid), {
-    households: arrayRemove(myHouseholdId),
-    orderedHouseholds: arrayRemove(myHouseholdId),
-    lastHouseholdChange: myHouseholdId
-  });
-
-  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-  loadHouseholdMembers();
-}
-
-async function loadMyHouseholds() {
-  const list = document.getElementById("leave-household-list");
-  list.innerHTML = "";
-
-  // ✅ If user is only in 1 household (their own)
-  if (userDoc.households.length <= 1) {
-    const msg = document.createElement("div");
-    msg.textContent = "您没有加入其他人的家庭";
-    msg.style.padding = "12px";
-    msg.style.color = "#666";
-    msg.style.textAlign = "center";
-    msg.style.fontSize = "calc(var(--font-size) * 0.9)";
-    list.appendChild(msg);
-    return; // ✅ Stop here — nothing else to load
-  }
-
-  // ✅ Skip the first household (primary)
-  const leaveable = userDoc.households.slice(1);
-
-  for (const hid of leaveable) {
-    const hname = householdDocs[[hid]].name;
-
-    const li = document.createElement("li");
-    li.textContent = hname;
-    li.style.padding = "10px";
-    li.style.borderBottom = "1px solid #eee";
-    li.style.position = "relative";
-
-    // Right-click to show delete
-    li.oncontextmenu = e => {
-      e.preventDefault();   // stop the browser from scrolling the page
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      showLeaveButton(li, hid);
-    };
-
-    li.onclick = () => {
-      hideLeaveButton(li);
-    };
-
-    // Swipe left (mobile)
-    li.addEventListener("touchstart", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      li._startX = e.touches[0].clientX;
-    });
-
-    li.addEventListener("touchend", e => {
-      e.stopPropagation();  // stop the event from bubbling up to parent elements
-      const dx = e.changedTouches[0].clientX - li._startX;
-      if (dx < -50) showLeaveButton(li, hid); // swipe left
-      if (dx > 50) hideLeaveButton(li); // swipe right
-    });
-
-    list.appendChild(li);
-  }
-}
-
-function showLeaveButton(li, hid) {
-  const t = translations[currentLang];
-  let btn = li.querySelector(".delete-btn");
-  if (btn) {
-    btn.style.display = "block"; // display again
-    return;
-  }
-
-  btn = document.createElement("button");
-  btn.textContent = t.leave;
-  btn.className = "delete-btn leave-btn";
-  btn.style.width = "4rem";
-  btn.style.transform = "translateX(-1rem)"; // display
-  btn.style.alignItems = "center";      /* vertical centering */
-  btn.style.justifyContent = "center";  /* horizontal centering */
-
-  btn.onclick = () => confirmLeaveHousehold(hid);
-
-  li.appendChild(btn);
-}
-
-function hideLeaveButton(li) {
-  const btn = li.querySelector(".delete-btn");
-  if (btn) {
-    btn.style.display = "none";
-  }
-}
-
-async function confirmLeaveHousehold(hid) {
-  if (!confirm("您确定要退出该家庭吗？退出后页面将自动刷新，请确保已保存所有数据")) return;
-
-  const userRef = doc(db, "users", currentUser.uid);
-
-  // Remove myself from household members
-  await updateDoc(doc(db, "households", hid), {
-    members: arrayRemove(currentUser.uid),
-    lastSynced: getFormattedTime()
-  });
-
-  // Remove household from my user doc
-  await updateDoc(userRef, {
-    households: arrayRemove(hid),
-    orderedHouseholds: arrayRemove(hid),
-    "profile.lastSynced": getFormattedTime()
-  });
-
-  toggleLedgerFormRows();
-
-  alert("已退出该家庭");
-  ({ userDoc, householdDocs } = await syncData(currentUser.uid));
-
-  window.location.href = "/";
-}
 
 async function deleteAccount(mode) { // mode = "account" (delete all) or mode = "data" (delete just data)
   const message = currentLang === "en"
@@ -11158,7 +10686,6 @@ function openReceiptScan(options = { returnOnly: false }) {
   console.log('receiptScanMode', receiptScanMode)
   showPage("scan-receipt", "Scan Receipt");
   let target = document.getElementById("scan-receipt-page");
-  disablePageSwipe(target);
 }
 
 document.getElementById("receipt-take-photo")
