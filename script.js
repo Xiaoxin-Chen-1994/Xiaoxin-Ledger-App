@@ -11779,8 +11779,6 @@ function OpenInterestRateCal() {
     let current = Number(startBalance);
     const result = [];
 
-    result.push({ date: changeRows[0].date, balance: current });
-
     for (const row of changeRows) {
       current += row.change;
       result.push({ date: row.date, balance: current });
@@ -11793,13 +11791,10 @@ function OpenInterestRateCal() {
     let current = Number(endBalance);
     const result = [];
 
-    // Last date = last change row date
-    result.push({ date: changeRows[changeRows.length - 1].date, balance: current });
-
     // Walk backwards
     for (let i = changeRows.length - 1; i >= 0; i--) {
-      current -= changeRows[i].change;
       result.push({ date: changeRows[i].date, balance: current });
+      current -= changeRows[i].change;
     }
 
     // Reverse to chronological order
