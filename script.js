@@ -1195,8 +1195,6 @@ async function smartSync(selectedRepos, token, options = {}) {
 
             const cloudLedgerData = await githubReadJson(repoName, `ledger-data.json`, token);
 
-            const remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
-            settingsMap = await loadLocalJsonData("ledger-settings.json", {});
             let localSettings = settingsMap[repoId];
 
             // Compare timestamps
@@ -2142,109 +2140,88 @@ function timeAgo(rawTime) {
   }
 }
 
-document.getElementById("display-last-synced").addEventListener("click", () => {
+document.getElementById("display-last-synced").addEventListener("click", async () => {
   const t = translations[currentLang];
-
   const container = document.getElementById("last-synced-text");
 
-  // If already visible → hide it 
   if (container.innerHTML.trim() !== "") {
     container.innerHTML = "";
     return;
   }
 
-  const lastSyncStatus = JSON.parse(localStorage.getItem("lastSyncStatus"));
+  const settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  const lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
 
   const notes = document.createElement("div");
   notes.style.color = "var(--muted)";
   notes.style.fontStyle = "italic";
   container.appendChild(notes);
 
-  // ⭐ Show skip-sync message if ANY ledger is local-only
-  // ⭐ Show skip-sync message if ANY ledger is local-only
-  const skippedLedgers = selectedRepos?.ledgerRepos?.filter(r => r.skipSync) || [];
+  // ⭐ Display timestamps for ALL repos
+  for (const repo of selectedRepos.ledgerRepos) {
+    const repoId = repo.id;
+    const repoName = repo.name;
 
-  if (skippedLedgers.length > 0) {
-    const msg = document.createElement("div");
-    msg.style.marginBottom = "0.8em";
+    const localSettings = settingsMap[repoId] || {};
+    const lastSynced = lastSyncedMap[repoId];
 
-    // Localized header (improved wording)
-    const header = document.createElement("div");
-    header.style.fontStyle = "italic";
-    header.style.color = "var(--muted)";
-    header.textContent =
-      currentLang === "en"
-        ? "The following ledgers are stored locally only because you have chosen to skip their syncing:"
-        : "以下账本因您选择跳过同步而仅存储在本地：";
-    msg.appendChild(header);
-
-    // List skipped ledgers
-    const list = document.createElement("ul");
-    list.style.margin = "0.4em 0 0.8em 1.2em";
-    list.style.padding = "0";
-    list.style.color = "var(--muted)";
-
-    skippedLedgers.forEach(r => {
-      const li = document.createElement("li");
-      li.textContent = r.name;
-      list.appendChild(li);
-    });
-
-    msg.appendChild(list);
-
-    // ⭐ Data-loss warning
-    const warn = document.createElement("div");
-    warn.style.fontStyle = "italic";
-    warn.style.color = "var(--warning, #d9534f)";
-    warn.style.marginBottom = "0.8em";
-    warn.textContent =
-      currentLang === "en"
-        ? "Warning: Local-only data will be lost if the browser clears site data (cache, cookies, storage)."
-        : "警告：如果浏览器清除网站数据（缓存、Cookie、本地存储），这些仅存储在本地的账本将会丢失。";
-    msg.appendChild(warn);
-
-    // Localized instruction
-    const note = document.createElement("div");
-    note.id = "last-synced-notes",
-    note.textContent =
-      currentLang === "en"
-        ? "To sync these ledgers, log out and re‑login, then select a GitHub repo to merge the local data into."
-        : "如需同步这些账本，请先退出登录并重新登录，然后选择一个 GitHub 仓库以合并本地数据。";
-    msg.appendChild(note);
-
-    container.appendChild(msg);
-  }
-
-  if (lastSyncStatus !== null) { // it exists   
-    notes.textContent = t.timestampNotes;
-
-    const blank = document.createElement("div");
-    blank.style.height = "0.8em";
-    container.appendChild(blank);
-
-    for (const label in lastSyncStatus) {
-      const syncInfo = lastSyncStatus[label];
-      if (!syncInfo) continue;
-
-      const local = syncInfo.formattedTime; // already formatted local time
-      const ago = timeAgo(syncInfo.rawTime);
-
-      const block = document.createElement("div");
-      block.className = "last-synced-entry";
-
-      block.innerHTML = `
-        <div><strong>${label}</strong></div>
-        <div style="margin-left: 1.2em;">
-          <span style="color: var(--muted); font-style: italic;">${ago} · </span>  
-          ${local}
-        </div>
-      `;
-
-      container.appendChild(block);
+    // ⭐ Fetch cloud only when allowed
+    let remoteSettings = null;
+    if (token && !offline) {
+      try {
+        remoteSettings = await githubReadJson(repoName, "ledger-settings.json", token);
+      } catch (err) {
+        console.error("Failed to load cloud settings for", repoName, err);
+      }
     }
-  } else { // it does not exist 
-    console.log("lastSyncStatus is not found in localStorage");
-    notes.textContent = "Last sync status is not found in the browser's localStorage."
+
+    const localCreated = localSettings.createdAt
+      ? new Date(localSettings.createdAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
+
+    const localUpdated = localSettings.updatedAt
+      ? new Date(localSettings.updatedAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
+
+    const cloudCreated = remoteSettings?.createdAt
+      ? new Date(remoteSettings.createdAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
+
+    const cloudUpdated = remoteSettings?.updatedAt
+      ? new Date(remoteSettings.updatedAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
+
+    const lastSyncedFormatted = lastSynced
+      ? new Date(lastSynced).toLocaleString()
+      : (currentLang === "en" ? "Never synced" : "从未同步");
+
+    const block = document.createElement("div");
+    block.className = "last-synced-entry";
+    block.style.marginBottom = "1em";
+
+    block.innerHTML = `
+      <div><strong>${repoName}</strong></div>
+
+      <div style="margin-left: 1.2em; color: var(--muted);">
+        ${currentLang === "en" ? "Local created:" : "本地创建时间："} ${localCreated}
+      </div>
+      <div style="margin-left: 1.2em; color: var(--muted);">
+        ${currentLang === "en" ? "Local updated:" : "本地更新时间："} ${localUpdated}
+      </div>
+
+      <div style="margin-left: 1.2em; color: var(--muted);">
+        ${currentLang === "en" ? "Cloud created:" : "云端创建时间："} ${cloudCreated}
+      </div>
+      <div style="margin-left: 1.2em; color: var(--muted);">
+        ${currentLang === "en" ? "Cloud updated:" : "云端更新时间："} ${cloudUpdated}
+      </div>
+
+      <div style="margin-left: 1.2em; color: var(--muted);">
+        ${currentLang === "en" ? "Last synced:" : "上次同步时间："} ${lastSyncedFormatted}
+      </div>
+    `;
+
+    container.appendChild(block);
   }
 });
 
