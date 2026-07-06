@@ -4600,7 +4600,7 @@ function createAccountRow(repoId, type, acc) {
             </span>
           `;
 
-        } else if (diffDays <= 15) {
+        } else {
           // Due soon with redness
           redness = Math.max(0, Math.min((15 - diffDays) / 15, 1));
           const bg = `color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg))`;
