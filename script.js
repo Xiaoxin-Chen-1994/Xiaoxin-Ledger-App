@@ -5032,7 +5032,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
         await saveLocalJsonData("ledger-settings.json", settingsMap);
         await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
-        renderAccountDetailContent(repoId, accountType, account);
+        renderAccountDetailContent(repoId, accountType, account, tabKey);
         loadAccounts(repoId);
       };
     }
