@@ -2213,8 +2213,8 @@ document.getElementById("display-last-synced").addEventListener("click", async (
   // -------------------------------
   // ⭐ Load new timestamp sources
   // -------------------------------
-  const settingsMap = await loadLocalJsonData("ledger-settings.json", {});
-  const lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
+  settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
 
   // -------------------------------
   // ⭐ Display timestamps for ALL repos
@@ -5033,6 +5033,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
         await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
         renderAccountDetailContent(repoId, accountType, account);
+        loadAccounts(repoId);
       };
     }
   }
