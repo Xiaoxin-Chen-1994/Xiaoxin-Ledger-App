@@ -2144,28 +2144,100 @@ document.getElementById("display-last-synced").addEventListener("click", async (
   const t = translations[currentLang];
   const container = document.getElementById("last-synced-text");
 
+  // toggle
   if (container.innerHTML.trim() !== "") {
     container.innerHTML = "";
     return;
   }
-
-  const settingsMap = await loadLocalJsonData("ledger-settings.json", {});
-  const lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
 
   const notes = document.createElement("div");
   notes.style.color = "var(--muted)";
   notes.style.fontStyle = "italic";
   container.appendChild(notes);
 
+  // -------------------------------
+  // ⭐ Skipped ledgers (unchanged)
+  // -------------------------------
+  const skippedLedgers = selectedRepos?.ledgerRepos?.filter(r => r.skipSync) || [];
+  if (skippedLedgers.length > 0) {
+    const msg = document.createElement("div");
+    msg.style.marginBottom = "0.8em";
+
+    // Localized header
+    const header = document.createElement("div");
+    header.style.fontStyle = "italic";
+    header.style.color = "var(--muted)";
+    header.textContent =
+      currentLang === "en"
+        ? "The following ledgers are stored locally only because you have chosen to skip their syncing:"
+        : "以下账本因您选择跳过同步而仅存储在本地：";
+    msg.appendChild(header);
+
+    // List skipped ledgers
+    const list = document.createElement("ul");
+    list.style.margin = "0.4em 0 0.8em 1.2em";
+    list.style.padding = "0";
+    list.style.color = "var(--muted)";
+
+    skippedLedgers.forEach(r => {
+      const li = document.createElement("li");
+      li.textContent = r.name;
+      list.appendChild(li);
+    });
+
+    msg.appendChild(list);
+
+    // Warning
+    const warn = document.createElement("div");
+    warn.style.fontStyle = "italic";
+    warn.style.color = "var(--warning, #d9534f)";
+    warn.style.marginBottom = "0.8em";
+    warn.textContent =
+      currentLang === "en"
+        ? "Warning: Local-only data will be lost if the browser clears site data (cache, cookies, storage)."
+        : "警告：如果浏览器清除网站数据（缓存、Cookie、本地存储），这些仅存储在本地的账本将会丢失。";
+    msg.appendChild(warn);
+
+    // Instruction
+    const note = document.createElement("div");
+    note.id = "last-synced-notes";
+    note.textContent =
+      currentLang === "en"
+        ? "To sync these ledgers, log out and re‑login, then select a GitHub repo to merge the local data into."
+        : "如需同步这些账本，请先退出登录并重新登录，然后选择一个 GitHub 仓库以合并本地数据。";
+    msg.appendChild(note);
+
+    container.appendChild(msg);
+  }
+
+  // -------------------------------
+  // ⭐ Load new timestamp sources
+  // -------------------------------
+  const settingsMap = await loadLocalJsonData("ledger-settings.json", {});
+  const lastSyncedMap = await loadLocalJsonData("lastSyncedMap.json", {});
+
+  // -------------------------------
   // ⭐ Display timestamps for ALL repos
+  // -------------------------------
   for (const repo of selectedRepos.ledgerRepos) {
     const repoId = repo.id;
     const repoName = repo.name;
 
+    // Local timestamps
     const localSettings = settingsMap[repoId] || {};
-    const lastSynced = lastSyncedMap[repoId];
+    const localCreated = localSettings.createdAt
+      ? new Date(localSettings.createdAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
 
-    // ⭐ Fetch cloud only when allowed
+    const localUpdated = localSettings.updatedAt
+      ? new Date(localSettings.updatedAt).toLocaleString()
+      : (currentLang === "en" ? "N/A" : "无");
+
+    const localUpdatedAgo = localSettings.updatedAt
+      ? timeAgo(localSettings.updatedAt)
+      : "";
+
+    // Cloud timestamps (only if online + authenticated)
     let remoteSettings = null;
     if (token && !offline) {
       try {
@@ -2175,14 +2247,6 @@ document.getElementById("display-last-synced").addEventListener("click", async (
       }
     }
 
-    const localCreated = localSettings.createdAt
-      ? new Date(localSettings.createdAt).toLocaleString()
-      : (currentLang === "en" ? "N/A" : "无");
-
-    const localUpdated = localSettings.updatedAt
-      ? new Date(localSettings.updatedAt).toLocaleString()
-      : (currentLang === "en" ? "N/A" : "无");
-
     const cloudCreated = remoteSettings?.createdAt
       ? new Date(remoteSettings.createdAt).toLocaleString()
       : (currentLang === "en" ? "N/A" : "无");
@@ -2191,10 +2255,21 @@ document.getElementById("display-last-synced").addEventListener("click", async (
       ? new Date(remoteSettings.updatedAt).toLocaleString()
       : (currentLang === "en" ? "N/A" : "无");
 
+    const cloudUpdatedAgo = remoteSettings?.updatedAt
+      ? timeAgo(remoteSettings.updatedAt)
+      : "";
+
+    // Last synced timestamp
+    const lastSynced = lastSyncedMap[repoId];
     const lastSyncedFormatted = lastSynced
       ? new Date(lastSynced).toLocaleString()
       : (currentLang === "en" ? "Never synced" : "从未同步");
 
+    const lastSyncedAgo = lastSynced ? timeAgo(lastSynced) : "";
+
+    // -------------------------------
+    // ⭐ Render block (same structure as original)
+    // -------------------------------
     const block = document.createElement("div");
     block.className = "last-synced-entry";
     block.style.marginBottom = "1em";
@@ -2202,22 +2277,28 @@ document.getElementById("display-last-synced").addEventListener("click", async (
     block.innerHTML = `
       <div><strong>${repoName}</strong></div>
 
-      <div style="margin-left: 1.2em; color: var(--muted);">
-        ${currentLang === "en" ? "Local created:" : "本地创建时间："} ${localCreated}
-      </div>
-      <div style="margin-left: 1.2em; color: var(--muted);">
-        ${currentLang === "en" ? "Local updated:" : "本地更新时间："} ${localUpdated}
-      </div>
-
-      <div style="margin-left: 1.2em; color: var(--muted);">
-        ${currentLang === "en" ? "Cloud created:" : "云端创建时间："} ${cloudCreated}
-      </div>
-      <div style="margin-left: 1.2em; color: var(--muted);">
-        ${currentLang === "en" ? "Cloud updated:" : "云端更新时间："} ${cloudUpdated}
+      <div style="margin-left: 1.2em;">
+        ${currentLang === "en" ? "Local updated:" : "本地更新时间："}
+        <span style="color: var(--muted); font-style: italic;">
+          ${localUpdatedAgo ? localUpdatedAgo + " · " : ""}
+        </span>
+        ${localUpdated}
       </div>
 
-      <div style="margin-left: 1.2em; color: var(--muted);">
-        ${currentLang === "en" ? "Last synced:" : "上次同步时间："} ${lastSyncedFormatted}
+      <div style="margin-left: 1.2em;">
+        ${currentLang === "en" ? "Cloud updated:" : "云端更新时间："}
+        <span style="color: var(--muted); font-style: italic;">
+          ${cloudUpdatedAgo ? cloudUpdatedAgo + " · " : ""}
+        </span>
+        ${cloudUpdated}
+      </div>
+
+      <div style="margin-left: 1.2em;">
+        ${currentLang === "en" ? "Last synced:" : "上次同步时间："}
+        <span style="color: var(--muted); font-style: italic;">
+          ${lastSyncedAgo ? lastSyncedAgo + " · " : ""}
+        </span>
+        ${lastSyncedFormatted}
       </div>
     `;
 
@@ -4210,7 +4291,7 @@ async function showPage(name, title = latestTitle, options = {}) {
         renderAccountDetailContent(activeRepoId, accountType, account, key);
       }
     });
-    
+
     renderAccountDetailContent(activeRepoId, accountType, account);
 
     const manageBtn = document.getElementById("manage-btn-headerbar");
@@ -4765,7 +4846,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
   const wrapper = document.createElement("div");
   wrapper.className = "account-detail-summary";
 
-  
+
   // Placeholder values — you will compute real ones later
   const totalSum = "--";
   const inflow = "--";
@@ -4940,7 +5021,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
 
     wrapper.appendChild(ccSection);
     content.appendChild(wrapper);
-  
+
     // Checkbox handler (only if dates exist)
     if (canCalculate) {
       const checkbox = document.getElementById("cc-paid-checkbox");
@@ -4974,7 +5055,7 @@ function getDragAfterElement(container, x) {
 
 function renderAccountEditPage(repoId, accountType, account) {
   account._pendingSubOrder = null; // this temporary variable will store drag order
-  
+
   const container = document.getElementById("account-edit-content");
   container.innerHTML = "";
 
