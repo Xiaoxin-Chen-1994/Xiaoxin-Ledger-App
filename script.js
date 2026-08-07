@@ -1996,7 +1996,7 @@ function getDueSummary(accounts) {
     if (!acc.statementDate || !acc.dueDate) continue;
 
     const { dueDate } = getCycleDates(acc.statementDate, acc.dueDate);
-    const paid = isCyclePaid(acc, dueDate);
+    const paid = isCyclePaid(repoId, type, acc.id, dueDate);
 
     if (paid) continue;
 
@@ -4287,22 +4287,22 @@ async function showPage(name, title = latestTitle, options = {}) {
     };
 
   } else if (latestPage === "account-detail") {
-    const { activeRepoId, accountType, account } = options;
+    const { activeRepoId, accountType, accountId } = options;
 
-    renderAccountTabs(account, "account-detail-tabs", {
+    renderAccountTabs(activeRepoId, accountType, accountId, "account-detail-tabs", {
       mode: "detail",
       onTabClick: (key) => {
-        renderAccountDetailContent(activeRepoId, accountType, account, key);
+        renderAccountDetailContent(activeRepoId, accountType, accountId, key);
       }
     });
 
-    renderAccountDetailContent(activeRepoId, accountType, account);
+    renderAccountDetailContent(activeRepoId, accountType, accountId);
 
     const manageBtn = document.getElementById("manage-btn-headerbar");
     manageBtn.style.display = "block";
 
     manageBtn.onclick = () => {
-      showPage("account-edit", "Edit " + account.name, { activeRepoId, accountType, account });
+      showPage("account-edit", "Edit " + title, { activeRepoId, accountType, accountId });
     };
 
     const addBtn = document.getElementById("add-btn-headerbar");
@@ -4317,34 +4317,34 @@ async function showPage(name, title = latestTitle, options = {}) {
           activeRepoId,
           mode: "sub",
           accountType,
-          account
+          accountId
         }
       );
     };
 
   } else if (latestPage === "account-edit") {
-    const { activeRepoId, accountType, account } = options;
+    const { activeRepoId, accountType, accountId } = options;
 
     // Render the edit UI
-    renderAccountEditPage(activeRepoId, accountType, account);
+    renderAccountEditPage(activeRepoId, accountType, accountId);
 
     // Show Save button
     const saveBtn = document.getElementById("save-btn-headerbar");
     saveBtn.style.display = "block";
     saveBtn.onclick = async () => {
-      await saveAccountEdits(activeRepoId, accountType, account);
+      await saveAccountEdits(activeRepoId, accountType, accountId);
     };
 
   } else if (latestPage === "account-add") {
 
-    const { activeRepoId, mode, accountType, account } = options;
-    renderAccountAddPage({ activeRepoId, mode, accountType, account });
+    const { activeRepoId, mode, accountType, accountId } = options;
+    renderAccountAddPage({ activeRepoId, mode, accountType, accountId });
 
     // Show Save button
     const saveBtn = document.getElementById("save-btn-headerbar");
     saveBtn.style.display = "block";
     saveBtn.onclick = async () => {
-      await saveAccountAdd({ activeRepoId, mode, accountType, account });
+      await saveAccountAdd({ activeRepoId, mode, accountType, accountId });
     };
 
   } else if (latestPage === "manage-labels") {
@@ -4571,7 +4571,6 @@ function loadAccounts(repoId) {
   if (!repoSettings || !repoSettings.accounts) return;
 
   const accounts = repoSettings.accounts;
-  console.log(accounts)
 
   accountTypes.forEach((type, typeIndex) => {
     const list = accounts[type];
@@ -4585,7 +4584,7 @@ function loadAccounts(repoId) {
     target.appendChild(header);
 
     list.forEach((acc, index) => {
-      const row = createAccountRow(repoId, type, acc);
+      const row = createAccountRow(repoId, type, acc.id);
       target.appendChild(row);
 
       if (acc.notes?.trim()) {
@@ -4610,14 +4609,17 @@ function loadAccounts(repoId) {
   });
 }
 
-function createAccountRow(repoId, type, acc) {
+function createAccountRow(repoId, type, accountId) {
   const t = translations[currentLang];
+
+  const acc = settingsMap[repoId].accounts[type]
+    .find(a => a.id === accountId);
 
   const row = document.createElement("div");
   row.className = "account-row";
 
   row.addEventListener("click", () => {
-    showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, account: acc });
+    showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, accountId: accountId });
   });
 
   // Sub-accounts
@@ -4642,7 +4644,7 @@ function createAccountRow(repoId, type, acc) {
 
     if (statementDay && dueDay) {
       const { cycleStart, cycleEnd, dueDate } = getCycleDates(statementDay, dueDay);
-      const paid = isCyclePaid(acc, cycleStart);
+      const paid = isCyclePaid(repoId, type, accountId, cycleStart);
 
       if (!paid) {
         const diffDays = Math.ceil((dueDate - today) / 86400000);
@@ -4717,7 +4719,10 @@ function createAccountRow(repoId, type, acc) {
   return row;
 }
 
-function renderAccountTabs(account, elementId, options = {}) {
+function renderAccountTabs(repoId, accountType, accountId, elementId, options = {}) {
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
+
   const { mode = "detail", onTabClick = null } = options;
   const tabRow = document.getElementById(elementId);
   tabRow.innerHTML = "";
@@ -4817,12 +4822,18 @@ function getPaidKey(cycleStart) {
   return `${cycleStart.toISOString().slice(0, 10)}`;
 }
 
-function isCyclePaid(account, cycleStart) {
+function isCyclePaid(repoId, accountType, accountId, cycleStart) {
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
+
   const key = getPaidKey(cycleStart);
   return account.paidStatus?.[key] === true;
 }
 
-function setCyclePaid(account, cycleStart, paid) {
+function setCyclePaid(repoId, accountType, accountId, cycleStart, paid) {
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
+
   const key = getPaidKey(cycleStart);
   if (!account.paidStatus) account.paidStatus = {};
   account.paidStatus[key] = paid;
@@ -4842,8 +4853,11 @@ function setCyclePaid(account, cycleStart, paid) {
   }
 }
 
-function renderAccountDetailContent(repoId, accountType, account, tabKey = "all") {
+function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "all") {
   const t = translations[currentLang];
+
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
 
   const content = document.getElementById("account-detail-content");
   content.innerHTML = "";
@@ -4913,7 +4927,7 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
         nextMonth = nextMonthIndex + 1;
       }
 
-      paid = isCyclePaid(account, cycleStart);
+      paid = isCyclePaid(repoId, accountType, accountId, cycleStart);
 
       // --- STATEMENT PROGRESS ---
       const total = (cycleEnd - cycleStart) / 86400000;
@@ -5031,13 +5045,13 @@ function renderAccountDetailContent(repoId, accountType, account, tabKey = "all"
     if (canCalculate) {
       const checkbox = document.getElementById("cc-paid-checkbox");
       checkbox.onchange = async () => {
-        setCyclePaid(account, cycleStart, checkbox.checked);
+        setCyclePaid(repoId, accountType, accountId, cycleStart, checkbox.checked);
 
         settingsMap[repoId].updatedAt = Date.now();
         await saveLocalJsonData("ledger-settings.json", settingsMap);
         await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
-        renderAccountDetailContent(repoId, accountType, account, tabKey);
+        renderAccountDetailContent(repoId, accountType, accountId, tabKey);
         loadAccounts(repoId);
       };
     }
@@ -5059,7 +5073,10 @@ function getDragAfterElement(container, x) {
   }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-function renderAccountEditPage(repoId, accountType, account) {
+function renderAccountEditPage(repoId, accountType, accountId) {
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
+
   account._pendingSubOrder = null; // this temporary variable will store drag order
 
   const container = document.getElementById("account-edit-content");
@@ -5077,7 +5094,7 @@ function renderAccountEditPage(repoId, accountType, account) {
   wrapper.appendChild(tabRow);
   container.appendChild(wrapper);
 
-  renderAccountTabs(account, "account-edit-tabs", {
+  renderAccountTabs(repoId, accountType, account.id, "account-edit-tabs", {
     mode: "edit",
     onTabClick: (key) => activateTab(key)
   });
@@ -5456,7 +5473,10 @@ function createTextareaRow(label, key, value) {
   return row;
 }
 
-async function saveAccountEdits(repoId, accountType, account) {
+async function saveAccountEdits(repoId, accountType, accountId) {
+  const account = settingsMap[repoId].accounts[accountType]
+    .find(a => a.id === accountId);
+
   const container = document.getElementById("account-edit-content");
 
   // MAIN FIELDS
@@ -5619,7 +5639,7 @@ function renderAccountAddFields(type, isSub) {
   container.innerHTML = html;
 }
 
-async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
+async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
 
   // -----------------------------
   // 1. Read common fields
@@ -5681,6 +5701,9 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
   // 5. Save SUB account
   // -----------------------------
   if (mode === "sub") {
+    const account = settingsMap[activeRepoId].accounts[accountType]
+      .find(a => a.id === accountId);
+
     account["sub-accounts"].push(base);
   }
 
