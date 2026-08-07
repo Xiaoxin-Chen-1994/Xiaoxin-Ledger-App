@@ -1523,19 +1523,19 @@ async function initializeLedgerSettings(repoId) {
   // Initialize ledger-level settings
   const accounts = {
     cashAccounts: [
-      { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      { name: currentLang === "en" ? "Cash" : "现金", icon: "💰", id: crypto.randomUUID(), currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
     ],
     creditCards: [
-      { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
+      { name: currentLang === "en" ? "Credit Card" : "信用卡", icon: "💳", id: crypto.randomUUID(), currency: "CNY", statementDate: null, dueDate: null, creditLimit: null, exclude: false, notes: "", "sub-accounts": [] }
     ],
     depositoryAccounts: [
-      { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      { name: currentLang === "en" ? "Bank Account" : "银行账户", icon: "🏦", id: crypto.randomUUID(), currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
     ],
     storedValueCards: [
-      { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
+      { name: currentLang === "en" ? "Stored Value Card" : "储值卡", icon: "🎫", id: crypto.randomUUID(), currency: "CNY", cardNumber: null, pin: null, exclude: false, notes: "", "sub-accounts": [] }
     ],
     investmentAccounts: [
-      { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
+      { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", id: crypto.randomUUID(), currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
     ]
   };
 
@@ -2646,6 +2646,7 @@ function setDefaultAccount(button, subWorkspace) {
           // Add each sub-account
           subs.forEach(sub => {
             allAccounts.push({
+              id: sub.id,
               icon: sub.icon,
               name: `${sub.name} (${sub.currency})`,
               currency: sub.currency,
@@ -2656,6 +2657,7 @@ function setDefaultAccount(button, subWorkspace) {
         } else {
           // Add the main account
           allAccounts.push({
+            id: acc.id,
             icon: acc.icon,
             name: `${acc.name} (${acc.currency})`,
             currency: acc.currency,
@@ -4046,6 +4048,7 @@ function handleAccount(repoId, name, currency) {
     const newAcc = {
       name,
       icon: "💰",
+      id: crypto.randomUUID(),
       currency,
       exclude: false,
       notes: "",
@@ -4066,6 +4069,7 @@ function handleAccount(repoId, name, currency) {
     const newAcc = {
       name: importedName,
       icon: "💰",
+      id: crypto.randomUUID(),
       currency,
       exclude: false,
       notes: "",
@@ -4567,6 +4571,7 @@ function loadAccounts(repoId) {
   if (!repoSettings || !repoSettings.accounts) return;
 
   const accounts = repoSettings.accounts;
+  console.log(accounts)
 
   accountTypes.forEach((type, typeIndex) => {
     const list = accounts[type];
@@ -4580,6 +4585,13 @@ function loadAccounts(repoId) {
     target.appendChild(header);
 
     list.forEach((acc, index) => {
+      if (!acc.id) acc.id = crypto.randomUUID();
+      const subs = acc["sub-accounts"] || [];
+      subs.forEach(sub => {
+        if (!sub.id) sub.id = crypto.randomUUID();
+      });
+      // make sure sub account has an ID
+
       const row = createAccountRow(repoId, type, acc);
       target.appendChild(row);
 
@@ -4603,6 +4615,10 @@ function loadAccounts(repoId) {
       target.appendChild(wide);
     }
   });
+
+  // This is to save account id if id does not already exist
+  settingsMap[repoId].updatedAt = Date.now();
+  saveLocalJsonData("ledger-settings.json", settingsMap);
 }
 
 function createAccountRow(repoId, type, acc) {
@@ -5534,11 +5550,11 @@ function renderAccountAddPage({ activeRepoId, mode, accountType, account }) {
         <label class="field-label">${currentLang === "en" ? "Account Type" : "账户类型"}</label>
         <select id="add-account-type" class="field-input">
           <option value="">Select…</option>
-          <option value="bank">Bank</option>
-          <option value="cash">Cash</option>
+          <option value="cashAccounts">Cash Account</option>
+          <option value="depositoryAccounts">Depository Account</option>
           <option value="creditCards">Credit Card</option>
           <option value="storedValueCards">Stored Value Card</option>
-          <option value="investment">Investment</option>
+          <option value="investmentAccounts">Investment Account</option>
         </select>
       ` : ""}
 
@@ -5631,16 +5647,16 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
   }
 
   // Base object for both main + sub
-  const base = { name, icon, currency, notes, exclude };
+  const base = { name, icon, id: crypto.randomUUID(), currency, notes, exclude };
 
   // -----------------------------
   // 2. Determine account type
   // -----------------------------
-  const type = mode === "main"
+  const typeSelect = mode === "main"
     ? document.getElementById("add-account-type").value
     : accountType;
 
-  if (!type) {
+  if (!typeSelect) {
     alert(currentLang === "en" ? "Select an account type" : "请选择账户类型");
     return;
   }
@@ -5648,7 +5664,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
   // -----------------------------
   // 3. Type-specific fields
   // -----------------------------
-  if (type === "creditCards") {
+  if (typeSelect === "creditCards") {
     base.statementDate = parseInt(document.getElementById("acc-statement")?.value) || null;
     base.dueDate = parseInt(document.getElementById("acc-due")?.value) || null;
 
@@ -5657,7 +5673,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
     }
   }
 
-  if (type === "storedValueCards") {
+  if (typeSelect === "storedValueCards") {
     base.cardNumber = document.getElementById("acc-cardnum")?.value.trim() || "";
     base.pin = document.getElementById("acc-pin")?.value.trim() || "";
   }
@@ -5669,7 +5685,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, account }) {
     base.exclude = false;
     base["sub-accounts"] = [];
 
-    settingsMap[activeRepoId].accounts[type].push(base);
+    settingsMap[activeRepoId].accounts[typeSelect].push(base);
   }
 
   // -----------------------------
