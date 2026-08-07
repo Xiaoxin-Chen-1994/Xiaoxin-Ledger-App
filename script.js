@@ -7036,7 +7036,7 @@ function enablePageSwipe(pageEl) {
 
     if (dx > threshold && dy < MAX_VERTICAL) {
       pageEl.style.transform = "translateX(110%)";
-      setTimeout(() => onReturnButton, 300);
+      setTimeout(() => onReturnButton(), 300);
     } else {
       pageEl.style.transform = "translateX(0)";
     }
@@ -9360,7 +9360,7 @@ window.onReturnButton = onReturnButton;
 window.addEventListener('popstate', (e) => {
   if (openSelector) {
     closeSelector();
-
+    
     if (returnButtonPressed) {
       returnButtonPressed = false; // reset
       goBack(); // This logic is to handle goBack when selector is open. Only goBack when clicking on return button. At system back gesture, close selector only, do not goBack. A second gesture when selector is closed can goBack.  
