@@ -122,6 +122,7 @@ let currentBase = "home";
 let latestPage = null;
 let latestTitle = null;
 let latestOptions = null;
+let numGroupsToday = null;
 
 const monthNamesEN = [
   "January", "February", "March", "April", "May", "June",
@@ -224,6 +225,7 @@ const translations = {
     manageHomeImage: "Manage homepage images",
     add: "Add",
     upload: "Upload",
+    edit: "Edit",
     delete: "Delete",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
     homeImageSaved: "Homepage images saved",
@@ -361,6 +363,7 @@ const translations = {
     manageHomeImage: "管理首页图",
     add: "增加",
     upload: "上传",
+    edit: "编辑",
     delete: "删除",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
     homeImageSaved: "首页图链接已保存",
@@ -4372,12 +4375,24 @@ async function showPage(name, title = latestTitle, options = {}) {
       let filteredEntries = await getFilteredEntries(filters);
 
       showFilteredEntriesToday(filteredEntries);
+
+      document.getElementById("search-btn-headerbar").style.display = "block";
+      
+      const addBtn = document.getElementById("add-btn-headerbar");
+      addBtn.style.display = "block";
+
+      addBtn.onclick = () => showPage("create", "navTransaction");
     } else {
       let filteredEntries = await getFilteredEntries(options.filters);
       showFilteredEntries(filteredEntries);
     }
 
     target.addEventListener("click", (e) => {
+      if (e.target.id === "go-create-btn") {
+        showPage("create", "navTransaction");
+        return;
+      };
+
       const block = e.target.closest(".fe-entry-block");
       if (!block) return;
 
@@ -4386,8 +4401,8 @@ async function showPage(name, title = latestTitle, options = {}) {
       const entry = localLedgerDataMap[repoId][entryId];
       if (!entry) return;
 
-      // If clicking Modify
-      if (e.target.classList.contains("modify-btn")) {
+      // If clicking Edit
+      if (e.target.classList.contains("edit-btn")) {
         loadEntryIntoWorkspace(entry);
         return;
       }
@@ -4396,11 +4411,33 @@ async function showPage(name, title = latestTitle, options = {}) {
       if (e.target.classList.contains("delete-btn")) {
         deleteEntry(repoId, entryId);
         block.remove();
+        showPage("filtered-entries", title, options)
         return;
       }
 
       // Normal click → load entry
       loadEntryIntoWorkspace(entry);
+    });
+
+    target.addEventListener("touchstart", (e) => {
+      const block = e.target.closest(".fe-entry-block");
+      if (!block) return;
+
+      block._startX = e.touches[0].clientX;
+    });
+
+    target.addEventListener("touchend", (e) => {
+      const block = e.target.closest(".fe-entry-block");
+      if (!block) return;
+
+      const endX = e.changedTouches[0].clientX;
+      const diff = block._startX - endX;
+
+      if (diff > 40) {
+        block.classList.add("show-actions");   // swipe left
+      } else if (diff < -40) {
+        block.classList.remove("show-actions"); // swipe right
+      }
     });
 
   } else if (latestPage === "grocery-search") {
@@ -4444,22 +4481,48 @@ async function deleteEntry(repoId, entryId) {
   const localLedgerData = localLedgerDataMap[repoId];
   if (!localLedgerData) return;
 
-  // If the entry exists, remove it
-  if (localLedgerData[entryId]) {
-    delete localLedgerData[entryId];
-  }
+  const entry = localLedgerData[entryId];
+  if (!entry) return;
+
+  // Remove from local data
+  delete localLedgerData[entryId];
 
   // Remove from settings tags
-  removeEntryFromTagMap(settingsMap, repoId, removedEntry);
+  removeEntryFromTagMap(settingsMap, repoId, entry);
 
   settingsMap[repoId].updatedAt = Date.now();
 
   // Persist both
   await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
   await saveLocalJsonData("ledger-settings.json", settingsMap);
+
+  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+}
+
+function removeEntryFromTagMap(settingsMap, repoId, entry) {
+  const tagMap = settingsMap[repoId].tags;
+  if (!tagMap) return;
+
+  const entryId = entry.entryId;
+  const tags = entry.tags || [];
+
+  for (const tag of tags) {
+    const list = tagMap[tag];
+    if (!list) continue;
+
+    // Remove the entryId from this tag list
+    tagMap[tag] = list.filter(id => id !== entryId);
+
+    // If empty → remove the tag entirely
+    if (tagMap[tag].length === 0) {
+      delete tagMap[tag];
+    }
+  }
 }
 
 function loadEntryIntoWorkspace(e) {
+  const t = translations[currentLang];
+
   let ws = {};
 
   ws.entryId = e.entryId;
@@ -4509,7 +4572,7 @@ function loadEntryIntoWorkspace(e) {
   // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
 
-  showPage("transaction", "编辑", { 'transactionId': e.entryId })
+  showPage("transaction", t.edit, { 'transactionId': e.entryId })
 }
 
 function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeLedgerRepo.id) {
@@ -7812,7 +7875,8 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   `;
 
   row.onclick = async () => {
-    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr });
+    numGroupsToday = 1;
+    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr});
   };
 }
 
@@ -7856,21 +7920,50 @@ function showFilteredEntriesToday(entries) {
 
   scroll.innerHTML = ``;
 
-  if (entries.length === 0) {
+  // --- Detect today's entries ---
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todaysEntries = entries.filter(e => e.transactionTime.startsWith(todayStr));
+  const otherEntries = entries.filter(e => !e.transactionTime.startsWith(todayStr));
+
+  // --- Case 1: No entries today ---
+  if (todaysEntries.length === 0) {
     scroll.innerHTML += `
       <div class="fe-empty">
-        ${currentLang === "zh" ? "没有记录" : "No entries"}
+        <span>${currentLang === "zh" ? "今天还没有记账哦" : "No entries today"}</span>
+        <button id="go-create-btn" class="fe-create-btn">
+          ${currentLang === "zh" ? "去记一笔吧 >" : "Create one >"}
+        </button>
       </div>
     `;
-    return;
+
+  } else {
+    // --- Render today's entries normally ---
+    const groups = {};
+    todaysEntries.forEach(e => {
+      const day = e.transactionTime.split(" ")[0];
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(e);
+    });
+
+    const todayDay = Object.keys(groups)[0];
+    scroll.innerHTML += renderEntryGroup(todayDay, groups[todayDay]);
   }
 
+  scroll.innerHTML += `
+    <div class="fe-past-header">
+      ${currentLang === "zh" ? "今天以前" : "Before Today"}
+    </div>
+  `;
+  
+  // --- Render past entries ---
+  if (otherEntries.length === 0) return;
+
   // Sort newest first
-  entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
+  otherEntries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
   // Group by date
   const groups = {};
-  for (const e of entries) {
+  for (const e of otherEntries) {
     const day = e.transactionTime.split(" ")[0];
     if (!groups[day]) groups[day] = [];
     groups[day].push(e);
@@ -7889,37 +7982,25 @@ function showFilteredEntriesToday(entries) {
       scroll.innerHTML += renderEntryGroup(day, dayEntries);
     }
     index = end;
-
-    document.querySelectorAll(".fe-entry-block").forEach(block => {
-      let startX = 0;
-
-      block.addEventListener("touchstart", e => {
-        startX = e.touches[0].clientX;
-      });
-
-      block.addEventListener("touchend", e => {
-        const endX = e.changedTouches[0].clientX;
-        const diff = startX - endX;
-
-        if (diff > 40) {
-          block.classList.add("show-actions");   // swipe left
-        } else if (diff < -40) {
-          block.classList.remove("show-actions"); // swipe right
-        }
-      });
-    });
+    return index;
   }
 
-  renderBatch();
+  // render a desired number of groups when loading the page
+  // This preserves the current location of the scroll after modifying entires
+  while (index < Math.min(numGroupsToday, groupKeys.length)) {
+    renderBatch();
+  }
 
   scroll.onscroll = () => {
     const nearBottom =
       scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 200;
 
     if (nearBottom && index < groupKeys.length) {
-      renderBatch();
+      numGroupsToday = renderBatch();
     }
   };
+
+  return index
 }
 
 function renderEntryGroup(day, entries) {
@@ -7962,7 +8043,7 @@ function renderEntryGroup(day, entries) {
     }
   });
 
-  html += `<hr class="hr-wide">`;
+  if (!isToday) html += `<hr class="hr-wide">`;
 
   html += `</div>`;
   return html;
@@ -8013,7 +8094,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
-          <button class="modify-btn">${t.modify}</button>
+          <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
 
@@ -8042,7 +8123,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
-          <button class="modify-btn">${t.modify}</button>
+          <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
 
@@ -8071,7 +8152,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
-          <button class="modify-btn">${t.modify}</button>
+          <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
 
@@ -9360,7 +9441,7 @@ window.onReturnButton = onReturnButton;
 window.addEventListener('popstate', (e) => {
   if (openSelector) {
     closeSelector();
-    
+
     if (returnButtonPressed) {
       returnButtonPressed = false; // reset
       goBack(); // This logic is to handle goBack when selector is open. Only goBack when clicking on return button. At system back gesture, close selector only, do not goBack. A second gesture when selector is closed can goBack.  

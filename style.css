@@ -1240,6 +1240,36 @@ input[type="url"] {
   /* horizontal centering */
 }
 
+.delete-btn:hover {
+  background: crimson;
+}
+
+.edit-btn {
+  position: absolute;
+  right: 3.8rem;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 3.6rem;
+  background: var(--primary);
+  color: white;
+  font-size: calc(var(--font-size) * 0.9);
+  /* a percentage of the base font size */
+  border: none;
+  transform: translateX(3.7rem);
+  /* hidden by default */
+  transition: transform 0.3s ease;
+  display: flex;
+  /* flexbox for centering */
+  align-items: center;
+  /* vertical centering */
+  justify-content: center;
+  /* horizontal centering */
+}
+
+.edit-btn:hover {
+  background: crimson;
+}
+
 .selector-button:hover {
   background: var(--card);
 }
@@ -2578,10 +2608,42 @@ emoji-picker {
 }
 
 .fe-empty {
-  padding: 24px;
-  text-align: center;
   color: var(--text-secondary, #666);
   font-size: calc(var(--font-size) * 1);
+  padding: 0;
+
+  display: flex;
+  justify-content: space-between; /* left text, right button */
+  align-items: center;            /* vertical centering */
+  text-align: left;               /* text aligns left */
+}
+
+.fe-create-btn {
+  flex: 0 0 auto;   /* prevents stretching */
+  font-size: inherit;
+  background: none;
+  color: var(--primary);
+  border-radius: 6px;
+  border: none;
+}
+
+.fe-create-btn:hover {
+  background: none;
+}
+
+.fe-past-header {
+  width: 100%;
+  margin: 0.8rem 0;
+  padding: 0.8rem 0;
+  text-align: center;
+  background: var(--light-grey);
+
+  color: var(--text-secondary, #666);
+  font-size: calc(var(--font-size) * 0.8);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Big date or "Today" */
@@ -2606,9 +2668,10 @@ emoji-picker {
 }
 
 .fe-entry-block {
+  position: relative;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 /* Wrap original content so actions can slide under it */
@@ -2620,14 +2683,15 @@ emoji-picker {
   width: 100%;
   background: var(--bg);
   position: relative;
-  z-index: 2;
-  /* stays above actions */
+  transition: transform 0.3s ease; /* smooth slide */
+  z-index: 1;
+  /* stays below actions */
 }
 
 /* Actions panel (hidden by default) */
 .fe-entry-actions {
   position: absolute;
-  right: -140px;
+  right: calc(-3.8rem - 4%);
   /* hidden off-screen */
   top: 0;
   height: 100%;
@@ -2635,14 +2699,21 @@ emoji-picker {
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  background: var(--danger-bg, #f44336);
-  transition: right 0.2s ease;
-  z-index: 1;
+  transition: right 0.3s ease;
+  z-index: 2;
 }
 
 /* When swiped left */
+.fe-entry-block.show-actions .fe-entry-content {
+  transform: translateX(-7.4rem); /* slide whole block left */
+}
 .fe-entry-block.show-actions .fe-entry-actions {
-  right: 0;
+  right: calc(-3.8rem);
+}
+
+.fe-entry-block.show-actions .delete-btn,
+.fe-entry-block.show-actions .edit-btn {
+  transform: translateX(calc(-3.8rem)); /* slide whole block left */
 }
 
 /* Left column: icon */
