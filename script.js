@@ -7031,7 +7031,7 @@ function enablePageSwipe(pageEl) {
     if (!isDragging) return;
     isDragging = false;
 
-    const threshold = window.innerWidth * 2 / 5;
+    const threshold = window.innerWidth * 1 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
     if (dx > threshold && dy < MAX_VERTICAL) {
