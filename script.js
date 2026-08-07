@@ -143,6 +143,8 @@ const translations = {
     today: "Today",
     thisMonth: "This Month",
     thisYear: "This Year",
+    all: "All",
+    primaryAccount: "Primary Account",
     transaction: "Transaction",
     expense: "Expense",
     income: "Income",
@@ -282,6 +284,8 @@ const translations = {
     today: "今天",
     thisMonth: "本月",
     thisYear: "本年",
+    all: "全部",
+    primaryAccount: "主账户",
     transaction: "交易",
     expense: "支出",
     income: "收入",
@@ -4153,8 +4157,8 @@ async function showPage(name, title = latestTitle, options = {}) {
   if (!target) return;
 
   target.style.display = "block";
-  target.zIndex = historyStack.length;
-
+  target.style.zIndex = historyStack.length;
+  
   const current = getComputedStyle(target).transform;
   // If it's not already at translateX(0), move it there
   if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
@@ -4271,7 +4275,9 @@ async function showPage(name, title = latestTitle, options = {}) {
     saveBtn.style.display = "block";
     saveBtn.onclick = () => saveEntry();
 
-    document.getElementById("transaction-nav").style.display = "flex";
+    const nav = document.getElementById("transaction-nav")
+    nav.style.display = "flex";
+    nav.style.zIndex = target.style.zIndex; // use same zIndex as the transaction page
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
@@ -4370,7 +4376,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     if (options.kanbanIndex == 0) {
       // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
-      document.getElementById("app-title").textContent = translations[currentLang].today + " " + filters.dateTo;
+      document.getElementById("app-title").textContent = "";
+      document.getElementById("return-btn").textContent = "< " + translations[currentLang].today + " " + filters.dateTo;
 
       let filteredEntries = await getFilteredEntries(filters);
 
@@ -4783,6 +4790,8 @@ function createAccountRow(repoId, type, accountId) {
 }
 
 function renderAccountTabs(repoId, accountType, accountId, elementId, options = {}) {
+  const t = translations[currentLang];
+
   const account = settingsMap[repoId].accounts[accountType]
     .find(a => a.id === accountId);
 
@@ -4796,7 +4805,7 @@ function renderAccountTabs(repoId, accountType, accountId, elementId, options = 
     // existing behavior
     if (subs.length > 0) {
       tabRow.appendChild(
-        createAccountTabButton("all", "All", true, onTabClick, false)
+        createAccountTabButton("all", t.all, true, onTabClick, false)
       );
       subs.forEach(sub => {
         tabRow.appendChild(
@@ -4809,7 +4818,7 @@ function renderAccountTabs(repoId, accountType, accountId, elementId, options = 
   if (mode === "edit") {
     // IMPORTANT: keys must match data-tab on panels
     tabRow.appendChild(
-      createAccountTabButton("main", "主账户", true, onTabClick)
+      createAccountTabButton("main", t.primaryAccount, true, onTabClick)
     );
 
     subs.forEach((sub, index) => {
@@ -7948,6 +7957,11 @@ function showFilteredEntriesToday(entries) {
     const todayDay = Object.keys(groups)[0];
     scroll.innerHTML += renderEntryGroup(todayDay, groups[todayDay]);
   }
+  
+  // --- Render past entries ---
+  if (otherEntries.length === 0) {
+    return;
+  }
 
   scroll.innerHTML += `
     <div class="fe-past-header">
@@ -7955,9 +7969,6 @@ function showFilteredEntriesToday(entries) {
     </div>
   `;
   
-  // --- Render past entries ---
-  if (otherEntries.length === 0) return;
-
   // Sort newest first
   otherEntries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
@@ -9899,39 +9910,47 @@ document.querySelectorAll(".selector-button[data-type='category']")
     };
   });
 
-document.querySelectorAll(
-  ".selector-button[data-type='account']"
-).forEach(btn => {
-  btn.onclick = e => {
-    e.stopPropagation();
-    prevLastButton = lastButton; // keep track of the previous button pressed
-    lastButton = btn;
+document.querySelectorAll(".selector-button[data-type='account']").
+  forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      prevLastButton = lastButton; // keep track of the previous button pressed
+      lastButton = btn;
 
-    showSelector('account')
+      const sel = showSelector('account');
 
-    let subWorkspace = null;
+      const manageLabelsBtn = document.getElementById("selector-manage-account-btn");
+        manageLabelsBtn.onclick = f => {
+          f.stopPropagation();
 
-    if (latestPage.includes("create")) { // when creating an entry
-      subWorkspace = workspace.create;
-    } else {
-      subWorkspace = workspace.transactions[latestOptions.transactionId];
-    }
+          sel.style.transform = 'translateY(120%)';
+          openSelector = null;
+          prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts);
+        };
 
-    const inputType = subWorkspace.inputType;
+      let subWorkspace = null;
 
-    const t = translations[currentLang];
+      if (latestPage.includes("create")) { // when creating an entry
+        subWorkspace = workspace.create;
+      } else {
+        subWorkspace = workspace.transactions[latestOptions.transactionId];
+      }
 
-    if (["expense", "income", "balance"].includes(inputType)) {
-      ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
-      ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
-    }
+      const inputType = subWorkspace.inputType;
 
-    if (inputType === "transfer") {
-      ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
-      ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
-    }
-  };
-});
+      const t = translations[currentLang];
+
+      if (["expense", "income", "balance"].includes(inputType)) {
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
+      }
+
+      if (inputType === "transfer") {
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
+      }
+    };
+  });
 
 document.querySelectorAll(".selector-button[data-type='subject']")
   .forEach(btn => {
@@ -9940,7 +9959,7 @@ document.querySelectorAll(".selector-button[data-type='subject']")
       prevLastButton = lastButton; // keep track of the previous button pressed
       lastButton = btn;
 
-      const sel = showSelector('subject')
+      const sel = showSelector('subject');
 
       const manageLabelsBtn = document.getElementById("selector-manage-subject-btn");
       manageLabelsBtn.onclick = f => {
