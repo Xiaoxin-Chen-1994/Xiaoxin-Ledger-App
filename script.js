@@ -7035,6 +7035,8 @@ function enablePageSwipe(pageEl) {
     pageEl.style.transition = "transform 0.3s ease";
 
     if (dx > threshold && dy < MAX_VERTICAL) {
+      closeSelector(); // close selector if open
+
       pageEl.style.transform = "translateX(110%)";
       setTimeout(() => history.back(), 300);
     } else {
