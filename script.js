@@ -7035,10 +7035,8 @@ function enablePageSwipe(pageEl) {
     pageEl.style.transition = "transform 0.3s ease";
 
     if (dx > threshold && dy < MAX_VERTICAL) {
-      closeSelector(); // close selector if open
-
       pageEl.style.transform = "translateX(110%)";
-      setTimeout(() => history.back(), 300);
+      setTimeout(() => onReturnButton, 300);
     } else {
       pageEl.style.transform = "translateX(0)";
     }
@@ -9372,6 +9370,7 @@ window.addEventListener('popstate', (e) => {
   }
 
   if (historyStack.length > 1) {
+    returnButtonPressed = false; // reset
     goBack();
   }
 });
