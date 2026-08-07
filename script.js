@@ -4585,13 +4585,6 @@ function loadAccounts(repoId) {
     target.appendChild(header);
 
     list.forEach((acc, index) => {
-      if (!acc.id) acc.id = crypto.randomUUID();
-      const subs = acc["sub-accounts"] || [];
-      subs.forEach(sub => {
-        if (!sub.id) sub.id = crypto.randomUUID();
-      });
-      // make sure sub account has an ID
-
       const row = createAccountRow(repoId, type, acc);
       target.appendChild(row);
 
@@ -4615,10 +4608,6 @@ function loadAccounts(repoId) {
       target.appendChild(wide);
     }
   });
-
-  // This is to save account id if id does not already exist
-  settingsMap[repoId].updatedAt = Date.now();
-  saveLocalJsonData("ledger-settings.json", settingsMap);
 }
 
 function createAccountRow(repoId, type, acc) {
