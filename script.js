@@ -144,6 +144,8 @@ const translations = {
     thisMonth: "This Month",
     thisYear: "This Year",
     all: "All",
+    alerts: "Alerts",
+    comma: ", ",
     primaryAccount: "Primary Account",
     transaction: "Transaction",
     expense: "Expense",
@@ -285,6 +287,8 @@ const translations = {
     thisMonth: "本月",
     thisYear: "本年",
     all: "全部",
+    alerts: "提醒",
+    comma: "，",
     primaryAccount: "主账户",
     transaction: "交易",
     expense: "支出",
@@ -1546,6 +1550,8 @@ async function initializeLedgerSettings(repoId) {
     ]
   };
 
+  const rewardAccounts = {};
+
   const expenseCategories = [
     {
       primary: currentLang === "en" ? "Shopping" : "购物", icon: "🛍️", secondaries: [
@@ -1740,6 +1746,7 @@ async function initializeLedgerSettings(repoId) {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     accounts,
+    rewardAccounts,
     "expense-categories": expenseCategories,
     "income-categories": incomeCategories,
     collections,
@@ -4163,7 +4170,8 @@ async function showPage(name, title = latestTitle, options = {}) {
   // If it's not already at translateX(0), move it there
   if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
     target.style.transform = "translateX(0%)";
-    if (!(name === "home")) {
+    if (name !== "home" && target.id !== "transaction-page") {
+      // Do not enable swipe on transaction page, because swiping left and right on a transaction page switches between transaction types
       enablePageSwipe(target);
     }
   }
@@ -4175,6 +4183,9 @@ async function showPage(name, title = latestTitle, options = {}) {
   } else { // at home page
     document.getElementById("search-btn-headerbar").style.display = "block";
     document.getElementById("home-nav").style.display = "flex";
+
+    console.log(settingsMap)
+    await renderAlertCenter();
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
@@ -4482,6 +4493,106 @@ function goBack() {
     showPage(prevPage, prevTitle, prevOptions);
   }
 }
+
+async function renderAlertCenter() {
+  const t = translations[currentLang];
+  const alertItems = await buildAlertItems();
+  const container = document.getElementById("alert-center");
+  
+  if (alertItems.length === 0) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+
+  container.innerHTML = `
+    <div class="alert-center-title">${t.alerts}</div>
+    ${alertItems.map(item => `
+      <div class="alert-item"
+           onclick="${item.onclick}">
+        ${item.text}
+      </div>
+    `).join("")}
+  `;
+}
+
+async function buildAlertItems() {
+  const t = translations[currentLang];
+
+  let overdueCount = 0;
+  let due7Count = 0;
+  let due15Count = 0;
+
+  for (const repoId in settingsMap) {
+    const repo = settingsMap[repoId];
+    // Temporary fix: ensure rewardAccounts exists
+    if (!repo.rewardAccounts) {
+      repo.rewardAccounts = {};
+
+      // Save back to settingsMap
+      settingsMap[repoId] = repo;
+
+      // Persist locally
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+    }
+    
+    for (const type of accountTypes) {
+      if (type !== "creditCards") continue;
+
+      const list = repo.accounts[type] || [];
+      for (const acc of list) {
+        const { statementDate, dueDate, id } = acc;
+        if (!statementDate || !dueDate) continue;
+
+        const { cycleStart, dueDate: actualDue } =
+          getCycleDates(statementDate, dueDate);
+
+        const paid = isCyclePaid(repoId, type, id, cycleStart);
+        if (paid) continue;
+
+        const diffDays = Math.ceil((actualDue - Date.now()) / 86400000);
+
+        if (diffDays < 0) overdueCount++;
+        else if (diffDays <= 7) due7Count++;
+        else if (diffDays <= 15) due15Count++;
+      }
+    }
+  }
+
+  const items = [];
+
+  if (overdueCount > 0 || due7Count > 0 || due15Count > 0) {
+    const parts = [];
+
+    if (overdueCount > 0) {
+      parts.push(
+        `<span style="color: var(--red); font-weight: 600;">${overdueCount}</span> 张信用卡已逾期`
+      );
+    }
+
+    if (due7Count > 0) {
+      parts.push(
+        `<span style="color: var(--red); font-weight: 600;">${due7Count}</span> 张信用卡将在 7 天内到期`
+      );
+    }
+
+    if (due15Count > 0) {
+      parts.push(
+        `<span style="font-weight: 600;">${due15Count}</span> 张信用卡将在 15 天内到期`
+      );
+    }
+
+    items.push({
+      text: `您有 ${parts.join(t.comma)}`,
+      onclick: `prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)`
+    });
+  }
+
+  return items;
+}
+
 
 async function deleteEntry(repoId, entryId) {
   // Load entries array for this repo

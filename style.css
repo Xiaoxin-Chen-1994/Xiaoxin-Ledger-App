@@ -1726,6 +1726,17 @@ button {
   font-weight: 700;    /* bold */
 }
 
+.alert-center {
+  padding: 0 0.5rem;
+}
+.alert-center-title {
+  font-weight: 600;
+}
+.alert-item {
+  padding: 0.25rem 0;
+  font-size: calc(var(--font-size) * 0.9);
+}
+
 /* Kanban rows */
 .kanban {
   margin-top: 1rem;
