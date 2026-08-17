@@ -12269,6 +12269,7 @@ async function renderRewardsHubRewardAccounts() {
       settingsMap[repoId] = repo;
 
       // Persist locally
+      settingsMap[repoId].updatedAt = Date.now();
       await saveLocalJsonData("ledger-settings.json", settingsMap);
       await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
     }
