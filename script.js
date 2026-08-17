@@ -187,6 +187,7 @@ const translations = {
     notes: "📝Notes",
     save: "✔️Save",
     savedSuccess: "Save success!",
+    loyaltyPrograms: "Loyalty Programs", 
     personalSettingsTitle: "Personal Settings",
     openPersonalSettings: "Open Personal Settings",
     timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. Please note that, if you are offline, these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
@@ -329,6 +330,7 @@ const translations = {
     notes: "📝备注",
     save: "✔️保存",
     savedSuccess: "保存成功!",
+    loyaltyPrograms: "会员计划", 
     personalSettingsTitle: "个人偏好",
     openPersonalSettings: "打开个人偏好",
     timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。请注意，如果您正处于离线状态，这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
@@ -1547,10 +1549,9 @@ async function initializeLedgerSettings(repoId) {
     ],
     investmentAccounts: [
       { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", id: crypto.randomUUID(), currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
-    ]
+    ],
+    rewardAccounts: []
   };
-
-  const rewardAccounts = {};
 
   const expenseCategories = [
     {
@@ -1746,7 +1747,6 @@ async function initializeLedgerSettings(repoId) {
     createdAt: Date.now(),
     updatedAt: Date.now(),
     accounts,
-    rewardAccounts,
     "expense-categories": expenseCategories,
     "income-categories": incomeCategories,
     collections,
@@ -4185,7 +4185,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("home-nav").style.display = "flex";
 
     console.log(settingsMap)
-    await renderAlertCenter();
+    renderAlertCenter();
 
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
@@ -4494,9 +4494,9 @@ function goBack() {
   }
 }
 
-async function renderAlertCenter() {
+function renderAlertCenter() {
   const t = translations[currentLang];
-  const alertItems = await buildAlertItems();
+  const alertItems = buildAlertItems();
   const container = document.getElementById("alert-center");
   
   if (alertItems.length === 0) {
@@ -4517,7 +4517,7 @@ async function renderAlertCenter() {
   `;
 }
 
-async function buildAlertItems() {
+function buildAlertItems() {
   const t = translations[currentLang];
 
   let overdueCount = 0;
@@ -4526,17 +4526,6 @@ async function buildAlertItems() {
 
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
-    // Temporary fix: ensure rewardAccounts exists
-    if (!repo.rewardAccounts) {
-      repo.rewardAccounts = {};
-
-      // Save back to settingsMap
-      settingsMap[repoId] = repo;
-
-      // Persist locally
-      await saveLocalJsonData("ledger-settings.json", settingsMap);
-      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-    }
     
     for (const type of accountTypes) {
       if (type !== "creditCards") continue;
@@ -12201,3 +12190,101 @@ function OpenInterestRateCal() {
   }
 }
 window.OpenInterestRateCal = OpenInterestRateCal;
+
+async function OpenRewardsHub() {
+  const t = translations[currentLang];
+
+  const scroll = document.getElementById("rewards-hub-scroll");
+
+  // Clear previous content
+  scroll.innerHTML = "";
+
+  // Render credit card section
+  scroll.innerHTML += `
+    <div class="section-title">${t.creditCards}</div>
+    <div id="rewards-hub-creditcards"></div>
+  `;
+  renderRewardsHubCreditCards();
+
+  // Render reward accounts section
+  scroll.innerHTML += `
+    <div class="section-title">${t.loyaltyPrograms}</div>
+    <div id="rewards-hub-rewardaccounts"></div>
+  `;
+  await renderRewardsHubRewardAccounts();
+
+  showPage('rewards-hub', 'Rewards Hub');
+}
+window.OpenRewardsHub = OpenRewardsHub;
+
+function renderRewardsHubCreditCards() {
+  const container = document.getElementById("rewards-hub-creditcards");
+  container.innerHTML = "";
+
+  for (const repoId in settingsMap) {
+    const repo = settingsMap[repoId];
+    const list = repo.accounts?.creditCards || [];
+
+    list.forEach(acc => {
+      const subs = acc["sub-accounts"] || [];
+
+      if (subs.length > 0) {
+        // Display sub-accounts instead of main account
+        subs.forEach(sub => {
+          container.innerHTML += `
+            <div class="reward-card-item">
+              <div class="reward-card-name">${sub.name}</div>
+            </div>
+          `;
+        });
+
+      } else {
+        // No sub-accounts → display main account
+        container.innerHTML += `
+          <div class="reward-card-item">
+            <div class="reward-card-name">${acc.name}</div>
+          </div>
+        `;
+      }
+    });
+  }
+}
+
+async function renderRewardsHubRewardAccounts() {
+  const container = document.getElementById("rewards-hub-rewardaccounts");
+  container.innerHTML = "";
+
+  for (const repoId in settingsMap) {
+    const repo = settingsMap[repoId];
+
+    // Remove old rewardAccounts if it exists at top level
+    if (repo.rewardAccounts) {
+      delete repo.rewardAccounts;
+    }
+    // Temporary fix: ensure rewardAccounts exists under accounts
+    if (!repo.accounts.rewardAccounts) {
+      repo.accounts.rewardAccounts = [];
+
+      // Save back to settingsMap
+      settingsMap[repoId] = repo;
+
+      // Persist locally
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+    }
+
+    const rewards = repo.accounts.rewardAccounts;
+
+    for (const rewardName in rewards) {
+      const r = rewards[rewardName];
+
+      container.innerHTML += `
+        <div class="reward-account-item">
+          <div class="reward-account-name">${rewardName}</div>
+          <div class="reward-account-expiry">${r.expiry || ""}</div>
+        </div>
+      `;
+    }
+  }
+}
+
