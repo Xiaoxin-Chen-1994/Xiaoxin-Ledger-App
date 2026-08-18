@@ -1550,7 +1550,7 @@ async function initializeLedgerSettings(repoId) {
     investmentAccounts: [
       { name: currentLang === "en" ? "Investment Account" : "投资账户", icon: "📈", id: crypto.randomUUID(), currency: "CNY", exclude: false, notes: "", "sub-accounts": [] }
     ],
-    rewardAccounts: []
+    loyaltyPrograms: []
   };
 
   const expenseCategories = [
@@ -12191,7 +12191,7 @@ function OpenInterestRateCal() {
 }
 window.OpenInterestRateCal = OpenInterestRateCal;
 
-async function OpenRewardsHub() {
+function OpenRewardsHub() {
   const t = translations[currentLang];
 
   const scroll = document.getElementById("rewards-hub-scroll");
@@ -12201,21 +12201,68 @@ async function OpenRewardsHub() {
 
   // Render credit card section
   scroll.innerHTML += `
-    <div class="section-title">${t.creditCards}</div>
+    <div class="section-header">
+      <div class="section-title">${t.creditCards}</div>
+
+      <div class="section-actions">
+        <button class="section-manage-btn" onclick="prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)">
+          管理
+        </button>
+
+        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'credit')">
+          显示全部
+        </button>
+      </div>
+    </div>
+
     <div id="rewards-hub-creditcards"></div>
   `;
+
   renderRewardsHubCreditCards();
 
   // Render reward accounts section
   scroll.innerHTML += `
-    <div class="section-title">${t.loyaltyPrograms}</div>
-    <div id="rewards-hub-rewardaccounts"></div>
+    <div class="section-header">
+      <div class="section-title">${t.loyaltyPrograms}</div>
+
+      <div class="section-actions">
+        <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
+        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
+      </div>
+    </div>
+
+    <div id="rewards-hub-loyaltyprograms"></div>
+
+    <!-- Inline add form (initially hidden) -->
+    <div id="loyalty-add-form" class="hidden"></div>
   `;
-  await renderRewardsHubRewardAccounts();
+
+  renderRewardsHubLoyaltyPrograms();
 
   showPage('rewards-hub', 'Rewards Hub');
 }
 window.OpenRewardsHub = OpenRewardsHub;
+
+function toggleAllRewards(btn, section) {
+  const page = document.getElementById("rewards-hub-page");
+
+  const prefix = section === "credit" ? "cc-" : "lp-";
+
+  const all = page.querySelectorAll(`[id^="${prefix}"][id$="-details"]`);
+
+  const expand = btn.textContent.includes("显示");
+
+  all.forEach(el => {
+    if (expand) {
+      el.classList.remove("hidden");
+    } else {
+      el.classList.add("hidden");
+    }
+  });
+
+  btn.textContent = expand ? "折叠全部" : "显示全部";
+}
+window.toggleAllRewards = toggleAllRewards;
 
 function renderRewardsHubCreditCards() {
   const container = document.getElementById("rewards-hub-creditcards");
@@ -12228,64 +12275,325 @@ function renderRewardsHubCreditCards() {
     list.forEach(acc => {
       const subs = acc["sub-accounts"] || [];
 
-      if (subs.length > 0) {
-        // Display sub-accounts instead of main account
-        subs.forEach(sub => {
-          container.innerHTML += `
-            <div class="reward-card-item">
-              <div class="reward-card-name">${sub.name}</div>
-            </div>
-          `;
-        });
+      const today = new Date();
+      const statementDay = acc.statementDate;
+      const dueDay = acc.dueDate;
 
-      } else {
-        // No sub-accounts → display main account
-        container.innerHTML += `
-          <div class="reward-card-item">
-            <div class="reward-card-name">${acc.name}</div>
+      let dueWarning = "";
+
+      if (statementDay && dueDay) {
+        const { cycleStart, cycleEnd, dueDate } =
+          getCycleDates(statementDay, dueDay);
+
+        const paid = isCyclePaid(repoId, "creditCards", acc.id, cycleStart);
+
+        if (!paid) {
+          const diffDays = Math.ceil((dueDate - today) / 86400000);
+          let redness = 0;
+
+          if (diffDays < 0) {
+            const daysOver = Math.abs(diffDays);
+            const text = currentLang === "zh"
+              ? `已逾期 ${daysOver} 天`
+              : `Overdue ${daysOver} days`;
+
+            dueWarning = `
+              <span class="due-warning"
+                    onclick="showPage('account-detail', '${acc.name}', { activeRepoId: '${repoId}', accountType: 'creditCards', accountId: '${acc.id}' })"
+                    style="background-color: var(--red); color: white; cursor: pointer;">
+                ${text}
+              </span>
+            `;
+
+          } else {
+            redness = Math.max(0, Math.min((15 - diffDays) / 15, 1));
+            const bg = `color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg))`;
+
+            const text = currentLang === "zh"
+              ? `${diffDays} 天后到期`
+              : `Due in ${diffDays} days`;
+
+            const textColor = redness > 0.6 ? "white" : "var(--text)";
+
+            dueWarning = `
+              <span class="due-warning"
+                    onclick="showPage('account-detail', '${acc.name}', { activeRepoId: '${repoId}', accountType: 'creditCards', accountId: '${acc.id}' })"
+                    style="background-color: ${bg}; color: ${textColor}; cursor: pointer;">
+                ${text}
+              </span>
+            `;
+          }
+        }
+      }
+
+      // --- 主账户行（点击展开/折叠） ---
+      const mainId = `cc-${acc.id}-details`;
+
+      container.innerHTML += `
+        <div class="reward-card-item"
+             onclick="document.getElementById('${mainId}').classList.toggle('hidden')">
+          <div class="reward-card-name">${acc.name}</div>
+          <div>${dueWarning}</div>
+        </div>
+
+        <div id="${mainId}" class="hidden"></div>
+      `;
+
+      // --- benefits + subaccounts (initially hidden) ---
+      const detailsContainer = document.getElementById(mainId);
+
+      subs.forEach(sub => {
+        detailsContainer.innerHTML += `
+          <div class="reward-card-item reward-card-sub">
+            <div class="reward-card-name">benefits: ${sub.name}</div>
           </div>
         `;
-      }
+      });
     });
   }
 }
 
-async function renderRewardsHubRewardAccounts() {
-  const container = document.getElementById("rewards-hub-rewardaccounts");
+function renderRewardsHubLoyaltyPrograms() {
+  const container = document.getElementById("rewards-hub-loyaltyprograms");
   container.innerHTML = "";
 
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
+    const programs = repo.accounts.loyaltyPrograms || [];
 
-    // Remove old rewardAccounts if it exists at top level
-    if (repo.rewardAccounts) {
-      delete repo.rewardAccounts;
-    }
-    // Temporary fix: ensure rewardAccounts exists under accounts
-    if (!repo.accounts.rewardAccounts) {
-      repo.accounts.rewardAccounts = [];
+    for (const p of programs) {
+      // --- compute expiry warning ---
+      let expiryText = "";
+      let warningText = "";
 
-      // Save back to settingsMap
-      settingsMap[repoId] = repo;
+      const daysToWarn = 90;
 
-      // Persist locally
-      settingsMap[repoId].updatedAt = Date.now();
-      await saveLocalJsonData("ledger-settings.json", settingsMap);
-      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-    }
+      if (p.expiry) {
+        const today = new Date();
+        const exp = new Date(p.expiry);
+        const diffDays = Math.ceil((exp - today) / 86400000);
 
-    const rewards = repo.accounts.rewardAccounts;
+        if (diffDays < 0) {
+          // 已过期
+          const daysOver = Math.abs(diffDays);
+          warningText = `
+            <span class="due-warning"
+                  style="background-color: var(--red); color: white;">
+              已过期 ${daysOver} 天
+            </span>
+          `;
+        } else if (diffDays <= daysToWarn) {
+          // 3 个月内 → 使用 redness 渐变
+          const redness = Math.max(0, Math.min((daysToWarn - diffDays) / daysToWarn, 1));
+          const bg = `color-mix(in srgb, var(--red) ${redness * 100}%, var(--bg))`;
+          const textColor = redness > 0.6 ? "white" : "var(--text)";
 
-    for (const rewardName in rewards) {
-      const r = rewards[rewardName];
+          warningText = `
+            <span class="due-warning"
+                  style="background-color: ${bg}; color: ${textColor};">
+              ${diffDays} 天后过期
+            </span>
+          `;
+        }
+
+        expiryText = `<span class="lp-expiry">到期日：${p.expiry}</span>`;
+      }
 
       container.innerHTML += `
-        <div class="reward-account-item">
-          <div class="reward-account-name">${rewardName}</div>
-          <div class="reward-account-expiry">${r.expiry || ""}</div>
+        <div class="reward-account-item" data-id="${p.id}" data-repo="${repoId}">
+          
+          <div class="reward-view-mode" onclick="enterLoyaltyEditMode('${p.id}', '${repoId}')">
+            <div class="lp-row">
+              <span class="lp-name">${p.name}</span>
+              ${warningText}
+              ${expiryText}
+            </div>
+
+            ${p.number ? `<div class="reward-account-number">会员号：${p.number}</div>` : ""}
+            ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
+          </div>
+
+          <div class="reward-edit-mode hidden"></div>
         </div>
       `;
     }
   }
 }
 
+function toggleAddLoyaltyForm() {
+  const repoList = selectedRepos.ledgerRepos;
+
+  const form = document.getElementById("loyalty-add-form");
+
+  if (!form.classList.contains("hidden")) {
+    form.classList.add("hidden");
+    form.innerHTML = "";
+    return;
+  }
+
+  form.classList.remove("hidden");
+
+  form.innerHTML = `
+    <div class="loyalty-add-container">
+
+      <div class="loyalty-row">
+        <input id="loyalty-name" class="loyalty-input" placeholder="名称" required>
+        <button class="section-manage-btn" onclick="saveNewLoyaltyProgram()">
+          保存
+        </button>
+      </div>
+
+      <select id="loyalty-repo-select" class="loyalty-input">
+        <option value="">选择保存的账本</option>
+        ${Object.values(repoList)
+          .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
+          .join("")}
+      </select>
+
+      <input id="loyalty-number" class="loyalty-input" placeholder="会员号">
+      <input id="loyalty-expiry" class="loyalty-input" placeholder="到期日 YYYY-MM-DD">
+      <textarea id="loyalty-details" class="loyalty-textarea" placeholder="备注"></textarea>
+
+      <div class="loyalty-add-footer">
+        <button class="section-manage-btn loyalty-cancel-btn" onclick="cancelAddLoyaltyForm()">
+          取消
+        </button>
+      </div>
+    </div>
+  `;
+}
+window.toggleAddLoyaltyForm = toggleAddLoyaltyForm;
+
+async function saveNewLoyaltyProgram() {
+  const name = document.getElementById("loyalty-name").value.trim();
+  const number = document.getElementById("loyalty-number").value.trim();
+  const expiry = document.getElementById("loyalty-expiry").value.trim();
+  const details = document.getElementById("loyalty-details").value.trim();
+  const repoId = document.getElementById("loyalty-repo-select").value;
+
+  if (!name) {
+    showStatusMessage("名称是必填项", "error");
+    return;
+  }
+
+  if (!repoId) {
+    showStatusMessage("请选择要保存到的账本", "error");
+    return;
+  }
+
+  const repo = settingsMap[repoId];
+
+  if (repo.accounts.rewardAccounts) {
+    delete repo.accounts.rewardAccounts;
+  }
+
+  if (!repo.accounts.loyaltyPrograms) {
+    repo.accounts.loyaltyPrograms = [];
+  }
+
+  const newId = "lp-" + Date.now();
+
+  repo.accounts.loyaltyPrograms.push({
+    id: newId,
+    name,
+    number,
+    expiry,
+    details
+  });
+
+  settingsMap[repoId].updatedAt = Date.now();
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+  
+  // Re-render loyalty section
+  renderRewardsHubLoyaltyPrograms();
+
+  // Collapse form
+  const form = document.getElementById("loyalty-add-form");
+  form.classList.add("hidden");
+  form.innerHTML = "";
+}
+window.saveNewLoyaltyProgram = saveNewLoyaltyProgram;
+
+function cancelAddLoyaltyForm() {
+  const form = document.getElementById("loyalty-add-form");
+  form.classList.add("hidden");
+  form.innerHTML = "";
+}
+window.cancelAddLoyaltyForm = cancelAddLoyaltyForm;
+
+function enterLoyaltyEditMode(id, repoId) {
+  
+  console.log(settingsMap)
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  const view = item.querySelector(".reward-view-mode");
+  const edit = item.querySelector(".reward-edit-mode");
+
+  // Always load fresh data
+  const repo = settingsMap[repoId];
+  const p = repo.accounts.loyaltyPrograms.find(x => x.id === id);
+
+  edit.innerHTML = `
+    <div class="loyalty-row">
+      <input class="loyalty-input" value="${p.name}" data-field="name">
+      <button class="section-manage-btn" onclick="saveLoyaltyEdit('${p.id}', '${repoId}')">保存</button>
+    </div>
+
+    <input class="loyalty-input" value="${p.number || ""}" placeholder="会员号" data-field="number">
+    <input class="loyalty-input" value="${p.expiry || ""}" placeholder="到期日 YYYY-MM-DD" data-field="expiry">
+    <textarea class="loyalty-textarea" placeholder="备注" data-field="details">${p.details || ""}</textarea>
+
+    <div class="reward-edit-footer">
+      <button class="section-manage-btn loyalty-cancel-btn" onclick="cancelLoyaltyEdit('${p.id}', '${repoId}')">取消</button>
+      <button class="section-delete-btn" onclick="deleteLoyaltyProgram('${p.id}', '${repoId}')">删除</button>
+    </div>
+  `;
+
+  view.classList.add("hidden");
+  edit.classList.remove("hidden");
+}
+window.enterLoyaltyEditMode = enterLoyaltyEditMode;
+
+function cancelLoyaltyEdit(id, repoId) {
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  item.querySelector(".reward-edit-mode").classList.add("hidden");
+  item.querySelector(".reward-view-mode").classList.remove("hidden");
+}
+window.cancelLoyaltyEdit = cancelLoyaltyEdit;
+
+async function saveLoyaltyEdit(id, repoId) {
+  const repo = settingsMap[repoId];
+  const programs = repo.accounts.loyaltyPrograms;
+
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  const fields = item.querySelectorAll("[data-field]");
+
+  const updated = {};
+  fields.forEach(f => {
+    updated[f.dataset.field] = f.value.trim();
+  });
+
+  const p = programs.find(x => x.id === id);
+  Object.assign(p, updated);
+
+  settingsMap[repoId].updatedAt = Date.now();
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+
+  renderRewardsHubLoyaltyPrograms();
+}
+window.saveLoyaltyEdit = saveLoyaltyEdit;
+
+async function deleteLoyaltyProgram(id, repoId) {
+  const repo = settingsMap[repoId];
+  const programs = repo.accounts.loyaltyPrograms;
+
+  repo.accounts.loyaltyPrograms = programs.filter(p => p.id !== id);
+
+  settingsMap[repoId].updatedAt = Date.now();
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+
+  renderRewardsHubLoyaltyPrograms();
+}
+window.deleteLoyaltyProgram = deleteLoyaltyProgram;

@@ -3287,3 +3287,180 @@ emoji-picker {
   height: 1rem;
   accent-color: var(--primary);
 }
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 10px;
+}
+
+/* Section title: 信用卡 / 会员计划 */
+.section-header .section-title {
+  font-size: calc(var(--font-size) * 1);
+  font-weight: 600;
+  margin: 0;              /* important: no extra vertical margin */
+}
+
+.section-manage-btn {
+  font-size: calc(var(--font-size) * 0.8);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--primary);
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  flex: 0 0 auto;         /* important: do NOT stretch */
+}
+
+.toggle-all-btn {
+  font-size: calc(var(--font-size) * 0.8);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--light-grey);
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  flex: 0 0 auto;         /* important: do NOT stretch */
+}
+
+.toggle-all-btn:hover {
+  background: var(--light-grey);
+}
+
+.hidden {
+  display: none;
+}
+
+/* 主卡片（信用卡主账户） */
+.reward-card-item, .reward-account-item {
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: background 0.15s ease;
+}
+
+/* 主卡片 hover */
+.reward-card-item:hover {
+  background: var(--primary);
+}
+
+.reward-account-item:hover {
+  background: none;
+}
+
+/* 主卡片名称 */
+.reward-card-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* 子卡片（benefits） */
+.reward-card-sub {
+  margin-left: 24px; 
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* 子卡片 hover */
+.reward-card-sub:hover {
+  background: var(--primary);
+}
+
+/* 会员计划卡片 */
+.reward-program-item {
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.lp-expiry, .reward-account-details {
+  color: var(--muted);
+}
+
+.loyalty-add-container {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.loyalty-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.loyalty-row .loyalty-input {
+  flex: 1; /* input expands, save button stays compact */
+}
+
+.loyalty-input {
+  font-size: calc(var(--font-size) * 1);
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.loyalty-textarea {
+  font-size: calc(var(--font-size) * 1);
+  width: 100%;
+  height: 60px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  resize: vertical;
+}
+
+.loyalty-save-btn {
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.reward-edit-mode {
+  margin-top: 8px;
+}
+
+.reward-edit-mode.hidden {
+  display: none;
+}
+
+.reward-edit-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-delete-btn {
+  font-size: calc(var(--font-size) * 0.85);
+  flex: 0 0 auto;
+  background: crimson; /* red */
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.section-delete-btn:hover {
+  background: crimson;
+}
