@@ -12409,7 +12409,23 @@ function renderRewardsHubLoyaltyPrograms() {
               ${expiryText}
             </div>
 
-            ${p.number ? `<div class="reward-account-number">会员号：${p.number}</div>` : ""}
+            ${p.number ? `
+              <div class="lp-barcode-toggle">
+                <div class="lp-barcode-left">
+                  <div class="reward-account-number">会员号：${p.number}</div>
+                </div>
+
+                <div class="lp-barcode-right">
+                  <button class="lp-showbarcode-btn"
+                    onclick="showBarcode('${p.id}', '${repoId}', event)">
+                    Show Barcode
+                  </button>
+                </div>
+              </div>
+              <img class="lp-barcode hidden"
+                src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(p.number)}&code=Code128&dpi=96"
+                onclick="hideBarcode('${p.id}', '${repoId}', event)">
+            ` : ""}
             ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
           </div>
 
@@ -12483,14 +12499,6 @@ async function saveNewLoyaltyProgram() {
 
   const repo = settingsMap[repoId];
 
-  if (repo.accounts.rewardAccounts) {
-    delete repo.accounts.rewardAccounts;
-  }
-
-  if (!repo.accounts.loyaltyPrograms) {
-    repo.accounts.loyaltyPrograms = [];
-  }
-
   const newId = "lp-" + Date.now();
 
   repo.accounts.loyaltyPrograms.push({
@@ -12514,6 +12522,30 @@ async function saveNewLoyaltyProgram() {
   form.innerHTML = "";
 }
 window.saveNewLoyaltyProgram = saveNewLoyaltyProgram;
+
+function showBarcode(id, repoId, event) {
+  event.stopPropagation(); // prevent entering edit mode
+
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  const btn = item.querySelector(".lp-showbarcode-btn");
+  const barcode = item.querySelector(".lp-barcode");
+
+  btn.classList.add("hidden");
+  barcode.classList.remove("hidden");
+}
+window.showBarcode = showBarcode;
+
+function hideBarcode(id, repoId, event) {
+  event.stopPropagation(); // prevent entering edit mode
+
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  const btn = item.querySelector(".lp-showbarcode-btn");
+  const barcode = item.querySelector(".lp-barcode");
+
+  barcode.classList.add("hidden");
+  btn.classList.remove("hidden");
+}
+window.hideBarcode = hideBarcode;
 
 function cancelAddLoyaltyForm() {
   const form = document.getElementById("loyalty-add-form");

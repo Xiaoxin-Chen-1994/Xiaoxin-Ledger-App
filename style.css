@@ -3343,6 +3343,13 @@ emoji-picker {
   transition: background 0.15s ease;
 }
 
+.reward-account-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* 主卡片 hover */
 .reward-card-item:hover {
   background: var(--primary);
@@ -3389,6 +3396,29 @@ emoji-picker {
 
 .lp-expiry, .reward-account-details {
   color: var(--muted);
+}
+
+.lp-barcode-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Full-width barcode */
+.lp-barcode {
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.lp-showbarcode-btn {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
 .loyalty-add-container {
