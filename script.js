@@ -12249,6 +12249,25 @@ function OpenRewardsHub() {
   // Clear previous content
   scroll.innerHTML = "";
 
+  // Render reward accounts section
+  scroll.innerHTML += `
+    <div class="section-header">
+      <div class="section-title">${t.loyaltyPrograms}</div>
+
+      <div class="section-actions">
+        <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
+        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
+      </div>
+    </div>
+
+    <div id="rewards-hub-loyaltyprograms"></div>
+
+    <!-- Inline add form (initially hidden) -->
+    <div id="loyalty-add-form" class="hidden"></div>
+  `;
+
+  renderRewardsHubLoyaltyPrograms();
+  
   // Render credit card section
   scroll.innerHTML += `
     <div class="section-header">
@@ -12269,25 +12288,6 @@ function OpenRewardsHub() {
   `;
 
   renderRewardsHubCreditCards();
-
-  // Render reward accounts section
-  scroll.innerHTML += `
-    <div class="section-header">
-      <div class="section-title">${t.loyaltyPrograms}</div>
-
-      <div class="section-actions">
-        <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
-        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
-      </div>
-    </div>
-
-    <div id="rewards-hub-loyaltyprograms"></div>
-
-    <!-- Inline add form (initially hidden) -->
-    <div id="loyalty-add-form" class="hidden"></div>
-  `;
-
-  renderRewardsHubLoyaltyPrograms();
 
   showPage('rewards-hub', 'Rewards Hub');
 }
