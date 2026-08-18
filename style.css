@@ -3334,6 +3334,7 @@ emoji-picker {
 
 /* 主卡片（信用卡主账户） */
 .reward-card-item, .reward-account-item {
+  background: var(--primary-category-bg);
   border-radius: 8px;
   padding: 12px 14px;
   margin-bottom: 8px;
@@ -3356,7 +3357,7 @@ emoji-picker {
 }
 
 .reward-account-item:hover {
-  background: none;
+  background: var(--primary-category-bg);
 }
 
 /* 主卡片名称 */
@@ -3402,6 +3403,7 @@ emoji-picker {
 }
 
 .lp-expiry {
+  font-size: calc(var(--font-size) * 0.85);
   color: var(--muted);
 }
 
