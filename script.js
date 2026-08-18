@@ -4524,9 +4524,15 @@ function buildAlertItems() {
   let due7Count = 0;
   let due15Count = 0;
 
+  let lpDaysToWarn = 90;
+  let lpExpired = 0; // loyalty program
+  let lpDue1 = 0; // within 45 days
+  let lpDue2 = 0; // within 90 days
+
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
     
+    /* --- CREDIT CARD ALERTS --- */
     for (const type of accountTypes) {
       if (type !== "creditCards") continue;
 
@@ -4548,10 +4554,26 @@ function buildAlertItems() {
         else if (diffDays <= 15) due15Count++;
       }
     }
+
+    /* --- LOYALTY PROGRAM ALERTS --- */
+    const lps = repo.accounts.loyaltyPrograms || [];
+    for (const lp of lps) {
+      if (!lp.expiry) continue;
+
+      const exp = new Date(lp.expiry);
+      if (isNaN(exp)) continue;
+
+      const diffDays = Math.ceil((exp - Date.now()) / 86400000);
+
+      if (diffDays < 0) lpExpired++;
+      else if (diffDays <= lpDaysToWarn/2) lpDue1++;
+      else if (diffDays <= lpDaysToWarn) lpDue2++;
+    }
   }
 
   const items = [];
-
+  
+  /* --- CREDIT CARD ALERT ROW --- */
   if (overdueCount > 0 || due7Count > 0 || due15Count > 0) {
     const parts = [];
 
@@ -4576,6 +4598,34 @@ function buildAlertItems() {
     items.push({
       text: `您有 ${parts.join(t.comma)}`,
       onclick: `prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)`
+    });
+  }
+
+  /* --- LOYALTY PROGRAM ALERT ROW --- */
+  if (lpExpired > 0 || lpDue1 > 0 || lpDue2 > 0) {
+    const parts = [];
+
+    if (lpExpired > 0) {
+      parts.push(
+        `<span style="color: var(--red); font-weight: 600;">${lpExpired}</span> 个会员已过期`
+      );
+    }
+
+    if (lpDue1 > 0) {
+      parts.push(
+        `<span style="color: var(--red); font-weight: 600;">${lpDue1}</span> 个会员将在 ${Math.ceil(lpDaysToWarn/2)} 天内过期`
+      );
+    }
+
+    if (lpDue2 > 0) {
+      parts.push(
+        `<span style="font-weight: 600;">${lpDue2}</span> 个会员将在 ${Math.ceil(lpDaysToWarn)} 天内过期`
+      );
+    }
+
+    items.push({
+      text: `您有 ${parts.join(t.comma)}`,
+      onclick: `OpenRewardsHub()`
     });
   }
 
