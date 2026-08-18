@@ -27,6 +27,7 @@
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
 
     <div class="header-right-group">
+      <button id="bookmark-btn-headerbar" class="header-right-button" onclick="toggleBookmark()" style="display:none;">☆</button>
       <button id="save-btn-headerbar" class="header-right-button" style="display:none;">✔️保存</button>
       <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display:none;">🔍搜索</button>
       <button id="manage-btn-headerbar" class="header-right-button" style="display:none;">管理</button>
@@ -56,6 +57,10 @@
           </div>
         </div>
         <div id="alert-center" class="alert-center"></div>
+        <div id="home-bookmarks-section">
+          <div class="home-section-title">收藏的页面</div>
+          <div id="home-bookmarks" class="home-bookmarks-row"></div>
+        </div>
         <div id=home-kanban-list class="kanban"></div>
       </div>
     </div>
@@ -496,7 +501,7 @@
           <button class="util-button" onclick="OpenGrocerySearch()">Grocery Search</button>
           <button class="util-button" id="open-receipt-scan">Scan Receipt</button>
           <button class="util-button" onclick="OpenInterestRateCal()">Calculate Interest Rates</button>
-          <button class="util-button" onclick="OpenRewardsHub()">Rewards Hub</button>
+          <button class="util-button" onclick="showPage('rewards-hub', 'Rewards Hub')">Rewards Hub</button>
         </div>
       </div>
     </div>

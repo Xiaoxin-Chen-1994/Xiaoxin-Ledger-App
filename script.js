@@ -4121,6 +4121,189 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
   }
 }
 
+async function toggleBookmark() {
+  const { name, title, options } = window.currentPageMeta;
+
+  let personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  if (!personalSettings) personalSettings = {};
+
+  if (!personalSettings.favourites) personalSettings.favourites = [];
+
+  // Check if already favourited
+  const exists = personalSettings.favourites.find(f =>
+    f.name === name &&
+    JSON.stringify(f.options) === JSON.stringify(options)
+  );
+
+  if (exists) {
+    // Remove favourite
+    personalSettings.favourites =
+      personalSettings.favourites.filter(f => f !== exists);
+
+  } else {
+    // Add favourite
+    personalSettings.favourites.push({ name, title, options });
+  }
+
+  personalSettings.updatedAt = Date.now();
+
+  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+  smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+
+  updateBookmarkIcon();
+}
+window.toggleBookmark = toggleBookmark;
+
+async function updateBookmarkIcon() {
+  const btn = document.getElementById("bookmark-btn-headerbar");
+  const { name, title, options } = window.currentPageMeta;
+
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  const favs = personalSettings?.favourites || [];
+
+  const exists = favs.find(f =>
+    f.name === name &&
+    JSON.stringify(f.options) === JSON.stringify(options)
+  );
+
+  btn.textContent = exists ? "⭐" : "☆";
+  btn.style.display = "inline-block";
+}
+
+async function renderHomeFavourites() {
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  const favs = personalSettings?.favourites || [];
+
+  const row = document.getElementById("home-bookmarks");
+  row.innerHTML = "";
+
+  favs.forEach((fav, index) => {
+    const item = document.createElement("div");
+    item.className = "home-fav-item";
+    item.textContent = `⭐ ${fav.title}`;
+    item.dataset.index = index;
+
+    row.appendChild(item);
+  });
+
+  document.getElementById("home-bookmarks-section").style.display =
+    favs.length > 0 ? "block" : "none";
+
+  initFavouriteInteractions();
+}
+
+function initFavouriteInteractions() {
+  const row = document.getElementById("home-bookmarks");
+  const items = row.querySelectorAll(".home-fav-item");
+
+  let longPressTimer = null;
+  let isDragging = false;
+  let dragItem = null;
+  let startX = 0;
+  let currentDragX = 0;
+
+  items.forEach(item => {
+
+    // TAP
+    item.addEventListener("click", () => {
+      if (isDragging) return;
+      const index = Number(item.dataset.index);
+      openFavouriteByIndex(index);
+    });
+
+    // LONG PRESS
+    item.addEventListener("touchstart", e => {
+      startX = e.touches[0].clientX;
+
+      longPressTimer = setTimeout(() => {
+        isDragging = true;
+        dragItem = item;
+        item.classList.add("dragging");
+        
+        // Only prevent default AFTER long‑press is activated
+        e.preventDefault();
+        e.stopPropagation();
+      }, 300);
+    });
+
+    // DRAG MOVE (visual only)
+    item.addEventListener("touchmove", e => {
+      if (!isDragging) {
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        if (dx > 10) clearTimeout(longPressTimer);
+        return;
+      }
+
+      const x = e.touches[0].clientX;
+      currentDragX = x;
+
+      dragItem.style.transform = `translateX(${x - startX}px)`;
+    });
+
+    // DRAG END (swap here)
+    item.addEventListener("touchend", () => {
+      clearTimeout(longPressTimer);
+
+      if (isDragging) {
+        dragItem.style.transform = "";
+        dragItem.classList.remove("dragging");
+
+        // find nearest item
+        let nearest = null;
+        let nearestDist = Infinity;
+
+        items.forEach(other => {
+          if (other === dragItem) return;
+
+          const rect = other.getBoundingClientRect();
+          const otherCenter = rect.left + rect.width / 2;
+          const dist = Math.abs(currentDragX - otherCenter);
+
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearest = other;
+          }
+        });
+
+        // Only swap if close enough
+        if (nearest && nearestDist < 50) {
+          swapFavouriteItems(dragItem, nearest);
+        }
+      }
+
+      isDragging = false;
+      dragItem = null;
+      currentDragX = 0;
+    });
+  });
+}
+
+async function swapFavouriteItems(a, b) {
+  const i = Number(a.dataset.index);
+  const j = Number(b.dataset.index);
+
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  const favs = personalSettings.favourites;
+
+  // swap
+  [favs[i], favs[j]] = [favs[j], favs[i]];
+
+  personalSettings.updatedAt = Date.now();
+
+  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+  await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+
+  // re-render
+  renderHomeFavourites();
+}
+
+async function openFavouriteByIndex(i) {
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  const fav = personalSettings.favourites[i];
+
+  showPage(fav.name, fav.title, fav.options);
+}
+
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
 
@@ -4130,6 +4313,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   // hide all pages
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("return-btn").textContent = "< " + t.back;
+  document.getElementById("bookmark-btn-headerbar").style.display = "none";
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
@@ -4141,6 +4325,8 @@ async function showPage(name, title = latestTitle, options = {}) {
   let latest = null;
 
   vibrate(30); // milliseconds
+
+  window.currentPageMeta = { name, title, options };
 
   latest = historyStack[historyStack.length - 1]; // there should always be at least one historyStack
   [latestPage, latestTitle, latestOptions] = latest; // retreive the latest page
@@ -4180,9 +4366,13 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("return-btn").style.display = "block";
     document.getElementById("home-nav").style.display = "none";
 
+    document.getElementById("bookmark-btn-headerbar").style.display = "block";
+    updateBookmarkIcon();
+
   } else { // at home page
     document.getElementById("search-btn-headerbar").style.display = "block";
     document.getElementById("home-nav").style.display = "flex";
+    renderHomeFavourites();
 
     console.log(settingsMap)
     renderAlertCenter();
@@ -4292,6 +4482,52 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
+
+  } else if (latestPage === "rewards-hub") {
+    const scroll = document.getElementById("rewards-hub-scroll");
+
+    // Clear previous content
+    scroll.innerHTML = "";
+
+    // Render reward accounts section
+    scroll.innerHTML += `
+      <div class="section-header">
+        <div class="section-title">${t.loyaltyPrograms}</div>
+
+        <div class="section-actions">
+          <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
+          <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
+        </div>
+      </div>
+
+      <div id="rewards-hub-loyaltyprograms"></div>
+
+      <!-- Inline add form (initially hidden) -->
+      <div id="loyalty-add-form" class="hidden"></div>
+    `;
+
+    renderRewardsHubLoyaltyPrograms();
+    
+    // Render credit card section
+    scroll.innerHTML += `
+      <div class="section-header">
+        <div class="section-title">${t.creditCards}</div>
+
+        <div class="section-actions">
+          <button class="section-manage-btn" onclick="prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)">
+            管理
+          </button>
+
+          <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'credit')">
+            显示全部
+          </button>
+        </div>
+      </div>
+
+      <div id="rewards-hub-creditcards"></div>
+    `;
+
+    renderRewardsHubCreditCards();
 
   } else if (latestPage === "accounts") {
     loadAccounts(options.activeRepoId);
@@ -4507,7 +4743,7 @@ function renderAlertCenter() {
   container.style.display = "block";
 
   container.innerHTML = `
-    <div class="alert-center-title">${t.alerts}</div>
+    <div class="home-section-title">${t.alerts}</div>
     ${alertItems.map(item => `
       <div class="alert-item"
            onclick="${item.onclick}">
@@ -12240,58 +12476,6 @@ function OpenInterestRateCal() {
   }
 }
 window.OpenInterestRateCal = OpenInterestRateCal;
-
-function OpenRewardsHub() {
-  const t = translations[currentLang];
-
-  const scroll = document.getElementById("rewards-hub-scroll");
-
-  // Clear previous content
-  scroll.innerHTML = "";
-
-  // Render reward accounts section
-  scroll.innerHTML += `
-    <div class="section-header">
-      <div class="section-title">${t.loyaltyPrograms}</div>
-
-      <div class="section-actions">
-        <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
-        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
-      </div>
-    </div>
-
-    <div id="rewards-hub-loyaltyprograms"></div>
-
-    <!-- Inline add form (initially hidden) -->
-    <div id="loyalty-add-form" class="hidden"></div>
-  `;
-
-  renderRewardsHubLoyaltyPrograms();
-  
-  // Render credit card section
-  scroll.innerHTML += `
-    <div class="section-header">
-      <div class="section-title">${t.creditCards}</div>
-
-      <div class="section-actions">
-        <button class="section-manage-btn" onclick="prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)">
-          管理
-        </button>
-
-        <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'credit')">
-          显示全部
-        </button>
-      </div>
-    </div>
-
-    <div id="rewards-hub-creditcards"></div>
-  `;
-
-  renderRewardsHubCreditCards();
-
-  showPage('rewards-hub', 'Rewards Hub');
-}
-window.OpenRewardsHub = OpenRewardsHub;
 
 function toggleAllRewards(btn, section) {
   const page = document.getElementById("rewards-hub-page");
