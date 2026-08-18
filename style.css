@@ -3394,7 +3394,18 @@ emoji-picker {
   color: var(--text);
 }
 
-.lp-expiry, .reward-account-details {
+.lp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* pushes expiry to the right */
+  width: 100%;
+}
+
+.lp-expiry {
+  color: var(--muted);
+}
+
+.reward-account-details {
   color: var(--muted);
 }
 
