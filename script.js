@@ -2830,7 +2830,7 @@ function vibrate(ms) {
   }
 }
 
-function switchTab(index) {
+function switchTab(index, mode='manual') {
   let subWorkspace = null;
 
   if (latestPage.includes("create")) { // when creating an entry
@@ -2842,6 +2842,13 @@ function switchTab(index) {
   const inputType = transactionTypes[index];
   subWorkspace.inputTypeIndex = index;
   subWorkspace.inputType = inputType;
+ 
+  if (mode === 'manual') {
+    wrapper.style.transition = `transform 0.3s ease`;
+    vibrate(30); // milliseconds
+  } else {
+    wrapper.style.transition = `none`;
+  }
 
   wrapper.style.transform = `translateX(-${index * 105}%)`; // this includes the 5% gap in class .transaction-wrapper
 
@@ -2849,8 +2856,7 @@ function switchTab(index) {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
-  vibrate(30); // milliseconds
-
+ 
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
@@ -3018,7 +3024,7 @@ function parseDateFromString(string) {
 // Button click
 tabButtons.forEach(btn => {
   btn.addEventListener("click", () => {
-    switchTab(parseInt(btn.dataset.index));
+    switchTab(parseInt(btn.dataset.index), 'manual');
   });
 });
 
@@ -3054,8 +3060,8 @@ wrapper.addEventListener("touchend", e => {
   let diff = startX - endX;
 
   if (Math.abs(diff) > 50) {
-    if (diff > 0 && inputTypeIndex < (tabButtons.length - 1)) switchTab(inputTypeIndex + 1);
-    if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1);
+    if (diff > 0 && inputTypeIndex < (tabButtons.length - 1)) switchTab(inputTypeIndex + 1, 'manual');
+    if (diff < 0 && inputTypeIndex > 0) switchTab(inputTypeIndex - 1, 'manual');
   }
 
   startX = 0;
@@ -4586,7 +4592,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       secondBtn.style.color = "var(--red)";
     }
 
-    switchTab(subWorkspace.inputTypeIndex);
+    switchTab(subWorkspace.inputTypeIndex, 'auto');
 
     // prepare date time selector columns in advance
     ScrollToSelectItem(datetimeSelector.querySelector(".year-col"), subWorkspace.inputTransactionTimeRaw.yyyy);
@@ -11878,7 +11884,7 @@ document.getElementById("receipt-confirm-btn")
       goBack();
 
       const ws = workspace.transactions[latestOptions.transactionId];
-      switchTab(ws.inputTypeIndex);
+      switchTab(ws.inputTypeIndex, 'auto');
     }
   });
 

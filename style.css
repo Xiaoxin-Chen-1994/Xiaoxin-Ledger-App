@@ -767,7 +767,7 @@ label {
   display: flex;
   width: 100%;
   gap: 5%;
-  transition: transform 0.3s ease;
+  /* transition for this wrapper is now defined in script.js*/
 }
 
 #transaction-page {
