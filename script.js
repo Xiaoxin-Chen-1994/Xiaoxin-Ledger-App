@@ -4127,28 +4127,52 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
   }
 }
 
-function attachMobileTapDragBehavior(el, {
-  onTap,
+function attachMobileGesture(el, {
+  enableClick = false,
+  dragMode = "none",
+  longPressTime = 300,
+  enableLongPressDelete = false,
+
+  onClick,
   onDragStart,
   onDragMove,
-  onDragEnd
+  onDragEnd,
+  onLongPressDelete,
+  onRightClick
 }) {
-  let longPressTimer = null;
-  let isDragging = false;
   let startX = 0;
   let startY = 0;
+
+  let isDragging = false;
+  let didLongPress = false;
+  let didMove = false;
+
+  let longPressTimer = null;
 
   el.addEventListener("touchstart", e => {
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
 
-    longPressTimer = setTimeout(() => {
-      isDragging = true;
-      onDragStart?.(e, el, startX, startY);
-      e.preventDefault();
-      e.stopPropagation();
-    }, 300);
+    isDragging = false;
+    didLongPress = false;
+    didMove = false;
+
+    if (dragMode === "longpress" || enableLongPressDelete) {
+      longPressTimer = setTimeout(() => {
+        didLongPress = true;
+
+        if (enableLongPressDelete) {
+          onLongPressDelete?.(e, el);
+          return;
+        }
+
+        if (dragMode === "longpress") {
+          isDragging = true;
+          onDragStart?.(e, el, startX, startY);
+        }
+      }, longPressTime);
+    }
   });
 
   el.addEventListener("touchmove", e => {
@@ -4156,45 +4180,72 @@ function attachMobileTapDragBehavior(el, {
     const dx = Math.abs(t.clientX - startX);
     const dy = Math.abs(t.clientY - startY);
 
-    if (!isDragging) {
-      if (dx > 10 || dy > 10) clearTimeout(longPressTimer);
-      return;
+    // Cancel long press if item moves early
+    if (dx > 10 || dy > 10) {
+      didMove = true;
+      clearTimeout(longPressTimer);
     }
 
-    onDragMove?.(e, el, startX, startY);
+    // Immediate drag (only if not scrolling)
+    if (dragMode === "immediate" && !isDragging && didMove) {
+      isDragging = true;
+      onDragStart?.(e, el, startX, startY);
+    }
+
+    if (isDragging) {
+      onDragMove?.(e, el, startX, startY);
+      e.preventDefault();
+      e.stopPropagation();
+    }
   });
 
   el.addEventListener("touchend", e => {
     clearTimeout(longPressTimer);
 
-    if (isDragging) {
-      isDragging = false;
-      onDragEnd?.(e, el);
+    if (didLongPress || isDragging || didMove) {
+      if (isDragging) {
+        isDragging = false;
+        onDragEnd?.(e, el);
+      }
       return;
     }
 
-    onTap?.(e, el);
+    if (enableClick) {
+      onClick?.(e, el);
+    }
   });
 
   el.addEventListener("click", e => {
-    if (isDragging) return;
-    onTap?.(e, el);
+    if (didLongPress || isDragging || didMove) return;
+    if (!enableClick) return;
+    onClick?.(e, el);
+  });
+
+  el.addEventListener("contextmenu", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRightClick?.(e, el);
   });
 }
 
 function pinEntry(subWorkspace) {
   const { name, title, options } = window.currentPageMeta;
-  
-  // Prevent duplicates
+
   const exists = pinnedEntries.some(p =>
     p.name === name &&
     p.options.transactionId === options.transactionId
   );
+  if (exists) return;
 
-  if (exists) return; // already pinned
-  
-  const opts = { ...options, mode: 'loadFromWorkspace', subWorkspace: subWorkspace };
-  
+  const opts = {
+    ...options,
+    mode: "loadFromWorkspace",
+    subWorkspace,
+    bubbleColor: randomBubbleColor(),   // store color
+    bubbleLeft: null,                   // store position
+    bubbleTop: null
+  };
+
   pinnedEntries.push({ name, title, options: opts });
   onReturnButton();
 }
@@ -4204,15 +4255,22 @@ function renderPinnedBubbles() {
   const container = document.getElementById("pinned-bubbles-container");
   container.innerHTML = "";
 
-  const currentPage = window.currentPageMeta;
-
   pinnedEntries.forEach((entry, index) => {
     const bubble = document.createElement("div");
     bubble.className = "pinned-bubble";
     bubble.dataset.index = index;
 
-    bubble.textContent = entry.options.subWorkspace.amount ?? "?"
-    bubble.style.background = randomBubbleColor();
+    bubble.textContent = entry.options.subWorkspace.amount ?? "?";
+
+    // Use stored color
+    bubble.style.background = entry.options.bubbleColor;
+
+    // Use stored position if available
+    if (entry.options.bubbleLeft !== null) {
+      bubble.style.left = entry.options.bubbleLeft;
+      bubble.style.top = entry.options.bubbleTop;
+      bubble.style.position = "fixed";
+    }
 
     container.appendChild(bubble);
   });
@@ -4236,9 +4294,13 @@ function initPinnedBubbleInteractions() {
     let offsetX = 0;
     let offsetY = 0;
 
-    attachMobileTapDragBehavior(bubble, {
-      // TAP → open pinned entry
-      onTap: async () => {
+    attachMobileGesture(bubble, {
+      enableClick: true,
+      dragMode: "immediate",
+      enableLongPressDelete: true,
+      longPressTime: 500,
+
+      onClick: async () => {
         const index = Number(bubble.dataset.index);
         const entry = pinnedEntries[index];
 
@@ -4250,7 +4312,6 @@ function initPinnedBubbleInteractions() {
         setTimeout(() => showPage(entry.name, entry.title, entry.options), 300);
       },
 
-      // LONG‑PRESS → start drag
       onDragStart: (e, el, startX, startY) => {
         const rect = el.getBoundingClientRect();
         offsetX = rect.left;
@@ -4258,7 +4319,6 @@ function initPinnedBubbleInteractions() {
         el.classList.add("dragging");
       },
 
-      // DRAG MOVE
       onDragMove: (e, el, startX, startY) => {
         const t = e.touches[0];
         el.style.left = offsetX + (t.clientX - startX) + "px";
@@ -4266,14 +4326,34 @@ function initPinnedBubbleInteractions() {
         el.style.position = "fixed";
       },
 
-      // DRAG END → snap left/right
       onDragEnd: (e, el) => {
         el.classList.remove("dragging");
 
         const rect = el.getBoundingClientRect();
         const mid = window.innerWidth / 2;
 
-        el.style.left = rect.left < mid ? "10px" : (window.innerWidth - 58) + "px";
+        const left = rect.left < mid ? "10px" : (window.innerWidth - 58) + "px";
+        const top = rect.top + "px";
+
+        el.style.left = left;
+        el.style.top = top;
+
+        const index = Number(el.dataset.index);
+        const entry = pinnedEntries[index];
+        entry.options.bubbleLeft = left;
+        entry.options.bubbleTop = top;
+      },
+
+      onLongPressDelete: (e, el) => {
+        const index = Number(el.dataset.index);
+        pinnedEntries.splice(index, 1);
+        renderPinnedBubbles();
+      },
+
+      onRightClick: (e, el) => {
+        const index = Number(el.dataset.index);
+        pinnedEntries.splice(index, 1);
+        renderPinnedBubbles();
       }
     });
   });
@@ -4350,37 +4430,35 @@ async function renderHomeFavourites() {
 }
 
 function initFavouriteInteractions() {
-  const row = document.getElementById("home-bookmarks");
-  const items = row.querySelectorAll(".home-fav-item");
+  const items = document.querySelectorAll(".home-fav-item");
 
   items.forEach(item => {
     let currentDragX = 0;
 
-    attachMobileTapDragBehavior(item, {
-      // TAP → open favourite
-      onTap: () => {
+    attachMobileGesture(item, {
+      enableClick: true,
+      dragMode: "longpress",
+      longPressTime: 300,
+
+      onClick: () => {
         const index = Number(item.dataset.index);
         openFavouriteByIndex(index);
       },
 
-      // LONG‑PRESS → start drag
       onDragStart: (e, el, startX, startY) => {
         el.classList.add("dragging");
       },
 
-      // DRAG MOVE (visual only)
       onDragMove: (e, el, startX, startY) => {
         const x = e.touches[0].clientX;
         currentDragX = x;
         el.style.transform = `translateX(${x - startX}px)`;
       },
 
-      // DRAG END → reorder
       onDragEnd: (e, el) => {
         el.style.transform = "";
         el.classList.remove("dragging");
 
-        // find nearest item by center
         let nearest = null;
         let nearestDist = Infinity;
 
@@ -4388,8 +4466,8 @@ function initFavouriteInteractions() {
           if (other === el) return;
 
           const rect = other.getBoundingClientRect();
-          const otherCenter = rect.left + rect.width / 2;
-          const dist = Math.abs(currentDragX - otherCenter);
+          const center = rect.left + rect.width / 2;
+          const dist = Math.abs(currentDragX - center);
 
           if (dist < nearestDist) {
             nearestDist = dist;
@@ -4397,7 +4475,6 @@ function initFavouriteInteractions() {
           }
         });
 
-        // Only swap if close enough
         if (nearest && nearestDist < 50) {
           swapFavouriteItems(el, nearest);
         }
