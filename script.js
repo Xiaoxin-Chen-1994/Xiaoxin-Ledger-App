@@ -4190,7 +4190,7 @@ function pinEntry(subWorkspace) {
   const opts = { ...options, mode: 'loadFromWorkspace', subWorkspace: subWorkspace };
   
   pinnedEntries.push({ name, title, options: opts });
-  renderPinnedBubbles();
+  onReturnButton();
 }
 window.pinEntry = pinEntry;
 
@@ -4471,9 +4471,6 @@ async function showPage(name, title = latestTitle, options = {}) {
     target = document.getElementById(latestPage + "-page");
   }
   if (!target) return;
-
-  target.style.display = "block";
-  target.style.zIndex = historyStack.length;
   
   const current = getComputedStyle(target).transform;
 
@@ -4838,6 +4835,10 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${window.currentUserLogin}`;
   }
 
+  // show the page
+  target.style.display = "block";
+  target.style.zIndex = historyStack.length;
+  
   renderPinnedBubbles();
 }
 window.showPage = showPage;
