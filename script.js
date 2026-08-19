@@ -86,6 +86,7 @@ const LAST_SYNC_KEY = "ledger_lastSynced";
 let localLedgerDataMap = null;
 let localLogMap = null;
 let lastSyncedMap = null;
+let pinnedEntries = [];
 
 let workspace = { 'transactions': {} } // use this variable to store temporary transaction data before being saved
 //workspace = {
@@ -4120,6 +4121,158 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
   }
 }
 
+function attachMobileTapDragBehavior(el, {
+  onTap,
+  onDragStart,
+  onDragMove,
+  onDragEnd
+}) {
+  let longPressTimer = null;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  el.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+
+    longPressTimer = setTimeout(() => {
+      isDragging = true;
+      onDragStart?.(e, el, startX, startY);
+      e.preventDefault();
+      e.stopPropagation();
+    }, 300);
+  });
+
+  el.addEventListener("touchmove", e => {
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - startX);
+    const dy = Math.abs(t.clientY - startY);
+
+    if (!isDragging) {
+      if (dx > 10 || dy > 10) clearTimeout(longPressTimer);
+      return;
+    }
+
+    onDragMove?.(e, el, startX, startY);
+  });
+
+  el.addEventListener("touchend", e => {
+    clearTimeout(longPressTimer);
+
+    if (isDragging) {
+      isDragging = false;
+      onDragEnd?.(e, el);
+      return;
+    }
+
+    onTap?.(e, el);
+  });
+
+  el.addEventListener("click", e => {
+    if (isDragging) return;
+    onTap?.(e, el);
+  });
+}
+
+function pinEntry(subWorkspace) {
+  const { name, title, options } = window.currentPageMeta;
+  
+  // Prevent duplicates
+  const exists = pinnedEntries.some(p =>
+    p.name === name &&
+    p.options.transactionId === options.transactionId
+  );
+
+  if (exists) return; // already pinned
+  
+  const opts = { ...options, mode: 'loadFromWorkspace', subWorkspace: subWorkspace };
+  
+  pinnedEntries.push({ name, title, options: opts });
+  renderPinnedBubbles();
+}
+window.pinEntry = pinEntry;
+
+function renderPinnedBubbles() {
+  const container = document.getElementById("pinned-bubbles-container");
+  container.innerHTML = "";
+
+  const currentPage = window.currentPageMeta;
+
+  pinnedEntries.forEach((entry, index) => {
+    const bubble = document.createElement("div");
+    bubble.className = "pinned-bubble";
+    bubble.dataset.index = index;
+
+    bubble.textContent = entry.options.subWorkspace.amount ?? "?"
+    bubble.style.background = randomBubbleColor();
+
+    container.appendChild(bubble);
+  });
+
+  initPinnedBubbleInteractions();
+}
+
+function randomBubbleColor() {
+  const colors = [
+    "#FF6B6B", "#4ECDC4", "#556270",
+    "#C7F464", "#C44D58", "#FFA500",
+    "#6A5ACD", "#20B2AA"
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function initPinnedBubbleInteractions() {
+  const bubbles = document.querySelectorAll(".pinned-bubble");
+
+  bubbles.forEach(bubble => {
+    let offsetX = 0;
+    let offsetY = 0;
+
+    attachMobileTapDragBehavior(bubble, {
+      // TAP → open pinned entry
+      onTap: async () => {
+        const index = Number(bubble.dataset.index);
+        const entry = pinnedEntries[index];
+
+        const [prevPage] = historyStack[historyStack.length - 1];
+        if (prevPage.includes("transaction") || prevPage.includes("create")) {
+          await onReturnButton();
+        }
+
+        setTimeout(() => showPage(entry.name, entry.title, entry.options), 300);
+      },
+
+      // LONG‑PRESS → start drag
+      onDragStart: (e, el, startX, startY) => {
+        const rect = el.getBoundingClientRect();
+        offsetX = rect.left;
+        offsetY = rect.top;
+        el.classList.add("dragging");
+      },
+
+      // DRAG MOVE
+      onDragMove: (e, el, startX, startY) => {
+        const t = e.touches[0];
+        el.style.left = offsetX + (t.clientX - startX) + "px";
+        el.style.top = offsetY + (t.clientY - startY) + "px";
+        el.style.position = "fixed";
+      },
+
+      // DRAG END → snap left/right
+      onDragEnd: (e, el) => {
+        el.classList.remove("dragging");
+
+        const rect = el.getBoundingClientRect();
+        const mid = window.innerWidth / 2;
+
+        el.style.left = rect.left < mid ? "10px" : (window.innerWidth - 58) + "px";
+      }
+    });
+  });
+}
+
 async function toggleBookmark() {
   const { name, title, options } = window.currentPageMeta;
 
@@ -4166,7 +4319,6 @@ async function updateBookmarkIcon() {
   );
 
   btn.textContent = exists ? "⭐" : "☆";
-  btn.style.display = "inline-block";
 }
 
 async function renderHomeFavourites() {
@@ -4195,64 +4347,39 @@ function initFavouriteInteractions() {
   const row = document.getElementById("home-bookmarks");
   const items = row.querySelectorAll(".home-fav-item");
 
-  let longPressTimer = null;
-  let isDragging = false;
-  let dragItem = null;
-  let startX = 0;
-  let currentDragX = 0;
-
   items.forEach(item => {
+    let currentDragX = 0;
 
-    // TAP
-    item.addEventListener("click", () => {
-      if (isDragging) return;
-      const index = Number(item.dataset.index);
-      openFavouriteByIndex(index);
-    });
+    attachMobileTapDragBehavior(item, {
+      // TAP → open favourite
+      onTap: () => {
+        const index = Number(item.dataset.index);
+        openFavouriteByIndex(index);
+      },
 
-    // LONG PRESS
-    item.addEventListener("touchstart", e => {
-      startX = e.touches[0].clientX;
+      // LONG‑PRESS → start drag
+      onDragStart: (e, el, startX, startY) => {
+        el.classList.add("dragging");
+      },
 
-      longPressTimer = setTimeout(() => {
-        isDragging = true;
-        dragItem = item;
-        item.classList.add("dragging");
-        
-        // Only prevent default AFTER long‑press is activated
-        e.preventDefault();
-        e.stopPropagation();
-      }, 300);
-    });
+      // DRAG MOVE (visual only)
+      onDragMove: (e, el, startX, startY) => {
+        const x = e.touches[0].clientX;
+        currentDragX = x;
+        el.style.transform = `translateX(${x - startX}px)`;
+      },
 
-    // DRAG MOVE (visual only)
-    item.addEventListener("touchmove", e => {
-      if (!isDragging) {
-        const dx = Math.abs(e.touches[0].clientX - startX);
-        if (dx > 10) clearTimeout(longPressTimer);
-        return;
-      }
+      // DRAG END → reorder
+      onDragEnd: (e, el) => {
+        el.style.transform = "";
+        el.classList.remove("dragging");
 
-      const x = e.touches[0].clientX;
-      currentDragX = x;
-
-      dragItem.style.transform = `translateX(${x - startX}px)`;
-    });
-
-    // DRAG END (swap here)
-    item.addEventListener("touchend", () => {
-      clearTimeout(longPressTimer);
-
-      if (isDragging) {
-        dragItem.style.transform = "";
-        dragItem.classList.remove("dragging");
-
-        // find nearest item
+        // find nearest item by center
         let nearest = null;
         let nearestDist = Infinity;
 
         items.forEach(other => {
-          if (other === dragItem) return;
+          if (other === el) return;
 
           const rect = other.getBoundingClientRect();
           const otherCenter = rect.left + rect.width / 2;
@@ -4266,13 +4393,9 @@ function initFavouriteInteractions() {
 
         // Only swap if close enough
         if (nearest && nearestDist < 50) {
-          swapFavouriteItems(dragItem, nearest);
+          swapFavouriteItems(el, nearest);
         }
       }
-
-      isDragging = false;
-      dragItem = null;
-      currentDragX = 0;
     });
   });
 }
@@ -4313,6 +4436,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("return-btn").textContent = "< " + t.back;
   document.getElementById("bookmark-btn-headerbar").style.display = "none";
+  document.getElementById("pin-btn-headerbar").style.display = "none";
   document.getElementById("save-btn-headerbar").style.display = "none";
   document.getElementById("search-btn-headerbar").style.display = "none";
   document.getElementById("manage-btn-headerbar").style.display = "none";
@@ -4352,6 +4476,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   target.style.zIndex = historyStack.length;
   
   const current = getComputedStyle(target).transform;
+
   // If it's not already at translateX(0), move it there
   if ((current === "none" || current.includes("matrix") && !current.includes("1, 0, 0, 1, 0, 0"))) {
     target.style.transform = "translateX(0%)";
@@ -4383,7 +4508,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     displayHomeImage();
   };
 
-  document.getElementById("app-title").textContent = translations[currentLang][latestTitle] ?? latestTitle;
+  document.getElementById("app-title").textContent = t[latestTitle] ?? latestTitle;
 
   let dateTimeBtn = null;
 
@@ -4453,6 +4578,9 @@ async function showPage(name, title = latestTitle, options = {}) {
 
       subWorkspace = workspace.create;
     } else { // when loading an existing entry
+      if (options.mode === 'loadExistingEntry') {
+        loadEntryIntoWorkspace(options.repoId, options.transactionId);
+      }
       subWorkspace = workspace.transactions[options.transactionId];
 
       const secondBtn = document.getElementById("second-btn-nav");
@@ -4470,6 +4598,11 @@ async function showPage(name, title = latestTitle, options = {}) {
     ScrollToSelectItem(datetimeSelector.querySelector(".day-col"), subWorkspace.inputTransactionTimeRaw.dd);
     ScrollToSelectItem(datetimeSelector.querySelector(".hour-col"), subWorkspace.inputTransactionTimeRaw.hh);
     ScrollToSelectItem(datetimeSelector.querySelector(".minute-col"), subWorkspace.inputTransactionTimeRaw.min);
+
+    document.getElementById("bookmark-btn-headerbar").style.display = "none";
+    const pinBtn = document.getElementById("pin-btn-headerbar");
+    pinBtn.style.display = "block";
+    pinBtn.onclick = () => pinEntry(subWorkspace);
 
     const saveBtn = document.getElementById("save-btn-headerbar");
     saveBtn.style.display = "block";
@@ -4651,12 +4784,11 @@ async function showPage(name, title = latestTitle, options = {}) {
 
       const entryId = block.dataset.entryId;
       const repoId = block.dataset.repoId;
-      const entry = localLedgerDataMap[repoId][entryId];
-      if (!entry) return;
+      if (!(entryId in localLedgerDataMap[repoId])) return;
 
       // If clicking Edit
       if (e.target.classList.contains("edit-btn")) {
-        loadEntryIntoWorkspace(entry);
+        showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
         return;
       }
 
@@ -4669,7 +4801,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       }
 
       // Normal click → load entry
-      loadEntryIntoWorkspace(entry);
+      showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
     });
 
     target.addEventListener("touchstart", (e) => {
@@ -4705,10 +4837,12 @@ async function showPage(name, title = latestTitle, options = {}) {
   if (latestPage === "settings") {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${window.currentUserLogin}`;
   }
+
+  renderPinnedBubbles();
 }
 window.showPage = showPage;
 
-function goBack() {
+async function goBack() {
   closeSelector();
 
   if (historyStack.length > 1) {
@@ -4914,8 +5048,10 @@ function removeEntryFromTagMap(settingsMap, repoId, entry) {
   }
 }
 
-function loadEntryIntoWorkspace(e) {
+function loadEntryIntoWorkspace(repoId, entryId) {
   const t = translations[currentLang];
+
+  const e = localLedgerDataMap[repoId][entryId];
 
   let ws = {};
 
@@ -4965,8 +5101,6 @@ function loadEntryIntoWorkspace(e) {
 
   // Save workspace buffer
   workspace.transactions[e.entryId] = ws;
-
-  showPage("transaction", t.edit, { 'transactionId': e.entryId })
 }
 
 function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeLedgerRepo.id) {
@@ -11723,20 +11857,23 @@ function cleanName(str) {
 
 document.getElementById("receipt-confirm-btn")
   .addEventListener("click", () => {
+    const t = translations[currentLang];
+
     const data = window._receiptParsed;
 
     if (!receiptScanMode.returnOnly) {
       // Standalone mode → go to create page
-      let entryData = applyReceiptToWorkspace("create", null, data);
-      goBack();
+      let entryId = applyReceiptToWorkspace("create", null, data);
       goBack();
 
-      loadEntryIntoWorkspace(entryData);
+      showPage("transaction", t.create, { 'mode': 'scanReceipt', 'transactionId': entryId });
+      // disable bookmark button when creating an entry in scanReceipt mode
+      document.getElementById("bookmark-btn-headerbar").style.display = "none";
 
     } else {
       // Inline mode → return to existing transaction
       closeReceiptScan();
-      let entryData = applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
+      applyReceiptToWorkspace("transaction", latestOptions.transactionId, data);
       goBack();
 
       const ws = workspace.transactions[latestOptions.transactionId];
@@ -11837,53 +11974,7 @@ function applyReceiptToWorkspace(mode, transactionId, data) {
     ws.notes = (ws.notes || "") + "\n" + data.merchant;
   }
 
-  if (mode === "create") {
-    const inputType = ws.inputType;
-
-    const base = {
-      entryId,
-      type: inputType,
-      amount: ws.amount ?? 0,
-      repoId: ws[inputType].repoId,
-      transactionTime: ws.inputTransactionTime,   // you can set this earlier
-      tags: ws.tags ?? [],
-      notes: ws.notes ?? "",
-      createdTimestamp: getFormattedTime(),
-      lastModifiedTimestamp: getFormattedTime()
-    };
-
-    if (inputType === "expense" || inputType === "income") {
-      entryData = {
-        ...base,
-        primaryCategory: ws[inputType].primaryCategory,
-        secondaryCategory: ws[inputType].secondaryCategory,
-        account: ws[inputType].accountInfo.account.name,
-        currency: ws[inputType].accountInfo.account.currency,
-        subject: ws[inputType].subject,
-        collection: ws[inputType].collection
-      };
-    } else if (inputType === "transfer") {
-      entryData = {
-        ...base,
-        toAmount: ws[inputType].toAmount ?? 0,
-        sameCurrency: ws[inputType].sameCurrency,
-        fromAccount: ws[inputType].fromAccountInfo.account.name,
-        fromCurrency: ws[inputType].fromAccountInfo.account.currency,
-        toAccount: ws[inputType].toAccountInfo.account.name,
-        toCurrency: ws[inputType].toAccountInfo.account.currency
-      };
-    } else if (inputType === "balance") {
-      entryData = {
-        ...base,
-        account: ws[inputType].accountInfo.account.name,
-        currency: ws[inputType].accountInfo.account.currency
-      };
-    }
-  } else {
-    entryData = null;
-  }
-
-  return entryData
+  return entryId
 }
 
 function normalizeDate(raw) {

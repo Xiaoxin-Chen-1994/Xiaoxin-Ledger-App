@@ -28,6 +28,7 @@
 
     <div class="header-right-group">
       <button id="bookmark-btn-headerbar" class="header-right-button" onclick="toggleBookmark()" style="display:none;">☆</button>
+      <button id="pin-btn-headerbar" class="header-right-button" onclick="pinEntry()" style="display:none;">📌</button>
       <button id="save-btn-headerbar" class="header-right-button" style="display:none;">✔️保存</button>
       <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display:none;">🔍搜索</button>
       <button id="manage-btn-headerbar" class="header-right-button" style="display:none;">管理</button>
@@ -43,6 +44,8 @@
   </div>
 
   <div class="pages-wrapper" id="pages-wrapper">
+    <div id="pinned-bubbles-container"></div>
+
     <!-- Home Page -->
     <div class="base-page" id="home-page">
       <div class="scroll">
