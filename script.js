@@ -4242,8 +4242,8 @@ function pinEntry(subWorkspace) {
     mode: "loadFromWorkspace",
     subWorkspace,
     bubbleColor: randomBubbleColor(),   // store color
-    bubbleLeft: null,                   // store position
-    bubbleTop: null
+    bubbleLeft: (window.innerWidth - 58) + "px",
+    bubbleTop: (window.innerHeight * 0.25 + pinnedEntries.length * 70) + "px"
   };
 
   pinnedEntries.push({ name, title, options: opts });
