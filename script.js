@@ -1084,7 +1084,6 @@ async function smartSync(selectedRepos, token, options = {}) {
 
       const repoId = repo.id;
       const repoName = repo.name;
-      console.log('reponame', repoName)
 
       const localLedgerData = localLedgerDataMap[repoId] || null;
       const localLog = localLogMap[repoId] || [];
@@ -4696,7 +4695,9 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   } else if (latestPage === "grocery-search") {
     document.getElementById("manage-btn-headerbar").style.display = "block";
-
+    disablePageSwipe(target);
+    RenderGrocerySearch();
+    
   } else { // for all other pages
 
   }
@@ -10483,12 +10484,7 @@ updateBtns.forEach(btn => {
   });
 });
 
-async function OpenGrocerySearch() {
-  showPage('grocery-search', 'Grocery Search');
-
-  let target = document.getElementById("grocery-search-page");
-  disablePageSwipe(target);
-
+async function RenderGrocerySearch() {
   const repo = selectedRepos.activeLedgerRepo;
   const repoName = repo.name;
 
@@ -11245,7 +11241,6 @@ async function OpenGrocerySearch() {
     document.getElementById("reset-preset-btn").onclick = resetPresetStores;
   }
 }
-window.OpenGrocerySearch = OpenGrocerySearch;
 
 document.getElementById("open-receipt-scan")
   .addEventListener("click", () => {
