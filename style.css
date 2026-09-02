@@ -7,7 +7,7 @@
   /* user choice */
   --primary: var(--primary-base);
   --primary-hover: color-mix(in srgb, var(--primary) 80%, black);
-  --border: #f5f5f5;
+  --border: #efefef;
   --chip: #eef4ff;
   --shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.06);
   --radius: 0.75rem;
@@ -3442,6 +3442,35 @@ emoji-picker {
 /* 子卡片 hover */
 .reward-card-sub:hover {
   background: var(--primary);
+}
+
+.lp-sort-popup {
+  font-size: calc(var(--font-size) * 0.8);
+  position: absolute;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 999;
+
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  pointer-events: none;
+
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+/* visible state */
+#lp-sort-popup.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.lp-sort-option {
+  padding: 5px 5px;
+  cursor: pointer;
 }
 
 /* 会员计划卡片 */

@@ -4708,6 +4708,14 @@ async function showPage(name, title = latestTitle, options = {}) {
 
         <div class="section-actions">
           <button class="section-manage-btn" onclick="toggleAddLoyaltyForm()">添加</button>
+          
+          <button class="section-manage-btn" id="lp-sort-btn" onclick="showSortOptions()">排序</button>
+          <div id="lp-sort-popup" class="lp-sort-popup">
+            <div class="lp-sort-option" onclick="setLoyaltySortMode('custom')">自定义排序</div>
+            <div class="lp-sort-option" onclick="setLoyaltySortMode('az')">A-Z</div>
+            <div class="lp-sort-option" onclick="setLoyaltySortMode('expiry')">到期日</div>
+          </div>
+
           <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
         </div>
       </div>
@@ -12763,7 +12771,7 @@ function renderRewardsHubLoyaltyPrograms() {
 
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
-    const programs = repo.accounts.loyaltyPrograms || [];
+    const programs = getSortedPrograms(repo);
 
     for (const p of programs) {
       // --- compute expiry warning ---
@@ -12838,6 +12846,83 @@ function renderRewardsHubLoyaltyPrograms() {
       `;
     }
   }
+}
+
+function showSortOptions() {
+  const popup = document.getElementById("lp-sort-popup");
+  const btn = document.getElementById("lp-sort-btn");
+
+  const rect = btn.getBoundingClientRect();
+
+  // center of the button
+  const centerX = rect.left + rect.width / 2;
+  const bottomY = rect.bottom;
+
+  // apply absolute position
+  popup.style.left = centerX + "px";
+  popup.style.top = (bottomY);
+
+  // shift popup left by half its width (to truly center it)
+  popup.style.transform = "translateX(-50%)";
+
+  popup.classList.toggle("show");
+}
+window.showSortOptions = showSortOptions;
+
+function setLoyaltySortMode(mode) {
+  for (const repoId in settingsMap) {
+    settingsMap[repoId].accounts.sortMode = mode;
+  }
+  renderRewardsHubLoyaltyPrograms();
+}
+window.setLoyaltySortMode = setLoyaltySortMode;
+
+function getSortedPrograms(repo) {
+  let programs = [...(repo.accounts.loyaltyPrograms || [])];
+
+  switch (repo.accounts.sortMode) {
+    case "az":
+      programs.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+
+    case "expiry":
+      programs.sort((a, b) => {
+        const da = a.expiry ? new Date(a.expiry) : Infinity;
+        const db = b.expiry ? new Date(b.expiry) : Infinity;
+        return da - db;
+      });
+      break;
+
+    case "custom":
+    default:
+      // custom = use array order directly
+      break;
+  }
+
+  return programs;
+}
+
+async function swapLoyaltyPrograms(repoId, idA, idB) {
+  const arr = settingsMap[repoId].accounts.loyaltyPrograms;
+
+  const indexA = arr.findIndex(p => p.id === idA);
+  const indexB = arr.findIndex(p => p.id === idB);
+
+  if (indexA < 0 || indexB < 0) return;
+
+  const tmp = arr[indexA];
+  arr[indexA] = arr[indexB];
+  arr[indexB] = tmp;
+
+  // switch to custom mode
+  settingsMap[repoId].accounts.sortMode = "custom";
+
+  settingsMap[repoId].updatedAt = Date.now();
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+  
+  // Re-render loyalty section
+  renderRewardsHubLoyaltyPrograms();
 }
 
 function toggleAddLoyaltyForm() {
