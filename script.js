@@ -5080,7 +5080,7 @@ function buildAlertItems() {
 
     items.push({
       text: `您有 ${parts.join(t.comma)}`,
-      onclick: `OpenRewardsHub()`
+      onclick: `showPage('rewards-hub', 'Rewards Hub')`
     });
   }
 
