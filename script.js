@@ -12830,13 +12830,13 @@ function renderRewardsHubCreditCards() {
   }
 }
 
-function renderRewardsHubLoyaltyPrograms() {
+async function renderRewardsHubLoyaltyPrograms() {
   const container = document.getElementById("rewards-hub-loyaltyprograms");
   container.innerHTML = "";
 
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
-    const programs = getSortedPrograms(repo);
+    const programs = await getSortedPrograms(repo);
 
     for (const p of programs) {
       // --- compute expiry warning ---
@@ -12934,18 +12934,26 @@ function showSortOptions() {
 }
 window.showSortOptions = showSortOptions;
 
-function setLoyaltySortMode(mode) {
-  for (const repoId in settingsMap) {
-    settingsMap[repoId].accounts.sortMode = mode;
-  }
+async function setLoyaltySortMode(sortMode) {
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+
+  personalSettings.loyaltySortMode = sortMode;
+  personalSettings.updatedAt = Date.now();
+
+  await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+  smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+
   renderRewardsHubLoyaltyPrograms();
 }
 window.setLoyaltySortMode = setLoyaltySortMode;
 
-function getSortedPrograms(repo) {
+async function getSortedPrograms(repo) {
   let programs = [...(repo.accounts.loyaltyPrograms || [])];
 
-  switch (repo.accounts.sortMode) {
+  const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", null);
+  const sortMode = personalSettings.loyaltySortMode || "custom"; // default
+
+  switch (sortMode) {
     case "az":
       programs.sort((a, b) => a.name.localeCompare(b.name));
       break;
@@ -12965,29 +12973,6 @@ function getSortedPrograms(repo) {
   }
 
   return programs;
-}
-
-async function swapLoyaltyPrograms(repoId, idA, idB) {
-  const arr = settingsMap[repoId].accounts.loyaltyPrograms;
-
-  const indexA = arr.findIndex(p => p.id === idA);
-  const indexB = arr.findIndex(p => p.id === idB);
-
-  if (indexA < 0 || indexB < 0) return;
-
-  const tmp = arr[indexA];
-  arr[indexA] = arr[indexB];
-  arr[indexB] = tmp;
-
-  // switch to custom mode
-  settingsMap[repoId].accounts.sortMode = "custom";
-
-  settingsMap[repoId].updatedAt = Date.now();
-  await saveLocalJsonData("ledger-settings.json", settingsMap);
-  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-  
-  // Re-render loyalty section
-  renderRewardsHubLoyaltyPrograms();
 }
 
 function toggleAddLoyaltyForm() {
