@@ -155,6 +155,18 @@ a {
   text-align: center;
 }
 
+#home-weather-btn {
+  position: absolute;
+  /* pin button to the left */
+  left: 1rem;
+  text-align: left;
+  padding-left: 0;
+  background: transparent;
+  border: none;
+  font-size: calc(var(--font-size) * 1);
+  cursor: pointer;
+}
+
 #return-btn,
 #cancel-btn {
   position: absolute;

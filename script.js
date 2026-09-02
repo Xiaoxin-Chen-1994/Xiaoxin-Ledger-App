@@ -4509,6 +4509,69 @@ async function openFavouriteByIndex(i) {
   showPage(fav.name, fav.title, fav.options);
 }
 
+navigator.geolocation.getCurrentPosition(async (pos) => {
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
+  loadLocalWeather(lat, lon);
+}, (err) => {
+  console.log("Location denied, fallback to Waterloo");
+  console.log(err);
+  loadLocalWeather(43.4643, -80.5204); // Waterloo fallback
+});
+
+async function loadLocalWeather(lat, lon) {
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current=temperature_2m,weather_code,is_day&timezone=auto`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const temp = data.current.temperature_2m;
+  const code = data.current.weather_code;
+  const isDay = data.current.is_day;
+
+  updateWeatherUI(temp, code, isDay, lat, lon);
+}
+
+function updateWeatherUI(temp, code, isDay, lat, lon) {
+  const emoji = getWeatherEmoji(code, isDay);
+
+  const btn = document.getElementById("home-weather-btn");
+  btn.innerHTML = `${emoji} ${temp.toFixed(1)}°C`;
+  btn.style.color = getTempColor(temp);
+  btn.onclick = () => openWeatherSite(lat, lon);
+}
+
+function getWeatherEmoji(code, isDay) {
+  if (code === 0) return isDay ? "☀️" : "🌙";   // clear
+  if (code === 1 || code === 2) return isDay ? "⛅" : "☁️"; 
+  if (code === 3) return "☁️";        // 阴天
+
+  if (code >= 51 && code <= 67) return "🌧️"; // 小雨
+  if (code >= 71 && code <= 77) return "🌨️"; // 小雪
+  if (code >= 80 && code <= 82) return "🌦️"; // 阵雨
+  if (code >= 95) return "⛈️";        // 雷暴
+
+  return "❓";                         // 未知天气
+}
+
+function getTempColor(temp) {
+  if (temp <= -10) return "#0040FF";   // strong deep blue
+  if (temp <= 0)  return "#2A7FFF";    // medium saturated blue
+  if (temp <= 10) return "#4FB3FF";    // bright sky-blue
+  if (temp <= 20) return "#00CC66";    // green
+  if (temp <= 25) return "#FFCC00";    // yellow
+  if (temp <= 30) return "#FF8800";    // orange
+  if (temp <= 35) return "#FF0000";    // red
+  return "#CC0000";                    // dark red
+}
+
+function openWeatherSite(lat, lon) {
+  window.open(`https://weather.gc.ca/en/location/index.html?coords=${lat},${lon}`, "_blank");
+}
+window.openWeatherSite = openWeatherSite;
+
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
 
@@ -4518,6 +4581,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   // hide all pages
   document.getElementById("return-btn").style.display = "none";
   document.getElementById("return-btn").textContent = "< " + t.back;
+  document.getElementById("home-weather-btn").style.display = "none";
   document.getElementById("bookmark-btn-headerbar").style.display = "none";
   document.getElementById("pin-btn-headerbar").style.display = "none";
   document.getElementById("save-btn-headerbar").style.display = "none";
@@ -4574,6 +4638,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     updateBookmarkIcon();
 
   } else { // at home page
+    document.getElementById("home-weather-btn").style.display = "block";
     document.getElementById("search-btn-headerbar").style.display = "block";
     document.getElementById("home-nav").style.display = "flex";
     renderHomeFavourites();
