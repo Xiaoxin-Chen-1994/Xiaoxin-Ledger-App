@@ -4767,7 +4767,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     scroll.innerHTML = "";
 
     // Render reward accounts section
-    scroll.innerHTML += `
+    const loyaltySection = document.createElement("div");
+    loyaltySection.innerHTML = `
       <div class="section-header">
         <div class="section-title">${t.loyaltyPrograms}</div>
 
@@ -4790,11 +4791,12 @@ async function showPage(name, title = latestTitle, options = {}) {
       <!-- Inline add form (initially hidden) -->
       <div id="loyalty-add-form" class="hidden"></div>
     `;
-
+    scroll.appendChild(loyaltySection);
     await renderRewardsHubLoyaltyPrograms();
 
     // Render credit card section
-    scroll.innerHTML += `
+    const creditSection = document.createElement("div");
+    creditSection.innerHTML = `
       <div class="section-header">
         <div class="section-title">${t.creditCards}</div>
 
@@ -4811,7 +4813,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
       <div id="rewards-hub-creditcards"></div>
     `;
-
+    scroll.appendChild(creditSection);
     renderRewardsHubCreditCards();
 
   } else if (latestPage === "accounts") {
