@@ -4560,6 +4560,7 @@ function getWeatherEmoji(code, isDay) {
   if (code >= 80 && code <= 82) return "🌦️"; // 阵雨
   if (code >= 95) return "⛈️";        // 雷暴
 
+  showStatusMessage(`Weather code ${code} unknown`)
   return "❓";                         // 未知天气
 }
 
