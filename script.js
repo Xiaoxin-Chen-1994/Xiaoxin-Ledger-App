@@ -4555,12 +4555,14 @@ function getWeatherEmoji(code, isDay) {
   if (code === 1 || code === 2) return isDay ? "⛅" : "☁️";
   if (code === 3) return "☁️";        // 阴天
 
+  if (code === 45 || code === 48) return "🌫️"; // fog
   if (code >= 51 && code <= 67) return "🌧️"; // 小雨
   if (code >= 71 && code <= 77) return "🌨️"; // 小雪
   if (code >= 80 && code <= 82) return "🌦️"; // 阵雨
+  if (code === 85 || code === 86) return "🌨️";
   if (code >= 95) return "⛈️";        // 雷暴
 
-  showStatusMessage(`Weather code ${code} unknown`)
+  showStatusMessage(`Weather code ${code} unknown`);
   return "❓";                         // 未知天气
 }
 
