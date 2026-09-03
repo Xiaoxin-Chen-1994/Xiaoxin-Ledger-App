@@ -188,7 +188,7 @@ const translations = {
     notes: "📝Notes",
     save: "✔️Save",
     savedSuccess: "Save success!",
-    loyaltyPrograms: "Loyalty Programs", 
+    loyaltyPrograms: "Loyalty Programs",
     personalSettingsTitle: "Personal Settings",
     openPersonalSettings: "Open Personal Settings",
     timestampNotes: "The timestamps below indicate the most recent edit times of data retrieved during your last online session. Please note that, if you are offline, these timestamps do not reflect edits made on this device, nor do they represent the latest edits on the server.",
@@ -331,7 +331,7 @@ const translations = {
     notes: "📝备注",
     save: "✔️保存",
     savedSuccess: "保存成功!",
-    loyaltyPrograms: "会员计划", 
+    loyaltyPrograms: "会员计划",
     personalSettingsTitle: "个人偏好",
     openPersonalSettings: "打开个人偏好",
     timestampNotes: "以下时间戳表示上次联网时获取的数据的最新编辑时间。请注意，如果您正处于离线状态，这些时间戳既不代表本设备上的最新编辑时间，也不代表服务器端的最新编辑时间。",
@@ -2830,7 +2830,7 @@ function vibrate(ms) {
   }
 }
 
-function switchTab(index, mode='manual') {
+function switchTab(index, mode = 'manual') {
   let subWorkspace = null;
 
   if (latestPage.includes("create")) { // when creating an entry
@@ -2842,7 +2842,7 @@ function switchTab(index, mode='manual') {
   const inputType = transactionTypes[index];
   subWorkspace.inputTypeIndex = index;
   subWorkspace.inputType = inputType;
- 
+
   if (mode === 'manual') {
     wrapper.style.transition = `transform 0.3s ease`;
     vibrate(30); // milliseconds
@@ -2856,7 +2856,7 @@ function switchTab(index, mode='manual') {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
- 
+
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
@@ -4545,7 +4545,7 @@ function updateWeatherUI(temp, code, isDay, lat, lon) {
 
 function getWeatherEmoji(code, isDay) {
   if (code === 0) return isDay ? "☀️" : "🌙";   // clear
-  if (code === 1 || code === 2) return isDay ? "⛅" : "☁️"; 
+  if (code === 1 || code === 2) return isDay ? "⛅" : "☁️";
   if (code === 3) return "☁️";        // 阴天
 
   if (code >= 51 && code <= 67) return "🌧️"; // 小雨
@@ -4558,7 +4558,7 @@ function getWeatherEmoji(code, isDay) {
 
 function getTempColor(temp) {
   if (temp <= -10) return "#0040FF";   // strong deep blue
-  if (temp <= 0)  return "#2A7FFF";    // medium saturated blue
+  if (temp <= 0) return "#2A7FFF";    // medium saturated blue
   if (temp <= 10) return "#4FB3FF";    // bright sky-blue
   if (temp <= 20) return "#00CC66";    // green
   if (temp <= 25) return "#FFCC00";    // yellow
@@ -4618,7 +4618,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     target = document.getElementById(latestPage + "-page");
   }
   if (!target) return;
-  
+
   const current = getComputedStyle(target).transform;
 
   // If it's not already at translateX(0), move it there
@@ -4781,7 +4781,7 @@ async function showPage(name, title = latestTitle, options = {}) {
             <div class="lp-sort-option" onclick="setLoyaltySortMode('expiry')">到期日</div>
           </div>
 
-          <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
+          <button id="loyalty-toggle-all-btn" class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
         </div>
       </div>
 
@@ -4791,8 +4791,8 @@ async function showPage(name, title = latestTitle, options = {}) {
       <div id="loyalty-add-form" class="hidden"></div>
     `;
 
-    renderRewardsHubLoyaltyPrograms();
-    
+    await renderRewardsHubLoyaltyPrograms();
+
     // Render credit card section
     scroll.innerHTML += `
       <div class="section-header">
@@ -4916,7 +4916,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       showFilteredEntriesToday(filteredEntries);
 
       document.getElementById("search-btn-headerbar").style.display = "block";
-      
+
       const addBtn = document.getElementById("add-btn-headerbar");
       addBtn.style.display = "block";
 
@@ -4982,7 +4982,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("manage-btn-headerbar").style.display = "block";
     disablePageSwipe(target);
     RenderGrocerySearch();
-    
+
   } else { // for all other pages
 
   }
@@ -4994,7 +4994,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   // show the page
   target.style.display = "block";
   target.style.zIndex = historyStack.length;
-  
+
   renderPinnedBubbles();
 }
 window.showPage = showPage;
@@ -5026,7 +5026,7 @@ function renderAlertCenter() {
   const t = translations[currentLang];
   const alertItems = buildAlertItems();
   const container = document.getElementById("alert-center");
-  
+
   if (alertItems.length === 0) {
     container.style.display = "none";
     return;
@@ -5059,7 +5059,7 @@ function buildAlertItems() {
 
   for (const repoId in settingsMap) {
     const repo = settingsMap[repoId];
-    
+
     /* --- CREDIT CARD ALERTS --- */
     for (const type of accountTypes) {
       if (type !== "creditCards") continue;
@@ -5094,13 +5094,13 @@ function buildAlertItems() {
       const diffDays = Math.ceil((exp - Date.now()) / 86400000);
 
       if (diffDays < 0) lpExpired++;
-      else if (diffDays <= lpDaysToWarn/2) lpDue1++;
+      else if (diffDays <= lpDaysToWarn / 2) lpDue1++;
       else if (diffDays <= lpDaysToWarn) lpDue2++;
     }
   }
 
   const items = [];
-  
+
   /* --- CREDIT CARD ALERT ROW --- */
   if (overdueCount > 0 || due7Count > 0 || due15Count > 0) {
     const parts = [];
@@ -5141,7 +5141,7 @@ function buildAlertItems() {
 
     if (lpDue1 > 0) {
       parts.push(
-        `<span style="color: var(--red); font-weight: 600;">${lpDue1}</span> 个会员将在 ${Math.ceil(lpDaysToWarn/2)} 天内过期`
+        `<span style="color: var(--red); font-weight: 600;">${lpDue1}</span> 个会员将在 ${Math.ceil(lpDaysToWarn / 2)} 天内过期`
       );
     }
 
@@ -8563,7 +8563,7 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
   row.onclick = async () => {
     numGroupsToday = 1;
-    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr});
+    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr });
   };
 }
 
@@ -8635,7 +8635,7 @@ function showFilteredEntriesToday(entries) {
     const todayDay = Object.keys(groups)[0];
     scroll.innerHTML += renderEntryGroup(todayDay, groups[todayDay]);
   }
-  
+
   // --- Render past entries ---
   if (otherEntries.length === 0) {
     return;
@@ -8646,7 +8646,7 @@ function showFilteredEntriesToday(entries) {
       ${currentLang === "zh" ? "今天以前" : "Before Today"}
     </div>
   `;
-  
+
   // Sort newest first
   otherEntries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
 
@@ -10598,13 +10598,13 @@ document.querySelectorAll(".selector-button[data-type='account']").
       const sel = showSelector('account');
 
       const manageLabelsBtn = document.getElementById("selector-manage-account-btn");
-        manageLabelsBtn.onclick = f => {
-          f.stopPropagation();
+      manageLabelsBtn.onclick = f => {
+        f.stopPropagation();
 
-          sel.style.transform = 'translateY(120%)';
-          openSelector = null;
-          prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts);
-        };
+        sel.style.transform = 'translateY(120%)';
+        openSelector = null;
+        prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts);
+      };
 
       let subWorkspace = null;
 
@@ -12725,7 +12725,15 @@ function toggleAllRewards(btn, section) {
 
   const prefix = section === "credit" ? "cc-" : "lp-";
 
-  const all = page.querySelectorAll(`[id^="${prefix}"][id$="-details"]`);
+  let all;
+
+  if (section === "credit") {
+    // credit card details use cc-xxxx-details
+    all = page.querySelectorAll(`[id^="cc-"][id$="-details"]`);
+  } else {
+    // loyalty programs use <div class="lp-extra">
+    all = page.querySelectorAll(".lp-extra");
+  }
 
   const expand = btn.textContent.includes("显示");
 
@@ -12879,31 +12887,40 @@ async function renderRewardsHubLoyaltyPrograms() {
       container.innerHTML += `
         <div class="reward-account-item" data-id="${p.id}" data-repo="${repoId}">
           
-          <div class="reward-view-mode" onclick="enterLoyaltyEditMode('${p.id}', '${repoId}')">
+          <div class="reward-view-mode" onclick="toggleLoyaltyExpand('${p.id}', '${repoId}', event)">
             <div class="lp-row">
               <span class="lp-name">${p.name}</span>
               ${warningText}
               ${expiryText}
             </div>
 
-            ${p.number ? `
-              <div class="lp-barcode-toggle">
-                <div class="lp-barcode-left">
-                  <div class="reward-account-number">会员号：${p.number}</div>
-                </div>
+            <div class="lp-extra hidden">
+              ${p.number ? `
+                <div class="lp-barcode-toggle">
+                  <div class="lp-barcode-left">
+                    <div class="reward-account-number">会员号：${p.number}</div>
+                  </div>
 
-                <div class="lp-barcode-right">
-                  <button class="lp-showbarcode-btn"
-                    onclick="showBarcode('${p.id}', '${repoId}', event)">
-                    Show Barcode
-                  </button>
+                  <div class="lp-barcode-right">
+                    <button class="lp-showbarcode-btn"
+                      onclick="showBarcode('${p.id}', '${repoId}', event)">
+                      Show Barcode
+                    </button>
+                  </div>
                 </div>
+                <img class="lp-barcode hidden"
+                  src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(p.number)}&code=Code128&dpi=96"
+                  onclick="hideBarcode('${p.id}', '${repoId}', event)">
+              ` : ""}
+              ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
+
+              <div class="lp-edit-row">
+                <button class="section-manage-btn"
+                  onclick="enterLoyaltyEditMode('${p.id}', '${repoId}', event)">
+                  编辑
+                </button>
               </div>
-              <img class="lp-barcode hidden"
-                src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(p.number)}&code=Code128&dpi=96"
-                onclick="hideBarcode('${p.id}', '${repoId}', event)">
-            ` : ""}
-            ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
+            </div>
           </div>
 
           <div class="reward-edit-mode hidden"></div>
@@ -12943,7 +12960,7 @@ async function setLoyaltySortMode(sortMode) {
   await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
   smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
 
-  renderRewardsHubLoyaltyPrograms();
+  await renderRewardsHubLoyaltyPrograms();
 }
 window.setLoyaltySortMode = setLoyaltySortMode;
 
@@ -12987,6 +13004,7 @@ function toggleAddLoyaltyForm() {
   }
 
   form.classList.remove("hidden");
+  form.scrollIntoView({ behavior: "smooth", block: "start" }); // Scroll to the form
 
   form.innerHTML = `
     <div class="loyalty-add-container">
@@ -13001,8 +13019,8 @@ function toggleAddLoyaltyForm() {
       <select id="loyalty-repo-select" class="loyalty-input">
         <option value="">选择保存的账本</option>
         ${Object.values(repoList)
-          .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
-          .join("")}
+      .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
+      .join("")}
       </select>
 
       <input id="loyalty-number" class="loyalty-input" placeholder="会员号">
@@ -13051,9 +13069,9 @@ async function saveNewLoyaltyProgram() {
   settingsMap[repoId].updatedAt = Date.now();
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
-  
+
   // Re-render loyalty section
-  renderRewardsHubLoyaltyPrograms();
+  await renderRewardsHubLoyaltyPrograms();
 
   // Collapse form
   const form = document.getElementById("loyalty-add-form");
@@ -13061,6 +13079,16 @@ async function saveNewLoyaltyProgram() {
   form.innerHTML = "";
 }
 window.saveNewLoyaltyProgram = saveNewLoyaltyProgram;
+
+function toggleLoyaltyExpand(id, repoId, event) {
+  event.stopPropagation();
+
+  const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
+  const extra = item.querySelector(".lp-extra");
+
+  extra.classList.toggle("hidden");
+}
+window.toggleLoyaltyExpand = toggleLoyaltyExpand;
 
 function showBarcode(id, repoId, event) {
   event.stopPropagation(); // prevent entering edit mode
@@ -13094,7 +13122,8 @@ function cancelAddLoyaltyForm() {
 window.cancelAddLoyaltyForm = cancelAddLoyaltyForm;
 
 function enterLoyaltyEditMode(id, repoId) {
-  
+  event.stopPropagation();
+
   console.log(settingsMap)
   const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
   const view = item.querySelector(".reward-view-mode");
@@ -13151,7 +13180,7 @@ async function saveLoyaltyEdit(id, repoId) {
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
-  renderRewardsHubLoyaltyPrograms();
+  await renderRewardsHubLoyaltyPrograms();
 }
 window.saveLoyaltyEdit = saveLoyaltyEdit;
 
@@ -13165,6 +13194,6 @@ async function deleteLoyaltyProgram(id, repoId) {
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 
-  renderRewardsHubLoyaltyPrograms();
+  await renderRewardsHubLoyaltyPrograms();
 }
 window.deleteLoyaltyProgram = deleteLoyaltyProgram;
