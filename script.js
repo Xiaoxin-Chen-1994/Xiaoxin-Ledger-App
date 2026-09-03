@@ -12910,9 +12910,12 @@ async function renderRewardsHubLoyaltyPrograms() {
                     </button>
                   </div>
                 </div>
-                <img class="lp-barcode hidden"
-                  src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(p.number)}&code=Code128&dpi=96"
-                  onclick="hideBarcode('${p.id}', '${repoId}', event)">
+                <div class="lp-barcode-wrapper hidden" onclick="hideBarcode('${p.id}', '${repoId}', event)">
+                  <img
+                    class="lp-barcode"
+                    src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(p.number)}&code=Code128&dpi=96"
+                  >
+                </div>
               ` : ""}
               ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
 
@@ -13097,7 +13100,7 @@ function showBarcode(id, repoId, event) {
 
   const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
   const btn = item.querySelector(".lp-showbarcode-btn");
-  const barcode = item.querySelector(".lp-barcode");
+  const barcode = item.querySelector(".lp-barcode-wrapper");
 
   btn.classList.add("hidden");
   barcode.classList.remove("hidden");
@@ -13109,7 +13112,7 @@ function hideBarcode(id, repoId, event) {
 
   const item = document.querySelector(`.reward-account-item[data-id="${id}"][data-repo="${repoId}"]`);
   const btn = item.querySelector(".lp-showbarcode-btn");
-  const barcode = item.querySelector(".lp-barcode");
+  const barcode = item.querySelector(".lp-barcode-wrapper");
 
   barcode.classList.add("hidden");
   btn.classList.remove("hidden");

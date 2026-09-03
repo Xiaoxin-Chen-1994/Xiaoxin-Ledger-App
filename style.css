@@ -3522,11 +3522,18 @@ emoji-picker {
 }
 
 /* Full-width barcode */
-.lp-barcode {
+.lp-barcode-wrapper {
+  margin-top: 10px;
+  background: white;
   width: 100%;
   height: auto;
-  margin-top: 10px;
+  box-sizing: border-box;  /* ensures padding stays inside width */
+  padding: 12px 16px;
   cursor: pointer;
+}
+
+.lp-barcode {
+  width: 100%;
 }
 
 .lp-showbarcode-btn {
