@@ -4520,18 +4520,25 @@ navigator.geolocation.getCurrentPosition(async (pos) => {
 });
 
 async function loadLocalWeather(lat, lon) {
-  const url =
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&current=temperature_2m,weather_code,is_day&timezone=auto`;
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weather_code,is_day&timezone=auto`;
 
-  const res = await fetch(url);
-  const data = await res.json();
+    const res = await fetch(url);
 
-  const temp = data.current.temperature_2m;
-  const code = data.current.weather_code;
-  const isDay = data.current.is_day;
+    if (res.ok) {
+      const data = await res.json();
 
-  updateWeatherUI(temp, code, isDay, lat, lon);
+      const temp = data.current.temperature_2m;
+      const code = data.current.weather_code;
+      const isDay = data.current.is_day;
+
+      updateWeatherUI(temp, code, isDay, lat, lon);
+    }
+  } catch (err) {
+    console.log("Weather fetch failed:", err);
+  }
 }
 
 function updateWeatherUI(temp, code, isDay, lat, lon) {
@@ -4580,7 +4587,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   // hide all pages
   document.getElementById("return-btn").style.display = "none";
-  document.getElementById("return-btn").textContent = "< " + t.back;
+  document.getElementById("return-btn").textContent = "❮ " + t.back;
   document.getElementById("home-weather-btn").style.display = "none";
   document.getElementById("bookmark-btn-headerbar").style.display = "none";
   document.getElementById("pin-btn-headerbar").style.display = "none";
@@ -4664,7 +4671,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     let activeForm;
 
     if (latestPage.includes("create")) { // when creating an entry
-      document.getElementById("return-btn").textContent = "< " + t.cancel;
+      document.getElementById("return-btn").textContent = "❮ " + t.cancel;
 
       const inProgress = !!workspace.create;
       if (!inProgress) { // reset button texts when creating a new entry
@@ -4911,7 +4918,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
       document.getElementById("app-title").textContent = "";
-      document.getElementById("return-btn").textContent = "< " + translations[currentLang].today + " " + filters.dateTo;
+      document.getElementById("return-btn").textContent = "❮ " + translations[currentLang].today + " " + filters.dateTo;
 
       let filteredEntries = await getFilteredEntries(filters);
 
@@ -7821,7 +7828,7 @@ async function setLanguage(lang, sync = true) {
   const t = translations[lang];
 
   // Login text
-  document.getElementById("return-btn").textContent = "< " + t.back;
+  document.getElementById("return-btn").textContent = "❮ " + t.back;
   document.getElementById("save-btn-headerbar").textContent = t.save;
   document.getElementById("manage-btn-headerbar").textContent = t.manage;
 
