@@ -448,8 +448,10 @@ if (isMobileBrowser()) {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const newColor = isDark ? "#000000" : "#FFFFFF";
     alert("isDark " + isDark + " newColor " + newColor);
+    // Tell browser engine explicitly what contrast mode to use for icons
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+
     let metaThemeColor = document.querySelector("meta[name=theme-color]");
-    alert(metaThemeColor)
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", newColor);
     } else {

@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light dark; /* Lets OS know UI icons must adapt */
+  background-color: #ffffff;
   --bg: white;
   --card: rgba(255, 255, 255, 0.7);
   --text: #1f2328;
@@ -44,6 +46,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   :root {
+    background-color: #000000;
     --bg: black;
     --btnBg: #252525;
     --card: rgba(18, 19, 23, 0.7);
