@@ -445,6 +445,7 @@ if (isMobileBrowser()) {
   // use dark / white color for the status bar
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
   darkQuery.addEventListener("change", () => {
+    alert(darkQuery.matches);
     const newColor = darkQuery.matches ? "#000000" : "#FFFFFF";
     let metaThemeColor = document.querySelector("meta[name=theme-color]");
       if (metaThemeColor) {
