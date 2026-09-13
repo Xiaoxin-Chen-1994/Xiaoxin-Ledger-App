@@ -448,9 +448,14 @@ if (isMobileBrowser()) {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const newColor = isDark ? "#000000" : "#FFFFFF";
     alert("isDark " + isDark + " newColor " + newColor);
-    // Tell browser engine explicitly what contrast mode to use for icons
+    // 1. Force the root HTML element background color directly
+    document.documentElement.style.backgroundColor = newColor;
+    document.body.style.backgroundColor = newColor;
+
+    // 2. Set colorScheme for OS icon contrast
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 
+    // 3. Update or create meta theme-color
     let metaThemeColor = document.querySelector("meta[name=theme-color]");
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", newColor);
