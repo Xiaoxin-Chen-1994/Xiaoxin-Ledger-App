@@ -32,13 +32,6 @@
 
 html, body {
   background-color: var(--bg) !important;
-  color-scheme: light;
-}
-
-body {
-  /* Extends background under status bar, but pushes content down */
-  padding-top: env(safe-area-inset-top);
-  background-color: var(--bg);
 }
 
 /* Global glass effect*/
@@ -78,10 +71,6 @@ body {
   :root.alt-scheme {
     --income-color: rgb(30, 144, 255);
     --expense-color: rgb(248, 70, 70);
-  }
-
-  html, body {
-    color-scheme: dark;
   }
 
   #statusMessage {
