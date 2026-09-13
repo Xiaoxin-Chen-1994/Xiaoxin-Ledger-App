@@ -2737,9 +2737,10 @@ emoji-picker {
 }
 
 .fe-date-big {
-  font-size: calc(var(--font-size) * 1.5);
+  font-size: calc(var(--font-size) * 1.3);
   width: calc(var(--font-size) * 3);
-  text-align: center;
+  padding-right: calc(var(--font-size) * 0.2);
+  text-align: right;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -2802,10 +2803,10 @@ emoji-picker {
 .fe-entry-icon {
   width: calc(var(--font-size) * 1);
   /* fixed width for alignment */
-  padding-left: calc(var(--font-size) * 1.5);
-  padding-right: calc(var(--font-size) * 0.5);
+  padding-left: calc(var(--font-size) * 2);
+  padding-right: calc(var(--font-size) * 0.2);
   display: flex;
-  justify-content: center;
+  justify-content: right;
   align-items: flex-start;
   font-size: calc(var(--font-size) * 1);
 }

@@ -8706,6 +8706,18 @@ function showFilteredEntriesToday(entries) {
   return index
 }
 
+function getEnglishOrdinal(n) {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return "th"; // 11th, 12th, 13th
+
+  switch (n % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
+
 function renderEntryGroup(day, entries) {
   const isToday = day === getTodayYYYYMMDD();
   const d = new Date(day + "T00:00:00");
@@ -8720,6 +8732,10 @@ function renderEntryGroup(day, entries) {
   });
 
   const dayNumber = d.getDate();
+  const dayDisplay =
+    currentLang === "zh"
+      ? `${dayNumber}日`
+      : `${dayNumber}${getEnglishOrdinal(dayNumber)}`;
 
   const dateHeader = isToday
     ? `
@@ -8730,7 +8746,7 @@ function renderEntryGroup(day, entries) {
     `
     : `
       <div class="fe-date-header">
-        <div class="fe-date-big">${dayNumber}</div>
+        <div class="fe-date-big">${dayDisplay}</div>
         <div class="fe-date-sub">${monthYear} · ${weekday}</div>
       </div>
     `;
