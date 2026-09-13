@@ -430,8 +430,7 @@ window.currentLang = currentLang;
 //     .then(() => console.log('Service Worker registered'));
 // }
 
-if (isMobileBrowser()) {
-  // use a smaller font for mobile
+if (isMobileBrowser()) { // use a smaller font for mobile
   // Get current value of --font-size
   let current = getComputedStyle(document.documentElement)
     .getPropertyValue("--font-size");

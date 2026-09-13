@@ -51,7 +51,7 @@
     --muted: #a1a7b3;
     --primary: color-mix(in srgb, var(--primary-base) 80%, white);
     --primary-hover: color-mix(in srgb, var(--primary) 80%, white);
-    --border: #0f0f0f;
+    --border: #171717;
     --chip: #1a2330;
     --shadow: 0 0.125rem 0.625rem rgba(0, 0, 0, 0.35);
     --light-grey: rgb(20, 20, 20);
@@ -1853,8 +1853,8 @@ hr {
 
 .hr-wide {
   border: none;
-  border-top: 3px solid var(--border);
-  margin: 0.8rem 0;
+  border-top: 5px solid var(--border);
+  margin: 1.5rem 0;
 }
 
 #statusMessage {
@@ -2800,14 +2800,14 @@ emoji-picker {
 
 /* Left column: icon */
 .fe-entry-icon {
-  width: calc(var(--font-size) * 1.3);
+  width: calc(var(--font-size) * 1);
   /* fixed width for alignment */
-  padding-left: calc(var(--font-size) * 0.85);
-  padding-right: calc(var(--font-size) * 0.85);
+  padding-left: calc(var(--font-size) * 1.5);
+  padding-right: calc(var(--font-size) * 0.5);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  font-size: calc(var(--font-size) * 1.2);
+  font-size: calc(var(--font-size) * 1);
 }
 
 /* Middle column: main content */
@@ -2845,7 +2845,7 @@ emoji-picker {
 .fe-notes-text {
   white-space: pre-wrap;   /* preserves newlines */
   font: inherit;
-  font-size: calc(var(--font-size) * 0.65);
+  font-size: calc(var(--font-size) * 0.75);
   color: color-mix(in srgb, var(--text) 60%, var(--bg));
   padding: 0;
   margin: 0;
@@ -2853,13 +2853,13 @@ emoji-picker {
 }
 
 .fe-entry-meta {
-  font-size: calc(var(--font-size) * 0.6);
+  font-size: calc(var(--font-size) * 0.7);
   color: color-mix(in srgb, var(--text) 40%, var(--bg));
   margin-top: 0px;
 }
 
 .fe-entry-household {
-  font-size: calc(var(--font-size) * 0.5);
+  font-size: calc(var(--font-size) * 0.6);
   color: color-mix(in srgb, var(--text) 40%, var(--bg));
   margin-top: 2px;
 }
