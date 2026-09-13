@@ -430,7 +430,8 @@ window.currentLang = currentLang;
 //     .then(() => console.log('Service Worker registered'));
 // }
 
-if (isMobileBrowser()) { // use a smaller font for mobile
+if (isMobileBrowser()) {
+  // use a smaller font for mobile
   // Get current value of --font-size
   let current = getComputedStyle(document.documentElement)
     .getPropertyValue("--font-size");
@@ -440,6 +441,21 @@ if (isMobileBrowser()) { // use a smaller font for mobile
   let newSize = current - 0.1;
   // Set it back with unit
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
+
+  // use dark / white color for the status bar
+  const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  darkQuery.addEventListener("change", () => {
+    const newColor = darkQuery.matches ? "#000000" : "#FFFFFF";
+    let metaThemeColor = document.querySelector("meta[name=theme-color]");
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute("content", newColor);
+      } else {
+        metaThemeColor = document.createElement("meta");
+        metaThemeColor.name = "theme-color";
+        metaThemeColor.content = newColor;
+        document.head.appendChild(metaThemeColor);
+      }
+  });
 }
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
