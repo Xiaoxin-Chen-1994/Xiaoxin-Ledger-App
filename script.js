@@ -446,9 +446,10 @@ if (isMobileBrowser()) {
   // Helper function to set mobile status bar color
   const updateMobileStatusBar = () => {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const newColor = isDark ? "black" : "white";
+    const newColor = isDark ? "#000000" : "#FFFFFF";
     alert("isDark " + isDark + " newColor " + newColor);
     let metaThemeColor = document.querySelector("meta[name=theme-color]");
+    alert(metaThemeColor)
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", newColor);
     } else {
