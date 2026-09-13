@@ -447,7 +447,7 @@ if (isMobileBrowser()) {
   const updateMobileStatusBar = () => {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const newColor = isDark ? "#000000" : "#FFFFFF";
-    alert("isDark " + isDark + " newColor " + newColor);
+
     // 1. Force the root HTML element background color directly
     document.documentElement.style.backgroundColor = newColor;
     document.body.style.backgroundColor = newColor;
