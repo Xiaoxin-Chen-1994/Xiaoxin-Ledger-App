@@ -30,10 +30,6 @@
   --expense-color: rgb(223, 34, 34);
 }
 
-html, body {
-  background-color: var(--bg) !important;
-}
-
 /* Global glass effect*/
 .bottom-nav,
 #statusMessage,
