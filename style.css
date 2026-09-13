@@ -676,21 +676,25 @@ label {
 
 /* Icon button */
 .icon {
-  width: 2.2rem;
-  height: 2.2rem;
-  font-size: 1.3rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--bg2);
+  width: calc(var(--font-size)*1.5);
+  height: calc(var(--font-size)*1.5);
+  border-radius: 50%;
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
 }
 
-.icon img.icon-img {
-  width: 1.4rem;
-  height: 1.4rem;
+.icon .icon-content {
+  width: 100%;
+  height: 100%;
+  font-size: calc(var(--font-size)*1.2);
+   /* emoji size */
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ───────────────────────────────────────────────
@@ -1848,7 +1852,7 @@ button {
 hr {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 0.3rem 0;
+  margin: 0.5rem 0;
 }
 
 .hr-wide {
@@ -2276,40 +2280,9 @@ hr {
   align-items: center;
 }
 
-.icon {
-  flex: 0 0 auto;
-  width: calc(var(--font-size)*1.5);
-  height: calc(var(--font-size)*1.5);
-  border-radius: 50%;
-  background: var(--primary);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-  overflow: clip;
-
-  padding: 0;
-  line-height: 0;
-  border: none;
-
-  font-size: calc(var(--font-size)*1.2);
-  /* emoji size */
-}
-
 .icon.selected {
+  border-radius: 0;
   background: none;
-}
-
-/* Wrapper that restores font size for emoji */
-.icon .icon-content {
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
 }
 
 .icon-picker-grid {
@@ -2800,15 +2773,8 @@ emoji-picker {
 }
 
 /* Left column: icon */
-.fe-entry-icon {
-  width: calc(var(--font-size) * 1);
-  /* fixed width for alignment */
-  padding-left: calc(var(--font-size) * 2);
-  padding-right: calc(var(--font-size) * 0.2);
-  display: flex;
-  justify-content: right;
-  align-items: flex-start;
-  font-size: calc(var(--font-size) * 1);
+.fe-entry-content .icon {
+  padding-left: calc(var(--font-size) * 1);
 }
 
 /* Middle column: main content */
@@ -2823,7 +2789,7 @@ emoji-picker {
 .fe-entry-amount-right {
   min-width: 80px;
   text-align: right;
-  font-size: calc(var(--font-size) * 1.1);
+  font-size: calc(var(--font-size) * 1);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -2838,9 +2804,10 @@ emoji-picker {
   width: 100%;
 }
 
-.fe-entry-title {
-  font-size: calc(var(--font-size) * 1);
-  font-weight: 600;
+.fe-entry-title-row .cat-part {
+  justify-content: flex-start;
+  text-align: left;
+  flex: unset; /* optional: prevents stretching */
 }
 
 .fe-notes-text {
@@ -2848,7 +2815,7 @@ emoji-picker {
   font: inherit;
   font-size: calc(var(--font-size) * 0.75);
   color: color-mix(in srgb, var(--text) 60%, var(--bg));
-  padding: 0;
+  padding-left: calc(var(--font-size) * 2.5 + 0.3rem);
   margin: 0;
   line-height: 1.4;
 }
@@ -2856,6 +2823,7 @@ emoji-picker {
 .fe-entry-meta {
   font-size: calc(var(--font-size) * 0.7);
   color: color-mix(in srgb, var(--text) 40%, var(--bg));
+  padding-left: calc(var(--font-size) * 2.5 + 0.3rem);
   margin-top: 0px;
 }
 
@@ -2874,13 +2842,6 @@ emoji-picker {
   color: var(--expense-color, #c0392b);
 }
 
-/* Transfer icon already handled by .fe-entry-icon */
-
-.fe-entry-title.transfer {
-  font-size: calc(var(--font-size) * 1);
-  font-weight: 600;
-}
-
 .fe-entry-notes.transfer {
   font-size: calc(var(--font-size) * 0.9);
   color: var(--text-secondary, #666);
@@ -2889,13 +2850,6 @@ emoji-picker {
 .fe-entry-meta.transfer {
   font-size: calc(var(--font-size) * 0.8);
   color: var(--text-tertiary, #999);
-}
-
-/* Balance icon handled by .fe-entry-icon */
-
-.fe-entry-title.balance {
-  font-size: calc(var(--font-size) * 1);
-  font-weight: 600;
 }
 
 .fe-entry-notes.balance {

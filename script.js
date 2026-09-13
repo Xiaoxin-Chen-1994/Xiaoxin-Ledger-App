@@ -8797,11 +8797,12 @@ function renderEntryByType(e) {
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
-          <div class="fe-entry-icon">${secondaryIcon}</div>
-
           <div class="fe-entry-main">
             <div class="fe-entry-title-row">
-              <div class="fe-entry-title">${e.secondaryCategory}</div>
+              <span class="cat-part">
+                <span class="icon selected">${secondaryIcon}</span>
+                <span class="cat-label">${e.secondaryCategory}</span>
+              </span>
               <div class="fe-entry-amount-right ${e.type}">
                 ${Number(e.amount).toFixed(2)}
               </div>
@@ -8827,11 +8828,12 @@ function renderEntryByType(e) {
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
-          <div class="fe-entry-icon"><span class="icon-content">🔁</span></div>
-
           <div class="fe-entry-main">
             <div class="fe-entry-title-row">
-              <div class="fe-entry-title">${e.fromAccount} → ${e.toAccount}</div>
+              <span class="cat-part">
+                <span class="icon selected">🔁</span>
+                <span class="cat-label">${e.fromAccount} → ${e.toAccount}</span>
+              </span>
               <div class="fe-entry-amount-right">
                 ${Number(e.amount).toFixed(2)}
               </div>
@@ -8856,11 +8858,12 @@ function renderEntryByType(e) {
       <div class="fe-entry-block" data-entry-id="${e.entryId}" data-repo-id="${e.repoId}" data-entry-type="${e.type}">
         
         <div class="fe-entry-content">
-          <div class="fe-entry-icon"><span class="icon-content">📊</span></div>
-
           <div class="fe-entry-main">
             <div class="fe-entry-title-row">
-              <div class="fe-entry-title">${currentLang === "zh" ? "余额变更" : "Balance Set"}</div>
+              <span class="cat-part">
+                <span class="icon selected">📊</span>
+                <span class="cat-label">${currentLang === "zh" ? "余额变更" : "Balance Set"}</span>
+              </span>
               <div class="fe-entry-amount-right">
                 ${Number(e.amount).toFixed(2)}
               </div>
