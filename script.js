@@ -8050,15 +8050,17 @@ function applyThemeColor(color) {
   // Update CSS variable
   document.documentElement.style.setProperty('--primary-base', color);
 
-  // Update meta tag
-  let metaThemeColor = document.querySelector("meta[name=theme-color]");
-  if (metaThemeColor) {
-    metaThemeColor.setAttribute("content", color);
-  } else {
-    metaThemeColor = document.createElement("meta");
-    metaThemeColor.name = "theme-color";
-    metaThemeColor.content = color;
-    document.head.appendChild(metaThemeColor);
+  // Update meta tag only in PC browsers
+  if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    let metaThemeColor = document.querySelector("meta[name=theme-color]");
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", color);
+    } else {
+      metaThemeColor = document.createElement("meta");
+      metaThemeColor.name = "theme-color";
+      metaThemeColor.content = color;
+      document.head.appendChild(metaThemeColor);
+    }
   }
 }
 
