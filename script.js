@@ -441,6 +441,29 @@ if (isMobileBrowser()) {
   let newSize = current - 0.1;
   // Set it back with unit
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
+
+  // use dark / white color for the status bar
+  // Helper function to set mobile status bar color
+  const updateMobileStatusBar = () => {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const newColor = isDark ? "#000000" : "#FFFFFF";
+    let metaThemeColor = document.querySelector("meta[name=theme-color]");
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", newColor);
+    } else {
+      metaThemeColor = document.createElement("meta");
+      metaThemeColor.name = "theme-color";
+      metaThemeColor.content = newColor;
+      document.head.appendChild(metaThemeColor);
+    }
+  };
+
+  // 1. Run immediately on initial load
+  updateMobileStatusBar();
+
+  // 2. Listen for theme changes while page is open
+  const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  darkQuery.addEventListener("change", updateMobileStatusBar);
 }
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
