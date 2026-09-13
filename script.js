@@ -441,10 +441,6 @@ if (isMobileBrowser()) {
   let newSize = current - 0.1;
   // Set it back with unit
   document.documentElement.style.setProperty("--font-size", newSize + "rem");
-
-  // Remove theme-color; let the browser handle it
-  document.querySelectorAll("meta[name=theme-color]")
-    .forEach(meta => meta.remove());
 }
 
 import { get, set, del } from "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm";
