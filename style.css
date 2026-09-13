@@ -31,8 +31,14 @@
 }
 
 html, body {
-  background-color: #FFFFFF !important;
+  background-color: var(--bg) !important;
   color-scheme: light;
+}
+
+body {
+  /* Extends background under status bar, but pushes content down */
+  padding-top: env(safe-area-inset-top);
+  background-color: var(--bg);
 }
 
 /* Global glass effect*/
@@ -75,10 +81,9 @@ html, body {
   }
 
   html, body {
-    background-color: #000000 !important;
     color-scheme: dark;
   }
-  
+
   #statusMessage {
     background: rgba(34, 34, 34, 0.6);
     /* translucent dark gray */

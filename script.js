@@ -8084,7 +8084,7 @@ function applyThemeColor(color) {
   document.documentElement.style.setProperty('--primary-base', color);
 
   // Update meta tag only in PC browsers
-  if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+  if (!isMobileBrowser()) {
     let metaThemeColor = document.querySelector("meta[name=theme-color]");
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", color);
