@@ -4241,7 +4241,8 @@ function pinEntry(subWorkspace) {
     ...options,
     mode: "loadFromWorkspace",
     subWorkspace,
-    bubbleColor: randomBubbleColor(),   // store color
+    bubbleType: subWorkspace.inputType,
+    bubbleColor: randomBubbleColor(subWorkspace.inputType),   // store color
     bubbleLeft: (window.innerWidth - 58) + "px",
     bubbleTop: (window.innerHeight * 0.25 + pinnedEntries.length * 70) + "px"
   };
@@ -4262,7 +4263,18 @@ function renderPinnedBubbles() {
 
     bubble.textContent = entry.options.subWorkspace.amount ?? "?";
 
-    // Use stored color
+    // If inputType changed, regenerate bubbleColor
+    const currentType = entry.options.subWorkspace.inputType;
+    const storedColor = entry.options.bubbleColor;
+    const storedType = entry.options.bubbleType;
+
+    if (storedType !== currentType) {
+      const newColor = randomBubbleColor(currentType);
+      entry.options.bubbleColor = newColor;
+      entry.options.bubbleType = currentType;
+    }
+
+    // Use stored or updated color
     bubble.style.background = entry.options.bubbleColor;
 
     // Use stored position if available
@@ -4278,13 +4290,28 @@ function renderPinnedBubbles() {
   initPinnedBubbleInteractions();
 }
 
-function randomBubbleColor() {
-  const colors = [
-    "#FF6B6B", "#4ECDC4", "#556270",
-    "#C7F464", "#C44D58", "#FFA500",
-    "#6A5ACD", "#20B2AA"
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
+function randomBubbleColor(inputType) {
+  // random blend from 0% to 60%
+  const blend = Math.floor(Math.random() * 61);
+
+  if (inputType === "income") {
+    return `color-mix(in srgb,
+      var(--income-color) ${100 - blend}%,
+      var(--bg) ${blend}%
+    )`;
+  }
+
+  if (inputType === "expense") {
+    return `color-mix(in srgb,
+      var(--expense-color) ${100 - blend}%,
+      var(--bg) ${blend}%
+    )`;
+  }
+
+  return `color-mix(in srgb,
+    var(--primary) ${100 - blend}%,
+    var(--bg) ${blend}%
+  )`;
 }
 
 function initPinnedBubbleInteractions() {
