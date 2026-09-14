@@ -11117,7 +11117,7 @@ async function RenderGrocerySearch() {
     "Google": { searchURL1: "https://www.google.com/search?q=", searchURL2: "", items: [] }
   }
 
-  const groceryData = await initializeGrocerySearch();
+  let groceryData = await initializeGrocerySearch();
 
   let currentItem = null;
 
