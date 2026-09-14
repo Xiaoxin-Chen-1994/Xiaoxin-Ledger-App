@@ -4213,11 +4213,10 @@ function attachMobileGesture(el, {
         if (!el._scrolling) {
           el._scrolling = true;
           el._scrollStartY = startY; 
-
-          const scrollEl = findScrollEl(el);
-
-          el._startAtTop = scrollEl.scrollTop <= 0;
-          el._startAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
+          // ⭐ record whether scroll BEGAN at top or bottom
+          el._startAtTop = el.scrollTop <= 0;
+          console.log(el.scrollTop)
+          el._startAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight;
         }
       }
     }
@@ -5055,7 +5054,9 @@ async function showPage(name, title = latestTitle, options = {}) {
     if (!target._gestureAttached) {
       target._gestureAttached = true;
       
-      attachMobileGesture(target, {
+      const scrollEl = findScrollEl(target);   // ⭐ use real scroll element
+
+      attachMobileGesture(scrollEl, {
         enableClick: true,
         dragMode: "immediate",
         dragDirection: 'horizontal',
@@ -5124,13 +5125,11 @@ async function showPage(name, title = latestTitle, options = {}) {
         },
 
         onScrollEnd: (e, el) => {
-          const scrollEl = findScrollEl(el);   // ⭐ use real scroll element
-
           const t = e.changedTouches[0];
           const dy = t.clientY - el._scrollStartY;
           
-          const endAtTop = scrollEl.scrollTop <= 0;
-          const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
+          const endAtTop = el.scrollTop <= 0;
+          const endAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight;
 
           // Overscroll DOWN at top → next month/year
           if (el._startAtTop && endAtTop && dy > 40 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
