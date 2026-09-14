@@ -4132,6 +4132,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 function attachMobileGesture(el, {
   enableClick = false,
   dragMode = "none",
+  dragDirection = "none", // direction must be specified for an "immediate" dragMode
   longPressTime = 300,
   enableLongPressDelete = false,
 
@@ -4191,9 +4192,21 @@ function attachMobileGesture(el, {
       didMove = true;
       clearTimeout(longPressTimer);
     }
+    
+    let allowDrag = false;
+
+    if (dragDirection === "any") {
+      allowDrag = true;
+    } else if (dragDirection === "horizontal") {
+      // Only start drag if horizontal movement dominates
+      if (dx > dy) allowDrag = true;
+    } else if (dragDirection === "vertical") {
+      // Only start drag if vertical movement dominates
+      if (dy > dx) allowDrag = true;
+    }
 
     // Immediate drag (only if not scrolling)
-    if (dragMode === "immediate" && !isDragging && didMove) {
+    if (dragMode === "immediate" && !isDragging && didMove && allowDrag) {
       isDragging = true;
       onDragStart?.(e, el, startX, startY);
     }
@@ -4343,6 +4356,7 @@ function initPinnedBubbleInteractions() {
     attachMobileGesture(bubble, {
       enableClick: true,
       dragMode: "immediate",
+      dragDirection: 'any',
       enableLongPressDelete: true,
       longPressTime: 500,
 
@@ -5023,6 +5037,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       attachMobileGesture(target, {
         enableClick: true,
         dragMode: "immediate",
+        dragDirection: 'horizontal',
 
         onClick: (e, el) => {
           if (e.target.id === "go-create-btn") {
