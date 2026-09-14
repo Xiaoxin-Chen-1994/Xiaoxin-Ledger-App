@@ -5196,6 +5196,10 @@ async function goBack() {
   }
 }
 
+function findScrollEl(el) {
+  return el.querySelector(".scroll") || el;
+}
+
 let currentMonthState = {
   year: null,
   month: null
