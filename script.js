@@ -137,7 +137,6 @@ const translations = {
     loginTitle: "Login or Signup",
     loginWithGitHub: "Login with GitHub",
     back: "Back",
-    search: "🔍Search",
     welcome: "Welcome, ",
     homeTitle: "Home",
     incomeMinusExpense: "Income - Expense",
@@ -282,7 +281,6 @@ const translations = {
     loginTitle: "登录或注册",
     loginWithGitHub: "通过GitHub账户登录",
     back: "返回",
-    search: "🔍搜索",
     welcome: "欢迎，",
     homeTitle: "首页",
     incomeMinusExpense: "收入 - 支出",
@@ -4574,9 +4572,8 @@ navigator.geolocation.getCurrentPosition(async (pos) => {
   const lon = pos.coords.longitude;
   loadLocalWeather(lat, lon);
 }, (err) => {
-  console.log("Location denied, fallback to Waterloo");
+  console.log("Location denied");
   console.log(err);
-  loadLocalWeather(43.4643, -80.5204); // Waterloo fallback
 });
 
 async function loadLocalWeather(lat, lon) {
@@ -8742,7 +8739,11 @@ function showFilteredEntriesToday(entries) {
   scroll.innerHTML = ``;
 
   // --- Detect today's entries ---
-  const todayStr = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const todayStr =
+    today.getFullYear() + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0"); // this makes sure todayStr always uses local date, not UTC date
   const todaysEntries = entries.filter(e => e.transactionTime.startsWith(todayStr));
   const otherEntries = entries.filter(e => !e.transactionTime.startsWith(todayStr));
 
@@ -8893,7 +8894,8 @@ function renderEntryByType(e) {
 
   const repoId = e.repoId;
 
-  const time = e.transactionTime.split(" ")[1];
+  const [hh, mm] = e.transactionTime.split(" ")[1].split(":"); // do not display seconds
+  const time = `${hh}:${mm}`;
   const account = e.account || e.fromAccount || e.toAccount || "";
   const subject = e.subject || "";
   const collection = e.collection || "";

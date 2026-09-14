@@ -774,7 +774,7 @@ label {
 
 .transaction-tabs .tab-btn.active {
   background: color-mix(in srgb, var(--primary) 90%, var(--bg));
-  color: var(--text);
+  color: #fff;
   font-weight: bold;
 }
 
@@ -3340,7 +3340,7 @@ emoji-picker {
   background: var(--light-grey);
   border: none;
   cursor: pointer;
-  color: #fff;
+  color: var(--text);
   flex: 0 0 auto;         /* important: do NOT stretch */
 }
 
