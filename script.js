@@ -5133,13 +5133,13 @@ async function showPage(name, title = latestTitle, options = {}) {
           const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
 
           // Overscroll DOWN at top → next month/year
-          if (el._startAtTop && endAtTop && dy > 100 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
+          if (el._startAtTop && endAtTop && dy > 40 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
               loadNextRange(options);
               return;
           }
 
           // Overscroll UP at bottom → previous month/year
-          if (el._startAtBottom && endAtBottom && dy < -100 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
+          if (el._startAtBottom && endAtBottom && dy < -40 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
               loadPreviousRange(options);
               return;
           }
