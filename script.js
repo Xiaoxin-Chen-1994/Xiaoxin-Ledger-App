@@ -231,6 +231,7 @@ const translations = {
     manageHomeImage: "Manage homepage images",
     add: "Add",
     upload: "Upload",
+    duplicate: "Duplicate",
     edit: "Edit",
     delete: "Delete",
     homeImageInstruction: "You may add the URL links to the online pictures you would like to use here.",
@@ -374,6 +375,7 @@ const translations = {
     manageHomeImage: "管理首页图",
     add: "增加",
     upload: "上传",
+    duplicate: "复制",
     edit: "编辑",
     delete: "删除",
     homeImageInstruction: "您可在此处添加您想要使用的在线图片链接。",
@@ -4149,6 +4151,8 @@ function attachMobileGesture(el, {
 
   let longPressTimer = null;
 
+  let tapHandled = false;
+
   el.addEventListener("touchstart", e => {
     const t = e.touches[0];
     startX = t.clientX;
@@ -4164,6 +4168,8 @@ function attachMobileGesture(el, {
 
         if (enableLongPressDelete) {
           onLongPressDelete?.(e, el);
+          e.preventDefault();
+          e.stopPropagation();
           return;
         }
 
@@ -4211,11 +4217,21 @@ function attachMobileGesture(el, {
     }
 
     if (enableClick) {
+      tapHandled = true; // mark tap as handled
       onClick?.(e, el);
+      e.preventDefault();
+      e.stopPropagation();
     }
   });
 
   el.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (tapHandled) {
+      tapHandled = false; // ignore synthetic click // already handled in touchend
+      return;
+    }
+
     if (didLongPress || isDragging || didMove) return;
     if (!enableClick) return;
     onClick?.(e, el);
@@ -4235,7 +4251,10 @@ function pinEntry(subWorkspace) {
     p.name === name &&
     p.options.transactionId === options.transactionId
   );
-  if (exists) return;
+  if (exists) {
+    onReturnButton();   // refresh UI
+    return;
+  };
 
   const opts = {
     ...options,
@@ -4703,16 +4722,48 @@ async function showPage(name, title = latestTitle, options = {}) {
     if (latestPage.includes("create")) { // when creating an entry
       document.getElementById("return-btn").textContent = "❮ " + t.cancel;
 
-      const inProgress = !!workspace.create;
-      if (!inProgress) { // reset button texts when creating a new entry
-        workspace.create = {};
+      let inProgress = !!workspace.create;
+      if (inProgress && options.mode && options.mode === "duplicateExistingEntry") {
+        inProgress = await new Promise(resolve => {
+          showPopupWindow({
+            title: currentLang === "en" ? "Confirm Duplicate" : "确认复制",
+            message:
+              currentLang === "en"
+                ? "You already have an entry in progress. Creating a duplicate will clear the existing information. Do you want to proceed with creating the duplicate?"
+                : "您已有正在创建的条目。复制新条目将清除原有内容，确定继续？",
+            buttons: [
+              {
+                text: currentLang === "en" ? "Duplicate" : "复制",
+                onClick: () => resolve(false)    // user confirmed
+              },
+              {
+                text: currentLang === "en" ? "Cancel" : "取消",
+                primary: true,
+                onClick: () => resolve(true)   // user cancelled
+              }
+            ]
+          });
+        });
+      }
 
-        workspace.create.inputTypeIndex = 0;
-        workspace.create.inputType = transactionTypes[0]; // start with expense
-        workspace.create.amount = 0;
-        workspace.create.calculation = "";
-        workspace.create.tags = [];
-        workspace.create.notes = "";
+      if (!inProgress) { // reset button texts when creating a new entry
+        if (!options.mode || options.mode !== "duplicateExistingEntry") {
+          workspace.create = {};
+
+          workspace.create.inputTypeIndex = 0;
+          workspace.create.inputType = transactionTypes[0]; // start with expense
+          workspace.create.amount = 0;
+          workspace.create.calculation = "";
+          workspace.create.tags = [];
+          workspace.create.notes = "";
+        } else { // duplicate an existing entry
+          loadEntryIntoWorkspace(options.repoId, options.transactionId); // first load this entry
+
+          const original = workspace.transactions[options.transactionId]; // then copy this entry
+          console.log(original)
+          workspace.create = JSON.parse(JSON.stringify(original)); // deep copy
+        }
+
         activeForm = workspace.create.inputType + "-form";
         dateTimeBtn = document.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
         let householdBtn = document.querySelector(`#${activeForm} .selector-button[data-type='household']`);
@@ -4740,6 +4791,7 @@ async function showPage(name, title = latestTitle, options = {}) {
         taggedEl.innerHTML = "";
         const notesEl = document.querySelector(`#${activeForm} textarea[id$='notes']`);
         notesEl.value = workspace.create.notes;
+
       } else {
         activeForm = workspace.create.inputType + "-form";
       }
@@ -4819,7 +4871,7 @@ async function showPage(name, title = latestTitle, options = {}) {
             <div class="lp-sort-option" onclick="setLoyaltySortMode('expiry')">到期日</div>
           </div>
 
-          <button id="loyalty-toggle-all-btn" class="toggle-all-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
+          <button id="loyalty-toggle-all-btn" class="section-manage-btn" onclick="toggleAllRewards(this, 'loyalty')">显示全部</button>
         </div>
       </div>
 
@@ -4842,7 +4894,7 @@ async function showPage(name, title = latestTitle, options = {}) {
             管理
           </button>
 
-          <button class="toggle-all-btn" onclick="toggleAllRewards(this, 'credit')">
+          <button class="section-manage-btn" onclick="toggleAllRewards(this, 'credit')">
             显示全部
           </button>
         </div>
@@ -4965,57 +5017,83 @@ async function showPage(name, title = latestTitle, options = {}) {
       showFilteredEntries(filteredEntries);
     }
 
-    target.addEventListener("click", (e) => {
-      if (e.target.id === "go-create-btn") {
-        showPage("create", "navTransaction");
-        return;
-      };
+    if (!target._gestureAttached) {
+      target._gestureAttached = true;
+      
+      attachMobileGesture(target, {
+        enableClick: true,
+        dragMode: "immediate",
 
-      const block = e.target.closest(".fe-entry-block");
-      if (!block) return;
+        onClick: (e, el) => {
+          if (e.target.id === "go-create-btn") {
+            showPage("create", "navTransaction");
+            return;
+          };
 
-      const entryId = block.dataset.entryId;
-      const repoId = block.dataset.repoId;
-      if (!(entryId in localLedgerDataMap[repoId])) return;
+          const block = e.target.closest(".fe-entry-block");
+          if (!block) return;
 
-      // If clicking Edit
-      if (e.target.classList.contains("edit-btn")) {
-        showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
-        return;
-      }
+          const entryId = block.dataset.entryId;
+          const repoId = block.dataset.repoId;
+          if (!(entryId in localLedgerDataMap[repoId])) return;
 
-      // If clicking Delete
-      if (e.target.classList.contains("delete-btn")) {
-        deleteEntry(repoId, entryId);
-        block.remove();
-        showPage("filtered-entries", title, options)
-        return;
-      }
+            // If clicking duplicate
+          if (e.target.classList.contains("duplicate-btn")) {
+            showPage("create", t.create, { 'mode': 'duplicateExistingEntry', 'repoId': repoId, 'transactionId': entryId });
+            return;
+          }
 
-      // Normal click → load entry
-      showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
-    });
+          // If clicking Edit
+          if (e.target.classList.contains("edit-btn")) {
+            showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
+            return;
+          }
 
-    target.addEventListener("touchstart", (e) => {
-      const block = e.target.closest(".fe-entry-block");
-      if (!block) return;
+          // If clicking Delete
+          if (e.target.classList.contains("delete-btn")) {
+            deleteEntry(repoId, entryId);
+            block.remove();
+            showPage("filtered-entries", title, options)
+            return;
+          }
 
-      block._startX = e.touches[0].clientX;
-    });
+          // Normal click
+          if (block.classList.contains("show-actions")) {
+            block.classList.remove("show-actions"); // hide action buttons if they are shown
+          } else { // or load entry if action buttons are already hidden
+            showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
+          }
+        },
 
-    target.addEventListener("touchend", (e) => {
-      const block = e.target.closest(".fe-entry-block");
-      if (!block) return;
+        // Swipe left/right
+        onDragStart: (e, el, startX) => {
+          const block = e.target.closest(".fe-entry-block");
+          if (!block) return;
 
-      const endX = e.changedTouches[0].clientX;
-      const diff = block._startX - endX;
+          block._startX = e.touches[0].clientX;
+        },
 
-      if (diff > 40) {
-        block.classList.add("show-actions");   // swipe left
-      } else if (diff < -40) {
-        block.classList.remove("show-actions"); // swipe right
-      }
-    });
+        onDragEnd: (e, el) => {
+          const block = e.target.closest(".fe-entry-block");
+          if (!block) return;
+
+          const endX = e.changedTouches[0].clientX;
+          const diff = block._startX - endX;
+
+          if (diff > 40) {
+            block.classList.add("show-actions");   // swipe left
+          } else if (diff < -40) {
+            block.classList.remove("show-actions"); // swipe right
+          }
+        },
+
+        onRightClick: (e, el) => {
+          const block = e.target.closest(".fe-entry-block");
+          if (!block) return;
+          block.classList.add("show-actions");
+        }
+      });
+    }
 
   } else if (latestPage === "grocery-search") {
     document.getElementById("manage-btn-headerbar").style.display = "block";
@@ -8841,6 +8919,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
+          <button class="duplicate-btn">${t.duplicate}</button>  
           <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
@@ -8871,6 +8950,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
+          <button class="duplicate-btn">${t.duplicate}</button>
           <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
@@ -8901,6 +8981,7 @@ function renderEntryByType(e) {
         </div>
 
         <div class="fe-entry-actions">
+          <button class="duplicate-btn">${t.duplicate}</button>
           <button class="edit-btn">${t.edit}</button>
           <button class="delete-btn">${t.delete}</button>
         </div>
@@ -9321,7 +9402,6 @@ function showPopupWindow({ title, message, buttons = [] }) {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       overlay.remove();
-      popup.classList.remove("show");
     }
   });
 
@@ -12329,7 +12409,7 @@ function OpenInterestRateCal() {
     `));
 
     const msg = document.createElement("div");
-    msg.style.color = "#666";
+    msg.style.color = "var(--card)";
     msg.textContent = "此模式尚未实现。";
     card.appendChild(msg);
   }
@@ -12405,7 +12485,7 @@ function OpenInterestRateCal() {
     delBtn.textContent = "–";
     delBtn.className = "delete-row-btn";
     delBtn.style.color = "white";
-    delBtn.style.background = "red";
+    delBtn.style.background = "crimson";
     delBtn.style.border = "none";
     delBtn.style.borderRadius = "4px";
     delBtn.style.padding = "0 8px";
@@ -12603,7 +12683,7 @@ function OpenInterestRateCal() {
     delBtn.textContent = "–";
     delBtn.className = "delete-row-btn";
     delBtn.style.color = "white";
-    delBtn.style.background = "red";
+    delBtn.style.background = "crimson";
     delBtn.style.border = "none";
     delBtn.style.borderRadius = "4px";
     delBtn.style.padding = "0 8px";
@@ -12978,7 +13058,7 @@ async function renderRewardsHubLoyaltyPrograms() {
               ${p.details ? `<div class="reward-account-details">${p.details}</div>` : ""}
 
               <div class="lp-edit-row">
-                <button class="section-manage-btn"
+                <button class="section-edit-btn"
                   onclick="enterLoyaltyEditMode('${p.id}', '${repoId}', event)">
                   编辑
                 </button>
@@ -13074,7 +13154,7 @@ function toggleAddLoyaltyForm() {
 
       <div class="loyalty-row">
         <input id="loyalty-name" class="loyalty-input" placeholder="名称" required>
-        <button class="section-manage-btn" onclick="saveNewLoyaltyProgram()">
+        <button class="section-edit-btn" onclick="saveNewLoyaltyProgram()">
           保存
         </button>
       </div>
@@ -13091,7 +13171,7 @@ function toggleAddLoyaltyForm() {
       <textarea id="loyalty-details" class="loyalty-textarea" placeholder="备注"></textarea>
 
       <div class="loyalty-add-footer">
-        <button class="section-manage-btn loyalty-cancel-btn" onclick="cancelAddLoyaltyForm()">
+        <button class="section-edit-btn loyalty-cancel-btn" onclick="cancelAddLoyaltyForm()">
           取消
         </button>
       </div>
@@ -13199,7 +13279,7 @@ function enterLoyaltyEditMode(id, repoId) {
   edit.innerHTML = `
     <div class="loyalty-row">
       <input class="loyalty-input" value="${p.name}" data-field="name">
-      <button class="section-manage-btn" onclick="saveLoyaltyEdit('${p.id}', '${repoId}')">保存</button>
+      <button class="section-edit-btn" onclick="saveLoyaltyEdit('${p.id}', '${repoId}')">保存</button>
     </div>
 
     <input class="loyalty-input" value="${p.number || ""}" placeholder="会员号" data-field="number">
@@ -13207,7 +13287,7 @@ function enterLoyaltyEditMode(id, repoId) {
     <textarea class="loyalty-textarea" placeholder="备注" data-field="details">${p.details || ""}</textarea>
 
     <div class="reward-edit-footer">
-      <button class="section-manage-btn loyalty-cancel-btn" onclick="cancelLoyaltyEdit('${p.id}', '${repoId}')">取消</button>
+      <button class="section-edit-btn loyalty-cancel-btn" onclick="cancelLoyaltyEdit('${p.id}', '${repoId}')">取消</button>
       <button class="section-delete-btn" onclick="deleteLoyaltyProgram('${p.id}', '${repoId}')">删除</button>
     </div>
   `;

@@ -46,7 +46,7 @@
   :root {
     --bg: black;
     --btnBg: #252525;
-    --card: rgba(18, 19, 23, 0.7);
+    --card: rgba(40, 40, 40, 0.7);
     --text: #eaeef3;
     --muted: #a1a7b3;
     --primary: color-mix(in srgb, var(--primary-base) 80%, white);
@@ -455,7 +455,7 @@ label {
 }
 
 .subaccount-badge {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 95%, var(--bg));
   color: white;
   padding: 0 0.4rem;
   border-radius: 0.4rem;
@@ -773,8 +773,8 @@ label {
 }
 
 .transaction-tabs .tab-btn.active {
-  background: var(--primary);
-  color: #fff;
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
+  color: var(--text);
   font-weight: bold;
 }
 
@@ -1158,7 +1158,7 @@ input[type="url"] {
 
 .form-row input:focus,
 .form-row textarea:focus {
-  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
 }
 
 #expense-category,
@@ -1229,7 +1229,7 @@ input[type="url"] {
   gap: 0rem;
   border: none;
   border-radius: 0.25rem;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   cursor: pointer;
 }
@@ -1251,7 +1251,7 @@ input[type="url"] {
   gap: 0rem;
   border: none;
   border-radius: 0.25rem;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   cursor: pointer;
 }
@@ -1322,13 +1322,12 @@ input[type="url"] {
   background: crimson;
 }
 
-.edit-btn {
+.edit-btn, .duplicate-btn {
   position: absolute;
-  right: 3.8rem;
   top: 0.25rem;
   bottom: 0.25rem;
   width: 3.6rem;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: white;
   font-size: calc(var(--font-size) * 0.9);
   /* a percentage of the base font size */
@@ -1344,12 +1343,20 @@ input[type="url"] {
   /* horizontal centering */
 }
 
-.edit-btn:hover {
-  background: crimson;
+.edit-btn {
+  right: 3.8rem;
+}
+
+.duplicate-btn {
+  right: 7.6rem;
+}
+
+.edit-btn:hover, .duplicate-btn:hover {
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 .selector-button:hover {
-  background: var(--card);
+  background: var(--bg);
 }
 
 /* Selector panel fixed at bottom */
@@ -1444,7 +1451,7 @@ input[type="url"] {
 
 /* Confirm button (replaces equals, vertical 2-row span) */
 #amount-selector .keys button.confirm {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   grid-row: span 2;
   /* makes it vertical */
   font-size: calc(var(--font-size) * 1.2);
@@ -1461,7 +1468,7 @@ input[type="url"] {
 
 /* Press feedback */
 #amount-selector .keys button.pressed {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 .dt-col {
@@ -1509,7 +1516,7 @@ input[type="url"] {
 }
 
 .dt-item.selected {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: var(--text);
   border-radius: 6px;
   font-size: calc(var(--font-size) * 1.2);
@@ -1596,7 +1603,7 @@ input[type="url"] {
   }
 
   .dt-item.selected {
-    background: var(--primary);
+    background: color-mix(in srgb, var(--primary) 90%, var(--bg));
     color: var(--text);
   }
 
@@ -1626,7 +1633,7 @@ select {
   padding: 0.75rem;
   border: none;
   border-radius: 0.5rem;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   font-size: calc(var(--font-size) * 1);
   /* a percentage of the base font size */
@@ -1713,7 +1720,7 @@ button {
 .bottom-nav button.active {
   flex-grow: 1.5;
   /* active button takes ~2× width */
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   font-weight: bold;
 }
@@ -1747,7 +1754,7 @@ button {
 /* Save button: 2/3 width + primary color */
 #save-btn-nav {
   flex: 2 1 0;               /* ⭐ takes 2/3 of space */
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   font-weight: bold;
 }
@@ -2036,9 +2043,9 @@ hr {
   margin-inline: 0;
   /* left & right */
   border: 1px solid #ddd;
-  color: var(--text);
+  color: #fff;
   border-radius: 6px;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   font-size: calc(var(--font-size) * 1.0);
   /* a percentage of the base font size */
   ;
@@ -2148,7 +2155,7 @@ hr {
 }
 
 #save-home-image-btn {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 #save-home-image-btn:hover {
@@ -2209,10 +2216,6 @@ hr {
     background: var(--primary-category-bg);
     border-color: #ccc;
     outline: none;
-  }
-
-  .actions button {
-    background: var(--primary);
   }
 
   #logout-btn {
@@ -2484,7 +2487,7 @@ emoji-picker {
 /* Place them side by side */
 .label-edit-btn {
   right: calc(-1 * (var(--action-w)*2));
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 .label-delete-btn {
@@ -2579,7 +2582,7 @@ emoji-picker {
 }
 
 .type-selector button.active {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: #fff;
   font-weight: bold;
 }
@@ -2639,7 +2642,7 @@ emoji-picker {
 }
 
 .glass-popup-btn.primary {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: white;
 }
 
@@ -2747,7 +2750,7 @@ emoji-picker {
 /* Actions panel (hidden by default) */
 .fe-entry-actions {
   position: absolute;
-  right: calc(-3.8rem - 4%);
+  right: calc(-7.6rem - 4%);
   /* hidden off-screen */
   top: 0;
   height: 100%;
@@ -2761,15 +2764,16 @@ emoji-picker {
 
 /* When swiped left */
 .fe-entry-block.show-actions .fe-entry-content {
-  transform: translateX(-7.4rem); /* slide whole block left */
+  transform: translateX(calc(-11.2rem - 4%)); /* slide whole block left */
 }
 .fe-entry-block.show-actions .fe-entry-actions {
-  right: calc(-3.8rem);
+  right: calc(-7.6rem);
 }
 
+.fe-entry-block.show-actions .duplicate-btn,
 .fe-entry-block.show-actions .delete-btn,
 .fe-entry-block.show-actions .edit-btn {
-  transform: translateX(calc(-3.8rem)); /* slide whole block left */
+  transform: translateX(calc(-7.6rem)); /* slide whole block left */
 }
 
 /* Left column: icon */
@@ -3111,13 +3115,6 @@ emoji-picker {
   transition: background 0.2s ease;
 }
 
-.manage-store-row input[type="text"] {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-}
-
 .manage-store-row.dragging {
   opacity: 0.3;
 }
@@ -3133,12 +3130,12 @@ emoji-picker {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--bg);
+  background: var(--card);
   transition: flex 0.25s ease, background 0.25s ease;
 }
 
 #manage-grocery-search-page .manage-store-row input[type="text"]:focus {
-  background: color-mix(in srgb, var(--primary) 5%, var(--bg));
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
 }
 
 #manage-grocery-search-page .drag-handle {
@@ -3222,16 +3219,17 @@ emoji-picker {
 .ir-mode-grid .big-button {
   padding: 0.8rem 0.6rem;
   border-radius: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid val(--border);
 }
 
 .ir-mode-grid .big-button:active {
-  background: #e5e5e5;
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 /* Card container */
 .ir-card {
-  background: #ffffff;
+  background: var(--bg);
+  color: var(--text);
   padding: 1rem;
   margin-top: 1rem;
   border-radius: 12px;
@@ -3244,13 +3242,13 @@ emoji-picker {
 }
 
 .ir-instructions {
-  background: #f9fafc;
+  background: var(--card);
   border-left: 4px solid var(--primary);
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
   border-radius: 8px;
   line-height: 1.5;
-  color: #444;
+  color: var(--text);
 }
 
 /* Field line (replaces .row) */
@@ -3258,29 +3256,23 @@ emoji-picker {
   display: flex;
   gap: 0.6rem;
   padding: 0.4rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 /* Inputs */
 .text-input {
+  background: var(--card);
+  color: var(--text);
   width: 100%;
   padding: 0.55rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   box-sizing: border-box;
 }
 
-/* Add row button */
-.ir-add-btn {
-  background: #fafafa;
-  border: 1px dashed #bbb;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-/* Primary button */
-.primary-btn {
-  color: white;
+.ir-add-btn, .primary-btn {
+  color: var(--text);
+  margin: 5px;
 }
 
 /* Result box */
@@ -3294,7 +3286,8 @@ emoji-picker {
 }
 
 .ir-selector-block {
-  background: #f9fafc;
+  background: var(--card);
+  color: var(--text);
   padding: 0.75rem 1rem;
   border-radius: 10px;
   border-left: 4px solid var(--primary);
@@ -3305,7 +3298,7 @@ emoji-picker {
   display: flex;
   align-items: center;
   gap: 0.1rem;
-  color: #333;
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -3329,25 +3322,25 @@ emoji-picker {
   margin: 0;              /* important: no extra vertical margin */
 }
 
-.section-manage-btn {
+.section-edit-btn {
   font-size: calc(var(--font-size) * 0.8);
   padding: 4px 8px;
   border-radius: 6px;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 95%, var(--bg));
   border: none;
   cursor: pointer;
-  color: var(--text);
+  color: #fff;
   flex: 0 0 auto;         /* important: do NOT stretch */
 }
 
-.toggle-all-btn {
+.section-manage-btn {
   font-size: calc(var(--font-size) * 0.8);
   padding: 4px 8px;
   border-radius: 6px;
   background: var(--light-grey);
   border: none;
   cursor: pointer;
-  color: var(--text);
+  color: #fff;
   flex: 0 0 auto;         /* important: do NOT stretch */
 }
 
@@ -3380,7 +3373,7 @@ emoji-picker {
 
 /* 主卡片 hover */
 .reward-card-item:hover {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 .reward-account-item:hover {
@@ -3408,7 +3401,7 @@ emoji-picker {
 
 /* 子卡片 hover */
 .reward-card-sub:hover {
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
 }
 
 .lp-sort-popup {
@@ -3542,7 +3535,7 @@ emoji-picker {
   margin-left: 8px;
   padding: 6px 10px;
   border-radius: 6px;
-  background: var(--primary);
+  background: color-mix(in srgb, var(--primary) 90%, var(--bg));
   color: white;
   border: none;
   cursor: pointer;
