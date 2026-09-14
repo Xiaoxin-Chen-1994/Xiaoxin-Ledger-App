@@ -5051,6 +5051,8 @@ async function showPage(name, title = latestTitle, options = {}) {
       currentMonthState.month = Number(m);
     }
 
+    target.dataset.kanbanIndex = options.kanbanIndex;
+
     if (!target._gestureAttached) {
       target._gestureAttached = true;
       
@@ -5123,8 +5125,10 @@ async function showPage(name, title = latestTitle, options = {}) {
         },
 
         onScrollEnd: (e, el) => {
-          const scrollEl = findScrollEl(el);   // ⭐ use real scroll element
+          const kanbanIndex = Number(el.dataset.kanbanIndex);
 
+          const scrollEl = findScrollEl(el);   // ⭐ use real scroll element
+          
           const t = e.changedTouches[0];
           const dy = t.clientY - el._scrollStartY;
           
@@ -5132,14 +5136,14 @@ async function showPage(name, title = latestTitle, options = {}) {
           const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
 
           // Overscroll DOWN at top → next month/year
-          if (el._startAtTop && endAtTop && dy > 40 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
-              loadNextRange(options);
+          if (el._startAtTop && endAtTop && dy > 40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
+              loadNextRange(el);
               return;
           }
 
           // Overscroll UP at bottom → previous month/year
-          if (el._startAtBottom && endAtBottom && dy < -40 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
-              loadPreviousRange(options);
+          if (el._startAtBottom && endAtBottom && dy < -40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
+              loadPreviousRange(el);
               return;
           }
         },
@@ -5205,23 +5209,25 @@ let currentMonthState = {
   month: null
 };
 
-function loadPreviousRange(options) {
-    if (options.kanbanIndex === 1) {
-        shiftMonth(-1, options);
-    } else {
-        shiftYear(-1, options);
-    }
+function loadPreviousRange(el) {
+  const kanbanIndex = Number(el.dataset.kanbanIndex);
+  if (kanbanIndex === 1) {
+      shiftMonth(-1);
+  } else {
+      shiftYear(-1);
+  }
 }
 
-function loadNextRange(options) {
-    if (options.kanbanIndex === 1) {
-        shiftMonth(1, options);
-    } else {
-        shiftYear(1, options);
-    }
+function loadNextRange(el) {
+  const kanbanIndex = Number(el.dataset.kanbanIndex);
+  if (kanbanIndex === 1) {
+      shiftMonth(1);
+  } else {
+      shiftYear(1);
+  }
 }
 
-async function shiftMonth(delta, options) {
+async function shiftMonth(delta) {
   // Update current month state
   currentMonthState.month += delta;
 
@@ -5263,7 +5269,7 @@ async function shiftMonth(delta, options) {
   document.getElementById("app-title").textContent = titleText;
 }
 
-async function shiftYear(delta, options) {
+async function shiftYear(delta) {
   currentMonthState.year += delta;
 
   // Build new date range
