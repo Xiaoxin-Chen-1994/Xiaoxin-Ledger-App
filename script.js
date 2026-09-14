@@ -4138,6 +4138,7 @@ function attachMobileGesture(el, {
   onDragStart,
   onDragMove,
   onDragEnd,
+  onScrollEnd,
   onLongPressDelete,
   onRightClick
 }) {
@@ -4204,9 +4205,21 @@ function attachMobileGesture(el, {
     }
 
     // Immediate drag (only if not scrolling)
-    if (dragMode === "immediate" && !isDragging && didMove && allowDrag) {
-      isDragging = true;
-      onDragStart?.(e, el, startX, startY);
+    if (dragMode === "immediate" && !isDragging) {
+      if (didMove && allowDrag) {
+        isDragging = true;
+        onDragStart?.(e, el, startX, startY);
+      } else {
+        if (!el._scrolling) {
+          el._scrolling = true;
+          el._scrollStartY = startY; 
+
+          const scrollEl = findScrollEl(el);
+
+          el._startAtTop = scrollEl.scrollTop <= 0;
+          el._startAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
+        }
+      }
     }
 
     if (isDragging) {
@@ -4218,7 +4231,13 @@ function attachMobileGesture(el, {
 
   el.addEventListener("touchend", e => {
     clearTimeout(longPressTimer);
-
+    
+    if (el._scrolling) {
+      el._scrolling = false;
+      onScrollEnd?.(e, el);
+      return;
+    }
+    
     if (didLongPress || isDragging || didMove) {
       if (isDragging) {
         isDragging = false;
@@ -5025,7 +5044,12 @@ async function showPage(name, title = latestTitle, options = {}) {
       addBtn.onclick = () => showPage("create", "navTransaction");
     } else {
       let filteredEntries = await getFilteredEntries(options.filters);
+      console.log(options.filters)
       showFilteredEntries(filteredEntries);
+
+      const [y, m] = options.filters.dateFrom.split("-");
+      currentMonthState.year = Number(y);
+      currentMonthState.month = Number(m);
     }
 
     if (!target._gestureAttached) {
@@ -5099,6 +5123,28 @@ async function showPage(name, title = latestTitle, options = {}) {
           }
         },
 
+        onScrollEnd: (e, el) => {
+          const scrollEl = findScrollEl(el);   // ⭐ use real scroll element
+
+          const t = e.changedTouches[0];
+          const dy = t.clientY - el._scrollStartY;
+          
+          const endAtTop = scrollEl.scrollTop <= 0;
+          const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
+
+          // Overscroll DOWN at top → next month/year
+          if (el._startAtTop && endAtTop && dy > 100 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
+              loadNextRange(options);
+              return;
+          }
+
+          // Overscroll UP at bottom → previous month/year
+          if (el._startAtBottom && endAtBottom && dy < -100 && (options.kanbanIndex === 1 || options.kanbanIndex === 2)) {
+              loadPreviousRange(options);
+              return;
+          }
+        },
+
         onRightClick: (e, el) => {
           const block = e.target.closest(".fe-entry-block");
           if (!block) return;
@@ -5149,6 +5195,97 @@ async function goBack() {
 
     showPage(prevPage, prevTitle, prevOptions);
   }
+}
+
+function findScrollEl(el) {
+  return el.querySelector(".scroll") || el;
+}
+
+let currentMonthState = {
+  year: null,
+  month: null
+};
+
+function loadPreviousRange(options) {
+    if (options.kanbanIndex === 1) {
+        shiftMonth(-1, options);
+    } else {
+        shiftYear(-1, options);
+    }
+}
+
+function loadNextRange(options) {
+    if (options.kanbanIndex === 1) {
+        shiftMonth(1, options);
+    } else {
+        shiftYear(1, options);
+    }
+}
+
+async function shiftMonth(delta, options) {
+  // Update current month state
+  currentMonthState.month += delta;
+
+  if (currentMonthState.month > 12) {
+    currentMonthState.month = 1;
+    currentMonthState.year++;
+  }
+  if (currentMonthState.month < 1) {
+    currentMonthState.month = 12;
+    currentMonthState.year--;
+  }
+
+  // Build new date range
+  const y = currentMonthState.year;
+  const m = String(currentMonthState.month).padStart(2, "0");
+
+  const dateFrom = `${y}-${m}-01`;
+  const dateTo = `${y}-${m}-${daysInMonth(y, currentMonthState.month)}`;
+
+  // Fetch and display
+  const filteredEntries = await getFilteredEntries({ dateFrom, dateTo });
+  showFilteredEntries(filteredEntries);
+
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  function formatMonthTitle(year, month, currentLang) {
+    if (currentLang === "zh") {
+      return `${year}年${month}月`;
+    } else {
+      return `${months[month - 1]} ${year}`;
+    }
+  }
+
+  // Update title
+  const titleText = formatMonthTitle(currentMonthState.year, currentMonthState.month, currentLang);
+  document.getElementById("app-title").textContent = titleText;
+}
+
+async function shiftYear(delta, options) {
+  currentMonthState.year += delta;
+
+  // Build new date range
+  const y = currentMonthState.year;
+  const dateFrom = `${y}-01-01`;
+  const dateTo   = `${y}-12-31`;
+
+  // Fetch + render
+  const filteredEntries = await getFilteredEntries({ dateFrom, dateTo });
+  showFilteredEntries(filteredEntries);
+
+  function formatYearTitle(year, currentLang) {
+  if (currentLang === "zh") {
+      return `${year}年`;
+    } else {
+      return `Year ${year}`;
+    }
+  }
+
+  // Update title
+  document.getElementById("app-title").textContent = formatYearTitle(y, currentLang);
 }
 
 function renderAlertCenter() {
