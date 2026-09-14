@@ -5054,9 +5054,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     if (!target._gestureAttached) {
       target._gestureAttached = true;
       
-      const scrollEl = findScrollEl(target);   // ⭐ use real scroll element
-
-      attachMobileGesture(scrollEl, {
+      attachMobileGesture(target, {
         enableClick: true,
         dragMode: "immediate",
         dragDirection: 'horizontal',
@@ -5194,10 +5192,6 @@ async function goBack() {
 
     showPage(prevPage, prevTitle, prevOptions);
   }
-}
-
-function findScrollEl(el) {
-  return el.querySelector(".scroll") || el;
 }
 
 let currentMonthState = {
