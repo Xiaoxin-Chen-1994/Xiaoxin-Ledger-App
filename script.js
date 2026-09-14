@@ -1038,7 +1038,8 @@ async function smartSync(selectedRepos, token, options = {}) {
                   text: currentLang === "en" ? "Keep Local" : "保留本地数据",
                   onClick: () => resolve(false)
                 }
-              ]
+              ],
+              onOutsideClick: (overlay) => {} // do nothing
             });
           });
 
@@ -1151,7 +1152,8 @@ async function smartSync(selectedRepos, token, options = {}) {
                     await smartSync(selectedRepos, token);
                   }
                 }
-              ]
+              ],
+              onOutsideClick: (overlay) => {} // do nothing
             });
           }
 
@@ -1272,7 +1274,8 @@ async function smartSync(selectedRepos, token, options = {}) {
                         text: currentLang === "en" ? "Keep Local" : "保留本地数据",
                         onClick: () => resolve(false)
                       }
-                    ]
+                    ],
+                    onOutsideClick: (overlay) => {} // do nothing
                   });
                 });
               }
@@ -4752,28 +4755,6 @@ async function showPage(name, title = latestTitle, options = {}) {
       document.getElementById("return-btn").textContent = "❮ " + t.cancel;
 
       let inProgress = !!workspace.create;
-      if (inProgress && options.mode && options.mode === "duplicateExistingEntry") {
-        inProgress = await new Promise(resolve => {
-          showPopupWindow({
-            title: currentLang === "en" ? "Confirm Duplicate" : "确认复制",
-            message:
-              currentLang === "en"
-                ? "You already have an entry in progress. Creating a duplicate will clear the existing information. Do you want to proceed with creating the duplicate?"
-                : "您已有正在创建的条目。复制新条目将清除原有内容，确定继续？",
-            buttons: [
-              {
-                text: currentLang === "en" ? "Duplicate" : "复制",
-                onClick: () => resolve(false)    // user confirmed
-              },
-              {
-                text: currentLang === "en" ? "Cancel" : "取消",
-                primary: true,
-                onClick: () => resolve(true)   // user cancelled
-              }
-            ]
-          });
-        });
-      }
 
       if (!inProgress) { // reset button texts when creating a new entry
         if (!options.mode || options.mode !== "duplicateExistingEntry") {
@@ -5061,7 +5042,7 @@ async function showPage(name, title = latestTitle, options = {}) {
         dragMode: "immediate",
         dragDirection: 'horizontal',
 
-        onClick: (e, el) => {
+        onClick: async (e, el) => {
           if (e.target.id === "go-create-btn") {
             showPage("create", "navTransaction");
             return;
@@ -5076,7 +5057,35 @@ async function showPage(name, title = latestTitle, options = {}) {
 
             // If clicking duplicate
           if (e.target.classList.contains("duplicate-btn")) {
-            showPage("create", t.create, { 'mode': 'duplicateExistingEntry', 'repoId': repoId, 'transactionId': entryId });
+            let proceed = true;
+
+            if (!!workspace.create) {
+              proceed = await new Promise(resolve => {
+                showPopupWindow({
+                  title: currentLang === "en" ? "Confirm Duplicate" : "确认复制",
+                  message:
+                    currentLang === "en"
+                      ? "You already have an entry in progress. Creating a duplicate will clear the existing information. Do you want to proceed with creating the duplicate?"
+                      : "您已有正在创建的条目。复制新条目将清除原有内容，确定继续？",
+                  buttons: [
+                    {
+                      text: currentLang === "en" ? "Duplicate" : "复制",
+                      onClick: () => resolve(true)    // user confirmed
+                    },
+                    {
+                      text: currentLang === "en" ? "Cancel" : "取消",
+                      primary: true,
+                      onClick: () => resolve(false)   // user cancelled
+                    }
+                  ],
+                  onOutsideClick: (overlay) => {} // do nothing
+                });
+              });
+            }
+
+            if (proceed) {
+              showPage("create", t.navTransaction, { 'mode': 'duplicateExistingEntry', 'repoId': repoId, 'transactionId': entryId });
+            }
             return;
           }
 
@@ -7362,7 +7371,8 @@ function handleDeleteClick(block, activeRepoId, task, type, title, hasSecondary)
           loadLabels(activeRepoId, task, type, title);
         }
       }
-    ]
+    ],
+    onOutsideClick: (overlay) => { overlay.remove(); } // simply remove overlay
   });
 }
 
@@ -9277,7 +9287,8 @@ async function deleteAccount(mode) { // mode = "account" (delete all) or mode = 
           }
         }
       }
-    ]
+    ],
+    onOutsideClick: (overlay) => { overlay.remove(); } // simply remove overlay
   });
 }
 window.deleteAccount = deleteAccount;
@@ -9460,7 +9471,8 @@ function showRepoMultiSelectPopup(repos, mode) {
           performAccountDeletion(mode);
         }
       }
-    ]
+    ],
+    onOutsideClick: (overlay) => { overlay.remove(); } // simply remove overlay
   });
 }
 
@@ -9552,7 +9564,7 @@ async function fetchUserRepos(token) {
   return await res.json();
 }
 
-function showPopupWindow({ title, message, buttons = [] }) {
+function showPopupWindow({ title, message, buttons = [], onOutsideClick }) {
   // Overlay
   const overlay = document.createElement("div");
   overlay.classList.add("glass-popup-overlay");
@@ -9560,7 +9572,7 @@ function showPopupWindow({ title, message, buttons = [] }) {
   // Close when clicking outside the popup
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
-      overlay.remove();
+      onOutsideClick(overlay);
     }
   });
 
@@ -11069,7 +11081,8 @@ updateBtns.forEach(btn => {
             /* popup auto closes */
           }
         }
-      ]
+      ],
+      onOutsideClick: (overlay) => { overlay.remove(); } // simply remove overlay
     });
   });
 });
@@ -11214,7 +11227,8 @@ async function RenderGrocerySearch() {
             text: currentLang === "en" ? "Keep Local" : "保留本地数据",
             onClick: () => resolve(false)
           }
-        ]
+        ],
+        onOutsideClick: (overlay) => {} // do nothing
       });
     });
 
@@ -11734,7 +11748,8 @@ async function RenderGrocerySearch() {
             renderManageGrocerySearchPage();
           }
         }
-      ]
+      ],
+      onOutsideClick: (overlay) => { overlay.remove(); } // simply remove overlay
     });
   }
 
