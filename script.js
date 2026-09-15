@@ -11178,6 +11178,12 @@ async function RenderGrocerySearch() {
       return cloudObj; // identical, choose local or cloud doesn't matter
     }
 
+    // If the creation but cloud version newer → skip popup and use cloud
+    if ((cloudObj.createdAt > localObj.createdAt) || (sameCreated && (cloudObj.lastUpdatedAt >= localObj.lastUpdatedAt))) {
+      await saveLocalJsonData("grocery.json", cloudObj); // overwrite local data
+      return cloudObj;
+    }
+
     const localCreated = new Date(localObj.createdAt);
     const cloudCreated = new Date(cloudObj.createdAt);
 
