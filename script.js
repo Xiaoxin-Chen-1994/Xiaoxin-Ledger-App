@@ -3469,8 +3469,8 @@ async function saveEntry() {
     if (fromAcc === toAcc) {
       showStatusMessage(
         currentLang === "en"
-          ? "The from and to accounts cannot be the same."
-          : "转出账户和转入账户不能相同。",
+          ? "The from and to accounts cannot be the same"
+          : "转出账户和转入账户不能相同",
         "error",
         4000
       );
@@ -7036,8 +7036,8 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
     if (!name) {
       showStatusMessage(
         currentLang === "en"
-          ? "The input name must not be empty."
-          : "输入的名称不能为空。",
+          ? "The input name must not be empty"
+          : "输入的名称不能为空",
         "error"
       );
       return;
@@ -7057,8 +7057,8 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
       if (!valid) {
         showStatusMessage(
           currentLang === "en"
-            ? "The input name must not match any existing categories."
-            : "输入的名称不能与现有项目重复。",
+            ? "The input name must not match any existing categories"
+            : "输入的名称不能与现有项目重复",
           "error"
         );
         return;
@@ -7127,8 +7127,8 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
       if (!valid) {
         showStatusMessage(
           currentLang === "en"
-            ? "The input name must not match any existing items."
-            : "输入的名称不能与现有条目重复。",
+            ? "The input name must not match any existing items"
+            : "输入的名称不能与现有条目重复",
           "error"
         );
         return;
@@ -9336,11 +9336,11 @@ async function performAccountDeletion(mode) {
   const successMessage =
     mode === "account"
       ? currentLang === "en"
-        ? "Your account and all associated data have been deleted."
-        : "您的账户和所有相关数据已删除。"
+        ? "Your account and all associated data have been deleted"
+        : "您的账户和所有相关数据已删除"
       : currentLang === "en"
-        ? "Your ledger data has been deleted. "
-        : "您的账本数据已删除。";
+        ? "Your ledger data has been deleted"
+        : "您的账本数据已删除";
 
   showStatusMessage(successMessage, "success", 4000);
 
@@ -9457,8 +9457,8 @@ function showRepoMultiSelectPopup(repos, mode) {
           if (selected.length === 0) {
             showStatusMessage(
               currentLang === "en"
-                ? "Please select at least one repository."
-                : "请至少选择一个仓库。",
+                ? "Please select at least one repository"
+                : "请至少选择一个仓库",
               "error",
               3000
             );
@@ -11196,14 +11196,14 @@ async function RenderGrocerySearch() {
     // If the creation but cloud version newer → skip popup and use cloud
     if ((cloudObj.createdAt > localObj.createdAt) || (sameCreated && (cloudObj.lastUpdatedAt >= localObj.lastUpdatedAt))) {
       showStatusMessage(
-        currentLang === "en" ? "Cloud version is newer and will overwrite the local data." : "云端版本较新，将覆盖本地数据。",
+        currentLang === "en" ? "Cloud version is newer and will overwrite the local data" : "云端版本较新，将覆盖本地数据",
         "success"
       );
       
       await saveLocalJsonData("grocery.json", cloudObj); // overwrite local data
       
       showStatusMessage(
-        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        currentLang === "en" ? "Cloud sync successful" : "云端同步成功",
         "success"
       );
 
@@ -11270,7 +11270,7 @@ async function RenderGrocerySearch() {
       await saveLocalJsonData("grocery.json", cloudObj);
       
       showStatusMessage(
-        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        currentLang === "en" ? "Cloud sync successful" : "云端同步成功",
         "success"
       );
 
@@ -11282,7 +11282,7 @@ async function RenderGrocerySearch() {
       if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localObj, token);
 
       showStatusMessage(
-        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        currentLang === "en" ? "Cloud sync successful" : "云端同步成功",
         "success"
       );
       
@@ -11310,7 +11310,7 @@ async function RenderGrocerySearch() {
 
         hideOfflineBanner();
         showStatusMessage(
-          currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+          currentLang === "en" ? "Cloud sync successful" : "云端同步成功",
           "success"
         );
 
@@ -11322,7 +11322,7 @@ async function RenderGrocerySearch() {
 
         showOfflineBanner("GitHub write failed: " + err);
         showStatusMessage(
-          currentLang === "en" ? "Cloud sync failed." : "云端同步失败。",
+          currentLang === "en" ? "Cloud sync failed" : "云端同步失败",
           "error"
         );
       }
@@ -11724,7 +11724,7 @@ async function RenderGrocerySearch() {
       // 2) For all other rows, name is required
       if (!name) {
         showStatusMessage(
-          currentLang === "en" ? "Store name cannot be empty." : "商店名称不能为空。",
+          currentLang === "en" ? "Store name cannot be empty" : "商店名称不能为空",
           "error"
         );
         return;
@@ -11766,8 +11766,8 @@ async function RenderGrocerySearch() {
       if (groceryData.stores[name]?.items?.length > 0) {
         alert(
           currentLang === "en"
-            ? `Cannot delete "${name}" because it still contains watchlist items.`
-            : `无法删除 "${name}"，因为它仍包含心愿物品。`
+            ? `Cannot delete "${name}" because it still contains watchlist items`
+            : `无法删除 "${name}"，因为它仍包含心愿物品`
         );
         return;
       }
@@ -12754,7 +12754,7 @@ function OpenInterestRateCal() {
 
       // Case 2: one empty → error
       if (date === "" || bal === "") {
-        showStatusMessage("请完整填写日期和余额，或留空整行。");
+        showStatusMessage("请完整填写日期和余额，或留空整行");
         return null;
       }
 
@@ -12998,7 +12998,7 @@ function OpenInterestRateCal() {
 
   function calculateFromDailyBalances(balanceRows, interestStr) {
     if (!balanceRows || balanceRows.length === 0) {
-      showStatusMessage("请至少输入一行余额数据。");
+      showStatusMessage("请至少输入一行余额数据");
       return null;
     }
 
@@ -13010,7 +13010,7 @@ function OpenInterestRateCal() {
 
     const interest = Number(interestStr);
     if (!Number.isFinite(interest)) {
-      showStatusMessage("请填写有效的利息金额。");
+      showStatusMessage("请填写有效的利息金额");
       return null;
     }
 
@@ -13090,7 +13090,7 @@ function OpenInterestRateCal() {
   `;
 
     content.appendChild(box);
-    showStatusMessage("计算完成。");
+    showStatusMessage("计算完成", "success");
   }
 }
 window.OpenInterestRateCal = OpenInterestRateCal;
