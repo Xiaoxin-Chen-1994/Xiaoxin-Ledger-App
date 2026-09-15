@@ -11130,6 +11130,10 @@ async function RenderGrocerySearch() {
   });
 
   async function initializeGrocerySearch() {
+    // keep track of sync progress
+    let completed = 1;
+    let total = 2;
+
     const localJSON = await loadLocalJsonData("grocery.json", null);
     const cloudJSON =
       token && !repo.skipSync
@@ -11149,18 +11153,27 @@ async function RenderGrocerySearch() {
       };
       await saveLocalJsonData("grocery.json", obj);
       if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", obj, token);
+      
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return obj;
     }
 
     // Case 2: cloud exists, local does not → copy cloud → local
     if (hasCloud && !hasLocal) {
       await saveLocalJsonData("grocery.json", cloudJSON);
+
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return cloudJSON;
     }
 
     // Case 3: local exists, cloud does not → copy local → cloud
     if (!hasCloud && hasLocal) {
       if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localJSON, token);
+
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return localJSON;
     }
 
@@ -11175,12 +11188,17 @@ async function RenderGrocerySearch() {
 
     // If both timestamps match → same version → skip popup
     if (sameCreated && sameUpdated) {
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return cloudObj; // identical, choose local or cloud doesn't matter
     }
 
     // If the creation but cloud version newer → skip popup and use cloud
     if ((cloudObj.createdAt > localObj.createdAt) || (sameCreated && (cloudObj.lastUpdatedAt >= localObj.lastUpdatedAt))) {
       await saveLocalJsonData("grocery.json", cloudObj); // overwrite local data
+
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return cloudObj;
     }
 
@@ -11240,17 +11258,30 @@ async function RenderGrocerySearch() {
 
     if (useCloud) {
       await saveLocalJsonData("grocery.json", cloudObj);
+      
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return cloudObj;
     } else {
       if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localObj, token);
+
+      completed++;
+      updateSyncProgress(Math.round((completed / total) * 100));
       return localObj;
     }
   }
 
   async function syncGroceryData() {
+    // keep track of sync progress
+    let completed = 0;
+    let total = 2;
+
     groceryData.lastUpdatedAt = new Date().toISOString();
 
     await saveLocalJsonData("grocery.json", groceryData);
+
+    completed++;
+    updateSyncProgress(Math.round((completed / total) * 100));
 
     if (token && !repo.skipSync) {
       try {
@@ -11261,6 +11292,9 @@ async function RenderGrocerySearch() {
           currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
           "success"
         );
+
+        completed++;
+        updateSyncProgress(Math.round((completed / total) * 100));
 
       } catch (err) {
         console.error("GitHub write failed:", err);
