@@ -11195,7 +11195,17 @@ async function RenderGrocerySearch() {
 
     // If the creation but cloud version newer → skip popup and use cloud
     if ((cloudObj.createdAt > localObj.createdAt) || (sameCreated && (cloudObj.lastUpdatedAt >= localObj.lastUpdatedAt))) {
+      showStatusMessage(
+        currentLang === "en" ? "Cloud version is newer and will overwrite the local data." : "云端版本较新，将覆盖本地数据。",
+        "success"
+      );
+      
       await saveLocalJsonData("grocery.json", cloudObj); // overwrite local data
+      
+      showStatusMessage(
+        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        "success"
+      );
 
       completed++;
       updateSyncProgress(Math.round((completed / total) * 100));
@@ -11259,12 +11269,23 @@ async function RenderGrocerySearch() {
     if (useCloud) {
       await saveLocalJsonData("grocery.json", cloudObj);
       
+      showStatusMessage(
+        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        "success"
+      );
+
       completed++;
       updateSyncProgress(Math.round((completed / total) * 100));
       return cloudObj;
     } else {
+
       if (token && !repo.skipSync) await githubUploadFile(repoName, "GrocerySearch.json", localObj, token);
 
+      showStatusMessage(
+        currentLang === "en" ? "Cloud sync successful." : "云端同步成功。",
+        "success"
+      );
+      
       completed++;
       updateSyncProgress(Math.round((completed / total) * 100));
       return localObj;
