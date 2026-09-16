@@ -178,6 +178,7 @@ const translations = {
     collection: "🗂Collection",
     tags: "🏷Tags",
     enterTagName: "Enter tag name",
+    merchant: "Merchant",
     exchangeRate: "Ex. Rate",
     transferFrom: "From",
     transferTo: "To",
@@ -321,6 +322,7 @@ const translations = {
     collection: "🗂项目",
     tags: "🏷标签",
     enterTagName: "输入标签名称",
+    merchant: "商户",
     exchangeRate: "汇率",
     transferFrom: "转出",
     transferTo: "转入",
@@ -2859,7 +2861,6 @@ function switchTab(index, mode = 'manual') {
   tabButtons.forEach(btn => btn.classList.remove("active"));
   tabButtons[index].classList.add("active");
 
-
   // Find the active tab container
   const activeTab = document.querySelectorAll(".transaction-page")[index];
   const activeForm = inputType + "-form";
@@ -2989,6 +2990,10 @@ function switchTab(index, mode = 'manual') {
   // Cache the add button ONCE
   const addBtn = group.querySelector("button[id$='add-item-btn']");
 
+  // merchant
+  const merchantEl = activeTab.querySelector(`#${activeForm} input[id$='merchant-input']`);
+  merchantEl.value = subWorkspace.merchant;
+
   // item rows
   if (Array.isArray(subWorkspace.items) && subWorkspace.items.length > 0) {
     // Insert restored rows
@@ -3101,7 +3106,7 @@ document.querySelectorAll(".tag-input-container").forEach(container => {
     const tags = settings.tags;
 
     Object.keys(tags).forEach(tag => {
-      if (tag && tag.includes(text)) {
+      if (tag && tag.toLowerCase().includes(text.toLowerCase())) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "tag-suggestion-btn";
@@ -3212,6 +3217,52 @@ function autoSave() {
   }, 150);
 }
 
+// Loop through each merchant input container
+document.querySelectorAll(".merchant-input-container").forEach(container => {
+  const input = container.querySelector("input");
+  const suggestionsDiv = container.querySelector(".merchant-suggestions");
+
+  // Listen for typing
+  input.addEventListener("input", async (e) => {
+    autoSave();
+
+    const text = e.target.value.trim();
+    suggestionsDiv.innerHTML = "";
+
+    if (text.length === 0) return;
+
+    let subWorkspace = null;
+
+    if (latestPage.includes("create")) { // when creating an entry
+      subWorkspace = workspace.create;
+    } else {
+      subWorkspace = workspace.transactions[latestOptions.transactionId];
+    }
+
+    const inputType = subWorkspace.inputType;
+    const repoId = subWorkspace[inputType].repoId;
+    const settings = settingsMap[repoId];
+
+    const merchants = settings.merchants ?? [];
+
+    Object.keys(merchants).forEach(merchant => {
+      if (merchant && merchant.toLowerCase().includes(text.toLowerCase())) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "merchant-suggestion-btn";
+        btn.textContent = merchant;
+
+        btn.addEventListener("click", () => {
+          input.value = merchant;
+          suggestionsDiv.innerHTML = "";
+        });
+
+        suggestionsDiv.appendChild(btn);
+      }
+    });
+  });
+});
+
 function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
   const t = translations[currentLang];
 
@@ -3319,6 +3370,10 @@ function saveItemsNotesToWorkspace() {
   // Save tag inputs
   const tagInputEl = activeTab.querySelector(`#${activeForm} .tag-input`);
   subWorkspace.tagInput = tagInputEl?.value || "";
+
+  // Save merchant
+  const merchantEl = activeTab.querySelector(`#${activeForm} .merchant-input`);
+  subWorkspace.merchant = merchantEl?.value || "";
 
   // Save item rows
   const group = activeTab.querySelector(`#${activeForm} .item-group`);
@@ -3534,7 +3589,8 @@ async function saveEntry() {
       account: ws[inputType].accountInfo.account.name,
       currency: ws[inputType].accountInfo.account.currency,
       subject: ws[inputType].subject,
-      collection: ws[inputType].collection
+      collection: ws[inputType].collection,
+      merchant: ws.merchant ?? "",
     };
   } else if (inputType === "transfer") {
     entryData = {
@@ -3544,7 +3600,8 @@ async function saveEntry() {
       fromAccount: ws[inputType].fromAccountInfo.account.name,
       fromCurrency: ws[inputType].fromAccountInfo.account.currency,
       toAccount: ws[inputType].toAccountInfo.account.name,
-      toCurrency: ws[inputType].toAccountInfo.account.currency
+      toCurrency: ws[inputType].toAccountInfo.account.currency,
+      merchant: ws.merchant ?? "",
     };
   } else if (inputType === "balance") {
     entryData = {
@@ -3620,6 +3677,35 @@ async function saveEntry() {
 
       if (settingsMap[repoId].tags[tag].length === 0) {
         delete settingsMap[repoId].tags[tag];
+      }
+    }
+
+    // if merchant info available
+    if ((inputType === "expense" || inputType === "income" || inputType === "transfer") && ws.merchant !== "") {
+      const oldMerchant = loadedEntry_original?.merchant || [];
+      const newMerchant = entryData.merchant || [];
+
+      if (oldMerchant !== newMerchant) {
+        if (!settingsMap[repoId].merchants) {
+          settingsMap[repoId].merchants = {};
+        }
+        
+        // Add merchant if not exist in the merchant map yet
+        if (!settingsMap[repoId].merchants[newMerchant]) {
+          settingsMap[repoId].merchants[newMerchant] = [];
+        }
+
+        if (!settingsMap[repoId].merchants[newMerchant].includes(entryId)) {
+          settingsMap[repoId].merchants[newMerchant].push(entryId);
+        }
+
+        // Remove entry from old merchant
+        settingsMap[repoId].merchants[oldMerchant] =
+          settingsMap[repoId].merchants[oldMerchant].filter(id => id !== entryId);
+
+        if (settingsMap[repoId].merchants[oldMerchant].length === 0) {
+          delete settingsMap[repoId].merchants[oldMerchant];
+        }
       }
     }
 
@@ -4745,6 +4831,10 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   let dateTimeBtn = null;
 
+  // show the page
+  target.style.display = "block";
+  target.style.zIndex = historyStack.length;
+  
   // Page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
 
@@ -4833,6 +4923,16 @@ async function showPage(name, title = latestTitle, options = {}) {
       secondBtn.style.color = "var(--red)";
     }
 
+    document.querySelectorAll(".tag-input-container").forEach(container => {
+      const suggestionsDiv = container.querySelector(".tag-suggestions");
+      suggestionsDiv.innerHTML = "";
+    }); // clear prior suggestions when loading a different entry
+
+    document.querySelectorAll(".merchant-input-container").forEach(container => {
+      const suggestionsDiv = container.querySelector(".merchant-suggestions");
+      suggestionsDiv.innerHTML = "";
+    }); // clear prior suggestions when loading a different entry
+
     switchTab(subWorkspace.inputTypeIndex, 'auto');
 
     // prepare date time selector columns in advance
@@ -4855,6 +4955,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     const nav = document.getElementById("transaction-nav")
     nav.style.display = "flex";
     nav.style.zIndex = target.style.zIndex; // use same zIndex as the transaction page
+
     document.querySelectorAll('.form-row label').forEach(label => {
       label.style.width = (currentLang === 'zh') ? '20%' : '25%';
     });
@@ -5178,10 +5279,6 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${window.currentUserLogin}`;
   }
 
-  // show the page
-  target.style.display = "block";
-  target.style.zIndex = historyStack.length;
-
   renderPinnedBubbles();
 }
 window.showPage = showPage;
@@ -5495,6 +5592,7 @@ function loadEntryIntoWorkspace(repoId, entryId) {
   ws.entryId = e.entryId;
   ws.amount = Number(e.amount) || 0;
   ws.notes = e.notes || "";
+  ws.merchant = e.merchant || "";
   ws.items = [...(e.items || [])];
   ws.tags = [...(e.tags || [])];
   ws.inputTransactionTime = e.transactionTime;
@@ -8137,6 +8235,9 @@ async function setLanguage(lang, sync = true) {
   document.getElementById("income-tag-input").placeholder = t.enterTagName;
   document.getElementById("transfer-tag-input").placeholder = t.enterTagName;
   document.getElementById("balance-tag-input").placeholder = t.enterTagName;
+  document.getElementById("expense-merchant-input").placeholder = t.merchant;
+  document.getElementById("income-merchant-input").placeholder = t.merchant;
+  document.getElementById("transfer-merchant-input").placeholder = t.merchant;
   document.querySelectorAll('.transaction-notes-title')
     .forEach(el => el.textContent = t.notes);
 
