@@ -13626,7 +13626,7 @@ function enterLoyaltyEditMode(id, repoId) {
     </div>
 
     <input class="loyalty-input" value="${p.number || ""}" placeholder="会员号" data-field="number">
-    <input class="loyalty-input" value="${p.expiry || ""}" placeholder="到期日 YYYY-MM-DD" data-field="expiry">
+    <input class="loyalty-input" value="${p.expiry || ""}" type="date" placeholder="到期日 YYYY-MM-DD" data-field="expiry">
     <textarea class="loyalty-textarea" placeholder="备注" data-field="details">${p.details || ""}</textarea>
 
     <div class="reward-edit-footer">
