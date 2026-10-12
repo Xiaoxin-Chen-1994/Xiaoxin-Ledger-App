@@ -1952,6 +1952,12 @@ async function init() {
 
   // Load ALL ledger DBs
   await smartSync(selectedRepos, token); // this second smart sync actually merges with the cloud data
+  
+  // re-render home page using the synced data
+  renderAlertCenter();
+  updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
+  updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
+  updateKanbanRow({ en: "This Year", zh: "本年" }[currentLang], 2, getDateRange('thisYear'));
 
   // Initialize household selector
   initLedgerSelector();
