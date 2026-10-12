@@ -12922,21 +12922,31 @@ function OpenInterestRateCal() {
 
     card.appendChild(makeMode3MethodSelector());
 
-    // Start balance input
-    const startBalanceLabel = makeLabel("期初余额（仅在选择“期初”时填写）");
-    card.appendChild(startBalanceLabel);
+    // Balance input
+    const balanceLabel = makeLabel("期初余额");
+    card.appendChild(balanceLabel);
 
-    const startBalanceInput = makeInput("number", "例如：10000");
-    startBalanceInput.step = "0.01";
-    card.appendChild(startBalanceInput);
+    const balanceInput = makeInput("number", "例如：10000");
+    balanceInput.step = "0.01";
+    balanceInput.id = "m3-balance";
+    card.appendChild(balanceInput);
 
-    // End balance input
-    const endBalanceLabel = makeLabel("期末余额（仅在选择“期末”时填写）");
-    card.appendChild(endBalanceLabel);
+    function updateBalanceLabel() {
+      const method = document.querySelector(
+        'input[name="m3method"]:checked'
+      ).value;
 
-    const endBalanceInput = makeInput("number", "例如：15000");
-    endBalanceInput.step = "0.01";
-    card.appendChild(endBalanceInput);
+      balanceLabel.textContent =
+        method === "start"
+          ? "期初余额"
+          : "期末余额";
+    }
+
+    card.querySelectorAll('input[name="m3method"]').forEach(radio => {
+      radio.addEventListener("change", updateBalanceLabel);
+    });
+
+    updateBalanceLabel();
 
     // Change rows
     card.appendChild(makeLabel("每日变动（仅输入有变动的日期，但必须包括第一天和最后一天）"));
@@ -12973,28 +12983,20 @@ function OpenInterestRateCal() {
       let balanceRows;
 
       if (method === "start") {
-        if (startBalanceInput.value === "") {
-          showStatusMessage("请选择期初方式并填写期初余额。");
-          return;
-        }
-        if (endBalanceInput.value !== "") {
-          showStatusMessage("请不要同时填写期初和期末余额。");
+        if (balanceInput.value === "") {
+          showStatusMessage("请填写期初余额。");
           return;
         }
 
-        balanceRows = convertChangesForward(startBalanceInput.value, changeRows);
+        balanceRows = convertChangesForward(balanceInput.value, changeRows);
 
       } else {
-        if (endBalanceInput.value === "") {
-          showStatusMessage("请选择期末方式并填写期末余额。");
-          return;
-        }
-        if (startBalanceInput.value !== "") {
-          showStatusMessage("请不要同时填写期初和期末余额。");
+        if (balanceInput.value === "") {
+          showStatusMessage("请填写期末余额。");
           return;
         }
 
-        balanceRows = convertChangesBackward(endBalanceInput.value, changeRows);
+        balanceRows = convertChangesBackward(balanceInput.value, changeRows);
       }
 
       if (!balanceRows) return;
