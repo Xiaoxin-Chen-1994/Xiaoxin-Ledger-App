@@ -3261,6 +3261,7 @@ document.querySelectorAll(".merchant-input-container").forEach(container => {
         btn.addEventListener("click", () => {
           input.value = merchant;
           suggestionsDiv.innerHTML = "";
+          saveItemsNotesToWorkspace();
         });
 
         suggestionsDiv.appendChild(btn);
