@@ -3131,7 +3131,7 @@ emoji-picker {
 }
 
 #searchResults button {
-  margin: 0.3rem 0.3rem 0.6rem 0;
+  margin: 0.3rem 0.3rem 0.3rem 0;
   flex: 0 0 auto;
   white-space: nowrap;
   display: flex;
