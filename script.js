@@ -153,9 +153,9 @@ const translations = {
     transfer: "Transfer",
     balance: "Balance",
     type: "Type",
-    household: "👥Household",
-    category: "📁Category",
-    account: "💳Account",
+    household: "Household",
+    category: "Category",
+    account: "Account",
     cashAccounts: "Cash Accounts",
     creditCards: "Credit Cards",
     depositoryAccounts: "Depository Accounts",
@@ -170,13 +170,13 @@ const translations = {
     statementLabel: "Statement Date",
     dueLabel: "Due Date",
     creditLimitLabel: "Credit Limit",
-    time: "🕒Time",
+    time: "Time",
     now: "Now",
     dismiss: "Dismiss ▼",
     datePrefixes: ["2 days ago ", "Yesterday ", "Today ", "Tomorrow ", "In 2 days "],
-    subject: "👤subject",
-    collection: "🗂Collection",
-    tags: "🏷Tags",
+    subject: "subject",
+    collection: "Collection",
+    tags: "Tags",
     enterTagName: "Enter tag name",
     merchant: "Merchant",
     exchangeRate: "Ex. Rate",
@@ -185,7 +185,7 @@ const translations = {
     item: "Item",
     unitPrice: "Unit price",
     totalPrice: "Total price",
-    notes: "📝Notes",
+    notes: "Notes",
     save: "✔️Save",
     savedSuccess: "Save success!",
     loyaltyPrograms: "Loyalty Programs",
@@ -297,9 +297,9 @@ const translations = {
     income: "收入",
     transfer: "转账",
     balance: "余额",
-    household: "👥家庭",
-    category: "📁分类",
-    account: "💳账户",
+    household: "家庭",
+    category: "分类",
+    account: "账户",
     cashAccounts: "现金账户",
     creditCards: "信用卡",
     depositoryAccounts: "银行账户",
@@ -314,13 +314,13 @@ const translations = {
     statementLabel: "账单日",
     dueLabel: "还款日",
     creditLimitLabel: "信用额度",
-    time: "🕒时间",
+    time: "时间",
     now: "现在",
     dismiss: "收起 ▼",
     datePrefixes: ["前天 ", "昨天 ", "今天 ", "明天 ", "后天 "],
     subject: "对象",
-    collection: "🗂项目",
-    tags: "🏷标签",
+    collection: "项目",
+    tags: "标签",
     enterTagName: "输入标签名称",
     merchant: "商户",
     exchangeRate: "汇率",
@@ -329,7 +329,7 @@ const translations = {
     item: "条目",
     unitPrice: "单价",
     totalPrice: "总价",
-    notes: "📝备注",
+    notes: "备注",
     save: "✔️保存",
     savedSuccess: "保存成功!",
     loyaltyPrograms: "会员计划",
@@ -2501,17 +2501,7 @@ function setDefaultCategory(button, subWorkspace) {
     subWorkspace[inputType].primaryCategoryIcon = primaryIcon;
     subWorkspace[inputType].secondaryCategoryIcon = secondaryIcon;
 
-    subWorkspace[inputType].catInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
-      </span>
-      <span class="cat-separator">&gt;</span>
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
-      </span>
-    `;
+    subWorkspace[inputType].catInnerHTML = `${subWorkspace[inputType].primaryCategory} &gt; ${subWorkspace[inputType].secondaryCategory}`;
 
     button.innerHTML = subWorkspace[inputType].catInnerHTML;
 
@@ -2642,12 +2632,7 @@ function setDefaultAccount(button, subWorkspace) {
     const accountIcon = accountObj.icon || "";
     const accountCurrency = accountObj.currency;
 
-    subWorkspace[inputType].accountInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${accountIcon}</span>
-        <span class="cat-label">${accountName} (${accountCurrency})</span>
-      </span>
-    `;
+    subWorkspace[inputType].accountInnerHTML = `${accountName} (${accountCurrency})`;
 
     button.innerHTML = subWorkspace[inputType].accountInnerHTML;
 
@@ -2699,12 +2684,7 @@ function setDefaultAccount(button, subWorkspace) {
     const fromName = from.name;
     const fromCurrency = from.currency;
 
-    subWorkspace.transfer.fromAccountInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${fromIcon}</span>
-        <span class="cat-label">${fromName} (${fromCurrency})</span>
-      </span>
-    `;
+    subWorkspace.transfer.fromAccountInnerHTML = `${fromName} (${fromCurrency})`;
 
     subWorkspace[inputType].toAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].toAccountInfo.type, subWorkspace[inputType].toAccountInfo.account.name);
     const to = subWorkspace.transfer.toAccountInfo.account;
@@ -2712,12 +2692,7 @@ function setDefaultAccount(button, subWorkspace) {
     const toName = to.name;
     const toCurrency = to.currency;
 
-    subWorkspace.transfer.toAccountInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${toIcon}</span>
-        <span class="cat-label">${toName} (${toCurrency})</span>
-      </span>
-    `;
+    subWorkspace.transfer.toAccountInnerHTML = `${toName} (${toCurrency})`;
 
     button[0].innerHTML = subWorkspace[inputType].fromAccountInnerHTML;
     button[1].innerHTML = subWorkspace[inputType].toAccountInnerHTML;
@@ -2763,12 +2738,7 @@ function setDefaultSubject(button, subWorkspace) {
     const subject = subjects.find(acc => acc.name === subWorkspace[inputType].subject);
     subWorkspace[inputType].subjectIcon = subject.icon
 
-    subWorkspace[inputType].subjectInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].subjectIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].subject}</span>
-      </span>
-    `;
+    subWorkspace[inputType].subjectInnerHTML = `${subWorkspace[inputType].subject}`;
 
     // Update button
     button.innerHTML = subWorkspace[inputType].subjectInnerHTML;
@@ -2814,12 +2784,7 @@ function setDefaultCollection(button, subWorkspace) {
     const collection = collections.find(acc => acc.name === subWorkspace[inputType].collection);
     subWorkspace[inputType].collectionIcon = collection.icon
 
-    subWorkspace[inputType].collectionInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].collectionIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].collection}</span>
-      </span>
-    `;
+    subWorkspace[inputType].collectionInnerHTML = `${subWorkspace[inputType].collection}`;
 
     // Update button
     button.innerHTML = subWorkspace[inputType].collectionInnerHTML;
@@ -3082,6 +3047,15 @@ wrapper.addEventListener("touchend", e => {
   endX = 0;
 });
 
+document.querySelectorAll('.form-row input, .form-row textarea').forEach(input => {
+  input.addEventListener('focus', () => {
+    document.querySelectorAll('.form-row.active')
+      .forEach(row => row.classList.remove('active'));
+
+    input.closest('.form-row')?.classList.add('active');
+  });
+});
+
 // Loop through each tag input container
 document.querySelectorAll(".tag-input-container").forEach(container => {
   const input = container.querySelector("input");
@@ -3231,7 +3205,7 @@ document.querySelectorAll(".merchant-input-container").forEach(container => {
   // Listen for typing
   input.addEventListener("input", async (e) => {
     autoSave();
-
+    
     const text = e.target.value.trim();
     suggestionsDiv.innerHTML = "";
 
@@ -3300,6 +3274,13 @@ function createItemRow(nameValue = "", unitValue = "", priceValue = "") {
 
   function attachAutoSave(input) {
     input.addEventListener("input", autoSave);
+
+    input.addEventListener('focus', () => { // also highlight the row when focusing on any input
+      document.querySelectorAll('.form-row.active')
+        .forEach(row => row.classList.remove('active'));
+
+      input.closest('.form-row')?.classList.add('active');
+    });
   }
 
   attachAutoSave(nameInput);
@@ -4862,6 +4843,7 @@ async function showPage(name, title = latestTitle, options = {}) {
           workspace.create.amount = 0;
           workspace.create.calculation = "";
           workspace.create.tags = [];
+          workspace.create.merchant = "";
           workspace.create.notes = "";
         } else { // duplicate an existing entry
           loadEntryIntoWorkspace(options.repoId, options.transactionId); // first load this entry
@@ -4964,7 +4946,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     nav.style.zIndex = target.style.zIndex; // use same zIndex as the transaction page
 
     document.querySelectorAll('.form-row label').forEach(label => {
-      label.style.width = (currentLang === 'zh') ? '20%' : '25%';
+      label.style.width = (currentLang === 'zh') ? '8%' : '15%';
+      label.style.textAlign = (currentLang === 'zh') ? 'center' : 'right';
     });
 
   } else if (latestPage === "rewards-hub") {
@@ -8242,9 +8225,13 @@ async function setLanguage(lang, sync = true) {
   document.getElementById("income-tag-input").placeholder = t.enterTagName;
   document.getElementById("transfer-tag-input").placeholder = t.enterTagName;
   document.getElementById("balance-tag-input").placeholder = t.enterTagName;
+  document.querySelectorAll('.transaction-merchant-title')
+    .forEach(el => el.textContent = t.merchant);
   document.getElementById("expense-merchant-input").placeholder = t.merchant;
   document.getElementById("income-merchant-input").placeholder = t.merchant;
   document.getElementById("transfer-merchant-input").placeholder = t.merchant;
+  document.querySelectorAll('.transaction-item-title')
+    .forEach(el => el.textContent = t.item);
   document.querySelectorAll('.transaction-notes-title')
     .forEach(el => el.textContent = t.notes);
 
@@ -10111,17 +10098,7 @@ function updateSelectorPreview(updatedCol) {
     subWorkspace[inputType].secondaryCategory = sName;
     subWorkspace[inputType].secondaryCategoryIcon = sIcon;
 
-    subWorkspace[inputType].catInnerHTML = `
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].primaryCategoryIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].primaryCategory}</span>
-      </span>
-      <span class="cat-separator">&gt;</span>
-      <span class="cat-part">
-        <span class="icon selected">${subWorkspace[inputType].secondaryCategoryIcon}</span>
-        <span class="cat-label">${subWorkspace[inputType].secondaryCategory}</span>
-      </span>
-    `;
+    subWorkspace[inputType].catInnerHTML = `${subWorkspace[inputType].primaryCategory} &gt; ${subWorkspace[inputType].secondaryCategory}`;
 
     lastButton.innerHTML = subWorkspace[inputType].catInnerHTML;
   } else if (['account', 'fromAccount', 'toAccount'].includes(lastButton.dataset.type)) {
@@ -10150,12 +10127,7 @@ function updateSelectorPreview(updatedCol) {
       const accountIcon = accountObj.icon || "";
       const accountCurrency = accountObj.currency;
 
-      subWorkspace[inputType].accountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${accountIcon}</span>
-          <span class="cat-label">${accountName} (${accountCurrency})</span>
-        </span>
-      `;
+      subWorkspace[inputType].accountInnerHTML = `${accountName} (${accountCurrency})`;
 
       lastButton.innerHTML = subWorkspace[inputType].accountInnerHTML;
     } else { // for transfer
@@ -10175,24 +10147,14 @@ function updateSelectorPreview(updatedCol) {
       const fromName = from.name;
       const fromCurrency = from.currency;
 
-      subWorkspace.transfer.fromAccountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${fromIcon}</span>
-          <span class="cat-label">${fromName} (${fromCurrency})</span>
-        </span>
-      `;
+      subWorkspace.transfer.fromAccountInnerHTML = `${fromName} (${fromCurrency})`;
 
       const to = subWorkspace.transfer.toAccountInfo.account;
       const toIcon = to.icon || "";
       const toName = to.name;
       const toCurrency = to.currency;
 
-      subWorkspace.transfer.toAccountInnerHTML = `
-        <span class="cat-part">
-          <span class="icon selected">${toIcon}</span>
-          <span class="cat-label">${toName} (${toCurrency})</span>
-        </span>
-      `;
+      subWorkspace.transfer.toAccountInnerHTML = `${toName} (${toCurrency})`;
 
       let fromAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='fromAccount']`);
       let toAccountBtn = document.querySelector(`#${activeForm} .selector-button[data-type='toAccount']`);
@@ -10244,7 +10206,7 @@ function updateSelectorPreview(updatedCol) {
     subWorkspace[inputType].subject = name;
     subWorkspace[inputType].subjectIcon = icon;
 
-    lastButton.innerHTML = `${icon} ${name}`;
+    lastButton.innerHTML = `${name}`;
   } else if (lastButton.dataset.type === "collection") {
     const { icon: icon, name: name } =
       getSelectedValue(collectionSelector, ".collection-col", true);
@@ -10252,7 +10214,7 @@ function updateSelectorPreview(updatedCol) {
     subWorkspace[inputType].collection = name;
     subWorkspace[inputType].collectionIcon = icon;
 
-    lastButton.innerHTML = `${icon} ${name}`;
+    lastButton.innerHTML = `${name}`;
   }
 }
 
@@ -10450,25 +10412,14 @@ function showSelector(selName) {
     if (openSelector === 'amount') { // if previously was an amount-selector
       prevLastButton.style.borderWidth = "1px";
     } else {
-      if (prevLastButton) {
-        if (prevLastButton.id === "transfer-accounts") {
-          prevLastButton.style.background = "var(--bg)";
-          document.getElementById("transfer-from-account").style.background = "var(--bg)";
-          document.getElementById("transfer-to-account").style.background = "var(--bg)";
-        } else {
-          prevLastButton.style.background = "var(--bg)";
-        }
-      }
+      document.querySelectorAll('.form-row.active')
+        .forEach(row => row.classList.remove('active'));
     }
   }
 
   if (selName !== 'amount') { // if currently not an amount-selector
-    if (lastButton.id === "transfer-accounts") {
-      lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
-      document.getElementById("transfer-from-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
-      document.getElementById("transfer-to-account").style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
-    } else {
-      lastButton.style.background = "color-mix(in srgb, var(--primary) 50%, var(--bg)";
+    if (lastButton) {
+      lastButton.closest('.form-row')?.classList.add('active');
     }
   }
 
@@ -10517,14 +10468,8 @@ function closeSelector() {
   if (openSelector === 'amount') {
     lastButton.style.borderWidth = "1px";
   } else {
-    if (lastButton.id === "transfer-accounts") {
-      lastButton.style.background = "var(--bg)";
-      document.getElementById("transfer-from-account").style.background = "var(--bg)";
-      document.getElementById("transfer-to-account").style.background = "var(--bg)";
-
-    } else {
-      lastButton.style.background = "var(--bg)";
-    }
+    document.querySelectorAll('.form-row.active')
+      .forEach(row => row.classList.remove('active'));
   }
 
   const sel = document.getElementById(openSelector + '-selector');

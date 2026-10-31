@@ -1033,13 +1033,18 @@ input[type="url"] {
   /* put children in a row */
   align-items: center;
   /* vertical centering */
+  border: none;
+  border-radius: 0.5rem;
   gap: 0.5rem;
   /* space between label and input/button */
 }
 
+.form-row.active {
+  background: color-mix(in srgb, var(--primary) 50%, var(--bg));
+}
+
 .form-row label {
-  width: 20%;
-  /* fixed width for label */
+  margin-top: 0;
   font-weight: 600;
 }
 
@@ -1069,8 +1074,8 @@ input[type="url"] {
   padding: 0.75rem;
   font-size: calc(var(--font-size) * 1);
   /* a percentage of the base font size */
-  ;
-  background: var(--bg);
+  text-align: left;
+  background: none;
   color: var(--text);
   box-sizing: border-box;
   /* include padding + border in width */
@@ -1259,8 +1264,7 @@ input[type="url"] {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding-top: 0.4rem;
-  padding-bottom: 0.4rem;
+  padding-left: 0.5rem;
 }
 
 .tag {
@@ -1270,9 +1274,9 @@ input[type="url"] {
   display: inline-flex;        /* shrink to content */
   align-items: center;
   background: color-mix(in srgb, var(--primary) 5%, var(--bg));
-  padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
   white-space: nowrap;         /* prevent breaking inside tag */
 }
 
@@ -1400,7 +1404,7 @@ input[type="url"] {
 }
 
 .selector-button:hover {
-  background: var(--bg);
+  background: none;
 }
 
 /* Selector panel fixed at bottom */
