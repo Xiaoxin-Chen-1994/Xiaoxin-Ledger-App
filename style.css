@@ -3312,14 +3312,19 @@ emoji-picker {
 
 .ir-add-btn, .primary-btn {
   color: var(--text);
-  margin: 5px;
+  margin-top: 0.6rem;
+}
+
+.ir-card .label {
+  margin-top: 0.6rem;
 }
 
 /* Result box */
 .ir-result {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #f7fbff;
+  margin-top: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  color: var(--text);
   border-left: 4px solid var(--primary);
   border-radius: 8px;
   line-height: 1.5;

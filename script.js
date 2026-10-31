@@ -13115,6 +13115,9 @@ function OpenInterestRateCal() {
     // sort rows by date
     balanceRows.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    const openingBalance = balanceRows[0].balance;
+    const closingBalance = balanceRows[balanceRows.length - 1].balance;
+
     const startDate = new Date(balanceRows[0].date);
     const endDate = new Date(balanceRows[balanceRows.length - 1].date);
 
@@ -13155,6 +13158,8 @@ function OpenInterestRateCal() {
     const annualRate = dailyRate * annualFactor;
 
     return {
+      openingBalance,
+      closingBalance,
       totalDays,
       avgDailyBalance,
       dailyRate,
@@ -13182,8 +13187,9 @@ function OpenInterestRateCal() {
   // ---------- RESULT DISPLAY ----------
   function showInterestResult(result) {
     const content = document.getElementById("mode-content");
+    const card = content.querySelector(".ir-card");
 
-    const old = content.querySelector(".ir-result");
+    const old = card.querySelector(".ir-result");
     if (old) old.remove();
 
     const box = document.createElement("div");
@@ -13199,7 +13205,13 @@ function OpenInterestRateCal() {
     年化利率：${(result.annualRate * 100).toFixed(4)}%
   `;
 
-    content.appendChild(box);
+    card.appendChild(box);
+
+    box.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
     showStatusMessage("计算完成", "success");
   }
 }
