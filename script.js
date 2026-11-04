@@ -12636,27 +12636,10 @@ function OpenInterestRateCal() {
   }
 
   const savedCalculationsProperty = "interestRateCalculations";
-  const previousCalculationsFile = "interest-rate-calculations.json";
-  const legacySavedCalculationsKey = "interest_rate_calculations";
 
   async function getSavedCalculations() {
-    try {
-      const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", {});
-      console.log('Loaded personal settings:', personalSettings);
-      if (!personalSettings || typeof personalSettings !== "object" || Array.isArray(personalSettings)) {
-        throw new TypeError("Personal settings must be an object");
-      }
-
-      const calculations = personalSettings[savedCalculationsProperty];
-      if (!Array.isArray(calculations)) {
-        throw new TypeError("Saved interest calculations must be an array");
-      }
-      return calculations;
-    } catch (error) {
-      console.error("Failed to load saved interest calculations:", error);
-      showStatusMessage("读取已保存的计算失败", "error");
-      return null;
-    }
+    const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", {});
+    return personalSettings[savedCalculationsProperty] ?? [];
   }
 
   async function saveCalculation(calculation, name) {
@@ -12742,7 +12725,6 @@ function OpenInterestRateCal() {
     card.appendChild(title);
 
     const savedCalculations = await getSavedCalculations();
-    if (!savedCalculations) return;
     if (savedCalculations.length === 0) {
       card.appendChild(makeInstructions("目前没有已保存的计算。"));
       return;
