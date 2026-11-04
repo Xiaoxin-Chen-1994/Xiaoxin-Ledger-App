@@ -12595,6 +12595,7 @@ function OpenInterestRateCal() {
     grid.appendChild(createModeButton("1）基于账本数据", loadMode1));
     grid.appendChild(createModeButton("2）基于每日余额", loadMode2));
     grid.appendChild(createModeButton("3）基于每日变动", loadMode3));
+    grid.appendChild(createModeButton("4）重新加载已保存的计算", loadSavedCalculations));
   }
 
   function createModeButton(text, onClick) {
@@ -12632,6 +12633,326 @@ function OpenInterestRateCal() {
     input.spellcheck = false;
 
     return input;
+  }
+
+  const savedCalculationsProperty = "interestRateCalculations";
+  const previousCalculationsFile = "interest-rate-calculations.json";
+  const legacySavedCalculationsKey = "interest_rate_calculations";
+
+  async function getSavedCalculations() {
+    try {
+      const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", {});
+      console.log('Loaded personal settings:', personalSettings);
+      if (!personalSettings || typeof personalSettings !== "object" || Array.isArray(personalSettings)) {
+        throw new TypeError("Personal settings must be an object");
+      }
+
+      const calculations = personalSettings[savedCalculationsProperty];
+      if (!Array.isArray(calculations)) {
+        throw new TypeError("Saved interest calculations must be an array");
+      }
+      return calculations;
+    } catch (error) {
+      console.error("Failed to load saved interest calculations:", error);
+      showStatusMessage("读取已保存的计算失败", "error");
+      return null;
+    }
+  }
+
+  async function saveCalculation(calculation, name) {
+    const savedCalculations = await getSavedCalculations();
+    if (!savedCalculations) return false;
+
+    try {
+      savedCalculations.unshift({
+        ...calculation,
+        ...(name ? { name } : {}),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        savedAt: new Date().toISOString()
+      });
+      return await persistCalculationChanges(savedCalculations, "本次计算已保存", false);
+    } catch (error) {
+      console.error("Failed to save interest calculation:", error);
+      showStatusMessage("保存本次计算失败", "error");
+      return false;
+    }
+  }
+
+  function createNameEditor({ initialName = "", onConfirm }) {
+    const editor = document.createElement("div");
+    editor.className = "ir-name-editor";
+    editor.hidden = true;
+
+    const input = makeInput("text", "名称（可留空，使用默认名称）");
+    input.classList.add("ir-name-input");
+    input.value = initialName;
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "big-button primary-btn";
+    confirmButton.textContent = "确认";
+    confirmButton.addEventListener("click", async () => {
+      confirmButton.disabled = true;
+      try {
+        if (await onConfirm(input.value.trim()) !== false) editor.hidden = true;
+      } catch (error) {
+        console.error("Failed to confirm saved calculation name:", error);
+        showStatusMessage("保存名称失败", "error");
+      } finally {
+        confirmButton.disabled = false;
+      }
+    });
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "big-button";
+    cancelButton.textContent = "取消";
+    cancelButton.addEventListener("click", () => {
+      editor.hidden = true;
+    });
+
+    const buttons = document.createElement("div");
+    buttons.className = "ir-name-editor-buttons";
+    buttons.append(confirmButton, cancelButton);
+    editor.append(input, buttons);
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") confirmButton.click();
+      if (event.key === "Escape") editor.hidden = true;
+    });
+
+    editor.open = () => {
+      editor.hidden = false;
+      input.focus();
+    };
+    return editor;
+  }
+
+  async function loadSavedCalculations() {
+    const content = document.getElementById("mode-content");
+    content.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "ir-card";
+    content.appendChild(card);
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "4) 重新加载已保存的计算";
+    card.appendChild(title);
+
+    const savedCalculations = await getSavedCalculations();
+    if (!savedCalculations) return;
+    if (savedCalculations.length === 0) {
+      card.appendChild(makeInstructions("目前没有已保存的计算。"));
+      return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "ir-saved-calculations";
+    savedCalculations.forEach(calculation => {
+      const item = document.createElement("div");
+      item.className = "ir-saved-item";
+
+      const loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.className = "big-button ir-saved-load";
+      loadButton.textContent = getCalculationLabel(calculation);
+
+      const actions = document.createElement("div");
+      actions.className = "ir-saved-actions";
+
+      const renameButton = document.createElement("button");
+      renameButton.type = "button";
+      renameButton.className = "edit-btn";
+      renameButton.textContent = "重命名";
+      renameButton.addEventListener("click", () => renameCalculation(calculation, item, list));
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "delete-btn";
+      deleteButton.textContent = "删除";
+      deleteButton.addEventListener("click", () => deleteCalculation(calculation));
+
+      actions.append(renameButton, deleteButton);
+      item.append(loadButton, actions);
+      list.appendChild(item);
+
+      let swipeItem = null;
+      attachMobileGesture(item, {
+        enableClick: true,
+        dragMode: "immediate",
+        dragDirection: "horizontal",
+        enableLongPressDelete: true,
+        longPressTime: 500,
+        onClick: e => {
+          if (e.target.closest(".ir-saved-actions")) return;
+          restoreCalculation(calculation);
+        },
+        onLongPressDelete: () => {
+          if (item.classList.contains("show-actions")) {
+              item.classList.remove("show-actions");
+          } else {
+              item.classList.add("show-actions");
+          }
+        },
+        onDragStart: e => {
+          swipeItem = e.target.closest(".ir-saved-item");
+          if (swipeItem) swipeItem._swipeStartX = e.touches[0].clientX;
+        },
+        onDragEnd: e => {
+          if (!swipeItem) return;
+          const distance = swipeItem._swipeStartX - e.changedTouches[0].clientX;
+          if (distance > 40) swipeItem.classList.add("show-actions");
+          else if (distance < -40) swipeItem.classList.remove("show-actions");
+          swipeItem = null;
+        },
+        onRightClick: () => {
+          if (item.classList.contains("show-actions")) {
+              item.classList.remove("show-actions");
+          } else {
+              item.classList.add("show-actions");
+          }
+        }
+      });
+    });
+    card.appendChild(list);
+  }
+
+  function getCalculationLabel(calculation) {
+    if (calculation.name) return calculation.name;
+    const savedAt = new Date(calculation.savedAt);
+    const dateLabel = Number.isNaN(savedAt.getTime())
+      ? ""
+      : savedAt.toLocaleString();
+    const modeLabel = calculation.mode === "mode2" ? "基于每日余额" : "基于每日变动";
+    return `${modeLabel}${dateLabel ? ` · ${dateLabel}` : ""}`;
+  }
+
+  async function persistCalculationChanges(savedCalculations, successMessage = "已保存更改", refreshList = true) {
+    try {
+      const personalSettings = await loadLocalJsonData("ledger-personal-settings.json", {});
+      if (!personalSettings || typeof personalSettings !== "object" || Array.isArray(personalSettings)) {
+        throw new TypeError("Personal settings must be an object");
+      }
+      personalSettings[savedCalculationsProperty] = savedCalculations;
+      personalSettings.updatedAt = Date.now();
+      await saveLocalJsonData("ledger-personal-settings.json", personalSettings);
+      if (refreshList) await loadSavedCalculations();
+      if (token && selectedRepos?.personalSettingsRepo) {
+        try {
+          await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+        } catch (error) {
+          console.error("Failed to sync saved interest calculations:", error);
+          showStatusMessage("计算已保存在本地，但同步失败", "error");
+          return true;
+        }
+      }
+      showStatusMessage(successMessage, "success");
+      return true;
+    } catch (error) {
+      console.error("Failed to update saved interest calculations:", error);
+      showStatusMessage("更新已保存的计算失败", "error");
+      return false;
+    }
+  }
+
+  function renameCalculation(calculation, item, list) {
+    list.querySelector(".ir-name-editor")?.remove();
+    item.classList.remove("show-actions");
+
+    const editor = createNameEditor({
+      initialName: calculation.name || "",
+      onConfirm: async name => {
+        const savedCalculations = await getSavedCalculations();
+        if (!savedCalculations) return false;
+        const saved = savedCalculations.find(entry => entry.id === calculation.id);
+        if (!saved) {
+          showStatusMessage("找不到要重命名的计算", "error");
+          return false;
+        }
+        if (name) saved.name = name;
+        else delete saved.name;
+        return await persistCalculationChanges(savedCalculations);
+      }
+    });
+    item.after(editor);
+    editor.open();
+  }
+
+  function deleteCalculation(calculation) {
+    showPopupWindow({
+      title: "确认删除",
+      message: "确定删除此计算吗？此操作无法撤销。",
+      buttons: [
+        {
+          text: "删除",
+          onClick: async () => {
+            const savedCalculations = await getSavedCalculations();
+            if (!savedCalculations) return;
+            const remaining = savedCalculations.filter(item => item.id !== calculation.id);
+            if (remaining.length === savedCalculations.length) {
+              showStatusMessage("找不到要删除的计算", "error");
+              return;
+            }
+            await persistCalculationChanges(remaining);
+          }
+        },
+        {
+          text: "取消",
+          primary: true
+        }
+      ],
+      onOutsideClick: overlay => overlay.remove()
+    });
+  }
+
+  function restoreCalculation(calculation) {
+    if (!calculation.fields || !calculation.result) {
+      showStatusMessage("已保存的计算数据不完整", "error");
+      return;
+    }
+
+    if (calculation.mode === "mode2") {
+      loadMode2();
+      const rowsContainer = document.getElementById("mode2-balance-rows");
+      rowsContainer.innerHTML = "";
+      (calculation.fields.balanceRows || []).forEach(row => {
+        const line = makeBalanceLine();
+        line.querySelector(".row-date").value = row.date || "";
+        line.querySelector(".row-balance").value = row.balance ?? "";
+        rowsContainer.appendChild(line);
+      });
+      if (rowsContainer.children.length === 0) rowsContainer.appendChild(makeBalanceLine());
+      document.querySelector("#mode-content .ir-card input[type='number']:not(.row-balance)").value =
+        calculation.fields.interest ?? "";
+    } else if (calculation.mode === "mode3") {
+      if (calculation.fields.method !== "start" && calculation.fields.method !== "end") {
+        showStatusMessage("已保存的计算方式无效", "error");
+        return;
+      }
+      loadMode3();
+      document.querySelector(`input[name="m3method"][value="${calculation.fields.method}"]`).checked = true;
+      document.querySelector('input[name="m3method"]:checked').dispatchEvent(new Event("change"));
+      document.getElementById("m3-balance").value = calculation.fields.balance ?? "";
+
+      const rowsContainer = document.getElementById("mode3-change-rows");
+      rowsContainer.innerHTML = "";
+      (calculation.fields.changeRows || []).forEach(row => {
+        const line = makeChangeLine();
+        line.querySelector(".row-date").value = row.date || "";
+        line.querySelector(".row-change").value = row.change ?? "";
+        rowsContainer.appendChild(line);
+      });
+      if (rowsContainer.children.length === 0) rowsContainer.appendChild(makeChangeLine());
+      const numberInputs = document.querySelectorAll("#mode-content .ir-card input[type='number']");
+      numberInputs[numberInputs.length - 1].value = calculation.fields.interest ?? "";
+    } else {
+      showStatusMessage("无法识别已保存的计算类型", "error");
+      return;
+    }
+
+    showInterestResult(calculation.result);
   }
 
   function enableAutoAdvance(input, containerSelector, makeNewRow) {
@@ -12710,6 +13031,7 @@ function OpenInterestRateCal() {
 
     const card = document.createElement("div");
     card.className = "ir-card";
+    card.classList.add("ir-mode2-card");
     content.appendChild(card);
 
     const title = document.createElement("div");
@@ -12747,13 +13069,44 @@ function OpenInterestRateCal() {
     const calcBtn = document.createElement("button");
     calcBtn.className = "big-button primary-btn";
     calcBtn.textContent = "计算利率";
+    function calculate() {
+      const rows = collectBalanceRows(rowsContainer);
+      if (!rows) return null;
+      return calculateFromDailyBalances(rows, interestInput.value);
+    }
     calcBtn.onclick = () => {
+      const result = calculate();
+      if (result) showInterestResult(result);
+    };
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "big-button primary-btn";
+    saveBtn.textContent = "保存本次计算";
+    let pendingCalculation = null;
+    saveBtn.onclick = () => {
       const rows = collectBalanceRows(rowsContainer);
       if (!rows) return;
       const result = calculateFromDailyBalances(rows, interestInput.value);
-      if (result) showInterestResult(result);
+      if (!result) return;
+      pendingCalculation = {
+        mode: "mode2",
+        fields: { balanceRows: rows, interest: interestInput.value },
+        result
+      };
+      nameEditor.open();
     };
-    card.appendChild(calcBtn);
+    const actions = document.createElement("div");
+    actions.className = "ir-calculation-actions";
+    actions.append(calcBtn, saveBtn);
+    card.appendChild(actions);
+    const nameEditor = createNameEditor({
+      onConfirm: async name => {
+        if (!pendingCalculation || !(await saveCalculation(pendingCalculation, name))) return false;
+        showInterestResult(pendingCalculation.result);
+        pendingCalculation = null;
+        return true;
+      }
+    });
+    card.appendChild(nameEditor);
   }
 
   function makeBalanceLine() {
@@ -12851,6 +13204,7 @@ function OpenInterestRateCal() {
 
     const card = document.createElement("div");
     card.className = "ir-card";
+    card.classList.add("ir-mode3-card");
     content.appendChild(card);
 
     const title = document.createElement("div");
@@ -12919,18 +13273,18 @@ function OpenInterestRateCal() {
     const calcBtn = document.createElement("button");
     calcBtn.className = "big-button primary-btn";
     calcBtn.textContent = "计算利率";
-    calcBtn.onclick = () => {
+    function calculate() {
       const method = document.querySelector('input[name="m3method"]:checked').value;
 
       const changeRows = collectChangeRows(rowsContainer);
-      if (!changeRows) return;
+      if (!changeRows) return null;
 
       let balanceRows;
 
       if (method === "start") {
         if (balanceInput.value === "") {
           showStatusMessage("请填写期初余额。");
-          return;
+          return null;
         }
 
         balanceRows = convertChangesForward(balanceInput.value, changeRows);
@@ -12938,23 +13292,61 @@ function OpenInterestRateCal() {
       } else {
         if (balanceInput.value === "") {
           showStatusMessage("请填写期末余额。");
-          return;
+          return null;
         }
 
         balanceRows = convertChangesBackward(balanceInput.value, changeRows);
       }
 
-      if (!balanceRows) return;
+      if (!balanceRows) return null;
 
       const result = calculateFromDailyBalances(balanceRows, interestInput.value);
       if (result) {
         result.openingBalance = balanceRows[0].balance;
         result.closingBalance = balanceRows[balanceRows.length - 1].balance;
-        showInterestResult(result);
       }
+      return result;
+    }
 
+    calcBtn.onclick = () => {
+      const result = calculate();
+      if (result) showInterestResult(result);
     };
-    card.appendChild(calcBtn);
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "big-button primary-btn";
+    saveBtn.textContent = "保存本次计算";
+    let pendingCalculation = null;
+    saveBtn.onclick = () => {
+      const result = calculate();
+      if (!result) return;
+      const method = document.querySelector('input[name="m3method"]:checked').value;
+      const changeRows = collectChangeRows(rowsContainer);
+      if (!changeRows) return;
+      pendingCalculation = {
+        mode: "mode3",
+        fields: {
+          method,
+          balance: balanceInput.value,
+          changeRows,
+          interest: interestInput.value
+        },
+        result
+      };
+      nameEditor.open();
+    };
+    const actions = document.createElement("div");
+    actions.className = "ir-calculation-actions";
+    actions.append(calcBtn, saveBtn);
+    card.appendChild(actions);
+    const nameEditor = createNameEditor({
+      onConfirm: async name => {
+        if (!pendingCalculation || !(await saveCalculation(pendingCalculation, name))) return false;
+        showInterestResult(pendingCalculation.result);
+        pendingCalculation = null;
+        return true;
+      }
+    });
+    card.appendChild(nameEditor);
   }
 
   function makeChangeLine() {

@@ -3319,6 +3319,97 @@ emoji-picker {
   margin-top: 0.6rem;
 }
 
+.ir-calculation-actions,
+.ir-saved-calculations {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.ir-calculation-actions > button {
+  flex: 1;
+}
+
+.ir-name-editor {
+  display: flex;
+  flex-wrap: wrap;
+  border-radius: 8px;
+  gap: 0.3rem;
+}
+
+.ir-mode2-card > .ir-name-editor,
+.ir-mode3-card > .ir-name-editor {
+  margin-top: 0.6rem;
+}
+
+.ir-name-editor[hidden] {
+  display: none;
+}
+
+.ir-name-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0 !important;
+}
+
+.ir-name-editor-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.2rem;
+}
+
+.ir-name-editor-buttons button {
+  margin: 0;
+}
+
+.ir-saved-calculations {
+  flex-direction: column;
+}
+
+.ir-saved-item {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.ir-saved-load {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: left;
+  transition: transform 0.3s ease;
+}
+
+.ir-saved-actions {
+  position: absolute;
+  top: 0;
+  right: -7.6rem;
+  display: flex;
+  height: 100%;
+  gap: 0.2rem;
+  transition: right 0.3s ease;
+}
+
+.ir-saved-actions button {
+  flex: 1;
+  min-width: 0;
+}
+
+.ir-saved-actions .edit-btn,
+.ir-saved-actions .delete-btn {
+  position: relative;
+  inset: auto;
+  transform: none;
+}
+
+.ir-saved-item.show-actions .ir-saved-load {
+  transform: translateX(calc(-7.6rem));
+}
+
+.ir-saved-item.show-actions .ir-saved-actions {
+  right: 0;
+}
+
 .ir-card .label {
   margin-top: 0.6rem;
 }
