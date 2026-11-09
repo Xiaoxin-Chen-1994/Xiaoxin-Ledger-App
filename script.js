@@ -13835,12 +13835,14 @@ function toggleAddLoyaltyForm() {
         </button>
       </div>
 
-      <select id="loyalty-repo-select" class="loyalty-input">
-        <option value="">选择保存的账本</option>
-        ${Object.values(repoList)
-      .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
-      .join("")}
-      </select>
+      ${repoList.length > 1 ? `
+        <select id="loyalty-repo-select" class="loyalty-input">
+          <option value="">选择保存的账本</option>
+          ${repoList
+        .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
+        .join("")}
+        </select>
+      ` : ""}
 
       <input id="loyalty-number" class="loyalty-input" placeholder="会员号">
       <input id="loyalty-expiry" class="loyalty-input" placeholder="到期日 YYYY-MM-DD">
@@ -13861,7 +13863,9 @@ async function saveNewLoyaltyProgram() {
   const number = document.getElementById("loyalty-number").value.trim();
   const expiry = document.getElementById("loyalty-expiry").value.trim();
   const details = document.getElementById("loyalty-details").value.trim();
-  const repoId = document.getElementById("loyalty-repo-select").value;
+  const repoId = selectedRepos.ledgerRepos.length === 1
+    ? selectedRepos.ledgerRepos[0].id
+    : document.getElementById("loyalty-repo-select").value;
 
   if (!name) {
     showStatusMessage("名称是必填项", "error");
