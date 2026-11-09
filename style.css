@@ -3600,6 +3600,8 @@ emoji-picker {
 
 .reward-account-details {
   color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .lp-barcode-toggle {
@@ -3640,6 +3642,18 @@ emoji-picker {
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
+.loyalty-add-footer,
+.reward-edit-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.loyalty-add-footer {
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
 .loyalty-row {
   display: flex;
   align-items: center;
@@ -3651,6 +3665,47 @@ emoji-picker {
   flex: 1; /* input expands, save button stays compact */
 }
 
+.loyalty-fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 8px;
+}
+
+.loyalty-field {
+  display: contents;
+}
+
+.loyalty-field-label {
+  grid-column: 1;
+  text-align: right;
+}
+
+.loyalty-field > :not(.loyalty-field-label) {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.loyalty-name-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loyalty-name-control > .loyalty-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.loyalty-field-top .loyalty-field-label {
+  align-self: start;
+  padding-top: 8px;
+}
+
+.loyalty-repo-row {
+  grid-column: 1 / -1;
+}
+
 .loyalty-input {
   font-size: calc(var(--font-size) * 1);
   color: var(--text);
@@ -3659,6 +3714,61 @@ emoji-picker {
   padding: 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.loyalty-field > .loyalty-input,
+.loyalty-field > .loyalty-textarea {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.loyalty-date-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+
+.loyalty-date-field > .loyalty-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.loyalty-date-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  flex: 0 0 42px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.loyalty-date-button:hover {
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
+}
+
+.loyalty-date-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 50px;
+  width: calc(100% - 50px);
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .loyalty-textarea {
@@ -3666,11 +3776,13 @@ emoji-picker {
   color: var(--text);
   background: var(--card);
   width: 100%;
-  height: 60px;
+  min-height: 60px;
   padding: 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  resize: vertical;
+  overflow-y: hidden;
+  resize: none;
+  box-sizing: border-box;
 }
 
 .loyalty-save-btn {
@@ -3692,8 +3804,28 @@ emoji-picker {
 }
 
 .reward-edit-footer {
-  display: flex;
-  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.reward-edit-footer .section-delete-btn {
+  margin-left: auto;
+}
+
+.reward-edit-footer .section-edit-btn {
+  font-size: calc(var(--font-size) * 0.85);
+  padding: 6px 10px;
+}
+
+.loyalty-add-footer .loyalty-cancel-btn,
+.reward-edit-footer .loyalty-cancel-btn {
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--border);
+}
+
+.loyalty-add-footer .loyalty-cancel-btn:hover,
+.reward-edit-footer .loyalty-cancel-btn:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 
 .section-delete-btn {

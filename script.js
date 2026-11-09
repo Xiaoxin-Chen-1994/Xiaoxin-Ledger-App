@@ -80,6 +80,39 @@ let currentLang = 'zh';
 let userDoc = null; // this variable will contain all data under this userId in the Users collection
 let householdDocs = {}; // this variable will contain all data of each household to which this userId has access
 
+function disableBrowserAutofill(root = document) {
+  if (root instanceof Element && root.matches("form, input, textarea")) {
+    root.setAttribute("autocomplete", "off");
+  }
+
+  root.querySelectorAll("form, input, textarea").forEach(element => {
+    element.setAttribute("autocomplete", "off");
+  });
+
+  const editableFields = [];
+  if (root instanceof Element && root.matches("input, textarea")) {
+    editableFields.push(root);
+  }
+  editableFields.push(...root.querySelectorAll("input, textarea"));
+
+  editableFields.forEach(element => {
+    element.setAttribute("autocorrect", "off");
+    element.setAttribute("autocapitalize", "off");
+    element.setAttribute("spellcheck", "false");
+  });
+}
+
+disableBrowserAutofill();
+new MutationObserver(records => {
+  records.forEach(record => {
+    record.addedNodes.forEach(node => {
+      if (node instanceof Element) {
+        disableBrowserAutofill(node);
+      }
+    });
+  });
+}).observe(document.documentElement, { childList: true, subtree: true });
+
 const LOCAL_DB_KEY = "ledger_dbs";
 const LOCAL_LOG_KEY = "ledger_logs";
 const LAST_SYNC_KEY = "ledger_lastSynced";
@@ -6542,17 +6575,6 @@ function renderAccountEditPage(repoId, accountType, accountId) {
   }
 
   // ───────────────────────────────────────────────
-  // AUTOCOMPLETE SUPPRESSION
-  // ───────────────────────────────────────────────
-  wrapper.querySelectorAll("input, select, textarea").forEach(el => {
-    el.autocomplete = "off";
-    el.autocorrect = "off";
-    el.autocapitalize = "off";
-    el.spellcheck = false;
-    el.setAttribute("autocomplete", "new-password");
-  });
-
-  // ───────────────────────────────────────────────
   // TAB SWITCHING
   // ───────────────────────────────────────────────
   function activateTab(key) {
@@ -12627,11 +12649,6 @@ function OpenInterestRateCal() {
     input.placeholder = placeholder;
     input.className = "text-input";
 
-    input.autocomplete = "off";
-    input.autocorrect = "off";
-    input.autocapitalize = "off";
-    input.spellcheck = false;
-
     return input;
   }
 
@@ -13828,33 +13845,52 @@ function toggleAddLoyaltyForm() {
   form.innerHTML = `
     <div class="loyalty-add-container">
 
-      <div class="loyalty-row">
-        <input id="loyalty-name" class="loyalty-input" placeholder="名称" required>
-        <button class="section-edit-btn" onclick="saveNewLoyaltyProgram()">
-          保存
-        </button>
-      </div>
+      <div class="loyalty-fields">
+        <div class="loyalty-field">
+          <span class="loyalty-field-label">名称</span>
+          <div class="loyalty-name-control">
+            <input id="loyalty-name" class="loyalty-input" aria-label="名称" required>
+          </div>
+        </div>
 
       ${repoList.length > 1 ? `
-        <select id="loyalty-repo-select" class="loyalty-input">
+        <div class="loyalty-repo-row">
+          <select id="loyalty-repo-select" class="loyalty-input">
           <option value="">选择保存的账本</option>
           ${repoList
         .map(repo => `<option value="${repo.id}">${repo.name}</option>`)
         .join("")}
-        </select>
+          </select>
+        </div>
       ` : ""}
 
-      <input id="loyalty-number" class="loyalty-input" placeholder="会员号">
-      <input id="loyalty-expiry" class="loyalty-input" placeholder="到期日 YYYY-MM-DD">
-      <textarea id="loyalty-details" class="loyalty-textarea" placeholder="备注"></textarea>
+        <div class="loyalty-field">
+          <span class="loyalty-field-label">会员号</span>
+          <input id="loyalty-number" class="loyalty-input" aria-label="会员号">
+        </div>
+        <div class="loyalty-field">
+          <span class="loyalty-field-label">日期</span>
+          <div class="loyalty-date-field">
+            <input id="loyalty-expiry" class="loyalty-input" type="text" placeholder="YYYY-MM-DD" aria-label="日期，格式 YYYY-MM-DD" oninput="syncLoyaltyDatePicker(this)">
+            <button type="button" class="loyalty-date-button" aria-label="选择日期" onclick="openLoyaltyDatePicker(this)">📅</button>
+            <input class="loyalty-date-picker" type="date" aria-label="选择日期" tabindex="-1" onchange="syncLoyaltyDate(this)">
+          </div>
+        </div>
+        <div class="loyalty-field loyalty-field-top">
+          <span class="loyalty-field-label">备注</span>
+          <textarea id="loyalty-details" class="loyalty-textarea" aria-label="备注" oninput="resizeLoyaltyTextarea(this)"></textarea>
+        </div>
+      </div>
 
       <div class="loyalty-add-footer">
+        <button class="section-edit-btn" onclick="saveNewLoyaltyProgram()">保存</button>
         <button class="section-edit-btn loyalty-cancel-btn" onclick="cancelAddLoyaltyForm()">
           取消
         </button>
       </div>
     </div>
   `;
+  resizeLoyaltyTextarea(form.querySelector(".loyalty-textarea"));
 }
 window.toggleAddLoyaltyForm = toggleAddLoyaltyForm;
 
@@ -13902,6 +13938,34 @@ async function saveNewLoyaltyProgram() {
   form.innerHTML = "";
 }
 window.saveNewLoyaltyProgram = saveNewLoyaltyProgram;
+
+function syncLoyaltyDate(datePicker) {
+  const dateField = datePicker.closest(".loyalty-date-field");
+  dateField.querySelector(".loyalty-input").value = datePicker.value;
+}
+window.syncLoyaltyDate = syncLoyaltyDate;
+
+function openLoyaltyDatePicker(button) {
+  const datePicker = button.parentElement.querySelector(".loyalty-date-picker");
+  if (typeof datePicker.showPicker === "function") {
+    datePicker.showPicker();
+  } else {
+    datePicker.click();
+  }
+}
+window.openLoyaltyDatePicker = openLoyaltyDatePicker;
+
+function syncLoyaltyDatePicker(dateInput) {
+  const dateField = dateInput.closest(".loyalty-date-field");
+  dateField.querySelector(".loyalty-date-picker").value = dateInput.value.trim();
+}
+window.syncLoyaltyDatePicker = syncLoyaltyDatePicker;
+
+function resizeLoyaltyTextarea(textarea) {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+window.resizeLoyaltyTextarea = resizeLoyaltyTextarea;
 
 function toggleLoyaltyExpand(id, repoId, event) {
   event.stopPropagation();
@@ -13957,16 +14021,34 @@ function enterLoyaltyEditMode(id, repoId) {
   const p = repo.accounts.loyaltyPrograms.find(x => x.id === id);
 
   edit.innerHTML = `
-    <div class="loyalty-row">
-      <input class="loyalty-input" value="${p.name}" data-field="name">
-      <button class="section-edit-btn" onclick="saveLoyaltyEdit('${p.id}', '${repoId}')">保存</button>
+    <div class="loyalty-fields">
+      <div class="loyalty-field">
+        <span class="loyalty-field-label">名称</span>
+        <div class="loyalty-name-control">
+          <input class="loyalty-input" value="${p.name}" aria-label="名称" data-field="name">
+        </div>
+      </div>
+
+      <div class="loyalty-field">
+        <span class="loyalty-field-label">会员号</span>
+        <input class="loyalty-input" value="${p.number || ""}" aria-label="会员号" data-field="number">
+      </div>
+      <div class="loyalty-field">
+        <span class="loyalty-field-label">日期</span>
+        <div class="loyalty-date-field">
+          <input class="loyalty-input" value="${p.expiry || ""}" type="text" placeholder="YYYY-MM-DD" aria-label="日期，格式 YYYY-MM-DD" data-field="expiry" oninput="syncLoyaltyDatePicker(this)">
+          <button type="button" class="loyalty-date-button" aria-label="选择日期" onclick="openLoyaltyDatePicker(this)">📅</button>
+          <input class="loyalty-date-picker" value="${p.expiry || ""}" type="date" aria-label="选择日期" tabindex="-1" onchange="syncLoyaltyDate(this)">
+        </div>
+      </div>
+      <div class="loyalty-field loyalty-field-top">
+        <span class="loyalty-field-label">备注</span>
+        <textarea class="loyalty-textarea" aria-label="备注" data-field="details" oninput="resizeLoyaltyTextarea(this)">${p.details || ""}</textarea>
+      </div>
     </div>
 
-    <input class="loyalty-input" value="${p.number || ""}" placeholder="会员号" data-field="number">
-    <input class="loyalty-input" value="${p.expiry || ""}" type="date" placeholder="到期日 YYYY-MM-DD" data-field="expiry">
-    <textarea class="loyalty-textarea" placeholder="备注" data-field="details">${p.details || ""}</textarea>
-
     <div class="reward-edit-footer">
+      <button class="section-edit-btn" onclick="saveLoyaltyEdit('${p.id}', '${repoId}')">保存</button>
       <button class="section-edit-btn loyalty-cancel-btn" onclick="cancelLoyaltyEdit('${p.id}', '${repoId}')">取消</button>
       <button class="section-delete-btn" onclick="deleteLoyaltyProgram('${p.id}', '${repoId}')">删除</button>
     </div>
@@ -13974,6 +14056,7 @@ function enterLoyaltyEditMode(id, repoId) {
 
   view.classList.add("hidden");
   edit.classList.remove("hidden");
+  resizeLoyaltyTextarea(edit.querySelector(".loyalty-textarea"));
 }
 window.enterLoyaltyEditMode = enterLoyaltyEditMode;
 
