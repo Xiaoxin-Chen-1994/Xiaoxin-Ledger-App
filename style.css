@@ -1050,7 +1050,6 @@ input[type="url"] {
   font-weight: 600;
 }
 
-.form-row label,
 .form-row .selector-button {
   white-space: normal;
   /* allow wrapping */
