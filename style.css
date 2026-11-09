@@ -1044,6 +1044,8 @@ input[type="url"] {
 }
 
 .form-row label {
+  flex: 0 0 auto;
+  white-space: nowrap;
   margin-top: 0;
   font-weight: 600;
 }
@@ -1064,6 +1066,7 @@ input[type="url"] {
   /* take up remaining space */
   width: 100%;
   /* force equal width */
+  min-width: 0;
   margin: 0;
   box-sizing: border-box;
 }
