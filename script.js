@@ -14964,7 +14964,7 @@ function renderRewardsHubCreditCards() {
         <div class="reward-card-item"
              onclick="document.getElementById('${mainId}').classList.toggle('hidden')">
           <div class="reward-card-name">${acc.name}</div>
-          <div>${dueWarning}</div>
+          ${dueWarning}
         </div>
 
         <div id="${mainId}" class="hidden"></div>
@@ -15035,9 +15035,8 @@ async function renderRewardsHubLoyaltyPrograms() {
           
           <div class="reward-view-mode" onclick="toggleLoyaltyExpand('${p.id}', '${repoId}', event)">
             <div class="lp-row">
-              <span class="lp-name">${p.name}</span>
-              ${warningText}
               ${expiryText}
+              <span class="lp-name">${p.name}</span>${warningText}
             </div>
 
             <div class="lp-extra hidden">

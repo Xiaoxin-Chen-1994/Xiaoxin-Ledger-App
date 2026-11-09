@@ -464,6 +464,12 @@ label {
 }
 
 .due-warning {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  white-space: normal;
   font-size: calc(var(--font-size) * 0.9);
   margin-left: 0.4rem;
   font-weight: 600;
@@ -5847,14 +5853,7 @@ button.secondary {
 }
 
 #accounts-page .due-warning {
-  display: inline-block;
-  max-width: 100%;
-  min-width: 0;
   margin-left: 0;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  font-size: calc(var(--font-size) * 0.8);
 }
 
 @media (min-width: 700px) {
@@ -6525,7 +6524,9 @@ button.secondary {
 }
 
 #rewards-hub-page .reward-card-item {
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: baseline;
   gap: 0.5rem;
   cursor: pointer;
 }
@@ -6551,12 +6552,17 @@ button.secondary {
 }
 
 #rewards-hub-page .lp-row {
-  flex-wrap: wrap;
-  gap: 0.45rem;
+  display: block;
 }
 
 #rewards-hub-page .lp-name {
-  flex: 1 1 8rem;
+  white-space: normal;
+}
+
+#rewards-hub-page .lp-expiry {
+  float: right;
+  margin-left: 0.45rem;
+  white-space: nowrap;
 }
 
 #rewards-hub-page .lp-extra {
