@@ -156,21 +156,45 @@ let currentBase = "home";
 let latestPage = null;
 let latestTitle = null;
 let latestOptions = null;
-let numGroupsToday = null;
 
-const monthNamesEN = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
+const monthNames = {
+  zh: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+};
 
-const supportedCurrencies = ["CNY", "USD", "CAD", "HKD", "JPY", "EUR"];
+const supportedCurrencies = ["CNY", "USD", "CAD", "HKD", "JPY", "EUR", "GBP", "AUD", "SGD", "KRW", "CHF", "NZD"];
+const currencyNames = {
+  zh: new Intl.DisplayNames(["zh-CN"], { type: "currency" }),
+  en: new Intl.DisplayNames(["en"], { type: "currency" })
+};
+
+function formatCurrencyLabel(currency) {
+  const name = currencyNames[currentLang].of(currency);
+  return name && name !== currency ? `${currency} · ${name}` : currency;
+}
+
+let baseCurrency = "CNY";
+let exchangeRateCache = {};
+let exchangeRateRequest = null;
+let exchangeRateWriteQueue = Promise.resolve();
 
 const translations = {
   en: {
     loginTitle: "Login or Signup",
     loginWithGitHub: "Login with GitHub",
     back: "Back",
+    searchAction: "Search",
+    addAction: "Add",
+    bookmarkAction: "Bookmark page",
+    removeBookmarkAction: "Remove bookmark",
     welcome: "Welcome, ",
+    settingsSubtitle: "A little more mindful, one entry at a time.",
+    settingsEntriesLabel: "Recorded",
+    settingsEntriesUnit: "bills",
+    settingsDaysLabel: "Logged for",
+    settingsDaysUnit: "days",
+    homeRecordsLabel: "entries",
+    homeNetLabel: "Net",
     homeTitle: "Home",
     incomeMinusExpense: "Income - Expense",
     today: "Today",
@@ -220,6 +244,8 @@ const translations = {
     totalPrice: "Total price",
     notes: "Notes",
     save: "✔️Save",
+    saveAction: "Save",
+    pinEntryAction: "Pin entry",
     savedSuccess: "Save success!",
     loyaltyPrograms: "Loyalty Programs",
     personalSettingsTitle: "Personal Settings",
@@ -261,6 +287,7 @@ const translations = {
     colorSchemeSwitchFailed: "Failed to save color scheme",
     homeImageTitle: "Homepage Image",
     manage: "Manage",
+    manageAccount: "Manage account",
     manageHomeImage: "Manage homepage images",
     add: "Add",
     upload: "Upload",
@@ -315,7 +342,19 @@ const translations = {
     loginTitle: "登录或注册",
     loginWithGitHub: "通过GitHub账户登录",
     back: "返回",
+    searchAction: "搜索",
+    addAction: "添加",
+    pinEntryAction: "固定账单",
+    bookmarkAction: "收藏页面",
+    removeBookmarkAction: "取消收藏",
     welcome: "欢迎，",
+    settingsSubtitle: "认真记录生活里的每一笔。",
+    settingsEntriesLabel: "已记录",
+    settingsEntriesUnit: "笔账单",
+    settingsDaysLabel: "已记账",
+    settingsDaysUnit: "天",
+    homeRecordsLabel: "笔记录",
+    homeNetLabel: "结余",
     homeTitle: "首页",
     incomeMinusExpense: "收入 - 支出",
     today: "今天",
@@ -364,6 +403,7 @@ const translations = {
     totalPrice: "总价",
     notes: "备注",
     save: "✔️保存",
+    saveAction: "保存",
     savedSuccess: "保存成功!",
     loyaltyPrograms: "会员计划",
     personalSettingsTitle: "个人偏好",
@@ -405,6 +445,7 @@ const translations = {
     colorSchemeSwitchFailed: "颜色方案保存出错",
     homeImageTitle: "首页图",
     manage: "管理",
+    manageAccount: "管理账户",
     manageHomeImage: "管理首页图",
     add: "增加",
     upload: "上传",
@@ -1565,6 +1606,7 @@ async function initializePersonalSettings() {
     fontsizeDesktop: "",
     fontsizeMobile: "",
     themeColor: "",
+    baseCurrency: "CNY",
   };
 
   await saveLocalJsonData("ledger-personal-settings.json", defaults);
@@ -1877,10 +1919,42 @@ async function init() {
 
   // Apply profile settings
   const personal = await loadLocalJsonData("ledger-personal-settings.json", null);
+  baseCurrency = supportedCurrencies.includes(personal.baseCurrency) ? personal.baseCurrency : "CNY";
+  exchangeRateCache = await loadLocalJsonData("exchange-rates.json", {});
+  const currencySelect = document.getElementById("base-currency-select");
+  currencySelect.classList.add("currency-select");
+  supportedCurrencies.forEach(currency => currencySelect.add(new Option(formatCurrencyLabel(currency), currency)));
+  currencySelect.value = baseCurrency;
+  document.getElementById("exchange-rate-toggle").onclick = () => {
+    const list = document.getElementById("exchange-rate-list");
+    list.hidden = !list.hidden;
+    updateExchangeRateToggle();
+  };
+  currencySelect.onchange = async () => {
+    const previous = baseCurrency;
+    try {
+      const settings = await loadLocalJsonData("ledger-personal-settings.json", null);
+      settings.baseCurrency = currencySelect.value;
+      settings.updatedAt = Date.now();
+      await saveLocalJsonData("ledger-personal-settings.json", settings);
+      baseCurrency = currencySelect.value;
+      exchangeRateRequest = null;
+      await smartSync(selectedRepos, token, { push: true, syncPersonalSettings: true });
+      updateExchangeRateStatus();
+      void getExchangeRates(baseCurrency);
+    } catch (error) {
+      console.error("Failed to save base currency", error);
+      baseCurrency = previous;
+      currencySelect.value = previous;
+      showStatusMessage(currentLang === "zh" ? "保存本位币失败" : "Failed to save base currency", "error");
+    }
+  };
+  updateExchangeRateStatus();
   if (personal.language) {
     currentLang = personal.language;
     setLanguage(currentLang, false); // do not sync to cloud
   }
+  void getExchangeRates(baseCurrency);
 
   if (isMobileBrowser()) {
     if (personal.fontsizeMobile) {
@@ -1991,6 +2065,7 @@ async function init() {
   updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
   updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
   updateKanbanRow({ en: "This Year", zh: "本年" }[currentLang], 2, getDateRange('thisYear'));
+  updateKanbanRow("presetUpcoming", 3, getDateRange('upcoming'));
 
   // Initialize household selector
   initLedgerSelector();
@@ -2550,7 +2625,7 @@ function setDefaultCategory(button, subWorkspace) {
   }
 }
 
-function findSelectedAccount(repoId, accountType, accountName) {
+function findSelectedAccount(repoId, accountType, accountName, allowContainer = true) {
   const settings = settingsMap[repoId];   // ledger settings for this repo
   const accountsRoot = settings.accounts;
 
@@ -2559,8 +2634,14 @@ function findSelectedAccount(repoId, accountType, accountName) {
   // -----------------------------------------------------
   if (!accountType) {
     for (const typeKey of accountTypes) {
-      const result = findSelectedAccount(repoId, typeKey, accountName);
+      const result = findSelectedAccount(repoId, typeKey, accountName, false);
       if (result) return result;
+    }
+    if (allowContainer) {
+      for (const typeKey of accountTypes) {
+        const result = findSelectedAccount(repoId, typeKey, accountName);
+        if (result) return result;
+      }
     }
     return null; // not found anywhere
   }
@@ -2571,17 +2652,7 @@ function findSelectedAccount(repoId, accountType, accountName) {
   const accountsByType = accountsRoot[accountType];
   if (!accountsByType) return null;
 
-  // 1. Try to match a top-level account
-  const top = accountsByType.find(acc => acc.name === accountName);
-  if (top) {
-    return {
-      type: accountType,
-      account: top,
-      parent: null
-    };
-  }
-
-  // 2. Try to match a sub-account
+  // Accounts with children are containers, not transaction accounts.
   for (const acc of accountsByType) {
     const subs = acc["sub-accounts"] || [];
     const sub = subs.find(sa => sa.name === accountName);
@@ -2594,6 +2665,17 @@ function findSelectedAccount(repoId, accountType, accountName) {
       };
     }
   }
+
+  const top = accountsByType.find(acc =>
+    !(acc["sub-accounts"] || []).length && acc.name === accountName
+  );
+  if (top) {
+    return { type: accountType, account: top, parent: null };
+  }
+
+  // Keep old defaults visible so the user can replace an invalid container selection.
+  const container = allowContainer && accountsByType.find(acc => acc.name === accountName);
+  if (container) return { type: accountType, account: container, parent: null };
 
   return null;
 }
@@ -2946,6 +3028,15 @@ function switchTab(index, mode = 'manual') {
     }
   }
 
+  if (openSelector === "amount") {
+    const amountRow = inputType === "transfer" && !subWorkspace.transfer.sameCurrency
+      ? document.getElementById("exchange-transfer-from-amount-row")
+      : activeTab.querySelector(".amount-row");
+    lastButton?.classList.remove("amount-active");
+    lastButton = amountRow;
+    lastButton.classList.add("amount-active");
+  }
+
   // datetime
   const datetimeEl = activeTab.querySelector(`#${activeForm} .selector-button[data-type='datetime']`);
   const [yyyy, mm, dd, hh, min, ss] = parseDateFromString(subWorkspace.inputTransactionTime);
@@ -3045,7 +3136,7 @@ let startX = 0;
 let endX = 0;
 
 wrapper.addEventListener("touchstart", e => {
-  if (e.target.closest("input, textarea, [contenteditable]")) return;
+  if (e.target.closest("input, textarea, [contenteditable], .account-entries-grouping")) return;
 
   // do not add preventDefault otherwise the selectors won't show!
   // e.preventDefault();   // stop the browser from scrolling the page
@@ -3537,6 +3628,16 @@ async function saveEntry() {
   const inputType = ws.inputType;
   const repoId = ws[inputType].repoId;
 
+  const accountInfos = inputType === "transfer"
+    ? [ws.transfer.fromAccountInfo, ws.transfer.toAccountInfo]
+    : [ws[inputType].accountInfo];
+  if (accountInfos.some(info => !info?.account || (info.account["sub-accounts"] || []).length)) {
+    showStatusMessage(currentLang === "zh"
+      ? "有子账户的主账户不能用于记账，请选择子账户。"
+      : "An account with sub-accounts cannot hold entries. Select a sub-account.", "error", 4000);
+    return;
+  }
+
   if (inputType === "transfer") {
     const fromAcc = ws.transfer.fromAccountInfo.account.name;
     const toAcc = ws.transfer.toAccountInfo.account.name;
@@ -3616,7 +3717,7 @@ async function saveEntry() {
   } else if (inputType === "transfer") {
     entryData = {
       ...base,
-      toAmount: ws[inputType].toAmount ?? 0,
+      toAmount: ws[inputType].sameCurrency ? (ws.amount ?? 0) : (ws[inputType].toAmount ?? 0),
       sameCurrency: ws[inputType].sameCurrency,
       fromAccount: ws[inputType].fromAccountInfo.account.name,
       fromCurrency: ws[inputType].fromAccountInfo.account.currency,
@@ -4136,7 +4237,7 @@ async function importFromSuiCSV(event) { // import CSV data from 随手记
       }[currentLang]}
         ${missingFieldsInRow(row).join(", ")}
         <br>
-        <span style="font-size:12px; color:#555;">
+        <span style="font-size:calc(var(--font-size) * 0.681818); color:#555;">
           ${JSON.stringify(row)}
         </span>
       </li>
@@ -4239,6 +4340,7 @@ function populateHouseholdDropdown(userDoc, householdDocs) {
 
 function attachMobileGesture(el, {
   enableClick = false,
+  allowNativeControls = false,
   dragMode = "none",
   dragDirection = "none", // direction must be specified for an "immediate" dragMode
   longPressTime = 300,
@@ -4264,6 +4366,7 @@ function attachMobileGesture(el, {
   let tapHandled = false;
 
   el.addEventListener("touchstart", e => {
+    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
@@ -4292,6 +4395,7 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("touchmove", e => {
+    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
     const t = e.touches[0];
     const dx = Math.abs(t.clientX - startX);
     const dy = Math.abs(t.clientY - startY);
@@ -4339,6 +4443,7 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("touchend", e => {
+    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
     clearTimeout(longPressTimer);
     
     if (el._scrolling) {
@@ -4364,6 +4469,7 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("click", e => {
+    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
     e.preventDefault();
     e.stopPropagation();
     if (tapHandled) {
@@ -4590,7 +4696,8 @@ async function updateBookmarkIcon() {
     JSON.stringify(f.options) === JSON.stringify(options)
   );
 
-  btn.textContent = exists ? "⭐" : "☆";
+  btn.setAttribute("aria-pressed", String(Boolean(exists)));
+  btn.setAttribute("aria-label", exists ? translations[currentLang].removeBookmarkAction : translations[currentLang].bookmarkAction);
 }
 
 async function renderHomeFavourites() {
@@ -4603,7 +4710,7 @@ async function renderHomeFavourites() {
   favs.forEach((fav, index) => {
     const item = document.createElement("div");
     item.className = "home-fav-item";
-    item.textContent = `⭐ ${fav.title}`;
+    item.textContent = fav.title;
     item.dataset.index = index;
 
     row.appendChild(item);
@@ -4770,12 +4877,66 @@ window.openWeatherSite = openWeatherSite;
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
 
+const accountTitleHeader = document.querySelector(".header-bar");
+const accountTitle = document.getElementById("app-title");
+const accountTitleReturn = document.getElementById("return-btn");
+const accountTitleActions = document.querySelector(".header-right-group");
+
+function fitAccountTitle() {
+  if (!accountTitleHeader.classList.contains("account-title-header")) return;
+
+  const headerRect = accountTitleHeader.getBoundingClientRect();
+  const returnRect = accountTitleReturn.getBoundingClientRect();
+  const actionsRect = accountTitleActions.getBoundingClientRect();
+  const gap = 8;
+  const left = Math.max(0, returnRect.right - headerRect.left + gap);
+  const right = Math.max(0, headerRect.right - actionsRect.left + gap);
+  accountTitle.style.left = `${left}px`;
+  accountTitle.style.right = `${right}px`;
+  accountTitle.style.fontSize = "";
+
+  const normalSize = parseFloat(getComputedStyle(accountTitle).fontSize);
+  if (accountTitle.scrollWidth <= accountTitle.clientWidth) return;
+
+  let minSize = normalSize * 0.7;
+  let maxSize = normalSize;
+  for (let i = 0; i < 10; i++) {
+    const size = (minSize + maxSize) / 2;
+    accountTitle.style.fontSize = `${size}px`;
+    if (accountTitle.scrollWidth <= accountTitle.clientWidth) {
+      minSize = size;
+    } else {
+      maxSize = size;
+    }
+  }
+  accountTitle.style.fontSize = `${minSize}px`;
+}
+
+function enableAccountTitleFit() {
+  accountTitleHeader.classList.add("account-title-header");
+  accountTitle.title = accountTitle.textContent;
+  fitAccountTitle();
+}
+
+const accountTitleResizeObserver = new ResizeObserver(fitAccountTitle);
+accountTitleResizeObserver.observe(accountTitleHeader);
+accountTitleResizeObserver.observe(accountTitleReturn);
+accountTitleResizeObserver.observe(accountTitleActions);
+window.addEventListener("resize", fitAccountTitle);
+document.fonts.ready.then(fitAccountTitle);
+
 async function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
+  accountTitleHeader.classList.remove("account-title-header");
+  accountTitle.style.removeProperty("left");
+  accountTitle.style.removeProperty("right");
+  accountTitle.style.removeProperty("font-size");
+  accountTitle.removeAttribute("title");
+
   // hide all pages
   document.getElementById("return-btn").style.display = "none";
-  document.getElementById("return-btn").textContent = "❮ " + t.back;
+  document.getElementById("return-btn").textContent = t.back;
   document.getElementById("home-weather-btn").style.display = "none";
   document.getElementById("bookmark-btn-headerbar").style.display = "none";
   document.getElementById("pin-btn-headerbar").style.display = "none";
@@ -4829,8 +4990,10 @@ async function showPage(name, title = latestTitle, options = {}) {
     document.getElementById("return-btn").style.display = "block";
     document.getElementById("home-nav").style.display = "none";
 
-    document.getElementById("bookmark-btn-headerbar").style.display = "block";
-    updateBookmarkIcon();
+    if (latestPage !== "settings") {
+      document.getElementById("bookmark-btn-headerbar").style.display = "block";
+      updateBookmarkIcon();
+    }
 
   } else { // at home page
     document.getElementById("home-weather-btn").style.display = "block";
@@ -4844,6 +5007,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
     updateKanbanRow({ en: "This Month", zh: "本月" }[currentLang], 1, getDateRange('thisMonth'));
     updateKanbanRow({ en: "This Year", zh: "本年" }[currentLang], 2, getDateRange('thisYear'));
+    updateKanbanRow("presetUpcoming", 3, getDateRange('upcoming'));
 
     displayHomeImage();
   };
@@ -4853,7 +5017,7 @@ async function showPage(name, title = latestTitle, options = {}) {
   let dateTimeBtn = null;
 
   // show the page
-  target.style.display = "block";
+  target.style.display = ["account-detail", "filtered-entries"].includes(latestPage) ? "flex" : "block";
   target.style.zIndex = historyStack.length;
   
   // Page special handling
@@ -4863,7 +5027,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     let activeForm;
 
     if (latestPage.includes("create")) { // when creating an entry
-      document.getElementById("return-btn").textContent = "❮ " + t.cancel;
+      document.getElementById("return-btn").textContent = t.cancel;
 
       let inProgress = !!workspace.create;
 
@@ -4924,7 +5088,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       lastButton = amountRowEl;
       setTimeout(() => {
         showSelector('amount');
-        lastButton.style.borderWidth = "3px";
+        lastButton.classList.add("amount-active");
       }, 10);
 
       const secondBtn = document.getElementById("second-btn-nav");
@@ -4991,6 +5155,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
     // Render reward accounts section
     const loyaltySection = document.createElement("div");
+    loyaltySection.className = "rewards-section";
     loyaltySection.innerHTML = `
       <div class="section-header">
         <div class="section-title">${t.loyaltyPrograms}</div>
@@ -5019,6 +5184,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
     // Render credit card section
     const creditSection = document.createElement("div");
+    creditSection.className = "rewards-section";
     creditSection.innerHTML = `
       <div class="section-header">
         <div class="section-title">${t.creditCards}</div>
@@ -5074,19 +5240,8 @@ async function showPage(name, title = latestTitle, options = {}) {
     const addBtn = document.getElementById("add-btn-headerbar");
     addBtn.style.display = "block";
 
-    addBtn.onclick = () => {
-      showPage("account-add",
-        currentLang === "en"
-          ? `Add Sub‑Account`
-          : `新增子账户`,
-        {
-          activeRepoId,
-          mode: "sub",
-          accountType,
-          accountId
-        }
-      );
-    };
+    addBtn.onclick = () => showPage("create", "navTransaction");
+    enableAccountTitleFit();
 
   } else if (latestPage === "account-edit") {
     const { activeRepoId, accountType, accountId } = options;
@@ -5100,6 +5255,7 @@ async function showPage(name, title = latestTitle, options = {}) {
     saveBtn.onclick = async () => {
       await saveAccountEdits(activeRepoId, accountType, accountId);
     };
+    enableAccountTitleFit();
 
   } else if (latestPage === "account-add") {
 
@@ -5130,15 +5286,22 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   } else if (latestPage === "filtered-entries") {
 
+    if (kanbanEntryGrouping.kanbanIndex !== options.kanbanIndex) {
+      kanbanEntryGrouping = { kanbanIndex: options.kanbanIndex, mode: "month", collapsed: new Set() };
+    }
     if (options.kanbanIndex == 0) {
       // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
+      const [, month, day] = filters.dateTo.split("-").map(Number);
+      const todayLabel = currentLang === "zh"
+        ? `${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`
+        : `${monthNames.en[month - 1].slice(0, 3)} ${String(day).padStart(2, "0")}`;
       document.getElementById("app-title").textContent = "";
-      document.getElementById("return-btn").textContent = "❮ " + translations[currentLang].today + " " + filters.dateTo;
+      document.getElementById("return-btn").textContent = translations[currentLang].today + " " + todayLabel;
 
       let filteredEntries = await getFilteredEntries(filters);
 
-      showFilteredEntriesToday(filteredEntries);
+      showFilteredEntries(filteredEntries, { today: true });
 
       document.getElementById("search-btn-headerbar").style.display = "block";
 
@@ -5147,6 +5310,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
       addBtn.onclick = () => showPage("create", "navTransaction");
     } else {
+      if (options.kanbanIndex == 3) options.filters = getDateRange("upcoming");
       let filteredEntries = await getFilteredEntries(options.filters);
       console.log(options.filters)
       showFilteredEntries(filteredEntries);
@@ -5163,6 +5327,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       
       attachMobileGesture(target, {
         enableClick: true,
+        allowNativeControls: true,
         dragMode: "immediate",
         dragDirection: 'horizontal',
 
@@ -5223,7 +5388,7 @@ async function showPage(name, title = latestTitle, options = {}) {
           if (e.target.classList.contains("delete-btn")) {
             deleteEntry(repoId, entryId);
             block.remove();
-            showPage("filtered-entries", title, options)
+            showPage("filtered-entries", latestTitle, latestOptions)
             return;
           }
 
@@ -5300,6 +5465,45 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   if (latestPage === "settings") {
     document.getElementById("settings-welcome").textContent = `${t.welcome}${window.currentUserLogin}`;
+    document.getElementById("settings-subtitle").textContent = t.settingsSubtitle;
+    document.getElementById("settings-entries-label").textContent = t.settingsEntriesLabel;
+    document.getElementById("settings-entries-unit").textContent = t.settingsEntriesUnit;
+    document.getElementById("settings-days-label").textContent = t.settingsDaysLabel;
+    document.getElementById("settings-days-unit").textContent = t.settingsDaysUnit;
+
+    let earliestEntryDate = null;
+    let entryCount = 0;
+    for (const repoEntries of Object.values(localLedgerDataMap)) {
+      if (!repoEntries) continue;
+
+      for (const entry of Object.values(repoEntries)) {
+        if (!entry?.transactionTime) continue;
+        const transactionDate = new Date(entry.transactionTime);
+        if (Number.isNaN(transactionDate.getTime())) continue;
+
+        entryCount += 1;
+        const entryDate = new Date(
+          transactionDate.getFullYear(),
+          transactionDate.getMonth(),
+          transactionDate.getDate()
+        );
+        if (!earliestEntryDate || entryDate < earliestEntryDate) {
+          earliestEntryDate = entryDate;
+        }
+      }
+    }
+
+    const today = new Date();
+    const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const earliestEntryUtc = earliestEntryDate
+      ? Date.UTC(earliestEntryDate.getFullYear(), earliestEntryDate.getMonth(), earliestEntryDate.getDate())
+      : null;
+    const loggingDays = earliestEntryUtc === null
+      ? 0
+      : Math.max(0, Math.floor((todayUtc - earliestEntryUtc) / 86400000) + 1);
+
+    document.getElementById("settings-entry-count").textContent = entryCount.toLocaleString();
+    document.getElementById("settings-days-count").textContent = loggingDays.toLocaleString();
   }
 
   renderPinnedBubbles();
@@ -5377,24 +5581,22 @@ async function shiftMonth(delta) {
   const dateTo = `${y}-${m}-${daysInMonth(y, currentMonthState.month)}`;
 
   // Fetch and display
-  const filteredEntries = await getFilteredEntries({ dateFrom, dateTo });
+  latestOptions.filters = { ...latestOptions.filters, dateFrom, dateTo };
+  const filteredEntries = await getFilteredEntries(latestOptions.filters);
   showFilteredEntries(filteredEntries);
-
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
 
   function formatMonthTitle(year, month, currentLang) {
     if (currentLang === "zh") {
       return `${year}年${month}月`;
     } else {
-      return `${months[month - 1]} ${year}`;
+      return `${monthNames.en[month - 1].slice(0, 3)} ${year}`;
     }
   }
 
   // Update title
   const titleText = formatMonthTitle(currentMonthState.year, currentMonthState.month, currentLang);
+  latestTitle = titleText;
+  historyStack[historyStack.length - 1][1] = titleText;
   document.getElementById("app-title").textContent = titleText;
 }
 
@@ -5407,7 +5609,8 @@ async function shiftYear(delta) {
   const dateTo   = `${y}-12-31`;
 
   // Fetch + render
-  const filteredEntries = await getFilteredEntries({ dateFrom, dateTo });
+  latestOptions.filters = { ...latestOptions.filters, dateFrom, dateTo };
+  const filteredEntries = await getFilteredEntries(latestOptions.filters);
   showFilteredEntries(filteredEntries);
 
   function formatYearTitle(year, currentLang) {
@@ -5419,7 +5622,10 @@ async function shiftYear(delta) {
   }
 
   // Update title
-  document.getElementById("app-title").textContent = formatYearTitle(y, currentLang);
+  const titleText = formatYearTitle(y, currentLang);
+  latestTitle = titleText;
+  historyStack[historyStack.length - 1][1] = titleText;
+  document.getElementById("app-title").textContent = titleText;
 }
 
 function renderAlertCenter() {
@@ -5437,9 +5643,9 @@ function renderAlertCenter() {
   container.innerHTML = `
     <div class="home-section-title">${t.alerts}</div>
     ${alertItems.map(item => `
-      <div class="alert-item"
+      <div class="alert-item alert-item--${item.urgent ? "urgent" : "upcoming"}"
            onclick="${item.onclick}">
-        ${item.text}
+        <span>${item.text}</span>
       </div>
     `).join("")}
   `;
@@ -5525,6 +5731,7 @@ function buildAlertItems() {
 
     items.push({
       text: `您有 ${parts.join(t.comma)}`,
+      urgent: overdueCount > 0 || due7Count > 0,
       onclick: `prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)`
     });
   }
@@ -5553,6 +5760,7 @@ function buildAlertItems() {
 
     items.push({
       text: `您有 ${parts.join(t.comma)}`,
+      urgent: lpExpired > 0 || lpDue1 > 0,
       onclick: `showPage('rewards-hub', 'Rewards Hub')`
     });
   }
@@ -5712,6 +5920,186 @@ function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeL
 }
 window.prepareRepoTabs = prepareRepoTabs;
 
+function getAccountMatches(repoId) {
+  const groups = accountTypes.flatMap(type =>
+    (settingsMap[repoId].accounts[type] || []).map(account => ({ type, account }))
+  );
+  const accounts = groups.flatMap(({ type, account }) => {
+    const children = account["sub-accounts"] || [];
+    return (children.length ? children : [account]).map(item => ({
+        id: item.id,
+        name: item.name,
+        currency: item.currency,
+        type,
+        parent: item === account ? null : account.name,
+        source: item
+      }));
+  });
+  const matches = [];
+  for (const entry of Object.values(localLedgerDataMap[repoId] || {})) {
+    const sides = entry.type === "transfer"
+      ? [["fromAccount", "fromCurrency", "fromAccountId"], ["toAccount", "toCurrency", "toAccountId"]]
+      : ["income", "expense", "balance"].includes(entry.type)
+        ? [["account", "currency", "accountId"]]
+        : [];
+    for (const [nameField, currencyField, idField] of sides) {
+      const linkedId = entry[idField];
+      const linkedGroups = linkedId ? groups.filter(group => group.account.id === linkedId &&
+        (group.account["sub-accounts"] || []).length) : [];
+      let candidates;
+      if (linkedGroups.length === 1) {
+        const children = linkedGroups[0].account["sub-accounts"];
+        candidates = accounts.filter(account => children.includes(account.source) &&
+          account.name === entry[nameField] && account.currency === entry[currencyField]);
+      } else if (linkedId) {
+        candidates = linkedGroups.length ? [] : accounts.filter(account => account.id === linkedId);
+      } else {
+        candidates = accounts.filter(account => account.name === entry[nameField] && account.currency === entry[currencyField]);
+      }
+      const hasUniqueId = candidates.length === 1 && candidates[0].id &&
+        accounts.filter(account => account.id === candidates[0].id).length === 1;
+      matches.push({
+        entryId: entry.entryId,
+        side: nameField,
+        currency: entry[currencyField],
+        candidates,
+        status: hasUniqueId ? (linkedId && !linkedGroups.length ? "linked" : "match") : "unresolved"
+      });
+    }
+  }
+  return matches;
+}
+
+function getAccountActivity(repoId, account, tabKey = "all", { includeFuture = false } = {}) {
+  const children = account["sub-accounts"] || [];
+  const allAccounts = children.length ? children : [account];
+  const selected = tabKey === "all" ? allAccounts : allAccounts.filter(item => item.id === tabKey);
+  const ids = new Set(selected.map(item => item.id));
+  const matches = getAccountMatches(repoId);
+  const unresolved = matches.some(item => item.status === "unresolved");
+  const matched = matches.filter(item => item.status !== "unresolved" && ids.has(item.candidates[0].id));
+  const entries = localLedgerDataMap[repoId] || {};
+  const byEntry = new Map();
+  for (const item of matched) {
+    const entry = entries[item.entryId];
+    if (!entry) continue;
+    if (!byEntry.has(item.entryId)) byEntry.set(item.entryId, { entry, sides: [] });
+    byEntry.get(item.entryId).sides.push(item);
+  }
+  const balances = new Map(selected.map(item => [item.id, { currency: item.currency, value: 0, inflow: 0, outflow: 0 }]));
+  const entryFlows = new Map();
+  let invalid = unresolved || !localLedgerDataMap[repoId] ||
+    selected.some(item => !item.id || !item.currency);
+  const now = Date.now();
+  const ordered = [...byEntry.values()].sort((a, b) =>
+    String(a.entry.transactionTime).localeCompare(String(b.entry.transactionTime)) ||
+    String(a.entry.entryId).localeCompare(String(b.entry.entryId))
+  );
+  const lastTime = new Map();
+  for (const { entry, sides } of ordered) {
+    const time = new Date(String(entry.transactionTime || "").replace(" ", "T")).getTime();
+    if (!Number.isFinite(time)) { invalid = true; continue; }
+    if (!includeFuture && time > now) continue;
+    for (const side of sides) {
+      const id = side.candidates[0].id;
+      const balance = balances.get(id);
+      if (!balance || balance.currency !== side.currency) { invalid = true; continue; }
+      const previous = lastTime.get(id);
+      if (previous && previous.time === time && (previous.balance || entry.type === "balance")) invalid = true;
+      lastTime.set(id, { time, balance: entry.type === "balance" });
+      const rawAmount = side.side === "toAccount" && entry.type === "transfer"
+        ? (entry.sameCurrency || (entry.sameCurrency == null && entry.fromCurrency === entry.toCurrency)
+          ? entry.amount : entry.toAmount) : entry.amount;
+      const amount = Number(rawAmount);
+      if (rawAmount === "" || rawAmount == null || !Number.isFinite(amount)) { invalid = true; continue; }
+      if (entry.type === "balance") {
+        balance.value = amount;
+        balance.inflow = 0;
+        balance.outflow = 0;
+      }
+      else {
+        const direction = entry.type === "income" || side.side === "toAccount" ? 1 : -1;
+        const accountSign = side.candidates[0].type === "creditCards" ? -1 : 1;
+        balance.value += direction * accountSign * amount;
+        const flow = direction * amount;
+        if (flow >= 0) balance.inflow += flow;
+        else balance.outflow -= flow;
+        if (!entryFlows.has(entry.entryId)) entryFlows.set(entry.entryId, { inflows: new Map(), outflows: new Map() });
+        const flows = entryFlows.get(entry.entryId);
+        const amounts = flow >= 0 ? flows.inflows : flows.outflows;
+        amounts.set(balance.currency, (amounts.get(balance.currency) || 0) + Math.abs(flow));
+      }
+    }
+  }
+  const totals = new Map();
+  const inflows = new Map();
+  const outflows = new Map();
+  for (const balance of balances.values()) {
+    totals.set(balance.currency, (totals.get(balance.currency) || 0) + balance.value);
+    inflows.set(balance.currency, (inflows.get(balance.currency) || 0) + balance.inflow);
+    outflows.set(balance.currency, (outflows.get(balance.currency) || 0) + balance.outflow);
+  }
+  return { entries: ordered.map(item => item.entry), totals, inflows, outflows, entryFlows, invalid };
+}
+
+function formatAccountBalances(activity, markup = false) {
+  if (activity.invalid) return currentLang === "zh" ? "余额不可用" : "Balance unavailable";
+  const format = markup ? renderCurrencyAmount : formatCurrencyAmount;
+  return [...activity.totals].map(([currency, value]) => format(value, currency)).join(" · ");
+}
+
+function getCreditAlertThreshold(account) {
+  const raw = account.creditAlertThreshold;
+  if (raw == null || raw === "") return { enabled: false, valid: true };
+  const value = Number(raw);
+  return { enabled: true, valid: Number.isFinite(value) && value >= 0, value };
+}
+
+function setupAccountAmountInput(input) {
+  input.addEventListener("focus", () => {
+    input.value = input.value.replace(/,/g, "");
+  });
+  input.addEventListener("input", () => {
+    const cleaned = input.value.replace(/[^\d.]/g, "");
+    const dot = cleaned.indexOf(".");
+    input.value = dot < 0 ? cleaned : cleaned.slice(0, dot + 1) + cleaned.slice(dot + 1).replace(/\./g, "");
+  });
+  input.addEventListener("blur", () => {
+    if (input.value && input.value !== "." && Number.isFinite(Number(input.value))) {
+      input.value = getFormattedAmount(Number(input.value));
+    }
+  });
+}
+
+function createCreditAlertField(input) {
+  const field = document.createElement("label");
+  field.className = "account-add-field account-credit-alert";
+  const prefix = document.createElement("span");
+  prefix.className = "field-label";
+  prefix.textContent = currentLang === "zh" ? "可用额度少于" : "Notify me when available credit is below";
+  input.classList.add("field-input");
+  input.placeholder = currentLang === "zh" ? "填写金额" : "Enter amount";
+  field.append(prefix, input);
+  if (currentLang === "zh") {
+    const suffix = document.createElement("span");
+    suffix.className = "field-label";
+    suffix.textContent = "时提醒我";
+    field.appendChild(suffix);
+  }
+  const hint = document.createElement("span");
+  hint.className = "account-credit-alert-hint";
+  hint.textContent = currentLang === "zh" ? "留空则不提醒" : "Leave blank to disable reminders";
+  field.appendChild(hint);
+  return field;
+}
+
+function readAccountAmount(input) {
+  const value = input.value.replace(/,/g, "").trim();
+  if (!value) return null;
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value) || !Number.isFinite(Number(value))) return NaN;
+  return Number(getFormattedAmount(Number(value)).replace(/,/g, ""));
+}
+
 function loadAccounts(repoId) {
   const target = document.getElementById("accounts-container");
   target.innerHTML = "";
@@ -5720,41 +6108,184 @@ function loadAccounts(repoId) {
   if (!repoSettings || !repoSettings.accounts) return;
 
   const accounts = repoSettings.accounts;
-
-  accountTypes.forEach((type, typeIndex) => {
+  const currency = baseCurrency;
+  const summary = document.createElement("div");
+  summary.className = "accounts-total";
+  const zh = currentLang === "zh";
+  const labels = zh
+    ? { net: "净资产", assets: "资产", liabilities: "负债", calculating: "计算中…", unavailable: "不可用" }
+    : { net: "Net assets", assets: "Assets", liabilities: "Liabilities", calculating: "Calculating…", unavailable: "Unavailable" };
+  const summaryValues = {};
+  for (const key of ["net", "assets", "liabilities"]) {
+    const metric = document.createElement("div");
+    metric.className = `accounts-total-metric accounts-total-${key}`;
+    const label = document.createElement("span");
+    label.textContent = key === "net" ? `${labels[key]} (${currency})` : labels[key];
+    const value = document.createElement("strong");
+    value.textContent = labels.calculating;
+    metric.append(label, value);
+    summaryValues[key] = value;
+    summary.appendChild(metric);
+  }
+  const summaryStatus = document.createElement("div");
+  summaryStatus.className = "accounts-total-status";
+  summary.appendChild(summaryStatus);
+  target.appendChild(summary);
+  const categoryTotals = new Map();
+  for (const type of accountTypes) {
+    const totals = new Map();
+    let invalid = false;
+    for (const account of accounts[type] || []) {
+      if (account.exclude) continue;
+      const children = account["sub-accounts"] || [];
+      for (const item of children.length ? children : [account]) {
+        if (item.exclude) continue;
+        const activity = getAccountActivity(repoId, { ...item, "sub-accounts": [] });
+        invalid ||= activity.invalid;
+        for (const [code, amount] of activity.totals) {
+          totals.set(code, (totals.get(code) ?? 0) + amount);
+        }
+      }
+    }
+    categoryTotals.set(type, { totals, invalid });
+  }
+  const categoryValues = new Map();
+  accountTypes.forEach(type => {
     const list = accounts[type];
     if (!list || list.length === 0) return;
 
-    const headerText = translations[currentLang][type];
+    const group = document.createElement("section");
+    group.className = "account-type-group";
 
-    const header = document.createElement("div");
+    const header = document.createElement("h2");
     header.className = "account-type-header";
-    header.textContent = headerText;
-    target.appendChild(header);
+    const title = document.createElement("span");
+    title.textContent = translations[currentLang][type];
+    const subtotal = document.createElement("span");
+    subtotal.className = "account-type-total";
+    subtotal.textContent = `${type === "creditCards" ? labels.liabilities : labels.assets} ${labels.calculating}`;
+    categoryValues.set(type, subtotal);
+    header.append(title, subtotal);
+    group.appendChild(header);
 
-    list.forEach((acc, index) => {
+    const cards = document.createElement("div");
+    cards.className = "account-type-cards";
+    list.forEach(acc => {
       const row = createAccountRow(repoId, type, acc.id);
-      target.appendChild(row);
-
-      if (acc.notes?.trim()) {
-        const notes = document.createElement("div");
-        notes.className = "account-notes";
-        notes.textContent = acc.notes;
-        target.appendChild(notes);
-      }
-
-      if (index < list.length - 1) {
-        target.appendChild(document.createElement("hr"));
-      }
+      cards.appendChild(row);
     });
+    group.appendChild(cards);
+    target.appendChild(group);
+  });
 
-    const isLastType = typeIndex === accountTypes.length - 1;
-
-    if (!isLastType) {
-      const wide = document.createElement("hr");
-      wide.className = "hr-wide";
-      target.appendChild(wide);
+  Promise.all(accountTypes.map(async type => {
+    const category = categoryTotals.get(type);
+    const converted = await convertCurrencyTotals(category.totals, currency);
+    return { type, invalid: category.invalid, ...converted };
+  })).then(results => {
+    if (!summary.isConnected || currency !== baseCurrency) return;
+    const missing = [...new Set(results.flatMap(result => result.missing))];
+    const invalid = results.some(result => result.invalid);
+    const assetsUnavailable = results.some(result => result.type !== "creditCards" && (result.invalid || result.missing.length));
+    const liabilitiesUnavailable = results.some(result => result.type === "creditCards" && (result.invalid || result.missing.length));
+    const assets = results.filter(result => result.type !== "creditCards").reduce((sum, result) => sum + result.total, 0);
+    const liabilities = results.find(result => result.type === "creditCards").total;
+    summaryValues.assets.textContent = assetsUnavailable ? labels.unavailable : formatCurrencyAmount(assets, currency);
+    summaryValues.liabilities.textContent = liabilitiesUnavailable ? labels.unavailable : formatCurrencyAmount(liabilities, currency);
+    summaryValues.net.textContent = assetsUnavailable || liabilitiesUnavailable
+      ? labels.unavailable : formatCurrencyAmount(assets - liabilities, currency);
+    for (const result of results) {
+      const subtotal = categoryValues.get(result.type);
+      if (!subtotal) continue;
+      const isLiability = result.type === "creditCards";
+      const value = result.invalid || result.missing.length
+        ? labels.unavailable : formatCurrencyAmount(result.total, currency);
+      subtotal.textContent = `${isLiability ? labels.liabilities : labels.assets} ${value}`;
     }
+    const reasons = [];
+    if (invalid) reasons.push(zh ? "部分账单账户无法确定或数据无效" : "Some entries have unresolved accounts or invalid data");
+    if (missing.length) reasons.push(zh ? `缺少汇率或币种：${missing.join(", ")}` : `Missing rates or currencies: ${missing.join(", ")}`);
+    summaryStatus.textContent = reasons.join("；");
+  }).catch(error => {
+    console.error("Failed to calculate account totals", error);
+    if (!summary.isConnected || currency !== baseCurrency) return;
+    for (const value of Object.values(summaryValues)) value.textContent = labels.unavailable;
+    for (const [type, subtotal] of categoryValues) {
+      subtotal.textContent = `${type === "creditCards" ? labels.liabilities : labels.assets} ${labels.unavailable}`;
+    }
+    summaryStatus.textContent = zh ? "汇总计算失败" : "Failed to calculate totals";
+  });
+}
+
+const iconColors = new Map();
+
+function getIconColor(icon) {
+  const image = icon.querySelector("img");
+  const text = image ? "" : icon.textContent.trim();
+  if (!image && !text) return Promise.resolve(null);
+  const key = image ? `image:${image.src}` : `text:${text}`;
+  if (iconColors.has(key)) return iconColors.get(key);
+
+  const result = (async () => {
+    if (image) {
+      if (!image.complete) {
+        await new Promise((resolve, reject) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", () => reject(new Error("Icon failed to load")), { once: true });
+        });
+      }
+      if (!image.naturalWidth) throw new Error("Icon could not be decoded");
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("Canvas is unavailable");
+    if (image) {
+      ctx.drawImage(image, 0, 0, 64, 64);
+    } else {
+      ctx.font = "48px 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 32, 32);
+    }
+
+    const pixels = ctx.getImageData(0, 0, 64, 64).data;
+    const buckets = new Map();
+    let opaque = 0;
+    let colorful = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if (pixels[i + 3] < 128) continue;
+      const [r, g, b] = [pixels[i], pixels[i + 1], pixels[i + 2]];
+      const chromatic = Math.max(r, g, b) - Math.min(r, g, b) >= 45;
+      const key = `${chromatic ? 1 : 0}:${r >> 5}:${g >> 5}:${b >> 5}`;
+      const bucket = buckets.get(key) || { count: 0, r: 0, g: 0, b: 0, chromatic };
+      bucket.count++;
+      bucket.r += r;
+      bucket.g += g;
+      bucket.b += b;
+      buckets.set(key, bucket);
+      opaque++;
+      if (chromatic) colorful++;
+    }
+    const preferColor = colorful >= opaque * 0.1;
+    const dominant = [...buckets.values()]
+      .filter(bucket => !preferColor || bucket.chromatic)
+      .sort((a, b) => b.count - a.count)[0];
+    if (!dominant) return null;
+    const rgb = [dominant.r, dominant.g, dominant.b].map(value => Math.round(value / dominant.count));
+    return `rgb(${rgb.join(", ")})`;
+  })();
+  iconColors.set(key, result);
+  result.catch(() => iconColors.delete(key));
+  return result;
+}
+
+function applyIconAccent(target, icon, property = "--account-accent") {
+  getIconColor(icon).then(color => {
+    if (color) target.style.setProperty(property, color);
+  }).catch(error => {
+    console.warn("Unable to extract icon color", error);
   });
 }
 
@@ -5766,9 +6297,17 @@ function createAccountRow(repoId, type, accountId) {
 
   const row = document.createElement("div");
   row.className = "account-row";
+  row.setAttribute("role", "button");
+  row.tabIndex = 0;
 
   row.addEventListener("click", () => {
     showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, accountId: accountId });
+  });
+  row.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      row.click();
+    }
   });
 
   // Sub-accounts
@@ -5776,11 +6315,10 @@ function createAccountRow(repoId, type, accountId) {
   const hasSubs = subs.length > 0;
 
   // Multi-currency detection
-  const currencies = new Set([acc.currency, ...subs.map(s => s.currency)]);
+  const currencies = new Set((hasSubs ? subs : [acc]).map(item => item.currency));
   const multiCurrency = currencies.size > 1;
 
-  // Placeholder sum (you will compute later)
-  const sumPlaceholder = "--";
+  const activity = getAccountActivity(repoId, acc);
 
   // CREDIT CARD WARNING TEXT
   let dueWarning = "";
@@ -5837,34 +6375,70 @@ function createAccountRow(repoId, type, accountId) {
   }
 
   row.innerHTML = `
-    <div class="account-left">
+    <div class="account-header">
       <span class="account-icon">${acc.icon ?? ""}</span>
-
-      <div class="account-text">
-        <div class="account-title">
-          <span class="account-name">${acc.name}</span>
-          ${hasSubs ? `<span class="subaccount-badge">${subs.length}</span>` : ""}
-          ${dueWarning}
-        </div>
-
-        ${type === "creditCards" && acc.statementDate && acc.dueDate ? `
-          <div class="account-notes">
-            ${t.statementLabel} ${acc.statementDate ?? "-"} •
-            ${t.dueLabel} ${acc.dueDate ?? "-"}
-            ${acc.notes ? `• ${acc.notes}` : ""}
-          </div>
-        ` : acc.notes ? `
-          <div class="account-notes">${acc.notes}</div>
-        ` : ""}
+      <div class="account-title">
+        <span class="account-name"></span>
+        ${hasSubs ? `<span class="subaccount-badge" aria-label="${currentLang === "zh" ? `${subs.length} 个子账户` : `${subs.length} sub-accounts`}">${subs.length}</span>` : ""}
+        ${dueWarning}
       </div>
+      <div class="account-sum"></div>
     </div>
-
-    <div class="account-right ${multiCurrency ? "multi" : ""}">
-      <div class="account-sum">${sumPlaceholder}</div>
-      ${multiCurrency ? `<div class="account-multi-currency">Multiple currencies</div>` : ""}
-    </div>
+    <div class="account-notes"></div>
   `;
-
+  applyIconAccent(row, row.querySelector(".account-icon"));
+  const name = row.querySelector(".account-name");
+  name.textContent = acc.name;
+  name.title = acc.name;
+  const amount = row.querySelector(".account-sum");
+  amount.innerHTML = formatAccountBalances(activity, true);
+  amount.title = formatAccountBalances(activity);
+  const warning = row.querySelector(".due-warning");
+  if (warning) warning.title = warning.textContent.trim();
+  const threshold = getCreditAlertThreshold(acc);
+  if (type === "creditCards" && threshold.enabled) {
+    const badge = document.createElement("span");
+    badge.className = "due-warning credit-alert-warning";
+    row.querySelector(".account-title").appendChild(badge);
+    const showCreditWarning = text => {
+      badge.textContent = text;
+      badge.title = text;
+    };
+    const limit = acc.creditLimit;
+    const validLimit = limit != null && limit !== "" && Number.isFinite(Number(limit)) && Number(limit) >= 0;
+    const validCurrency = typeof acc.currency === "string" && /^[A-Z]{3}$/.test(acc.currency);
+    if (!threshold.valid || !validLimit || !validCurrency) {
+      showCreditWarning(currentLang === "zh" ? "额度提醒不可用" : "Credit alert unavailable");
+    } else {
+      const creditActivity = getAccountActivity(repoId, acc, "all", { includeFuture: true });
+      convertCurrencyTotals(creditActivity.totals, acc.currency).then(result => {
+        if (!row.isConnected) return;
+        if (creditActivity.invalid || result.missing.length) {
+          showCreditWarning(currentLang === "zh" ? "额度提醒不可用" : "Credit alert unavailable");
+        } else if (Number(limit) - result.total < threshold.value) {
+          showCreditWarning(currentLang === "zh" ? "可用额度低" : "Low available credit");
+        } else {
+          badge.remove();
+        }
+      }).catch(error => {
+        console.error("Failed to calculate credit alert", error);
+        if (row.isConnected) showCreditWarning(currentLang === "zh" ? "额度提醒不可用" : "Credit alert unavailable");
+      });
+    }
+  }
+  const notes = [];
+  if (type === "creditCards" && acc.statementDate && acc.dueDate) {
+    notes.push(`${t.statementLabel} ${acc.statementDate} · ${t.dueLabel} ${acc.dueDate}`);
+  }
+  if (acc.notes) notes.push(acc.notes);
+  if (multiCurrency) notes.push(currentLang === "zh" ? "多币种" : "Multiple currencies");
+  const notesElement = row.querySelector(".account-notes");
+  if (notes.length) {
+    notesElement.textContent = notes.join(" · ");
+    notesElement.title = notesElement.textContent;
+  } else {
+    notesElement.remove();
+  }
   return row;
 }
 
@@ -5888,7 +6462,7 @@ function renderAccountTabs(repoId, accountType, accountId, elementId, options = 
       );
       subs.forEach(sub => {
         tabRow.appendChild(
-          createAccountTabButton(sub.name, sub.name, false, onTabClick)
+          createAccountTabButton(sub.id, sub.name, false, onTabClick)
         );
       });
     }
@@ -6004,44 +6578,196 @@ function setCyclePaid(repoId, accountType, accountId, cycleStart, paid) {
   }
 }
 
+let accountEntryGrouping = { accountKey: null, mode: "month", collapsed: new Set() };
+
+function getAccountEntryGroup(entry, mode, zh) {
+  const day = entry.transactionTime.slice(0, 10);
+  if (mode === "week") {
+    const date = new Date(`${day}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+    const start = date.toISOString().slice(0, 10);
+    date.setUTCDate(date.getUTCDate() + 6);
+    const end = date.toISOString().slice(0, 10);
+    return { key: start, label: `${start} – ${end}` };
+  }
+  if (mode === "month") {
+    const month = day.slice(0, 7);
+    return { key: month, label: zh ? `${month.slice(0, 4)}年${month.slice(5)}月` : month };
+  }
+  if (mode === "year") {
+    const year = day.slice(0, 4);
+    return { key: year, label: zh ? `${year}年` : year };
+  }
+  if (mode === "primary" || mode === "secondary") {
+    if (entry.type === "transfer" || entry.type === "balance") {
+      return {
+        key: entry.type,
+        label: entry.type === "transfer" ? (zh ? "转账" : "Transfer") : (zh ? "余额变更" : "Balance set")
+      };
+    }
+    const primary = typeof entry.primaryCategory === "string" ? entry.primaryCategory.trim() : "";
+    const secondary = typeof entry.secondaryCategory === "string" ? entry.secondaryCategory.trim() : "";
+    const value = mode === "primary" ? primary : secondary;
+    if (!value) return { key: "missing", label: zh ? "未分类" : "Uncategorized" };
+    const typeLabel = entry.type === "income" ? (zh ? "收入" : "Income") : (zh ? "支出" : "Expense");
+    const category = mode === "secondary" && primary ? `${primary} / ${secondary}` : value;
+    return { key: JSON.stringify([entry.type, primary, mode === "secondary" ? secondary : ""]), label: `${typeLabel} · ${category}` };
+  }
+  const value = typeof entry[mode] === "string" ? entry[mode].trim() : "";
+  return value
+    ? { key: JSON.stringify(value), label: value }
+    : { key: "missing", label: zh ? "未分类" : "Uncategorized" };
+}
+
+function getAccountEntryGroups(entry, matches, zh) {
+  const sides = entry.type === "transfer"
+    ? [["fromAccount", "fromCurrency", "fromAccountId"], ["toAccount", "toCurrency", "toAccountId"]]
+    : [["account", "currency", "accountId"]];
+  const groups = new Map();
+  for (const [nameField, currencyField, idField] of sides) {
+    const match = matches.get(JSON.stringify([entry.entryId, nameField]));
+    const account = match?.status !== "unresolved" ? match?.candidates[0] : null;
+    const name = account?.name || entry[nameField];
+    const currency = account?.currency || entry[currencyField];
+    const identity = account?.id || entry[idField] || [name, currency];
+    const key = JSON.stringify([entry.repoId, !!account, identity]);
+    if (!groups.has(key)) {
+      const accountName = name || (zh ? "未知账户" : "Unknown account");
+      const unresolved = account ? "" : (zh ? " · 账户未确认" : " · Unresolved account");
+      const repo = householdDocs[entry.repoId]?.name || entry.repoId;
+      const label = `${accountName}${currency ? ` (${currency})` : ""}${repo ? ` · ${repo}` : ""}${unresolved}`;
+      groups.set(key, { key, label, sides: [] });
+    }
+    groups.get(key).sides.push(nameField);
+  }
+  return [...groups.values()];
+}
+
+function getAccountGroupTransferFlow(entry, sides) {
+  const flows = { inflows: new Map(), outflows: new Map() };
+  for (const side of sides) {
+    const incoming = side === "toAccount";
+    const raw = incoming && !entry.sameCurrency &&
+      !(entry.sameCurrency == null && entry.fromCurrency === entry.toCurrency)
+      ? entry.toAmount : entry.amount;
+    const amount = raw === "" || raw == null ? NaN : Number(raw);
+    const currency = incoming ? entry.toCurrency : entry.fromCurrency;
+    const amounts = incoming ? flows.inflows : flows.outflows;
+    amounts.set(currency, (amounts.get(currency) ?? 0) + amount);
+  }
+  return flows;
+}
+
 function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "all") {
   const t = translations[currentLang];
 
   const account = settingsMap[repoId].accounts[accountType]
     .find(a => a.id === accountId);
 
+  const mainContent = document.getElementById("account-detail-main");
+  mainContent.innerHTML = "";
   const content = document.getElementById("account-detail-content");
   content.innerHTML = "";
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "account-detail-summary";
-
-
-  // Placeholder values — you will compute real ones later
-  const totalSum = "--";
-  const inflow = "--";
-  const outflow = "--";
-
-  // --- COMMON SUMMARY (all accounts) ---
-  wrapper.innerHTML = `
-    <div class="summary-row">
-      <div class="summary-item">
-        <div class="summary-label">总额</div>
-        <div class="summary-value">${totalSum}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">流入</div>
-        <div class="summary-value summary-inflow">${inflow}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">流出</div>
-        <div class="summary-value summary-outflow">${outflow}</div>
-      </div>
-    </div>
-  `;
+  const activity = getAccountActivity(repoId, account, tabKey, { includeFuture: true });
+  const zh = currentLang === "zh";
+  const selectedAccount = tabKey === "all" ? account : (account["sub-accounts"] || []).find(sub => sub.id === tabKey);
+  const currency = selectedAccount?.currency;
+  const validCurrency = typeof currency === "string" && /^[A-Z]{3}$/.test(currency);
+  const labels = zh
+    ? { net: accountType === "creditCards" ? "账户负债" : "账户余额", assets: "流入", liabilities: "流出", calculating: "计算中…", unavailable: "不可用" }
+    : { net: accountType === "creditCards" ? "Account debt" : "Account balance", assets: "Inflow", liabilities: "Outflow", calculating: "Calculating…", unavailable: "Unavailable" };
+  const summary = document.createElement("div");
+  summary.className = "accounts-total";
+  const values = {};
+  for (const key of ["net", "assets", "liabilities"]) {
+    const metric = document.createElement("div");
+    metric.className = `accounts-total-metric accounts-total-${key}`;
+    const label = document.createElement("span");
+    label.textContent = key === "net"
+      ? `${labels[key]}${validCurrency ? ` (${currency})` : ""}`
+      : labels[key];
+    const value = document.createElement("strong");
+    value.textContent = labels.calculating;
+    metric.append(label, value);
+    summary.appendChild(metric);
+    values[key] = value;
+  }
+  const status = document.createElement("div");
+  status.className = "accounts-total-status";
+  summary.appendChild(status);
+  content.appendChild(summary);
+  const creditLimit = account.creditLimit;
+  const creditThreshold = getCreditAlertThreshold(account);
+  const hasCreditLimit = creditLimit != null && creditLimit !== "";
+  const validCreditLimit = hasCreditLimit && Number.isFinite(Number(creditLimit)) && Number(creditLimit) >= 0;
+  const validCreditCurrency = typeof account.currency === "string" && /^[A-Z]{3}$/.test(account.currency);
+  let availableCreditValue = null;
+  (async () => {
+    const total = validCurrency
+      ? await convertCurrencyTotals(activity.totals, currency)
+      : { total: 0, missing: [currency || "?"] };
+    let credit = null;
+    if (accountType === "creditCards" && validCreditLimit && validCreditCurrency) {
+      const sharedActivity = tabKey === "all" ? activity : getAccountActivity(repoId, account, "all", { includeFuture: true });
+      const sharedTotal = tabKey === "all"
+        ? total : await convertCurrencyTotals(sharedActivity.totals, account.currency);
+      credit = { invalid: sharedActivity.invalid, ...sharedTotal };
+    }
+    const flows = validCurrency
+      ? await Promise.all([
+        convertCurrencyTotals(activity.inflows, currency),
+        convertCurrencyTotals(activity.outflows, currency)
+      ])
+      : [{ total: 0, missing: [currency || "?"] }, { total: 0, missing: [currency || "?"] }];
+    return { results: [total, ...flows], credit };
+  })()
+    .then(({ results, credit }) => {
+      if (!summary.isConnected) return;
+      const missing = [...new Set(results.flatMap(result => result.missing))];
+      ["net", "assets", "liabilities"].forEach((key, index) => {
+        values[key].textContent = activity.invalid || results[index].missing.length
+          ? labels.unavailable : getFormattedAmount(results[index].total);
+      });
+      const reasons = [];
+      if (activity.invalid) reasons.push(zh
+        ? "部分账单账户无法确定或数据无效；同一时间的余额记录需要区分先后。"
+        : "Some entries have unresolved accounts or invalid data; balance records at the same time need an ordering.");
+      if (missing.length) reasons.push(zh ? `缺少汇率或币种：${missing.join(", ")}` : `Missing rates or currencies: ${missing.join(", ")}`);
+      if (availableCreditValue) {
+        if (!creditThreshold.valid) reasons.push(zh ? "可用额度提醒额无效" : "Invalid available credit alert threshold");
+        if (!hasCreditLimit) {
+          availableCreditValue.textContent = zh ? "未设置" : "Not set";
+        } else if (!validCreditLimit || !validCreditCurrency || credit.invalid || credit.missing.length) {
+          availableCreditValue.textContent = labels.unavailable;
+          if (!validCreditLimit) reasons.push(zh ? "信用额度无效" : "Invalid credit limit");
+          if (!validCreditCurrency) reasons.push(zh ? "主账户币种无效" : "Invalid parent account currency");
+          if (credit?.invalid && !activity.invalid) reasons.push(zh ? "主账户负债无法确定" : "Parent account debt is unavailable");
+          const creditMissing = credit?.missing.filter(code => !missing.includes(code)) || [];
+          if (creditMissing.length) reasons.push(zh ? `缺少汇率或币种：${creditMissing.join(", ")}` : `Missing rates or currencies: ${creditMissing.join(", ")}`);
+        } else {
+          const available = Number(creditLimit) - credit.total;
+          availableCreditValue.innerHTML = renderCurrencyAmount(available, account.currency);
+          availableCreditValue.parentElement.classList.toggle("credit-alert-low", creditThreshold.valid && creditThreshold.enabled && available < creditThreshold.value);
+        }
+      }
+      status.textContent = reasons.join("；");
+    }).catch(error => {
+      console.error("Failed to calculate account detail totals", error);
+      if (!summary.isConnected) return;
+      for (const value of Object.values(values)) value.textContent = labels.unavailable;
+      if (availableCreditValue) availableCreditValue.textContent = labels.unavailable;
+      status.textContent = zh ? "汇总计算失败" : "Failed to calculate totals";
+    });
 
   // --- CREDIT CARD SPECIAL SECTION ---
   if (accountType === "creditCards") {
+    const wrapper = document.createElement("div");
+    wrapper.className = "account-detail-summary";
+    mainContent.appendChild(wrapper);
+    const icon = document.createElement("span");
+    icon.innerHTML = account.icon ?? "";
+    applyIconAccent(wrapper, icon);
     const today = new Date();
 
     const statementDay = account.statementDate;
@@ -6071,8 +6797,8 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
       const nextMonthIndex = cycleEnd.getMonth();
 
       if (currentLang === "en") {
-        currentMonth = monthNamesEN[currentMonthIndex];
-        nextMonth = monthNamesEN[nextMonthIndex];
+        currentMonth = monthNames.en[currentMonthIndex];
+        nextMonth = monthNames.en[nextMonthIndex];
       } else {
         currentMonth = currentMonthIndex + 1;
         nextMonth = nextMonthIndex + 1;
@@ -6115,14 +6841,9 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
     }
 
     // --- CREDIT LIMIT (always shown) ---
-    const creditLimit = account.creditLimit ?? null;
-    const formattedCreditLimit = creditLimit != null
-      ? getFormattedAmount(creditLimit)
-      : "-";
-
-    const used = 0; // compute later
-    const available = creditLimit != null ? creditLimit - used : "-";
-    const usagePercent = paid ? 0 : (creditLimit ? used / creditLimit : 0);
+    const formattedCreditLimit = validCreditLimit && validCreditCurrency
+      ? renderCurrencyAmount(creditLimit, account.currency)
+      : hasCreditLimit ? labels.unavailable : "-";
 
     // --- RENDER SECTION (always rendered) ---
     const ccSection = document.createElement("div");
@@ -6164,7 +6885,7 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
       </div>
 
       <!-- Row 3: Credit Limit -->
-      <div class="cc-row">
+      <div class="cc-row cc-credit-row">
         <div class="cc-left">
           <span class="cc-label">${t.creditLimitLabel}</span>
           <span class="cc-value">${formattedCreditLimit ?? "-"}</span>
@@ -6172,11 +6893,7 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
 
         <div class="cc-right">
           <div class="cc-right-text">
-            ${t.available(getFormattedAmount(available))}
-          </div>
-          <div class="cc-progress-bar">
-            <div class="cc-progress-fill"
-              style="width: ${usagePercent * 100}%; --redness: 0"></div>
+            ${zh ? "可用额度" : "Available credit"} <span class="cc-available-value">${labels.calculating}</span>
           </div>
         </div>
       </div>
@@ -6190,7 +6907,7 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
     `;
 
     wrapper.appendChild(ccSection);
-    content.appendChild(wrapper);
+    availableCreditValue = ccSection.querySelector(".cc-available-value");
 
     // Checkbox handler (only if dates exist)
     if (canCalculate) {
@@ -6208,6 +6925,302 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
     }
   }
 
+  const accountKey = JSON.stringify([repoId, accountType, accountId]);
+  if (accountEntryGrouping.accountKey !== accountKey) {
+    accountEntryGrouping = { accountKey, mode: "month", collapsed: new Set() };
+  }
+  renderGroupedEntryList({
+    container: content,
+    entries: [...activity.entries].reverse(),
+    getEntryFlow: (entry, group) => group?.sides && entry.type === "transfer"
+      ? getAccountGroupTransferFlow(entry, group.sides)
+      : activity.entryFlows.get(entry.entryId),
+    invalid: activity.invalid,
+    currency,
+    state: accountEntryGrouping,
+    prepareEntry: (block, entry) => {
+      const amount = block.querySelector(".fe-entry-amount-right");
+      if (!amount) return;
+      amount.innerHTML = entry.type === "transfer"
+        ? `${renderCurrencyAmount(entry.amount, entry.fromCurrency)} → ${renderCurrencyAmount(entry.sameCurrency || (entry.sameCurrency == null && entry.fromCurrency === entry.toCurrency) ? entry.amount : entry.toAmount, entry.toCurrency)}`
+        : renderCurrencyAmount(entry.amount, entry.currency);
+      block.querySelector(".fe-entry-actions")?.remove();
+      block.addEventListener("click", () => showPage("transaction", t.edit, {
+        mode: "loadExistingEntry", repoId, transactionId: entry.entryId
+      }));
+    }
+  });
+}
+
+function renderGroupedEntryList({ container, entries: allEntries, getEntryFlow, invalid, currency, state, prepareEntry, showGrouping = true }) {
+  const zh = currentLang === "zh";
+  const validCurrency = typeof currency === "string" && /^[A-Z]{3}$/.test(currency);
+  const labels = zh
+    ? { calculating: "计算中…", unavailable: "不可用" }
+    : { calculating: "Calculating…", unavailable: "Unavailable" };
+  const groupOptions = [
+    { label: zh ? "时间" : "Time", options: zh ? [["week", "周"], ["month", "月"], ["year", "年"]] : [["week", "Week"], ["month", "Month"], ["year", "Year"]] },
+    { label: zh ? "交易类别" : "Category", options: zh ? [["primary", "大类"], ["secondary", "小类"]] : [["primary", "Category"], ["secondary", "Subcategory"]] },
+    { label: zh ? "账户" : "Account", mode: "account" },
+    { label: zh ? "对象" : "Subject", mode: "subject" },
+    { label: zh ? "项目" : "Project", mode: "collection" }
+  ];
+  const scroll = container.closest(".scroll");
+  const page = scroll.parentElement;
+  page.querySelector(":scope > .account-entries-grouping")?.remove();
+  if (showGrouping) {
+    const grouping = document.createElement("div");
+    grouping.className = "account-entries-grouping";
+    grouping.setAttribute("role", "group");
+    grouping.setAttribute("aria-label", zh ? "账单分组方式" : "Group entries by");
+    const mainRow = document.createElement("div");
+    mainRow.className = "account-entries-grouping-main";
+    const subRow = document.createElement("div");
+    subRow.className = "account-entries-grouping-sub";
+    subRow.hidden = true;
+    let expanded = null;
+    const updateButtons = () => {
+      for (const button of mainRow.querySelectorAll("button")) {
+        const option = groupOptions[Number(button.dataset.index)];
+        const active = option.mode === state.mode || option.options?.some(([mode]) => mode === state.mode);
+        button.setAttribute("aria-pressed", String(!!active));
+        if (option.options) button.setAttribute("aria-expanded", String(expanded === option));
+      }
+    };
+    const selectMode = value => {
+      const changed = state.mode !== value;
+      state.mode = value;
+      expanded = null;
+      subRow.hidden = true;
+      subRow.replaceChildren();
+      updateButtons();
+      if (changed) renderEntries();
+    };
+    groupOptions.forEach((option, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = option.label;
+      button.dataset.index = index;
+      if (option.mode) button.dataset.mode = option.mode;
+      button.addEventListener("click", () => {
+        if (!option.options) {
+          selectMode(option.mode);
+          return;
+        }
+        expanded = expanded === option ? null : option;
+        subRow.replaceChildren();
+        subRow.hidden = !expanded;
+        if (expanded) {
+          for (const [value, label] of expanded.options) {
+            const subButton = document.createElement("button");
+            subButton.type = "button";
+            subButton.textContent = label;
+            subButton.dataset.mode = value;
+            subButton.setAttribute("aria-pressed", String(state.mode === value));
+            subButton.addEventListener("click", () => selectMode(value));
+            subRow.appendChild(subButton);
+          }
+        }
+        updateButtons();
+      });
+      mainRow.appendChild(button);
+    });
+    updateButtons();
+    grouping.append(subRow, mainRow);
+    page.appendChild(grouping);
+  }
+  const entriesContainer = document.createElement("div");
+  entriesContainer.className = "account-entries";
+  container.appendChild(entriesContainer);
+
+  let entriesRenderVersion = 0;
+  function renderEntries() {
+    const renderVersion = ++entriesRenderVersion;
+    const sortByNet = ["primary", "secondary", "account", "subject", "collection"].includes(state.mode);
+    const groupResults = [];
+    entriesContainer.replaceChildren();
+    if (invalid) {
+      const warning = document.createElement("p");
+      warning.textContent = zh
+        ? "待处理的账户归属可能导致账单列表不完整。"
+        : "Unresolved account matches may make this list incomplete.";
+      entriesContainer.appendChild(warning);
+    }
+    const groups = new Map();
+    const accountMatches = new Map();
+    if (state.mode === "account") {
+      for (const repoId of new Set(allEntries.map(entry => entry.repoId))) {
+        if (!settingsMap[repoId]?.accounts) continue;
+        const matches = new Map();
+        for (const match of getAccountMatches(repoId)) {
+          matches.set(JSON.stringify([match.entryId, match.side]), match);
+        }
+        accountMatches.set(repoId, matches);
+      }
+    }
+    for (const entry of allEntries) {
+      const day = entry.transactionTime?.slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(entry.transactionTime || "") ||
+          Number.isNaN(new Date(`${day}T00:00:00Z`).getTime())) {
+        const error = document.createElement("p");
+        error.textContent = `${zh ? "账单时间无效" : "Invalid entry time"}: ${entry.entryId}`;
+        entriesContainer.appendChild(error);
+        continue;
+      }
+      const groupInfos = state.mode === "account"
+        ? getAccountEntryGroups(entry, accountMatches.get(entry.repoId) || new Map(), zh)
+        : [getAccountEntryGroup(entry, state.mode, zh)];
+      for (const groupInfo of groupInfos) {
+        if (!groups.has(groupInfo.key)) groups.set(groupInfo.key, { label: groupInfo.label, entries: [] });
+        groups.get(groupInfo.key).entries.push({ entry, groupInfo });
+      }
+    }
+    if (!allEntries.length) {
+      const empty = document.createElement("p");
+      empty.textContent = invalid
+        ? (zh ? "没有可确认归属的账单" : "No entries with a confirmed match")
+        : (zh ? "暂无账单" : "No entries");
+      entriesContainer.appendChild(empty);
+    }
+    for (const [groupKey, { label, entries: members }] of groups) {
+      const entries = members.map(member => member.entry);
+      const section = document.createElement("details");
+      section.className = "account-entry-group";
+      const collapseKey = JSON.stringify([state.mode, groupKey]);
+      const collapsed = state.collapsed;
+      section.open = !collapsed.has(collapseKey);
+      section.addEventListener("toggle", () => {
+        if (!section.isConnected) return;
+        if (section.open) collapsed.delete(collapseKey);
+        else collapsed.add(collapseKey);
+      });
+      const groupHeading = document.createElement("summary");
+      groupHeading.className = "account-entry-group-heading";
+      const headingContent = document.createElement("div");
+      headingContent.className = "account-entry-group-content";
+      const groupTitle = document.createElement("div");
+      groupTitle.className = "account-entry-group-title";
+      const groupName = document.createElement("span");
+      groupName.textContent = label;
+      groupTitle.appendChild(groupName);
+      const groupTotals = document.createElement("div");
+      groupTotals.className = "account-entry-group-totals";
+      const flowTotals = document.createElement("div");
+      flowTotals.className = "account-entry-group-flows";
+      const totalValues = {};
+      for (const [key, text] of [["net", zh ? "结余" : "Net"], ["inflows", zh ? "流入" : "Inflow"], ["outflows", zh ? "流出" : "Outflow"]]) {
+        const metric = document.createElement("div");
+        metric.className = `account-entry-group-${key}`;
+        const name = document.createElement("span");
+        name.textContent = text;
+        const value = document.createElement("strong");
+        value.textContent = labels.calculating;
+        metric.append(name, value);
+        (key === "net" ? groupTotals : flowTotals).appendChild(metric);
+        totalValues[key] = value;
+      }
+      groupTotals.appendChild(flowTotals);
+      const groupStatus = document.createElement("div");
+      groupStatus.className = "account-entry-group-status";
+      headingContent.append(groupTitle, groupTotals, groupStatus);
+      groupHeading.appendChild(headingContent);
+      section.appendChild(groupHeading);
+      const flows = { inflows: new Map(), outflows: new Map() };
+      for (const { entry, groupInfo } of members) {
+        const entryFlow = getEntryFlow(entry, groupInfo);
+        if (!entryFlow) continue;
+        for (const key of ["inflows", "outflows"]) {
+          for (const [code, amount] of entryFlow[key]) {
+            flows[key].set(code, (flows[key].get(code) ?? 0) + amount);
+          }
+        }
+      }
+      const groupResult = (async () => {
+        if (invalid || !validCurrency) {
+          return { error: zh ? "账户流水或币种不可用" : "Account flows or currency unavailable" };
+        }
+        if ([...flows.inflows.values(), ...flows.outflows.values()].some(value => !Number.isFinite(value))) {
+          return { error: zh ? "分类汇总金额无效" : "Invalid group totals" };
+        }
+        const [inflows, outflows] = await Promise.all([
+          convertCurrencyTotals(flows.inflows, currency),
+          convertCurrencyTotals(flows.outflows, currency)
+        ]);
+        const missing = [...new Set([...inflows.missing, ...outflows.missing])];
+        if (missing.length) {
+          return { error: zh ? `缺少汇率或币种：${missing.join(", ")}` : `Missing rates or currencies: ${missing.join(", ")}` };
+        }
+        if (!Number.isFinite(inflows.total) || !Number.isFinite(outflows.total) ||
+            !Number.isFinite(inflows.total - outflows.total)) {
+          return { error: zh ? "分类汇总金额无效" : "Invalid group totals" };
+        }
+        return { inflows: inflows.total, outflows: outflows.total };
+      })().then(result => {
+        if (!section.isConnected) return { section, net: null };
+        if (result.error) {
+          for (const value of Object.values(totalValues)) value.textContent = labels.unavailable;
+          groupStatus.textContent = result.error;
+          return { section, net: null };
+        }
+        totalValues.net.innerHTML = renderCurrencyAmount(result.inflows - result.outflows, currency);
+        totalValues.inflows.textContent = getFormattedAmount(result.inflows);
+        totalValues.outflows.textContent = getFormattedAmount(result.outflows);
+        return { section, net: result.inflows - result.outflows };
+      }).catch(error => {
+        console.error("Failed to calculate account entry group totals", error);
+        if (section.isConnected) {
+          for (const value of Object.values(totalValues)) value.textContent = labels.unavailable;
+          groupStatus.textContent = zh ? "分类汇总计算失败" : "Failed to calculate group totals";
+        }
+        return { section, net: null };
+      });
+      groupResults.push(groupResult);
+      const days = new Map();
+      for (const entry of entries) {
+        const day = entry.transactionTime.slice(0, 10);
+        if (!days.has(day)) days.set(day, []);
+        days.get(day).push(entry);
+      }
+      const groupEntries = document.createElement("div");
+      groupEntries.className = "account-entry-group-entries";
+      for (const [day, dayEntries] of days) {
+        const group = document.createElement("div");
+        group.innerHTML = renderEntryGroup(day, dayEntries);
+        for (const block of group.querySelectorAll(".fe-entry-block")) {
+          const icon = block.querySelector(".fe-entry-content .icon-content")
+            || block.querySelector(".fe-entry-content .icon");
+          const content = block.querySelector(".fe-entry-content");
+          if (icon && content) applyIconAccent(content, icon, "--entry-accent");
+        }
+        if (prepareEntry) {
+          const blocks = [...group.querySelectorAll(".fe-entry-block")];
+          for (const entry of dayEntries) {
+            const block = blocks.find(el => el.dataset.entryId === String(entry.entryId) && el.dataset.repoId === String(entry.repoId));
+            if (block) prepareEntry(block, entry);
+          }
+        }
+        groupEntries.appendChild(group);
+      }
+      section.appendChild(groupEntries);
+      entriesContainer.appendChild(section);
+    }
+    if (sortByNet) {
+      Promise.all(groupResults).then(results => {
+        if (renderVersion !== entriesRenderVersion || !entriesContainer.isConnected) return;
+        const sorted = results.slice().sort((a, b) => {
+          if (a.net === null) return b.net === null ? 0 : 1;
+          if (b.net === null) return -1;
+          return b.net - a.net;
+        });
+        if (sorted.every((item, index) => item.section === results[index].section)) return;
+        const focused = document.activeElement;
+        const restoreFocus = focused && entriesContainer.contains(focused);
+        for (const item of sorted) entriesContainer.appendChild(item.section);
+        if (restoreFocus) focused.focus({ preventScroll: true });
+      });
+    }
+  }
+  renderEntries();
 }
 
 function getDragAfterElement(container, x) {
@@ -6249,6 +7262,12 @@ function renderAccountEditPage(repoId, accountType, accountId) {
     mode: "edit",
     onTabClick: (key) => activateTab(key)
   });
+
+  const addSubButton = document.createElement("button");
+  addSubButton.type = "button";
+  addSubButton.className = "account-edit-add-sub";
+  addSubButton.textContent = currentLang === "zh" ? "+ 新增子账户" : "+ Add sub-account";
+  wrapper.appendChild(addSubButton);
 
   tabRow.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -6334,11 +7353,12 @@ function renderAccountEditPage(repoId, accountType, accountId) {
 
   const currencySelect = document.createElement("select");
   currencySelect.name = "currency";
+  currencySelect.classList.add("currency-select");
 
   supportedCurrencies.forEach(cur => {
     const opt = document.createElement("option");
     opt.value = cur;
-    opt.textContent = cur;
+    opt.textContent = formatCurrencyLabel(cur);
     if (cur === account.currency) opt.selected = true;
     currencySelect.appendChild(opt);
   });
@@ -6357,6 +7377,7 @@ function renderAccountEditPage(repoId, accountType, accountId) {
 
     const statement = document.createElement("select");
     statement.name = "statementDate";
+    statement.add(new Option("", ""));
 
     for (let d = 1; d <= 31; d++) {
       const opt = document.createElement("option");
@@ -6374,6 +7395,7 @@ function renderAccountEditPage(repoId, accountType, accountId) {
 
     const due = document.createElement("select");
     due.name = "dueDate";
+    due.add(new Option("", ""));
 
     for (let d = 1; d <= 31; d++) {
       const opt = document.createElement("option");
@@ -6405,28 +7427,29 @@ function renderAccountEditPage(repoId, accountType, accountId) {
       limit.value = "";
     }
 
-    let rawValue = account.creditLimit ?? null;
-
-    limit.addEventListener("input", () => {
-      const cleaned = limit.value.replace(/[^\d.]/g, "");
-      const parts = cleaned.split(".");
-      if (parts.length > 2) {
-        limit.value = parts[0] + "." + parts.slice(1).join("");
-        return;
-      }
-      rawValue = cleaned === "" ? null : Number(cleaned);
-    });
-
-    limit.addEventListener("blur", () => {
-      if (rawValue != null && !isNaN(rawValue)) {
-        limit.value = getFormattedAmount(rawValue);
-      } else {
-        limit.value = "";
-      }
-    });
+    setupAccountAmountInput(limit);
 
     row4.appendChild(limit);
     mainPanel.appendChild(row4);
+
+    const alertRow = document.createElement("div");
+    alertRow.classList.add("account-inline-row");
+    const alertLabel = document.createElement("label");
+    alertLabel.htmlFor = "edit-credit-alert-threshold";
+    alertLabel.textContent = currentLang === "zh" ? "可用额度提醒额" : "Available credit alert";
+    const alertInput = document.createElement("input");
+    alertInput.id = "edit-credit-alert-threshold";
+    alertInput.type = "text";
+    alertInput.inputMode = "decimal";
+    alertInput.name = "creditAlertThreshold";
+    alertInput.placeholder = currentLang === "zh" ? "留空不提醒" : "Leave blank to disable";
+    if (account.creditAlertThreshold != null && account.creditAlertThreshold !== "") {
+      alertInput.value = String(account.creditAlertThreshold);
+      if (Number.isFinite(Number(alertInput.value))) alertInput.value = getFormattedAmount(Number(alertInput.value));
+    }
+    setupAccountAmountInput(alertInput);
+    alertRow.append(alertLabel, alertInput);
+    mainPanel.appendChild(alertRow);
   }
 
   // STORED VALUE CARD FIELDS
@@ -6470,7 +7493,7 @@ function renderAccountEditPage(repoId, accountType, accountId) {
   excludeInput.checked = !!account.exclude;
 
   excludeLabel.appendChild(excludeInput);
-  excludeLabel.append(" 不计入资产");
+  excludeLabel.append(currentLang === "zh" ? " 不计入汇总" : " Exclude from totals");
 
   rowExclude.appendChild(excludeLabel);
   mainPanel.appendChild(rowExclude);
@@ -6537,11 +7560,12 @@ function renderAccountEditPage(repoId, accountType, accountId) {
 
       const sCurrency = document.createElement("select");
       sCurrency.name = `sub-${index}-currency`;
+      sCurrency.classList.add("currency-select");
 
       supportedCurrencies.forEach(cur => {
         const opt = document.createElement("option");
         opt.value = cur;
-        opt.textContent = cur;
+        opt.textContent = formatCurrencyLabel(cur);
         if (cur === sub.currency) opt.selected = true;
         sCurrency.appendChild(opt);
       });
@@ -6562,7 +7586,7 @@ function renderAccountEditPage(repoId, accountType, accountId) {
       sExcludeInput.checked = !!sub.exclude;
 
       sExcludeLabel.appendChild(sExcludeInput);
-      sExcludeLabel.append(" 不计入资产");
+      sExcludeLabel.append(currentLang === "zh" ? " 不计入汇总" : " Exclude from totals");
 
       srowExclude.appendChild(sExcludeLabel);
       panel.appendChild(srowExclude);
@@ -6573,6 +7597,80 @@ function renderAccountEditPage(repoId, accountType, accountId) {
       wrapper.appendChild(panel);
     });
   }
+
+  wrapper.querySelectorAll(".edit-panel").forEach(panel => {
+    const zh = currentLang === "zh";
+    const rows = [...panel.children];
+    const basic = document.createElement("div");
+    basic.className = "account-add-panel";
+    const makeField = (control, text, notes = false) => {
+      const field = document.createElement("label");
+      field.className = `account-add-field${notes ? " account-add-notes" : ""}`;
+      const label = document.createElement("span");
+      label.className = "field-label";
+      label.textContent = text;
+      control.classList.add("field-input");
+      field.append(label, control);
+      return field;
+    };
+    const name = rows[0].querySelector('input[type="text"]');
+    basic.appendChild(makeField(name, zh ? "名称" : "Name"));
+
+    const pair = rows[1];
+    const icon = pair.querySelector("button");
+    const iconValue = pair.querySelector('input[type="hidden"]');
+    const currency = pair.querySelector("select");
+    pair.className = "account-add-pair";
+    pair.replaceChildren();
+    const iconField = document.createElement("div");
+    iconField.className = "account-add-field";
+    const iconLabel = document.createElement("span");
+    iconLabel.className = "field-label";
+    iconLabel.textContent = zh ? "图标" : "Icon";
+    icon.type = "button";
+    icon.className = "field-input account-add-icon";
+    icon.setAttribute("aria-label", zh ? "选择图标" : "Choose icon");
+    if (!iconValue.value) icon.textContent = zh ? "选择图标" : "Choose an icon";
+    iconField.append(iconLabel, icon, iconValue);
+    pair.append(iconField, makeField(currency, zh ? "货币" : "Currency"));
+    basic.appendChild(pair);
+    const notes = panel.querySelector('textarea[data-key]');
+    basic.appendChild(makeField(notes, zh ? "备注" : "Notes", true));
+    notes.rows = 2;
+
+    const special = document.createElement("div");
+    special.className = "account-add-panel";
+    if (panel.dataset.tab === "main" && accountType === "creditCards") {
+      const dates = document.createElement("div");
+      dates.className = "account-add-pair";
+      dates.append(
+        makeField(panel.querySelector('select[name="statementDate"]'), zh ? "账单日" : "Statement Date"),
+        makeField(panel.querySelector('select[name="dueDate"]'), zh ? "还款日" : "Due Date")
+      );
+      special.append(
+        dates,
+        makeField(panel.querySelector('input[name="creditLimit"]'), zh ? "信用额度" : "Credit Limit"),
+        createCreditAlertField(panel.querySelector('input[name="creditAlertThreshold"]'))
+      );
+    } else if (panel.dataset.tab === "main" && accountType === "storedValueCards") {
+      special.append(
+        makeField(panel.querySelector('input[name="cardNumber"]'), zh ? "卡号" : "Card Number"),
+        makeField(panel.querySelector('input[name="pin"]'), zh ? "密码" : "PIN")
+      );
+    }
+
+    const exclude = panel.querySelector('input[type="checkbox"]');
+    const excludeField = document.createElement("label");
+    excludeField.className = "account-add-panel account-add-exclude";
+    const excludeLabel = document.createElement("span");
+    excludeLabel.className = "field-label";
+    excludeLabel.textContent = zh ? "不计入汇总" : "Exclude from totals";
+    exclude.classList.add("field-checkbox");
+    excludeField.append(excludeLabel, exclude);
+    panel.replaceChildren(basic);
+    if (special.children.length) panel.appendChild(special);
+    panel.appendChild(excludeField);
+  });
 
   // ───────────────────────────────────────────────
   // TAB SWITCHING
@@ -6594,6 +7692,22 @@ function renderAccountEditPage(repoId, accountType, accountId) {
       activateTab(btn.dataset.tab);
     });
   });
+
+  const getDraftState = () => JSON.stringify({
+    fields: [...wrapper.querySelectorAll("input, select, textarea")].map(field =>
+      field.type === "checkbox" ? field.checked : field.value
+    ),
+    order: [...tabRow.querySelectorAll(".account-tab-btn")].map(button => button.dataset.tab)
+  });
+  const initialDraft = getDraftState();
+  addSubButton.addEventListener("click", () => {
+    if (getDraftState() !== initialDraft && !confirm(currentLang === "zh"
+      ? "尚未保存的账户修改将丢失。确定继续新增子账户吗？"
+      : "Unsaved account changes will be lost. Continue adding a sub-account?")) return;
+    showPage("account-add", currentLang === "zh" ? "新增子账户" : "Add Sub-Account", {
+      activeRepoId: repoId, mode: "sub", accountType, accountId
+    });
+  });
 }
 
 function createSectionHeader(text) {
@@ -6606,10 +7720,12 @@ function createSectionHeader(text) {
 function createTextareaRow(label, key, value) {
   const row = document.createElement("div");
   row.className = "form-row";
-  row.innerHTML = `
-    <label>${label}</label>
-    <textarea data-key="${key}">${value ?? ""}</textarea>
-  `;
+  const labelElement = document.createElement("label");
+  labelElement.textContent = label;
+  const textarea = document.createElement("textarea");
+  textarea.dataset.key = key;
+  textarea.value = value ?? "";
+  row.append(labelElement, textarea);
   return row;
 }
 
@@ -6618,6 +7734,14 @@ async function saveAccountEdits(repoId, accountType, accountId) {
     .find(a => a.id === accountId);
 
   const container = document.getElementById("account-edit-content");
+  let creditAlertThreshold = null;
+  if (accountType === "creditCards") {
+    creditAlertThreshold = readAccountAmount(container.querySelector('input[name="creditAlertThreshold"]'));
+    if (Number.isNaN(creditAlertThreshold)) {
+      alert(currentLang === "zh" ? "请输入有效的可用额度提醒额" : "Enter a valid available credit alert threshold");
+      return;
+    }
+  }
 
   // MAIN FIELDS
   account.name = container.querySelector('input[name="name"]').value.trim();
@@ -6636,6 +7760,7 @@ async function saveAccountEdits(repoId, accountType, accountId) {
     account.statementDate = sd ? parseInt(sd) : null;
     account.dueDate = dd ? parseInt(dd) : null;
     account.creditLimit = cleaned ? parseFloat(cleaned) : null;
+    account.creditAlertThreshold = creditAlertThreshold;
 
     // Normalize invalid values
     if (account.statementDate < 1 || account.statementDate > 31) account.statementDate = null;
@@ -6682,34 +7807,41 @@ async function saveAccountEdits(repoId, accountType, accountId) {
   goBack();
 }
 
-function renderAccountAddPage({ activeRepoId, mode, accountType, account }) {
+function renderAccountAddPage({ activeRepoId, mode, accountType, accountId }) {
   const container = document.getElementById("account-add-content");
-
   const isSub = mode === "sub";
+  const parent = isSub
+    ? settingsMap[activeRepoId]?.accounts[accountType]?.find(account => account.id === accountId)
+    : null;
+  if (isSub && !parent) {
+    container.textContent = currentLang === "zh" ? "找不到父账户。" : "Parent account not found.";
+    return;
+  }
+  const t = translations[currentLang];
 
   container.innerHTML = `
     <div class="account-add">
-
       ${isSub ? `
-        <div class="field-label">${currentLang === "en" ? "Parent Account" : "父账户"}</div>
-        <div class="field-value">${account.name}</div>
+        <div class="account-add-panel account-add-parent">
+          <div class="field-label">${currentLang === "en" ? "Parent Account" : "父账户"}</div>
+          <div class="field-value"></div>
+        </div>
       ` : ""}
-
       ${!isSub ? `
-        <label class="field-label">${currentLang === "en" ? "Account Type" : "账户类型"}</label>
-        <select id="add-account-type" class="field-input">
-          <option value="">Select…</option>
-          <option value="cashAccounts">Cash Account</option>
-          <option value="depositoryAccounts">Depository Account</option>
-          <option value="creditCards">Credit Card</option>
-          <option value="storedValueCards">Stored Value Card</option>
-          <option value="investmentAccounts">Investment Account</option>
-        </select>
+        <div class="account-add-panel">
+          <label class="account-add-field" for="add-account-type">
+            <span class="field-label">${currentLang === "en" ? "Account Type" : "账户类型"}</span>
+            <select id="add-account-type" class="field-input">
+              <option value="">${currentLang === "en" ? "Select an account type" : "请选择账户类型"}</option>
+              ${accountTypes.map(type => `<option value="${type}">${t[type]}</option>`).join("")}
+            </select>
+          </label>
+        </div>
       ` : ""}
-
       <div id="add-account-fields"></div>
     </div>
   `;
+  if (parent) container.querySelector(".field-value").textContent = parent.name;
 
   const typeSelect = document.getElementById("add-account-type");
 
@@ -6727,59 +7859,124 @@ function renderAccountAddPage({ activeRepoId, mode, accountType, account }) {
 function renderAccountAddFields(type, isSub) {
   const container = document.getElementById("add-account-fields");
 
+  if (container.dataset.initialized) {
+    container.hidden = !type;
+    container.querySelectorAll("[data-account-type]").forEach(panel => {
+      panel.hidden = panel.dataset.accountType !== type;
+    });
+    return;
+  }
+
   if (!type) {
-    container.innerHTML = "";
     return;
   }
 
   let html = `
-    <label class="field-label">${currentLang === "en" ? "Name" : "名称"}</label>
-    <input id="acc-name" class="field-input">
-
-    <label class="field-label">${currentLang === "en" ? "Icon" : "图标"}</label>
-    <input id="acc-icon" class="field-input">
-
-    <label class="field-label">${currentLang === "en" ? "Currency" : "货币"}</label>
-    <input id="acc-currency" class="field-input">
-
-    <label class="field-label">${currentLang === "en" ? "Notes" : "备注"}</label>
-    <textarea id="acc-notes" class="field-input"></textarea>
+    <div class="account-add-panel">
+      <label class="account-add-field" for="acc-name">
+        <span class="field-label">${currentLang === "en" ? "Name" : "名称"}</span>
+        <input id="acc-name" class="field-input">
+      </label>
+      <div class="account-add-pair">
+        <div class="account-add-field">
+          <span id="acc-icon-label" class="field-label">${currentLang === "en" ? "Icon" : "图标"}</span>
+          <button id="acc-icon-button" type="button" class="field-input account-add-icon" aria-labelledby="acc-icon-label">${currentLang === "en" ? "Choose an icon" : "选择图标"}</button>
+          <input id="acc-icon" type="hidden">
+        </div>
+        <label class="account-add-field" for="acc-currency">
+          <span class="field-label">${currentLang === "en" ? "Currency" : "货币"}</span>
+          <select id="acc-currency" class="field-input currency-select">
+            ${supportedCurrencies.map(currency => `<option value="${currency}">${formatCurrencyLabel(currency)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <label class="account-add-field account-add-notes" for="acc-notes">
+        <span class="field-label">${currentLang === "en" ? "Notes" : "备注"}</span>
+        <textarea id="acc-notes" class="field-input" rows="2"></textarea>
+      </label>
+    </div>
   `;
 
-  if (type === "creditCards" && !isSub) {
+  if (!isSub) {
     html += `
-      <label class="field-label">${currentLang === "en" ? "Statement Date" : "账单日"}</label>
-      <input id="acc-statement" type="number" class="field-input">
-
-      <label class="field-label">${currentLang === "en" ? "Due Date" : "还款日"}</label>
-      <input id="acc-due" type="number" class="field-input">
-
-      ${!isSub ? `
-      <label class="field-label">${currentLang === "en" ? "Credit Limit" : "信用额度"}</label>
-      <input id="acc-limit" type="number" class="field-input">
-      ` : ""}
-    `;
-  }
-
-  if (type === "storedValueCards") {
-    html += `
-      <label class="field-label">${currentLang === "en" ? "Card Number" : "卡号"}</label>
-      <input id="acc-cardnum" class="field-input">
-
-      <label class="field-label">${currentLang === "en" ? "PIN" : "密码"}</label>
-      <input id="acc-pin" class="field-input">
+      <div class="account-add-panel" data-account-type="creditCards">
+        <div class="account-add-pair">
+          <label class="account-add-field" for="acc-statement">
+            <span class="field-label">${currentLang === "en" ? "Statement Date" : "账单日"}</span>
+            <select id="acc-statement" class="field-input">
+              <option value=""></option>
+              ${Array.from({ length: 31 }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("")}
+            </select>
+          </label>
+          <label class="account-add-field" for="acc-due">
+            <span class="field-label">${currentLang === "en" ? "Due Date" : "还款日"}</span>
+            <select id="acc-due" class="field-input">
+              <option value=""></option>
+              ${Array.from({ length: 31 }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <label class="account-add-field" for="acc-limit">
+          <span class="field-label">${currentLang === "en" ? "Credit Limit" : "信用额度"}</span>
+          <input id="acc-limit" type="text" inputmode="decimal" class="field-input" autocomplete="off">
+        </label>
+        <label class="account-add-field" for="acc-credit-alert">
+          <span class="field-label">${currentLang === "en" ? "Available Credit Alert" : "可用额度提醒额"}</span>
+          <input id="acc-credit-alert" type="text" inputmode="decimal" class="field-input" autocomplete="off" placeholder="${currentLang === "en" ? "Leave blank to disable" : "留空不提醒"}">
+        </label>
+      </div>
     `;
   }
 
   html += `
-    <label class="field-label">${currentLang === "en" ? "Exclude from totals" : "不计入资产"}</label>
-    <input id="acc-exclude" type="checkbox" class="field-checkbox">
+      <div class="account-add-panel" data-account-type="storedValueCards">
+        <label class="account-add-field" for="acc-cardnum">
+          <span class="field-label">${currentLang === "en" ? "Card Number" : "卡号"}</span>
+          <input id="acc-cardnum" class="field-input">
+        </label>
+        <label class="account-add-field" for="acc-pin">
+          <span class="field-label">${currentLang === "en" ? "PIN" : "密码"}</span>
+          <input id="acc-pin" class="field-input">
+        </label>
+      </div>
+    `;
+
+  html += `
+    <label class="account-add-panel account-add-exclude" for="acc-exclude">
+      <span class="field-label">${currentLang === "en" ? "Exclude from totals" : "不计入汇总"}</span>
+      <input id="acc-exclude" type="checkbox" class="field-checkbox">
+    </label>
   `;
 
   container.innerHTML = html;
+  container.dataset.initialized = "true";
+  container.querySelectorAll("[data-account-type]").forEach(panel => {
+    panel.hidden = panel.dataset.accountType !== type;
+  });
+  const currencySelect = container.querySelector("#acc-currency");
+  currencySelect.value = baseCurrency;
+
+  const alertInput = container.querySelector("#acc-credit-alert");
+  if (alertInput) alertInput.parentElement.replaceWith(createCreditAlertField(alertInput));
+  container.querySelectorAll("#acc-limit, #acc-credit-alert").forEach(setupAccountAmountInput);
+
+  const iconButton = container.querySelector("#acc-icon-button");
+  iconButton.addEventListener("click", event => {
+    event.stopPropagation();
+    const picker = showIconPicker(iconButton, container.querySelector("#acc-icon"));
+    iconButton.closest(".account-add-pair").insertAdjacentElement("afterend", picker);
+  });
 }
 
 async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
+
+  const typeSelect = mode === "main"
+    ? document.getElementById("add-account-type").value
+    : accountType;
+  if (!typeSelect) {
+    alert(currentLang === "en" ? "Select an account type" : "请选择账户类型");
+    return;
+  }
 
   // -----------------------------
   // 1. Read common fields
@@ -6799,18 +7996,6 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
   const base = { name, icon, id: crypto.randomUUID(), currency, notes, exclude };
 
   // -----------------------------
-  // 2. Determine account type
-  // -----------------------------
-  const typeSelect = mode === "main"
-    ? document.getElementById("add-account-type").value
-    : accountType;
-
-  if (!typeSelect) {
-    alert(currentLang === "en" ? "Select an account type" : "请选择账户类型");
-    return;
-  }
-
-  // -----------------------------
   // 3. Type-specific fields
   // -----------------------------
   if (typeSelect === "creditCards") {
@@ -6818,7 +8003,18 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
     base.dueDate = parseInt(document.getElementById("acc-due")?.value) || null;
 
     if (mode === "main") {
-      base.creditLimit = parseFloat(document.getElementById("acc-limit")?.value) || null;
+      const limit = readAccountAmount(document.getElementById("acc-limit"));
+      if (Number.isNaN(limit)) {
+        alert(currentLang === "en" ? "Enter a valid credit limit" : "请输入有效的信用额度");
+        return;
+      }
+      const threshold = readAccountAmount(document.getElementById("acc-credit-alert"));
+      if (Number.isNaN(threshold)) {
+        alert(currentLang === "en" ? "Enter a valid available credit alert threshold" : "请输入有效的可用额度提醒额");
+        return;
+      }
+      base.creditLimit = limit;
+      base.creditAlertThreshold = threshold;
     }
   }
 
@@ -6831,7 +8027,6 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
   // 4. Save MAIN account
   // -----------------------------
   if (mode === "main") {
-    base.exclude = false;
     base["sub-accounts"] = [];
 
     settingsMap[activeRepoId].accounts[typeSelect].push(base);
@@ -6854,7 +8049,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
   await saveLocalJsonData("ledger-settings.json", settingsMap);
   await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: activeRepoId });
 
-  goBack;
+  goBack();
 }
 
 async function loadLabels(activeRepoId, task, type, title) {
@@ -7277,7 +8472,7 @@ function createCategoryInputRow(activeRepoId, task, type, title, hasSecondary, o
   return inputRow;
 }
 
-function showIconPicker(iconBtn) {
+function showIconPicker(iconBtn, iconInput = null) {
   const t = translations[currentLang];
 
   // Always remove any existing wrapper before creating a new one
@@ -7317,6 +8512,7 @@ function showIconPicker(iconBtn) {
   emojiPicker.addEventListener("emoji-click", event => {
     iconBtn.innerHTML = `<span class="icon-content">${event.detail.unicode}</span>`;
     iconBtn.classList.add("selected");
+    if (iconInput) iconInput.value = iconBtn.innerHTML;
     hideWrapper(wrapper);
   });
 
@@ -7324,26 +8520,33 @@ function showIconPicker(iconBtn) {
   const iconGrid = document.createElement("div");
   iconGrid.classList.add("icon-picker-grid");
 
-  fetch("/icons/manifest.json")
-    .then(res => res.json())
+  fetch("./icons/manifest.json")
+    .then(res => {
+      if (!res.ok) throw new Error(`Icon manifest request failed: ${res.status}`);
+      return res.json();
+    })
     .then(files => {
       files.forEach(file => {
         const item = document.createElement("div");
         item.classList.add("icon-picker-item");
 
         const img = document.createElement("img");
-        img.src = `/icons/${file}`;
-        console.log(file)
+        img.src = `./icons/${file}`;
         item.appendChild(img);
 
         item.addEventListener("click", () => {
-          iconBtn.innerHTML = `<span class="icon-content"><img src="/icons/${file}" class="icon-img"></span>`;
+          iconBtn.innerHTML = `<span class="icon-content"><img src="./icons/${file}" class="icon-img"></span>`;
           iconBtn.classList.add("selected");
+          if (iconInput) iconInput.value = iconBtn.innerHTML;
           hideWrapper(wrapper);
         });
 
         iconGrid.appendChild(item);
       });
+    })
+    .catch(error => {
+      console.error("Failed to load icons", error);
+      iconGrid.textContent = currentLang === "en" ? "Unable to load icons." : "无法加载图标。";
     });
 
 
@@ -8208,11 +9411,21 @@ function disablePageSwipe(pageEl) {
 async function setLanguage(lang, sync = true) {
   currentLang = lang;
   const t = translations[lang];
+  updateExchangeRateStatus();
 
   // Login text
-  document.getElementById("return-btn").textContent = "❮ " + t.back;
-  document.getElementById("save-btn-headerbar").textContent = t.save;
-  document.getElementById("manage-btn-headerbar").textContent = t.manage;
+  document.getElementById("return-btn").textContent = t.back;
+  document.getElementById("search-btn-headerbar").setAttribute("aria-label", t.searchAction);
+  document.getElementById("add-btn-headerbar").setAttribute("aria-label", t.addAction);
+  const bookmarkBtn = document.getElementById("bookmark-btn-headerbar");
+  bookmarkBtn.setAttribute("aria-label", bookmarkBtn.getAttribute("aria-pressed") === "true" ? t.removeBookmarkAction : t.bookmarkAction);
+  document.getElementById("save-btn-headerbar").setAttribute("aria-label", t.saveAction);
+  const pinBtn = document.getElementById("pin-btn-headerbar");
+  pinBtn.setAttribute("aria-label", t.pinEntryAction);
+  pinBtn.title = t.pinEntryAction;
+  const manageAccountBtn = document.getElementById("manage-btn-headerbar");
+  manageAccountBtn.setAttribute("aria-label", t.manageAccount);
+  manageAccountBtn.title = t.manageAccount;
 
   // Home text
   document.getElementById("home-balance").textContent = t.incomeMinusExpense;
@@ -8258,6 +9471,11 @@ async function setLanguage(lang, sync = true) {
     .forEach(el => el.textContent = t.notes);
 
   // Settings
+  document.getElementById("settings-subtitle").textContent = t.settingsSubtitle;
+  document.getElementById("settings-entries-label").textContent = t.settingsEntriesLabel;
+  document.getElementById("settings-entries-unit").textContent = t.settingsEntriesUnit;
+  document.getElementById("settings-days-label").textContent = t.settingsDaysLabel;
+  document.getElementById("settings-days-unit").textContent = t.settingsDaysUnit;
   document.getElementById("basic-settings-title").textContent = t.personalSettingsTitle;
   document.getElementById("open-basic-settings").textContent = t.openPersonalSettings;
   document.getElementById("labels-title").textContent = t.labels;
@@ -8622,11 +9840,12 @@ async function displayHomeImage() {
   const images = personal?.homeImages || [];
 
   const img = document.getElementById("home-image");
-  const overlay = document.querySelector(".home-overlay");
+  const imageWrapper = img.closest(".home-image-wrapper");
+  imageWrapper.classList.remove("has-home-image");
 
   if (!Array.isArray(images) || images.length === 0) {
     img.style.display = "none";
-    overlay.style.background = "rgba(0, 0, 0, 0.5)";
+    imageWrapper.classList.remove("has-home-image");
     return;
   }
 
@@ -8635,7 +9854,7 @@ async function displayHomeImage() {
 
   if (!randomPath) {
     img.style.display = "none";
-    overlay.style.background = "rgba(0, 0, 0, 0.5)";
+    imageWrapper.classList.remove("has-home-image");
     return;
   }
 
@@ -8652,12 +9871,12 @@ async function displayHomeImage() {
   preloader.onload = () => {
     img.src = finalUrl;
     img.style.display = "block";
-    overlay.style.background = "transparent";
+    imageWrapper.classList.add("has-home-image");
   };
 
   preloader.onerror = () => {
     img.style.display = "none";
-    overlay.style.background = "rgba(0, 0, 0, 0.5)";
+    imageWrapper.classList.remove("has-home-image");
   };
 
   preloader.src = finalUrl;
@@ -8711,8 +9930,10 @@ async function getFilteredEntries({
     if (collections && e.collection && !collections.includes(e.collection)) return false;
 
     if (accounts) {
-      const acc = e.account || e.fromAccount || e.toAccount;
-      if (!accounts.includes(acc)) return false;
+      const matches = e.type === "transfer"
+        ? accounts.includes(e.fromAccount) || accounts.includes(e.toAccount)
+        : accounts.includes(e.account);
+      if (!matches) return false;
     }
 
     if (tags && !tags.every(t => e.tags?.includes(t))) return false;
@@ -8744,32 +9965,130 @@ function summarizeIncomeExpense(entries) {
   return { income, expense };
 }
 
-function getDateRange(type) {
-  // --- Localized formatter with optional year ---
-  function formatDateLocalized(dateStr, showYear = true) {
-    if (!dateStr) return "";
-
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const date = new Date(y, m - 1, d); // local, no timezone shift
-
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-
-    if (currentLang === "zh") {
-      return showYear
-        ? `${year}年${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`
-        : `${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`;
-    }
-
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    return showYear
-      ? `${months[date.getMonth()]} ${String(day).padStart(2, "0")}, ${year}`
-      : `${months[date.getMonth()]} ${String(day).padStart(2, "0")}`;
+  function updateExchangeRateToggle() {
+    const button = document.getElementById("exchange-rate-toggle");
+    const expanded = !document.getElementById("exchange-rate-list").hidden;
+    button.setAttribute("aria-expanded", String(expanded));
+    button.textContent = currentLang === "zh"
+      ? (expanded ? "收起汇率" : "查看当前汇率")
+      : (expanded ? "Hide rates" : "Show current rates");
   }
 
+  function updateExchangeRateStatus() {
+    const label = document.getElementById("base-currency-label");
+    const status = document.getElementById("exchange-rate-status");
+    const list = document.getElementById("exchange-rate-list");
+    const cached = exchangeRateCache[baseCurrency];
+    const zh = currentLang === "zh";
+    label.textContent = zh ? "本位币" : "Base currency";
+    document.querySelectorAll(".currency-select option").forEach(option => {
+      option.textContent = formatCurrencyLabel(option.value);
+    });
+    updateExchangeRateToggle();
+    list.replaceChildren();
+    const rates = Object.entries(cached?.rates || {})
+      .filter(([code, rate]) => /^[A-Z]{3}$/.test(code) && code !== baseCurrency && Number.isFinite(rate) && rate > 0)
+      .sort(([a], [b]) => a.localeCompare(b));
+    if (!cached || !rates.length) {
+      status.textContent = zh
+        ? "暂无本地汇率。联网后会尝试获取；没有相应汇率时无法换算。"
+        : "No local rates yet. The app will try to fetch them online; conversion requires the relevant rates.";
+      return;
+    }
+    const fetched = Number.isFinite(cached.fetchedAt)
+      ? new Intl.DateTimeFormat(zh ? "zh-CN" : "en-US", { dateStyle: "medium", timeStyle: "short" }).format(cached.fetchedAt)
+      : (zh ? "未知" : "Unknown");
+    status.textContent = zh
+      ? `Frankfurter 参考汇率 · 获取于 ${fetched}`
+      : `Frankfurter reference rates · Fetched ${fetched}`;
+    const heading = document.createElement("div");
+    heading.className = "exchange-rate-heading";
+    heading.textContent = `1 ${currencyNames[currentLang].of(baseCurrency)} =`;
+    list.appendChild(heading);
+    const formatter = new Intl.NumberFormat(zh ? "zh-CN" : "en-US", { maximumSignificantDigits: 12 });
+    for (const [code, rate] of rates) {
+      const item = document.createElement("div");
+      item.className = "exchange-rate-item";
+      item.textContent = `${formatter.format(rate)} ${currencyNames[currentLang].of(code)}`;
+      list.appendChild(item);
+    }
+  }
+
+  async function getExchangeRates(currency) {
+    const cached = exchangeRateCache[currency];
+    if (cached && Date.now() - cached.fetchedAt < 86400000) return cached;
+    if (exchangeRateRequest?.currency === currency) return exchangeRateRequest.promise;
+    const promise = (async () => {
+      try {
+        const response = await fetch(`https://api.frankfurter.dev/v1/latest?base=${encodeURIComponent(currency)}`, {
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) throw new Error(`Exchange rate HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.base !== currency || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) ||
+            !data.rates || typeof data.rates !== "object") throw new Error("Invalid exchange rate response");
+        const rates = Object.fromEntries(Object.entries(data.rates).filter(([, rate]) => Number.isFinite(rate) && rate > 0));
+        if (!Object.keys(rates).length) throw new Error("Exchange rate response has no valid rates");
+        const result = { date: data.date, fetchedAt: Date.now(), rates };
+        const write = exchangeRateWriteQueue.then(async () => {
+          const next = { ...exchangeRateCache, [currency]: result };
+          await saveLocalJsonData("exchange-rates.json", next);
+          exchangeRateCache = next;
+        });
+        exchangeRateWriteQueue = write.catch(error => {
+          console.warn("Failed to save exchange rates locally", error);
+        });
+        await write;
+        updateExchangeRateStatus();
+        return result;
+      } catch (error) {
+        console.warn("Exchange rates unavailable; using cached rates if present", error);
+        return cached || null;
+      }
+    })();
+    exchangeRateRequest = { currency, promise };
+    try { return await promise; }
+    finally {
+      if (exchangeRateRequest?.promise === promise) exchangeRateRequest = null;
+    }
+  }
+
+  async function convertCurrencyTotals(totals, currency) {
+    const missing = [...totals.keys()].filter(code => !code || !/^[A-Z]{3}$/.test(code));
+    const foreign = [...totals.keys()].filter(code => code && code !== currency);
+    const rates = foreign.length ? await getExchangeRates(currency) : null;
+    let total = 0;
+    for (const [code, amount] of totals) {
+      if (!Number.isFinite(amount)) { missing.push(code || "?"); continue; }
+      if (code === currency) total += amount;
+      else if (rates?.rates[code]) total += amount / rates.rates[code];
+      else missing.push(code || "?");
+    }
+    return { total, missing: [...new Set(missing)], date: rates?.date };
+  }
+
+function formatDateLocalized(dateStr, showYear = true) {
+  if (!dateStr) return "";
+
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d); // local, no timezone shift
+
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+
+  if (currentLang === "zh") {
+    return showYear
+      ? `${year}年${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`
+      : `${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日`;
+  }
+
+  return showYear
+    ? `${monthNames.en[date.getMonth()].slice(0, 3)} ${String(day).padStart(2, "0")}, ${year}`
+    : `${monthNames.en[date.getMonth()].slice(0, 3)} ${String(day).padStart(2, "0")}`;
+}
+
+function getDateRange(type) {
   // --- YYYY-MM-DD formatter for filtering ---
   function formatDate(d) {
     const year = d.getFullYear();
@@ -8865,6 +10184,14 @@ function getDateRange(type) {
   switch (type) {
     case "today": return pack(today, today);
     case "upToToday": return pack(null, today);
+    case "upcoming": {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const range = pack(tomorrow, null, true);
+      const formatted = formatDateLocalized(range.dateFrom, true);
+      range.dateRangeStr = currentLang === "zh" ? `从 ${formatted} 起` : `From ${formatted}`;
+      return range;
+    }
     case "yesterday": const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
     case "last7": const d7 = new Date(today); d7.setDate(today.getDate() - 6); return pack(d7, today);
     case "last30": const d30 = new Date(today); d30.setDate(today.getDate() - 29); return pack(d30, today);
@@ -8893,20 +10220,77 @@ function getFormattedAmount(number) {
   })
 }
 
+function getCurrencyAmountParts(amount, currency) {
+  const symbols = { CNY: "CN¥", USD: "US$", CAD: "C$", HKD: "HK$", JPY: "JP¥", EUR: "€" };
+  const symbol = Object.prototype.hasOwnProperty.call(symbols, currency) ? symbols[currency] : null;
+  const prefix = currency === baseCurrency ? "" : (symbol || (/^[A-Z]{3}$/.test(currency || "") ? currency : "?"));
+  if (amount === "" || amount == null || !Number.isFinite(Number(amount))) return { sign: "", prefix, number: "?" };
+  const value = Number(amount);
+  return { sign: value < 0 ? "-" : "", prefix, number: getFormattedAmount(Math.abs(value)) };
+}
+
+function formatCurrencyAmount(amount, currency) {
+  const { sign, prefix, number } = getCurrencyAmountParts(amount, currency);
+  return (prefix ? prefix + " " : "") + sign + number;
+}
+
+function renderCurrencyAmount(amount, currency) {
+  const { sign, prefix, number } = getCurrencyAmountParts(amount, currency);
+  return (prefix ? `<span class="currency-prefix">${prefix}</span> ` : "") + sign + number;
+}
+
+function renderOverviewDateRange(element, filters) {
+  const from = /^(\d{4})-(\d{2})-(\d{2})$/.exec(filters.dateFrom || "");
+  const to = /^(\d{4})-(\d{2})-(\d{2})$/.exec(filters.dateTo || "");
+  if (!from || !to || Number(from[2]) < 1 || Number(from[2]) > 12 ||
+      Number(to[2]) < 1 || Number(to[2]) > 12) {
+    element.textContent = filters.dateRangeStr;
+    return;
+  }
+
+  const appendDate = (date, isStart) => {
+    const line = document.createElement("span");
+    line.className = "kanban-date-line";
+    line.textContent = formatDateLocalized(date) + (isStart ? " –" : "");
+    element.appendChild(line);
+  };
+
+  element.replaceChildren();
+  const isRange = filters.dateFrom !== filters.dateTo;
+  appendDate(filters.dateFrom, isRange);
+  if (isRange) {
+    appendDate(filters.dateTo, false);
+  }
+}
+
 async function updateKanbanRow(title, kanbanIndex, filters) {
   const t = translations[currentLang];
 
   // apply filters to all entries
   let filteredEntries = await getFilteredEntries(filters);
 
-  const { income, expense } = summarizeIncomeExpense(filteredEntries);
+  const currency = baseCurrency;
+  const totals = { income: new Map(), expense: new Map() };
+  for (const entry of filteredEntries) {
+    if (!totals[entry.type]) continue;
+    const amount = entry.amount === "" || entry.amount == null ? NaN : Number(entry.amount);
+    totals[entry.type].set(entry.currency, (totals[entry.type].get(entry.currency) ?? 0) + amount);
+  }
+  const [incomeResult, expenseResult] = await Promise.all([
+    convertCurrencyTotals(totals.income, currency),
+    convertCurrencyTotals(totals.expense, currency)
+  ]);
+  if (currency !== baseCurrency) return;
+  const missing = [...new Set([...incomeResult.missing, ...expenseResult.missing])];
+  const unavailable = missing.length > 0;
+  const income = incomeResult.total;
+  const expense = expenseResult.total;
+  const net = income - expense;
+  const warning = unavailable
+    ? (currentLang === "zh" ? `无法换算：${missing.join(", ")}` : `Cannot convert: ${missing.join(", ")}`)
+    : `${currency}${incomeResult.date || expenseResult.date ? ` · ${incomeResult.date || expenseResult.date}` : ""}`;
 
   if (kanbanIndex == 1) {
-    const monthNames = {
-      zh: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
-      en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-    };
-
     const monthIndex = new Date().getMonth();
 
     const monthText =
@@ -8915,22 +10299,29 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
         : `${monthNames.en[monthIndex]} · Balance`;
 
     document.getElementById("home-month").textContent = monthText;
-    document.getElementById("home-balance").textContent = getFormattedAmount(income - expense);
+    document.getElementById("home-balance").textContent = unavailable ? "—" : getFormattedAmount(net);
+    document.getElementById("home-balance").title = warning;
 
     const summaryEl = document.getElementById("home-summary");
 
     if (currentLang === "zh") {
-      summaryEl.textContent = `本月收入 ${getFormattedAmount(income)} | 本月支出 ${getFormattedAmount(expense)}`;
+      summaryEl.textContent = unavailable ? warning : `本月收入 ${getFormattedAmount(income)} | 本月支出 ${getFormattedAmount(expense)}`;
     } else {
-      summaryEl.textContent = `Income ${getFormattedAmount(income)} | Expense ${getFormattedAmount(expense)}`;
+      summaryEl.textContent = unavailable ? warning : `Income ${getFormattedAmount(income)} | Expense ${getFormattedAmount(expense)}`;
     }
   }
 
   const dateRangeStr = filters.dateRangeStr;
 
-  const displayTitle = (title === "presetToday")
+  const displayTitle = title === "presetToday"
     ? (currentLang === "zh" ? "今天" : "Today")
-    : title;
+    : title === "presetUpcoming"
+      ? (currentLang === "zh" ? "未来账单" : "Future")
+      : title;
+  const formattedIncome = unavailable ? "—" : getFormattedAmount(income);
+  const formattedExpense = unavailable ? "—" : getFormattedAmount(expense);
+  document.getElementById("home-overview-title").textContent =
+    currentLang === "zh" ? "账目概览" : "Ledger overview";
 
   // create kanban div
   const list = document.getElementById("home-kanban-list");
@@ -8939,161 +10330,93 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
   // Try to find existing row 
   let row = list.querySelector(`.kanban-row[data-kanban-index="${kanbanIndex}"]`);
   if (!row) {
-    // Create new row if not found 
     row = document.createElement("div");
     row.className = "kanban-row";
     row.dataset.kanbanIndex = kanbanIndex;
-
-    // Append row + hr 
-    list.appendChild(row);
-    list.appendChild(document.createElement("hr"));
   }
+  const kanbanOrder = [0, 3, 1, 2];
+  const order = kanbanOrder.indexOf(kanbanIndex);
+  const next = [...list.querySelectorAll(".kanban-row")].find(item =>
+    item !== row && kanbanOrder.indexOf(Number(item.dataset.kanbanIndex)) > order);
+  list.insertBefore(row, next || null);
 
-  // Build inner HTML
   row.innerHTML = `
-    <div class="kanban-left">
+    <div class="kanban-tile-heading">
       <div class="kanban-title">${displayTitle}</div>
-      <div class="kanban-sub">${dateRangeStr}</div>
+      <div class="kanban-sub"></div>
     </div>
-    <div class="kanban-right">
-      <div class="kanban-income">${t.income} ${income.toFixed(2)}</div>
-      <div class="kanban-expense">${t.expense} ${expense.toFixed(2)}</div>
+    <div class="kanban-tile-metrics">
+      <div class="kanban-income"><span>${t.income}</span><strong>${formattedIncome}</strong></div>
+      <div class="kanban-expense"><span>${t.expense}</span><strong>${formattedExpense}</strong></div>
     </div>
   `;
+  if (unavailable) {
+    const notice = document.createElement("div");
+    notice.className = "kanban-conversion-warning";
+    notice.textContent = warning;
+    row.appendChild(notice);
+  }
+  renderOverviewDateRange(row.querySelector(".kanban-sub"), filters);
+  row.setAttribute("role", "button");
+  row.title = warning;
+  row.tabIndex = 0;
+  row.setAttribute(
+    "aria-label",
+    `${displayTitle}, ${dateRangeStr}, ${t.income} ${formattedIncome}, ${t.expense} ${formattedExpense}`
+  );
 
   row.onclick = async () => {
-    numGroupsToday = 1;
-    await showPage("filtered-entries", title, { kanbanIndex: kanbanIndex, filters: filters, dateRangeStr });
-  };
-}
-
-function showFilteredEntries(entries) {
-  const page = document.getElementById("filtered-entries-page");
-  const scroll = page.querySelector(".scroll");
-
-  scroll.innerHTML = ``;
-
-  if (entries.length === 0) {
-    scroll.innerHTML += `
-      <div class="fe-empty">
-        ${currentLang === "zh" ? "没有记录" : "No entries"}
-      </div>
-    `;
-    return;
-  }
-
-  // Sort newest first
-  entries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
-
-  // Group by date
-  const groups = {};
-  for (const e of entries) {
-    const day = e.transactionTime.split(" ")[0];
-    if (!groups[day]) groups[day] = [];
-    groups[day].push(e);
-  }
-
-  const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
-
-  for (const day of groupKeys) {
-    const dayEntries = groups[day];
-    scroll.innerHTML += renderEntryGroup(day, dayEntries);
-  }
-}
-
-function showFilteredEntriesToday(entries) {
-  const page = document.getElementById("filtered-entries-page");
-  const scroll = page.querySelector(".scroll");
-
-  scroll.innerHTML = ``;
-
-  // --- Detect today's entries ---
-  const today = new Date();
-  const todayStr =
-    today.getFullYear() + "-" +
-    String(today.getMonth() + 1).padStart(2, "0") + "-" +
-    String(today.getDate()).padStart(2, "0"); // this makes sure todayStr always uses local date, not UTC date
-  const todaysEntries = entries.filter(e => e.transactionTime.startsWith(todayStr));
-  const otherEntries = entries.filter(e => !e.transactionTime.startsWith(todayStr));
-
-  // --- Case 1: No entries today ---
-  if (todaysEntries.length === 0) {
-    scroll.innerHTML += `
-      <div class="fe-empty">
-        <span>${currentLang === "zh" ? "今天还没有记账哦" : "No entries today"}</span>
-        <button id="go-create-btn" class="fe-create-btn">
-          ${currentLang === "zh" ? "去记一笔吧 >" : "Create one >"}
-        </button>
-      </div>
-    `;
-
-  } else {
-    // --- Render today's entries normally ---
-    const groups = {};
-    todaysEntries.forEach(e => {
-      const day = e.transactionTime.split(" ")[0];
-      if (!groups[day]) groups[day] = [];
-      groups[day].push(e);
+    const activeFilters = kanbanIndex === 3 ? getDateRange("upcoming") : filters;
+    await showPage("filtered-entries", title === "presetUpcoming" ? displayTitle : title, {
+      kanbanIndex: kanbanIndex, filters: activeFilters, dateRangeStr: activeFilters.dateRangeStr
     });
-
-    const todayDay = Object.keys(groups)[0];
-    scroll.innerHTML += renderEntryGroup(todayDay, groups[todayDay]);
-  }
-
-  // --- Render past entries ---
-  if (otherEntries.length === 0) {
-    return;
-  }
-
-  scroll.innerHTML += `
-    <div class="fe-past-header">
-      ${currentLang === "zh" ? "今天以前" : "Before Today"}
-    </div>
-  `;
-
-  // Sort newest first
-  otherEntries.sort((a, b) => (a.transactionTime < b.transactionTime ? 1 : -1));
-
-  // Group by date
-  const groups = {};
-  for (const e of otherEntries) {
-    const day = e.transactionTime.split(" ")[0];
-    if (!groups[day]) groups[day] = [];
-    groups[day].push(e);
-  }
-
-  const groupKeys = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
-
-  const BATCH_SIZE = 5;
-  let index = 0;
-
-  function renderBatch() {
-    const end = Math.min(index + BATCH_SIZE, groupKeys.length);
-    for (let i = index; i < end; i++) {
-      const day = groupKeys[i];
-      const dayEntries = groups[day];
-      scroll.innerHTML += renderEntryGroup(day, dayEntries);
-    }
-    index = end;
-    return index;
-  }
-
-  // render a desired number of groups when loading the page
-  // This preserves the current location of the scroll after modifying entires
-  while (index < Math.min(numGroupsToday, groupKeys.length)) {
-    renderBatch();
-  }
-
-  scroll.onscroll = () => {
-    const nearBottom =
-      scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 200;
-
-    if (nearBottom && index < groupKeys.length) {
-      numGroupsToday = renderBatch();
+  };
+  row.onkeydown = event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      row.click();
     }
   };
+}
 
-  return index
+let kanbanEntryGrouping = { kanbanIndex: null, mode: "month", collapsed: new Set() };
+
+function showFilteredEntries(entries, { today = false } = {}) {
+  const page = document.getElementById("filtered-entries-page");
+  const scroll = page.querySelector(".scroll");
+
+  scroll.onscroll = null;
+  scroll.replaceChildren();
+  if (today && !entries.some(entry => entry.transactionTime?.startsWith(getTodayYYYYMMDD()))) {
+    const empty = document.createElement("div");
+    empty.className = "fe-empty";
+    const message = document.createElement("span");
+    message.textContent = currentLang === "zh" ? "今天还没有记账哦" : "No entries today";
+    const button = document.createElement("button");
+    button.id = "go-create-btn";
+    button.className = "fe-create-btn";
+    button.textContent = currentLang === "zh" ? "去记一笔吧 >" : "Create one >";
+    empty.append(message, button);
+    scroll.appendChild(empty);
+  }
+  renderGroupedEntryList({
+    container: scroll,
+    entries: [...entries].sort((a, b) =>
+      String(b.transactionTime || "").localeCompare(String(a.transactionTime || ""))),
+    getEntryFlow: entry => {
+      if (entry.type !== "income" && entry.type !== "expense") return null;
+      const raw = entry.amount;
+      const amount = raw === "" || raw == null ? NaN : Number(raw);
+      return {
+        inflows: new Map(entry.type === "income" ? [[entry.currency, amount]] : []),
+        outflows: new Map(entry.type === "expense" ? [[entry.currency, amount]] : [])
+      };
+    },
+    invalid: false,
+    currency: baseCurrency,
+    state: kanbanEntryGrouping,
+    showGrouping: !today
+  });
 }
 
 function getEnglishOrdinal(n) {
@@ -9195,7 +10518,7 @@ function renderEntryByType(e) {
                 <span class="cat-label">${e.secondaryCategory}</span>
               </span>
               <div class="fe-entry-amount-right ${e.type}">
-                ${Number(e.amount).toFixed(2)}
+                ${renderCurrencyAmount(e.amount, e.currency)}
               </div>
             </div>
             ${renderNotesItemsTags(notes, items)}
@@ -9227,7 +10550,7 @@ function renderEntryByType(e) {
                 <span class="cat-label">${e.fromAccount} → ${e.toAccount}</span>
               </span>
               <div class="fe-entry-amount-right">
-                ${Number(e.amount).toFixed(2)}
+                ${renderCurrencyAmount(e.amount, e.fromCurrency)}
               </div>
             </div>
             ${renderNotesItemsTags(notes, items)}
@@ -9258,7 +10581,7 @@ function renderEntryByType(e) {
                 <span class="cat-label">${currentLang === "zh" ? "余额变更" : "Balance Set"}</span>
               </span>
               <div class="fe-entry-amount-right">
-                ${Number(e.amount).toFixed(2)}
+                ${renderCurrencyAmount(e.amount, e.currency)}
               </div>
             </div>
             ${renderNotesItemsTags(notes, items)}
@@ -10432,7 +11755,7 @@ let keypadOpen = false;
 function showSelector(selName) {
   if (prevLastButton !== lastButton) { // when switching to a different button
     if (openSelector === 'amount') { // if previously was an amount-selector
-      prevLastButton.style.borderWidth = "1px";
+      prevLastButton?.classList.remove("amount-active");
     } else {
       document.querySelectorAll('.form-row.active')
         .forEach(row => row.classList.remove('active'));
@@ -10488,7 +11811,7 @@ function closeSelector() {
   keypadOpen = false; // keep it false regardless of what selector is open, in case of unexpected interception of keys
 
   if (openSelector === 'amount') {
-    lastButton.style.borderWidth = "1px";
+    lastButton?.classList.remove("amount-active");
   } else {
     document.querySelectorAll('.form-row.active')
       .forEach(row => row.classList.remove('active'));
@@ -10662,6 +11985,9 @@ function tryUpdateAmount(expr, amountButton) {
       if (amountButton.id === 'transfer-to-amount') {
         subWorkspace.transfer.toAmount = 0;
         subWorkspace.transfer.toCalculation = "";
+      } else {
+        subWorkspace.amount = 0;
+        subWorkspace.calculation = "";
       }
 
       if (['transfer-from-amount', 'transfer-to-amount'].includes(amountButton.id)) {
@@ -10847,7 +12173,7 @@ document.querySelectorAll(".amount-row").forEach(btn => {
     // Show the desired selector
     showSelector('amount')
 
-    lastButton.style.borderWidth = "3px";
+    lastButton.classList.add("amount-active");
   };
 });
 
@@ -11066,19 +12392,6 @@ document.addEventListener("click", e => {
 
   // Ignore clicks on tab buttons for closing selector
   if (e.target.closest(".tab-btn")) {
-    // If amount selector is open, update lastButton to the new form's amount-row
-    if (openSelector === "amount") {
-      const btn = e.target.closest(".tab-btn");
-      const index = parseInt(btn.dataset.index, 10);
-
-      const inputType = transactionTypes[index];  // e.g. "expense", "income", "transfer"
-      const activeForm = inputType + "-form";
-
-      const amountRowEl = document.querySelector(`#${activeForm} .amount-row`);
-      if (amountRowEl) {
-        lastButton = amountRowEl;
-      }
-    }
     return; // IMPORTANT: do not close amount selector when switching tabs
   }
 
@@ -13772,16 +15085,9 @@ function showSortOptions() {
 
   const rect = btn.getBoundingClientRect();
 
-  // center of the button
-  const centerX = rect.left + rect.width / 2;
-  const bottomY = rect.bottom;
-
-  // apply absolute position
-  popup.style.left = centerX + "px";
-  popup.style.top = (bottomY);
-
-  // shift popup left by half its width (to truly center it)
-  popup.style.transform = "translateX(-50%)";
+  const left = Math.max(8, Math.min(rect.left + rect.width / 2 - popup.offsetWidth / 2, window.innerWidth - popup.offsetWidth - 8));
+  popup.style.left = `${left}px`;
+  popup.style.top = `${rect.bottom + 6}px`;
 
   popup.classList.toggle("show");
 }

@@ -21,19 +21,19 @@
 
   <div class="header-bar">
     <button id="home-weather-btn" style="display:none;"></button>
-    <button id="return-btn" onclick="onReturnButton()" style="display:none;">&lt; 返回</button>
+    <button id="return-btn" onclick="onReturnButton()" style="display:none;">返回</button>
     <button id="cancel-btn" onclick="resetCreate()" style="display:none;">取消</button>
 
     <h1 id="app-title">Xiaoxin's Ledger App</h1>
 
     <div class="header-right-group">
-      <button id="bookmark-btn-headerbar" class="header-right-button" onclick="toggleBookmark()" style="display:none;">☆</button>
-      <button id="pin-btn-headerbar" class="header-right-button" onclick="pinEntry()" style="display:none;">📌</button>
-      <button id="save-btn-headerbar" class="header-right-button" style="display:none;">✔️保存</button>
-      <button id="search-btn-headerbar" class="header-right-button" onclick="searchEntry()" style="display:none;">🔍</button>
-      <button id="manage-btn-headerbar" class="header-right-button" style="display:none;">管理</button>
+      <button id="bookmark-btn-headerbar" class="header-right-button header-icon-button" onclick="toggleBookmark()" aria-label="收藏页面" aria-pressed="false" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 17.19 6.44 20.12l1.06-6.2L3 9.53l6.22-.9L12 3Z"/></svg></button>
+      <button id="pin-btn-headerbar" class="header-right-button header-icon-button" aria-label="固定账单" title="固定账单" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-.5 5 3.5 4v2H6v-2l3.5-4L9 3ZM12 14v7"/></svg></button>
+      <button id="save-btn-headerbar" class="header-right-button header-icon-button" aria-label="保存" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 6"/></svg></button>
+      <button id="search-btn-headerbar" class="header-right-button header-icon-button" onclick="searchEntry()" aria-label="搜索" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button>
+      <button id="manage-btn-headerbar" class="header-right-button header-icon-button" aria-label="管理账户" title="管理账户" style="display:none;"></button>
       <button id="delete-btn-headerbar" class="header-right-button" style="display:none;">删除</button>
-      <button id="add-btn-headerbar" class="header-right-button" style="display:none;">➕</button>
+      <button id="add-btn-headerbar" class="header-right-button header-icon-button" aria-label="添加" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
 
     <div id="sync-progress-bar">
@@ -64,6 +64,7 @@
           <div class="home-section-title">收藏的页面</div>
           <div id="home-bookmarks" class="home-bookmarks-row"></div>
         </div>
+        <div class="home-section-title home-overview-title" id="home-overview-title"></div>
         <div id=home-kanban-list class="kanban"></div>
       </div>
     </div>
@@ -84,6 +85,7 @@
 
     <div id="account-detail-page" class="page">
       <div class="scroll">
+        <div id="account-detail-main"></div>
         <div id="account-detail-tabs" class="account-detail-tabs"></div>
         <div id="account-detail-content"></div>
       </div>
@@ -645,15 +647,37 @@
     <!-- Settings Section -->
     <div class="page" id="settings-page">
       <div class="scroll">
-        <div class="settings-header">
-          <h2></h2>
-          <span id="settings-welcome"></span>
+        <div class="settings-hero">
+          <h2 id="settings-welcome"></h2>
+          <p class="settings-hero-subtitle" id="settings-subtitle"></p>
+          <div class="settings-stats">
+            <div class="settings-stat settings-stat-inline">
+              <span class="settings-stat-label" id="settings-entries-label"></span>
+              <span class="settings-stat-value" id="settings-entry-count">0</span>
+              <span class="settings-stat-unit" id="settings-entries-unit"></span>
+            </div>
+            <div class="settings-stat settings-stat-inline">
+              <span class="settings-stat-label" id="settings-days-label"></span>
+              <span class="settings-stat-value" id="settings-days-count">0</span>
+              <span class="settings-stat-unit" id="settings-days-unit"></span>
+            </div>
+          </div>
         </div>
 
         <!-- Basic settings -->
         <section class="settings-section basic-settings">
           <p id="basic-settings-title">个人偏好</p>
           <button id="open-basic-settings" class="settings-button" onclick="showPage('basic-settings')">打开个人偏好</button>
+        </section>
+
+        <section class="settings-section currency-settings">
+          <label for="base-currency-select" id="base-currency-label">本位币</label>
+          <select id="base-currency-select"></select>
+          <div class="exchange-rate-details">
+            <button type="button" id="exchange-rate-toggle" aria-expanded="false" aria-controls="exchange-rate-list">查看当前汇率</button>
+            <p id="exchange-rate-status" role="status"></p>
+            <div id="exchange-rate-list" hidden></div>
+          </div>
         </section>
 
         <section class="settings-section local-storage">
@@ -884,7 +908,7 @@
 
   <!-- Bottom Navigation Bar -->
   <nav id="home-nav" class="bottom-nav" style="display:none;">
-    <button id="nav-home" onclick="showPage('home', 'homeTitle')">首页</button>
+    <button id="nav-home" class="active" aria-current="page" onclick="showPage('home', 'homeTitle')">首页</button>
     <button id="nav-accounts"
       onclick="prepareRepoTabs('accounts', 'accounts', translations[currentLang].navAccounts)">账户</button>
     <button id="nav-transaction" onclick="showPage('create', 'navTransaction')">记一笔</button>
