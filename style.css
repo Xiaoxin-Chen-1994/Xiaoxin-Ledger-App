@@ -849,7 +849,6 @@ label {
 }
 
 .transaction-page {
-  padding-bottom: 7rem;
   flex: 0 0 100%;
   width: 100%;
   box-sizing: border-box;
@@ -4032,6 +4031,12 @@ body {
 .base-page .scroll,
 .page .scroll {
   padding: 0.75rem 4% 1.5rem;
+}
+
+#home-page > .scroll,
+#transaction-page > .scroll {
+  padding-bottom: max(1.5rem, calc(var(--nav-overlap, 0px) + 1.5rem));
+  scroll-padding-bottom: max(1.5rem, calc(var(--nav-overlap, 0px) + 1.5rem));
 }
 
 button,

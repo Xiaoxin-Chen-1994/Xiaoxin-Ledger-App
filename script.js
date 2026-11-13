@@ -2960,6 +2960,31 @@ function setDefaultCollection(button, subWorkspace) {
 const wrapper = document.getElementById("transaction-wrapper");
 const tabButtons = document.querySelectorAll(".tab-btn");
 
+const navScrollPairs = [
+  [document.getElementById("home-nav"), document.querySelector("#home-page > .scroll")],
+  [document.getElementById("transaction-nav"), document.querySelector("#transaction-page > .scroll")]
+];
+
+function updateNavScrollPadding() {
+  navScrollPairs.forEach(([nav, scroll]) => {
+    const overlap = nav.getClientRects().length
+      ? Math.max(0, scroll.getBoundingClientRect().bottom - nav.getBoundingClientRect().top)
+      : 0;
+    const value = `${overlap}px`;
+    if (scroll.style.getPropertyValue("--nav-overlap") !== value) {
+      scroll.style.setProperty("--nav-overlap", value);
+    }
+  });
+}
+
+const navScrollResizeObserver = new ResizeObserver(updateNavScrollPadding);
+navScrollPairs.forEach(([nav, scroll]) => {
+  navScrollResizeObserver.observe(nav);
+  navScrollResizeObserver.observe(scroll);
+});
+window.addEventListener("resize", updateNavScrollPadding);
+updateNavScrollPadding();
+
 function vibrate(ms) {
   if (typeof navigator.vibrate === "function") { // checks whether the browser supports vibration
     navigator.vibrate(ms); // milliseconds
@@ -10455,7 +10480,7 @@ function getDateRange(type) {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const range = pack(tomorrow, null, true);
       const formatted = formatDateLocalized(range.dateFrom, true);
-      range.dateRangeStr = currentLang === "zh" ? `从 ${formatted} 起` : `From ${formatted}`;
+      range.dateRangeStr = currentLang === "zh" ? "从明天起" : `From ${formatted}`;
       return range;
     }
     case "yesterday": const y = new Date(today); y.setDate(y.getDate() - 1); return pack(y, y);
