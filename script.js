@@ -6418,19 +6418,73 @@ function createAccountRow(repoId, type, accountId) {
   const acc = settingsMap[repoId].accounts[type]
     .find(a => a.id === accountId);
 
+  const card = document.createElement("div");
+  card.className = "account-card";
   const row = document.createElement("div");
   row.className = "account-row";
   row.setAttribute("role", "button");
   row.tabIndex = 0;
 
-  row.addEventListener("click", () => {
-    showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, accountId: accountId });
-  });
   row.addEventListener("keydown", event => {
-    if (event.key === "Enter" || event.key === " ") {
+    if (event.target === row && (event.key === "Enter" || event.key === " ")) {
       event.preventDefault();
       row.click();
     }
+  });
+  const actions = document.createElement("div");
+  actions.className = "account-card-actions";
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "edit-btn";
+  editButton.textContent = t.edit;
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "delete-btn";
+  deleteButton.textContent = t.delete;
+  actions.append(editButton, deleteButton);
+  actions.inert = true;
+  card.append(row, actions);
+
+  const setActionsVisible = visible => {
+    card.classList.toggle("show-actions", visible);
+    actions.inert = !visible;
+  };
+  let deleting = false;
+  attachMobileGesture(card, {
+    enableClick: true,
+    dragMode: "immediate",
+    dragDirection: "horizontal",
+    onClick: e => {
+      if (e.target.closest(".edit-btn")) {
+        showPage("account-edit", currentLang === "zh" ? `编辑 ${acc.name}` : `Edit ${acc.name}`, {
+          activeRepoId: repoId, accountType: type, accountId
+        });
+      } else if (e.target.closest(".delete-btn")) {
+        if (deleting) return;
+        confirmManagedAccountDeletion(repoId, type, accountId, null, {
+          onStart: () => { deleting = true; deleteButton.disabled = true; },
+          onFinish: () => { deleting = false; deleteButton.disabled = false; },
+          onComplete: () => {
+            if (latestPage === "accounts" && latestOptions.activeRepoId === repoId) loadAccounts(repoId);
+          }
+        });
+      } else if (card.classList.contains("show-actions")) {
+        setActionsVisible(false);
+      } else {
+        showPage("account-detail", acc.name, { activeRepoId: repoId, accountType: type, accountId });
+      }
+    },
+    onDragStart: (e, el, startX) => {
+      el._scrolling = false;
+      el._startX = startX;
+    },
+    onDragEnd: (e, el) => {
+      const diff = el._startX - e.changedTouches[0].clientX;
+      delete el._startX;
+      if (diff > 40) setActionsVisible(true);
+      else if (diff < -40) setActionsVisible(false);
+    },
+    onRightClick: () => setActionsVisible(true)
   });
 
   // Sub-accounts
@@ -6562,7 +6616,7 @@ function createAccountRow(repoId, type, accountId) {
   } else {
     notesElement.remove();
   }
-  return row;
+  return card;
 }
 
 function renderAccountTabs(repoId, accountType, accountId, elementId, options = {}) {
@@ -7834,70 +7888,94 @@ function renderAccountEditPage(repoId, accountType, accountId) {
     panel.appendChild(deleteButton);
     deleteButton.addEventListener("click", () => {
       if (deletingAccount) return;
-      const zh = currentLang === "zh";
-      if (subIndex === null && (account["sub-accounts"] || []).length) {
-        alert(zh ? "请先删除所有子账户，才能删除主账户。" : "Delete all sub-accounts before deleting the primary account.");
-        return;
-      }
       const target = subIndex === null ? account : subs[subIndex];
-      let entryIds;
-      try {
-        entryIds = getAccountDeletionEntryIds(repoId, account, target);
-      } catch (error) {
-        console.error("Cannot determine account transactions for deletion", error);
-        alert(zh
-          ? "无法确定部分交易所属的账户。请先检查同名同币种账户及相关历史交易，再删除账户。"
-          : "Some transactions cannot be reliably matched to an account. Check accounts with the same name and currency and their historical transactions before deleting the account.");
-        return;
-      }
-      const draftWarning = getDraftState() !== initialDraft
-        ? (zh ? "<br><br>尚未保存的账户修改将丢失。" : "<br><br>Unsaved account changes will be lost.")
-        : "";
-      const defaultsWarning = accountIsDefault(repoId, accountType, target)
-        ? (zh ? "<br><br>该账户用于交易模版；删除后将改用其他可用账户，若没有可用账户则需先新增账户。" : "<br><br>This account is used in transaction templates. Another available account will be used, or you will need to add an account.")
-        : "";
-      showPopupWindow({
-        title: zh ? "确认删除账户" : "Confirm account deletion",
-        message: (zh
-          ? `删除该账户将永久删除其下的所有交易（共 ${entryIds.size} 条），包括关联的转账。此操作无法撤销。`
-          : `Deleting this account will permanently delete all of its transactions (${entryIds.size}), including transfers. This cannot be undone.`) + defaultsWarning + draftWarning,
-        buttons: [
-          { text: zh ? "取消" : "Cancel", primary: true, onClick: () => {} },
-          {
-            text: zh ? "删除" : "Delete",
-            onClick: async () => {
-              if (deletingAccount) return;
-              deletingAccount = true;
-              wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = true; });
-              addSubButton.disabled = true;
-              const saveButton = document.getElementById("save-btn-headerbar");
-              saveButton.disabled = true;
-              try {
-                await deleteManagedAccount(repoId, accountType, accountId, target.id, subIndex !== null, entryIds);
-              } catch (error) {
-                console.error("Failed to delete account", error);
-                alert(zh ? "删除账户失败或同步未完成，请检查账户、交易和网络状态。" : "Account deletion failed or sync did not complete. Check your accounts, transactions, and connection.");
-              } finally {
-                deletingAccount = false;
-                wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = false; });
-                addSubButton.disabled = false;
-                saveButton.disabled = false;
-              }
-              const currentParent = settingsMap[repoId]?.accounts[accountType]?.find(item => item.id === accountId);
-              if (!currentParent) {
-                historyStack = historyStack.filter((item, index) =>
-                  index === historyStack.length - 1 || item[0] !== "account-detail" ||
-                  item[2]?.activeRepoId !== repoId || item[2]?.accountId !== accountId);
-                await goBack();
-              } else if (subIndex !== null && !(currentParent["sub-accounts"] || []).some(item => item.id === target.id)) {
-                renderAccountEditPage(repoId, accountType, accountId);
-              }
-            }
+      confirmManagedAccountDeletion(repoId, accountType, accountId, subIndex === null ? null : target.id, {
+        hasDraftChanges: getDraftState() !== initialDraft,
+        onStart: () => {
+          deletingAccount = true;
+          wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = true; });
+          addSubButton.disabled = true;
+          document.getElementById("save-btn-headerbar").disabled = true;
+        },
+        onFinish: () => {
+          deletingAccount = false;
+          wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = false; });
+          addSubButton.disabled = false;
+          document.getElementById("save-btn-headerbar").disabled = false;
+        },
+        onComplete: async () => {
+          const currentParent = settingsMap[repoId]?.accounts[accountType]?.find(item => item.id === accountId);
+          if (!currentParent) {
+            historyStack = historyStack.filter((item, index) =>
+              index === historyStack.length - 1 || item[0] !== "account-detail" ||
+              item[2]?.activeRepoId !== repoId || item[2]?.accountId !== accountId);
+            await goBack();
+          } else if (subIndex !== null && !(currentParent["sub-accounts"] || []).some(item => item.id === target.id)) {
+            renderAccountEditPage(repoId, accountType, accountId);
           }
-        ],
-        onOutsideClick: overlay => overlay.remove()
+        }
       });
     });
+  });
+}
+
+function confirmManagedAccountDeletion(repoId, accountType, accountId, subAccountId, {
+  hasDraftChanges = false, onStart, onFinish, onComplete
+}) {
+  const zh = currentLang === "zh";
+  const account = settingsMap[repoId]?.accounts[accountType]?.find(item => item.id === accountId);
+  const target = subAccountId === null ? account : account?.["sub-accounts"]?.find(item => item.id === subAccountId);
+  if (!target) {
+    alert(zh ? "账户不存在，请刷新后重试。" : "Account not found. Refresh and try again.");
+    return;
+  }
+  if (subAccountId === null && (account["sub-accounts"] || []).length) {
+    alert(zh ? "请先删除所有子账户，才能删除主账户。" : "Delete all sub-accounts before deleting the primary account.");
+    return;
+  }
+  let entryIds;
+  try {
+    entryIds = getAccountDeletionEntryIds(repoId, account, target);
+  } catch (error) {
+    console.error("Cannot determine account transactions for deletion", error);
+    alert(zh
+      ? "无法确定部分交易所属的账户。请先检查同名同币种账户及相关历史交易，再删除账户。"
+      : "Some transactions cannot be reliably matched to an account. Check accounts with the same name and currency and their historical transactions before deleting the account.");
+    return;
+  }
+  const draftWarning = hasDraftChanges
+    ? (zh ? "<br><br>尚未保存的账户修改将丢失。" : "<br><br>Unsaved account changes will be lost.")
+    : "";
+  const defaultsWarning = accountIsDefault(repoId, accountType, target)
+    ? (zh ? "<br><br>该账户用于交易模版；删除后将改用其他可用账户，若没有可用账户则需先新增账户。" : "<br><br>This account is used in transaction templates. Another available account will be used, or you will need to add an account.")
+    : "";
+  let deleting = false;
+  showPopupWindow({
+    title: zh ? "确认删除账户" : "Confirm account deletion",
+    message: (zh
+      ? `删除该账户将永久删除其下的所有交易（共 ${entryIds.size} 条），包括关联的转账。此操作无法撤销。`
+      : `Deleting this account will permanently delete all of its transactions (${entryIds.size}), including transfers. This cannot be undone.`) + defaultsWarning + draftWarning,
+    buttons: [
+      { text: zh ? "取消" : "Cancel", primary: true, onClick: () => {} },
+      {
+        text: zh ? "删除" : "Delete",
+        onClick: async () => {
+          if (deleting) return;
+          deleting = true;
+          onStart();
+          try {
+            await deleteManagedAccount(repoId, accountType, accountId, target.id, subAccountId !== null, entryIds);
+          } catch (error) {
+            console.error("Failed to delete account", error);
+            alert(zh ? "删除账户失败或同步未完成，请检查账户、交易和网络状态。" : "Account deletion failed or sync did not complete. Check your accounts, transactions, and connection.");
+          } finally {
+            onFinish();
+          }
+          await onComplete();
+        }
+      }
+    ],
+    onOutsideClick: overlay => overlay.remove()
   });
 }
 
@@ -9619,7 +9697,7 @@ function enablePageSwipe(pageEl) {
       return;
     }
 
-    if (e.target.closest("input, textarea, [contenteditable], .fe-entry-block")) {
+    if (e.target.closest("input, textarea, [contenteditable], .fe-entry-block, .account-card")) {
       isDragging = false;
       return;
     }
