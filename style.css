@@ -5636,12 +5636,12 @@ button.secondary {
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries .fe-notes-text {
   margin-top: 0.2rem;
-  color: color-mix(in srgb, var(--text) 78%, var(--entries-surface, var(--card)));
+  color: color-mix(in srgb, var(--text) 45%, var(--entries-surface, var(--card)));
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-meta {
   margin-top: 0.2rem;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--text) 40%, var(--entries-surface, var(--card)));
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-meta:empty {
