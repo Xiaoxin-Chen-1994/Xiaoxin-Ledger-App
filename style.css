@@ -5367,7 +5367,8 @@ button.secondary {
 :is(#account-detail-page, #filtered-entries-page) {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 4rem - var(--banner-height));
+  top: calc(3.5rem + 1px + var(--banner-height));
+  height: calc(100% - 3.5rem - 1px - var(--banner-height));
 }
 
 :is(#account-detail-page, #filtered-entries-page) > .scroll {
@@ -5383,7 +5384,7 @@ button.secondary {
   flex: none;
   padding: 0.5rem 4% max(0.5rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
-  background: var(--card);
+  background: var(--entries-surface, var(--card));
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries-grouping-main,
@@ -5403,15 +5404,15 @@ button.secondary {
   min-height: 2.25rem;
   padding: 0.3rem 0.15rem;
   border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
+  background: transparent;
+  color: var(--muted);
   font-size: calc(var(--font-size) * 0.75);
   overflow-wrap: anywhere;
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries-grouping button[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 18%, var(--card));
+  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, var(--entries-surface, var(--card)));
   color: var(--text);
   font-weight: 600;
 }
@@ -5419,18 +5420,22 @@ button.secondary {
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--card);
-  box-shadow: var(--shadow);
+  background: var(--entries-surface, var(--card));
+  box-shadow: none;
+  overflow: clip;
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-heading {
+  position: sticky;
+  top: -0.75rem;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.85rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.75rem 0.85rem;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  background: var(--entries-surface, var(--card));
   font-weight: 600;
   overflow-wrap: anywhere;
   cursor: pointer;
@@ -5443,7 +5448,7 @@ button.secondary {
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-entries {
-  padding: 0 0.65rem 0.5rem;
+  padding: 0 0.85rem 0.35rem;
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-entries > div + div {
@@ -5493,7 +5498,8 @@ button.secondary {
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-net strong {
-  font-size: calc(var(--font-size) * 1.05);
+  font-size: calc(var(--font-size) * 0.9);
+  font-variant-numeric: tabular-nums;
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-flows {
@@ -5501,15 +5507,12 @@ button.secondary {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0 0.3rem;
-  font-size: calc(var(--font-size) * 0.6);
+  font-size: calc(var(--font-size) * 0.7);
 }
 
-:is(#account-detail-page, #filtered-entries-page) .account-entry-group-inflows {
-  color: var(--income-color);
-}
-
+:is(#account-detail-page, #filtered-entries-page) .account-entry-group-inflows,
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-outflows {
-  color: var(--expense-color);
+  color: var(--muted);
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group-status {
@@ -5555,38 +5558,137 @@ button.secondary {
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-block + hr + .fe-entry-block {
-  margin-top: 0.15rem;
+  border-top: 1px solid var(--border);
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-content {
-  border-left: 4px solid var(--entry-accent, var(--border));
+  margin: 0;
+  padding: 0.7rem 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--entries-surface, var(--card));
+  box-shadow: none;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-date-header {
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.8rem 0 0.25rem;
+  color: var(--muted);
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-date-big {
+  width: auto;
+  padding: 0;
+  color: inherit;
+  font-size: calc(var(--font-size) * 0.85);
+  font-weight: 600;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-date-sub {
+  color: inherit;
+  font-size: calc(var(--font-size) * 0.75);
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-main {
+  min-width: 0;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-title-row {
+  gap: 0.75rem;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-title-row .cat-part {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-content .icon {
+  padding-left: 0;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-amount-right {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-amount-right.income {
+  color: color-mix(in srgb, var(--income-color) 80%, var(--text));
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-amount-right.expense {
+  color: color-mix(in srgb, var(--expense-color) 80%, var(--text));
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries :is(.fe-notes-text, .fe-entry-meta) {
+  padding-left: calc(var(--font-size) * 1.5 + 0.3rem);
+  overflow-wrap: anywhere;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-notes-text {
+  margin-top: 0.2rem;
+  color: color-mix(in srgb, var(--text) 78%, var(--entries-surface, var(--card)));
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-meta {
+  margin-top: 0.2rem;
+  color: var(--muted);
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-meta:empty {
+  display: none;
 }
 
 #filtered-entries-page .account-entries .fe-entry-content {
   cursor: pointer;
 }
 
-#filtered-entries-page .account-entries .fe-entry-actions {
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-block {
+  overflow: hidden;
+}
+
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-actions {
+  right: 0;
+  width: min(11.2rem, 100%);
+  padding: 0.25rem 0;
+  box-sizing: border-box;
+  gap: 0.2rem;
+  transform: translateX(100%);
+  transition: transform 0.3s ease, visibility 0s linear 0.3s;
   visibility: hidden;
 }
 
-#filtered-entries-page .account-entries .fe-entry-block.show-actions .fe-entry-content {
-  transform: translateX(-11.5rem);
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-block.show-actions .fe-entry-content {
+  transform: translateX(calc(-1 * min(11.5rem, 100%)));
 }
 
-#filtered-entries-page .account-entries .fe-entry-block.show-actions .fe-entry-actions {
-  right: 0;
-  width: 11.2rem;
-  padding: 0;
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-block.show-actions .fe-entry-actions {
+  transform: translateX(0);
+  transition-delay: 0s;
   visibility: visible;
 }
 
-#filtered-entries-page .account-entries .fe-entry-block.show-actions :is(.duplicate-btn, .edit-btn, .delete-btn) {
+:is(#account-detail-page, #filtered-entries-page) .account-entries .fe-entry-actions :is(.duplicate-btn, .edit-btn, .delete-btn) {
+  position: static;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 100%;
   transform: none;
 }
 
 :is(#account-detail-page, #filtered-entries-page) .account-entry-group + .account-entry-group {
   margin-top: 1.1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :is(#account-detail-page, #filtered-entries-page) {
+    --entries-surface: #1c1e22;
+  }
 }
 
 #accounts-page .account-type-header {
@@ -5768,6 +5870,22 @@ button.secondary {
 
 #account-edit-page .edit-panel > .account-add-panel + .account-add-panel {
   margin-top: 0.65rem;
+}
+
+#account-edit-page .account-edit-delete {
+  margin-top: 1rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--red);
+  font: inherit;
+  cursor: pointer;
+}
+
+#account-edit-page .account-edit-delete:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 #account-edit-page .account-add-icon > img {
@@ -6155,7 +6273,7 @@ button.secondary {
 
 #transaction-page .transaction-tabs {
   gap: 0.3rem;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.6rem;
   padding: 0.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -6180,7 +6298,7 @@ button.secondary {
 #transaction-page .transaction-form .amount-row {
   box-sizing: border-box;
   height: calc(var(--font-size) * 5.3);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.6rem;
   padding: 0;
   border: 1px solid var(--border);
   border-bottom-color: var(--primary);
@@ -6218,7 +6336,7 @@ button.secondary {
 
 #transaction-page #exchange-transfer-amount-row {
   gap: 0.5rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.6rem;
 }
 
 #transaction-page #exchange-transfer-amount-row .amount-row {
@@ -6244,13 +6362,14 @@ button.secondary {
 }
 
 #transaction-page .transaction-form > .form-row {
-  min-height: 3.2rem;
-  margin-bottom: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  box-shadow: var(--shadow);
+  min-height: 2.75rem;
+  margin-bottom: 0;
+  padding: 0.15rem 0.65rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 #transaction-page .transaction-form > .form-row > label {
@@ -6258,14 +6377,19 @@ button.secondary {
   font-size: calc(var(--font-size) * 0.85);
 }
 
+#transaction-page .transaction-form > .form-row > .selector-button {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.25rem;
+}
+
 #transaction-page .transaction-form > .form-row.active {
   border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-  background: color-mix(in srgb, var(--primary) 7%, var(--card));
+  background: color-mix(in srgb, var(--primary) 7%, var(--bg));
 }
 
 #transaction-page .transaction-form > .form-row:has(> :is(.transaction-tags-title, .transaction-merchant-title, .transaction-item-title, .transaction-notes-title)) {
-  background: color-mix(in srgb, var(--bg) 45%, var(--card));
-  box-shadow: none;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
 }
 
 #transaction-page .transaction-form :is(input, textarea) {
@@ -6294,6 +6418,14 @@ button.secondary {
 
 #transaction-page .transaction-form .item-row {
   gap: 0.25rem;
+}
+
+#transaction-page .transaction-form .merchant-suggestions:empty {
+  padding-top: 0;
+}
+
+#transaction-page .transaction-form .merchant-input-row {
+  padding-bottom: 0;
 }
 
 #utilities-page .utilities-grid {

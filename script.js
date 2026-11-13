@@ -2059,7 +2059,31 @@ async function init() {
 
   // Load ALL ledger DBs
   await smartSync(selectedRepos, token); // this second smart sync actually merges with the cloud data
-  
+
+  for (const repo of selectedRepos.ledgerRepos) {
+    if (!settingsMap[repo.id]?.accounts || !localLedgerDataMap[repo.id]) continue;
+    const result = migrateTransactionAccountIds(repo.id);
+    if (result.changed || result.accountsChanged) {
+      settingsMap[repo.id].updatedAt = Math.max(Date.now(), (settingsMap[repo.id].updatedAt || 0) + 1);
+      await saveLocalJsonData("ledger-settings.json", settingsMap);
+      await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
+      await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repo.id });
+      if (result.generatedIds.some(id => !findAccountById(repo.id, id)) ||
+          result.links.some(({ entryKey, field, id }) => localLedgerDataMap[repo.id]?.[entryKey]?.[field] !== id)) {
+        console.error("Transaction account ID migration was overwritten during sync", repo.id);
+        alert(currentLang === "zh"
+          ? "账户 ID 更新在同步时被云端数据覆盖，请检查同步状态后重启应用。"
+          : "Account ID updates were overwritten during sync. Check sync status and restart the app.");
+      }
+    }
+    if (result.unresolved) {
+      console.warn(`Ledger ${repo.id}: ${result.unresolved} transaction account references could not be matched.`);
+      showStatusMessage(currentLang === "zh"
+        ? `有 ${result.unresolved} 个交易账户无法唯一匹配，请检查账户和交易。`
+        : `${result.unresolved} transaction account references could not be uniquely matched. Check your accounts and transactions.`, "error", 8000);
+    }
+  }
+
   // re-render home page using the synced data
   renderAlertCenter();
   updateKanbanRow("presetToday", 0, getDateRange('today')); // to distinguish from any "Today" kanban that user defines
@@ -2680,6 +2704,27 @@ function findSelectedAccount(repoId, accountType, accountName, allowContainer = 
   return null;
 }
 
+function findAccountById(repoId, id) {
+  if (!id) return null;
+  const found = [];
+  for (const type of accountTypes) {
+    for (const account of settingsMap[repoId].accounts[type] || []) {
+      if (account.id === id) found.push({ type, account, parent: null });
+      for (const sub of account["sub-accounts"] || []) {
+        if (sub.id === id) found.push({ type, account: sub, parent: account });
+      }
+    }
+  }
+  return found.length === 1 ? found[0] : null;
+}
+
+function resolveWorkspaceAccount(repoId, info, defaultType, defaultName) {
+  if (info?.account?.id) return findAccountById(repoId, info.account.id) || info;
+  if (info?.unresolved) return info;
+  return findSelectedAccount(repoId, info?.type, info?.account?.name)
+    || findSelectedAccount(repoId, defaultType, defaultName);
+}
+
 function setDefaultAccount(button, subWorkspace) {
   const t = translations[currentLang];
 
@@ -2737,7 +2782,7 @@ function setDefaultAccount(button, subWorkspace) {
     if (!subWorkspace[inputType].accountInfo) {
       subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, def.accountType, def.account);
     } else {
-      subWorkspace[inputType].accountInfo = findSelectedAccount(repoId, subWorkspace[inputType].accountInfo.type, subWorkspace[inputType].accountInfo.account.name);
+      subWorkspace[inputType].accountInfo = resolveWorkspaceAccount(repoId, subWorkspace[inputType].accountInfo, def.accountType, def.account);
     }
 
     // Extract account info
@@ -2793,7 +2838,7 @@ function setDefaultAccount(button, subWorkspace) {
       });
     });
 
-    subWorkspace[inputType].fromAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].fromAccountInfo.type, subWorkspace[inputType].fromAccountInfo.account.name);
+    subWorkspace[inputType].fromAccountInfo = resolveWorkspaceAccount(repoId, subWorkspace[inputType].fromAccountInfo, def.fromType, def.fromAccount);
     const from = subWorkspace.transfer.fromAccountInfo.account;
     const fromIcon = from.icon || "";
     const fromName = from.name;
@@ -2801,7 +2846,7 @@ function setDefaultAccount(button, subWorkspace) {
 
     subWorkspace.transfer.fromAccountInnerHTML = `${fromName} (${fromCurrency})`;
 
-    subWorkspace[inputType].toAccountInfo = findSelectedAccount(repoId, subWorkspace[inputType].toAccountInfo.type, subWorkspace[inputType].toAccountInfo.account.name);
+    subWorkspace[inputType].toAccountInfo = resolveWorkspaceAccount(repoId, subWorkspace[inputType].toAccountInfo, def.toType, def.toAccount);
     const to = subWorkspace.transfer.toAccountInfo.account;
     const toIcon = to.icon || "";
     const toName = to.name;
@@ -3637,10 +3682,16 @@ async function saveEntry() {
       : "An account with sub-accounts cannot hold entries. Select a sub-account.", "error", 4000);
     return;
   }
+  if (accountInfos.some(info => !findAccountById(repoId, info.account.id))) {
+    showStatusMessage(currentLang === "zh"
+      ? "账户无法确定，请重新选择账户后保存。"
+      : "The account could not be identified. Select an account before saving.", "error", 4000);
+    return;
+  }
 
   if (inputType === "transfer") {
-    const fromAcc = ws.transfer.fromAccountInfo.account.name;
-    const toAcc = ws.transfer.toAccountInfo.account.name;
+    const fromAcc = ws.transfer.fromAccountInfo.account.id;
+    const toAcc = ws.transfer.toAccountInfo.account.id;
 
     // Prevent same-account transfers
     if (fromAcc === toAcc) {
@@ -3709,6 +3760,7 @@ async function saveEntry() {
       primaryCategory: ws[inputType].primaryCategory,
       secondaryCategory: ws[inputType].secondaryCategory,
       account: ws[inputType].accountInfo.account.name,
+      accountId: ws[inputType].accountInfo.account.id,
       currency: ws[inputType].accountInfo.account.currency,
       subject: ws[inputType].subject,
       collection: ws[inputType].collection,
@@ -3720,8 +3772,10 @@ async function saveEntry() {
       toAmount: ws[inputType].sameCurrency ? (ws.amount ?? 0) : (ws[inputType].toAmount ?? 0),
       sameCurrency: ws[inputType].sameCurrency,
       fromAccount: ws[inputType].fromAccountInfo.account.name,
+      fromAccountId: ws[inputType].fromAccountInfo.account.id,
       fromCurrency: ws[inputType].fromAccountInfo.account.currency,
       toAccount: ws[inputType].toAccountInfo.account.name,
+      toAccountId: ws[inputType].toAccountInfo.account.id,
       toCurrency: ws[inputType].toAccountInfo.account.currency,
       merchant: ws.merchant ?? "",
     };
@@ -3729,6 +3783,7 @@ async function saveEntry() {
     entryData = {
       ...base,
       account: ws[inputType].accountInfo.account.name,
+      accountId: ws[inputType].accountInfo.account.id,
       currency: ws[inputType].accountInfo.account.currency
     };
   }
@@ -4343,6 +4398,7 @@ function attachMobileGesture(el, {
   allowNativeControls = false,
   dragMode = "none",
   dragDirection = "none", // direction must be specified for an "immediate" dragMode
+  canDrag = null,
   longPressTime = 300,
   enableLongPressDelete = false,
 
@@ -4366,7 +4422,7 @@ function attachMobileGesture(el, {
   let tapHandled = false;
 
   el.addEventListener("touchstart", e => {
-    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
+    if (allowNativeControls && e.target.closest("summary, select, input, textarea, label, [contenteditable], .account-entries-grouping")) return;
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
@@ -4395,7 +4451,7 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("touchmove", e => {
-    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
+    if (allowNativeControls && e.target.closest("summary, select, input, textarea, label, [contenteditable], .account-entries-grouping")) return;
     const t = e.touches[0];
     const dx = Math.abs(t.clientX - startX);
     const dy = Math.abs(t.clientY - startY);
@@ -4420,7 +4476,7 @@ function attachMobileGesture(el, {
 
     // Immediate drag (only if not scrolling)
     if (dragMode === "immediate" && !isDragging) {
-      if (didMove && allowDrag) {
+      if (didMove && allowDrag && (!canDrag || canDrag(e, el))) {
         isDragging = true;
         onDragStart?.(e, el, startX, startY);
       } else {
@@ -4443,12 +4499,13 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("touchend", e => {
-    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
+    if (allowNativeControls && e.target.closest("summary, select, input, textarea, label, [contenteditable], .account-entries-grouping")) return;
     clearTimeout(longPressTimer);
     
     if (el._scrolling) {
       el._scrolling = false;
       onScrollEnd?.(e, el);
+      setTimeout(() => { didMove = false; didLongPress = false; }, 0);
       return;
     }
     
@@ -4457,6 +4514,7 @@ function attachMobileGesture(el, {
         isDragging = false;
         onDragEnd?.(e, el);
       }
+      setTimeout(() => { didMove = false; didLongPress = false; }, 0);
       return;
     }
 
@@ -4465,11 +4523,12 @@ function attachMobileGesture(el, {
       onClick?.(e, el);
       e.preventDefault();
       e.stopPropagation();
+      setTimeout(() => { tapHandled = false; }, 0);
     }
   });
 
   el.addEventListener("click", e => {
-    if (allowNativeControls && e.target.closest("summary, select, .account-entries-grouping")) return;
+    if (allowNativeControls && e.target.closest("summary, select, input, textarea, label, [contenteditable], .account-entries-grouping")) return;
     e.preventDefault();
     e.stopPropagation();
     if (tapHandled) {
@@ -4483,9 +4542,96 @@ function attachMobileGesture(el, {
   });
 
   el.addEventListener("contextmenu", e => {
+    if (allowNativeControls && !e.target.closest(".fe-entry-block")) return;
     e.preventDefault();
     e.stopPropagation();
     onRightClick?.(e, el);
+  });
+}
+
+function attachEntryGestures(page, onDelete, onScrollEnd) {
+  if (page._entryGesturesAttached) return;
+  page._entryGesturesAttached = true;
+  attachMobileGesture(page, {
+    enableClick: true,
+    allowNativeControls: true,
+    dragMode: "immediate",
+    dragDirection: "horizontal",
+    canDrag: e => !!e.target.closest(".fe-entry-block"),
+    onClick: async e => {
+      if (e.target.id === "go-create-btn") {
+        showPage("create", "navTransaction");
+        return;
+      }
+      const block = e.target.closest(".fe-entry-block");
+      if (!block) return;
+      const { entryId, repoId } = block.dataset;
+      if (!localLedgerDataMap[repoId]?.[entryId]) return;
+
+      if (e.target.closest(".duplicate-btn")) {
+        let proceed = true;
+        if (workspace.create) {
+          proceed = await new Promise(resolve => {
+            showPopupWindow({
+              title: currentLang === "en" ? "Confirm Duplicate" : "确认复制",
+              message: currentLang === "en"
+                ? "You already have an entry in progress. Creating a duplicate will clear the existing information. Do you want to proceed with creating the duplicate?"
+                : "您已有正在创建的条目。复制新条目将清除原有内容，确定继续？",
+              buttons: [
+                { text: currentLang === "en" ? "Duplicate" : "复制", onClick: () => resolve(true) },
+                { text: currentLang === "en" ? "Cancel" : "取消", primary: true, onClick: () => resolve(false) }
+              ],
+              onOutsideClick: () => {}
+            });
+          });
+        }
+        if (proceed) showPage("create", translations[currentLang].navTransaction, {
+          mode: "duplicateExistingEntry", repoId, transactionId: entryId
+        });
+        return;
+      }
+      if (e.target.closest(".delete-btn")) {
+        const button = e.target.closest(".delete-btn");
+        if (button.disabled) return;
+        button.disabled = true;
+        try {
+          await deleteEntry(repoId, entryId);
+          await onDelete();
+        } catch (error) {
+          console.error("Failed to delete transaction", error);
+          alert(currentLang === "zh" ? "删除交易失败，请检查数据和网络。" : "Failed to delete the transaction. Check your data and connection.");
+          button.disabled = false;
+          if (!localLedgerDataMap[repoId]?.[entryId]) await onDelete();
+        }
+        return;
+      }
+      if (e.target.closest(".edit-btn") || !block.classList.contains("show-actions")) {
+        showPage("transaction", translations[currentLang].edit, {
+          mode: "loadExistingEntry", repoId, transactionId: entryId
+        });
+      } else {
+        block.classList.remove("show-actions");
+      }
+    },
+    onDragStart: (e, el, startX) => {
+      const block = e.target.closest(".fe-entry-block");
+      if (!block) return;
+      el._scrolling = false;
+      block._startX = startX;
+    },
+    onDragEnd: e => {
+      const block = e.target.closest(".fe-entry-block");
+      if (!block || block._startX == null) return;
+      const diff = block._startX - e.changedTouches[0].clientX;
+      delete block._startX;
+      if (diff > 40) block.classList.add("show-actions");
+      else if (diff < -40) block.classList.remove("show-actions");
+    },
+    onScrollEnd,
+    onRightClick: e => {
+      const block = e.target.closest(".fe-entry-block");
+      if (block) block.classList.add("show-actions");
+    }
   });
 }
 
@@ -4928,6 +5074,17 @@ document.fonts.ready.then(fitAccountTitle);
 async function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
+  if (name === "create" || name === "transaction") {
+    const repoId = options.repoId || (name === "transaction"
+      ? workspace.transactions[options.transactionId]?.[workspace.transactions[options.transactionId]?.inputType]?.repoId
+      : workspace.create?.[workspace.create?.inputType]?.repoId) || selectedRepos?.ledgerRepos[0]?.id;
+    const accounts = settingsMap?.[repoId]?.accounts;
+    if (accounts && !accountTypes.some(type => (accounts[type] || []).length)) {
+      alert(currentLang === "zh" ? "请先在账户管理中新增账户，再记账。" : "Add an account in account management before recording transactions.");
+      return;
+    }
+  }
+
   accountTitleHeader.classList.remove("account-title-header");
   accountTitle.style.removeProperty("left");
   accountTitle.style.removeProperty("right");
@@ -5220,6 +5377,12 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   } else if (latestPage === "account-detail") {
     const { activeRepoId, accountType, accountId } = options;
+    attachEntryGestures(target, async () => {
+      if (latestPage !== "account-detail") return;
+      const { activeRepoId, accountType, accountId } = latestOptions;
+      const activeTab = document.querySelector("#account-detail-tabs .account-tab-btn.active");
+      renderAccountDetailContent(activeRepoId, accountType, accountId, activeTab?.dataset.tab || "all");
+    });
 
     renderAccountTabs(activeRepoId, accountType, accountId, "account-detail-tabs", {
       mode: "detail",
@@ -5313,7 +5476,7 @@ async function showPage(name, title = latestTitle, options = {}) {
       if (options.kanbanIndex == 3) options.filters = getDateRange("upcoming");
       let filteredEntries = await getFilteredEntries(options.filters);
       console.log(options.filters)
-      showFilteredEntries(filteredEntries);
+      showFilteredEntries(filteredEntries, { upcoming: options.kanbanIndex == 3 });
 
       const [y, m] = options.filters.dateFrom.split("-");
       currentMonthState.year = Number(y);
@@ -5322,137 +5485,20 @@ async function showPage(name, title = latestTitle, options = {}) {
 
     target.dataset.kanbanIndex = options.kanbanIndex;
 
-    if (!target._gestureAttached) {
-      target._gestureAttached = true;
-      
-      attachMobileGesture(target, {
-        enableClick: true,
-        allowNativeControls: true,
-        dragMode: "immediate",
-        dragDirection: 'horizontal',
-
-        onClick: async (e, el) => {
-          if (e.target.id === "go-create-btn") {
-            showPage("create", "navTransaction");
-            return;
-          };
-
-          const block = e.target.closest(".fe-entry-block");
-          if (!block) return;
-
-          const entryId = block.dataset.entryId;
-          const repoId = block.dataset.repoId;
-          if (!(entryId in localLedgerDataMap[repoId])) return;
-
-            // If clicking duplicate
-          if (e.target.classList.contains("duplicate-btn")) {
-            let proceed = true;
-
-            if (!!workspace.create) {
-              proceed = await new Promise(resolve => {
-                showPopupWindow({
-                  title: currentLang === "en" ? "Confirm Duplicate" : "确认复制",
-                  message:
-                    currentLang === "en"
-                      ? "You already have an entry in progress. Creating a duplicate will clear the existing information. Do you want to proceed with creating the duplicate?"
-                      : "您已有正在创建的条目。复制新条目将清除原有内容，确定继续？",
-                  buttons: [
-                    {
-                      text: currentLang === "en" ? "Duplicate" : "复制",
-                      onClick: () => resolve(true)    // user confirmed
-                    },
-                    {
-                      text: currentLang === "en" ? "Cancel" : "取消",
-                      primary: true,
-                      onClick: () => resolve(false)   // user cancelled
-                    }
-                  ],
-                  onOutsideClick: (overlay) => {} // do nothing
-                });
-              });
-            }
-
-            if (proceed) {
-              showPage("create", t.navTransaction, { 'mode': 'duplicateExistingEntry', 'repoId': repoId, 'transactionId': entryId });
-            }
-            return;
-          }
-
-          // If clicking Edit
-          if (e.target.classList.contains("edit-btn")) {
-            showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
-            return;
-          }
-
-          // If clicking Delete
-          if (e.target.classList.contains("delete-btn")) {
-            deleteEntry(repoId, entryId);
-            block.remove();
-            showPage("filtered-entries", latestTitle, latestOptions)
-            return;
-          }
-
-          // Normal click
-          if (block.classList.contains("show-actions")) {
-            block.classList.remove("show-actions"); // hide action buttons if they are shown
-          } else { // or load entry if action buttons are already hidden
-            showPage("transaction", t.edit, { 'mode': 'loadExistingEntry', 'repoId': repoId, 'transactionId': entryId });
-          }
-        },
-
-        // Swipe left/right
-        onDragStart: (e, el, startX) => {
-          const block = e.target.closest(".fe-entry-block");
-          if (!block) return;
-
-          block._startX = e.touches[0].clientX;
-        },
-
-        onDragEnd: (e, el) => {
-          const block = e.target.closest(".fe-entry-block");
-          if (!block) return;
-
-          const endX = e.changedTouches[0].clientX;
-          const diff = block._startX - endX;
-
-          if (diff > 40) {
-            block.classList.add("show-actions");   // swipe left
-          } else if (diff < -40) {
-            block.classList.remove("show-actions"); // swipe right
-          }
-        },
-
-        onScrollEnd: (e, el) => {
-          const kanbanIndex = Number(el.dataset.kanbanIndex);
-
-          const scrollEl = findScrollEl(el);   // ⭐ use real scroll element
-          
-          const t = e.changedTouches[0];
-          const dy = t.clientY - el._scrollStartY;
-          
-          const endAtTop = scrollEl.scrollTop <= 0;
-          const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
-
-          // Overscroll DOWN at top → next month/year
-          if (el._startAtTop && endAtTop && dy > 40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
-              loadNextRange(el);
-              return;
-          }
-
-          // Overscroll UP at bottom → previous month/year
-          if (el._startAtBottom && endAtBottom && dy < -40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
-              loadPreviousRange(el);
-              return;
-          }
-        },
-
-        onRightClick: (e, el) => {
-          const block = e.target.closest(".fe-entry-block");
-          if (!block) return;
-          block.classList.add("show-actions");
-        }
-      });
-    }
+    attachEntryGestures(target, () => {
+      if (latestPage === "filtered-entries") return showPage("filtered-entries", latestTitle, latestOptions);
+    }, (e, el) => {
+      const kanbanIndex = Number(el.dataset.kanbanIndex);
+      const scrollEl = findScrollEl(el);
+      const dy = e.changedTouches[0].clientY - el._scrollStartY;
+      const endAtTop = scrollEl.scrollTop <= 0;
+      const endAtBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight;
+      if (el._startAtTop && endAtTop && dy > 40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
+        loadNextRange(el);
+      } else if (el._startAtBottom && endAtBottom && dy < -40 && (kanbanIndex === 1 || kanbanIndex === 2)) {
+        loadPreviousRange(el);
+      }
+    });
 
   } else if (latestPage === "grocery-search") {
     document.getElementById("manage-btn-headerbar").style.display = "block";
@@ -5789,7 +5835,7 @@ async function deleteEntry(repoId, entryId) {
   await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
   await saveLocalJsonData("ledger-settings.json", settingsMap);
 
-  smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
+  await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId: repoId });
 }
 
 function removeEntryFromTagMap(settingsMap, repoId, entry) {
@@ -5818,6 +5864,12 @@ function loadEntryIntoWorkspace(repoId, entryId) {
 
   const e = localLedgerDataMap[repoId][entryId];
 
+  const entryAccount = (id, name, currency) => findAccountById(repoId, id) || {
+    type: settingsMap[repoId].defaults[e.type]?.accountType || accountTypes[0],
+    account: { id, name, currency },
+    unresolved: true
+  };
+
   let ws = {};
 
   ws.entryId = e.entryId;
@@ -5838,7 +5890,7 @@ function loadEntryIntoWorkspace(repoId, entryId) {
     ws[e.type].secondaryCategory = e.secondaryCategory;
     ws[e.type].catInnerHTML = e.catInnerHTML;
 
-    ws[e.type].accountInfo = { account: { name: e.account, currency: e.currency } };
+    ws[e.type].accountInfo = entryAccount(e.accountId, e.account, e.currency);
 
     ws[e.type].subject = e.subject || "";
     ws[e.type].collection = e.collection || "";
@@ -5851,8 +5903,8 @@ function loadEntryIntoWorkspace(repoId, entryId) {
 
     ws.transfer.sameCurrency = e.sameCurrency;
 
-    ws.transfer.fromAccountInfo = { account: { name: e.fromAccount, currency: e.fromCurrency } };
-    ws.transfer.toAccountInfo = { account: { name: e.toAccount, currency: e.toCurrency } };
+    ws.transfer.fromAccountInfo = entryAccount(e.fromAccountId, e.fromAccount, e.fromCurrency);
+    ws.transfer.toAccountInfo = entryAccount(e.toAccountId, e.toAccount, e.toCurrency);
 
     ws.transfer.toAmount = Number(e.toAmount) || 0;
   }
@@ -5862,7 +5914,7 @@ function loadEntryIntoWorkspace(repoId, entryId) {
     ws.inputTypeIndex = transactionTypes.indexOf(e.type);
     ws.balance = {};
 
-    ws.balance.accountInfo = { account: { name: e.account, currency: e.currency } };
+    ws.balance.accountInfo = entryAccount(e.accountId, e.account, e.currency);
   }
 
   // Save workspace buffer
@@ -5920,6 +5972,54 @@ function prepareRepoTabs(task, type, title, activeRepoId = selectedRepos.activeL
 }
 window.prepareRepoTabs = prepareRepoTabs;
 
+function getTransactionAccountFields(entry) {
+  if (entry.type === "transfer") {
+    return [["fromAccount", "fromCurrency", "fromAccountId"], ["toAccount", "toCurrency", "toAccountId"]];
+  }
+  return ["income", "expense", "balance"].includes(entry.type)
+    ? [["account", "currency", "accountId"]] : [];
+}
+
+function migrateTransactionAccountIds(repoId) {
+  const accounts = accountTypes.flatMap(type =>
+    (settingsMap[repoId].accounts[type] || []).flatMap(account => [account, ...(account["sub-accounts"] || [])])
+  );
+  const existingIds = new Set(accounts.map(account => account.id).filter(Boolean));
+  const generatedIds = [];
+  const links = [];
+  let accountsChanged = 0;
+  for (const account of accounts) {
+    if (account.id) continue;
+    let id;
+    do { id = crypto.randomUUID(); } while (existingIds.has(id));
+    account.id = id;
+    existingIds.add(id);
+    generatedIds.push(id);
+    accountsChanged++;
+  }
+  let changed = 0;
+  let unresolved = 0;
+  for (const [entryKey, entry] of Object.entries(localLedgerDataMap[repoId])) {
+    for (const [nameField, currencyField, idField] of getTransactionAccountFields(entry)) {
+      if (entry[idField]) {
+        if (!findAccountById(repoId, entry[idField])) unresolved++;
+        continue;
+      }
+      const candidates = accounts.filter(account =>
+        account.name === entry[nameField] && account.currency === entry[currencyField]);
+      if (candidates.length === 1 && candidates[0].id &&
+          accounts.filter(account => account.id === candidates[0].id).length === 1) {
+        entry[idField] = candidates[0].id;
+        links.push({ entryKey, field: idField, id: candidates[0].id });
+        changed++;
+      } else {
+        unresolved++;
+      }
+    }
+  }
+  return { changed, accountsChanged, unresolved, generatedIds, links };
+}
+
 function getAccountMatches(repoId) {
   const groups = accountTypes.flatMap(type =>
     (settingsMap[repoId].accounts[type] || []).map(account => ({ type, account }))
@@ -5937,33 +6037,31 @@ function getAccountMatches(repoId) {
   });
   const matches = [];
   for (const entry of Object.values(localLedgerDataMap[repoId] || {})) {
-    const sides = entry.type === "transfer"
-      ? [["fromAccount", "fromCurrency", "fromAccountId"], ["toAccount", "toCurrency", "toAccountId"]]
-      : ["income", "expense", "balance"].includes(entry.type)
-        ? [["account", "currency", "accountId"]]
-        : [];
+    const sides = getTransactionAccountFields(entry);
     for (const [nameField, currencyField, idField] of sides) {
       const linkedId = entry[idField];
-      const linkedGroups = linkedId ? groups.filter(group => group.account.id === linkedId &&
-        (group.account["sub-accounts"] || []).length) : [];
       let candidates;
-      if (linkedGroups.length === 1) {
-        const children = linkedGroups[0].account["sub-accounts"];
-        candidates = accounts.filter(account => children.includes(account.source) &&
-          account.name === entry[nameField] && account.currency === entry[currencyField]);
-      } else if (linkedId) {
-        candidates = linkedGroups.length ? [] : accounts.filter(account => account.id === linkedId);
+      if (linkedId) {
+        const found = findAccountById(repoId, linkedId);
+        candidates = found ? [{
+          id: found.account.id,
+          name: found.account.name,
+          currency: found.account.currency,
+          type: found.type,
+          parent: found.parent?.name || null,
+          source: found.account
+        }] : [];
       } else {
         candidates = accounts.filter(account => account.name === entry[nameField] && account.currency === entry[currencyField]);
       }
       const hasUniqueId = candidates.length === 1 && candidates[0].id &&
-        accounts.filter(account => account.id === candidates[0].id).length === 1;
+        !!findAccountById(repoId, candidates[0].id);
       matches.push({
         entryId: entry.entryId,
         side: nameField,
         currency: entry[currencyField],
         candidates,
-        status: hasUniqueId ? (linkedId && !linkedGroups.length ? "linked" : "match") : "unresolved"
+        status: hasUniqueId ? (linkedId ? "linked" : "match") : "unresolved"
       });
     }
   }
@@ -6944,10 +7042,6 @@ function renderAccountDetailContent(repoId, accountType, accountId, tabKey = "al
       amount.innerHTML = entry.type === "transfer"
         ? `${renderCurrencyAmount(entry.amount, entry.fromCurrency)} → ${renderCurrencyAmount(entry.sameCurrency || (entry.sameCurrency == null && entry.fromCurrency === entry.toCurrency) ? entry.amount : entry.toAmount, entry.toCurrency)}`
         : renderCurrencyAmount(entry.amount, entry.currency);
-      block.querySelector(".fe-entry-actions")?.remove();
-      block.addEventListener("click", () => showPage("transaction", t.edit, {
-        mode: "loadExistingEntry", repoId, transactionId: entry.entryId
-      }));
     }
   });
 }
@@ -7186,12 +7280,6 @@ function renderGroupedEntryList({ container, entries: allEntries, getEntryFlow, 
       for (const [day, dayEntries] of days) {
         const group = document.createElement("div");
         group.innerHTML = renderEntryGroup(day, dayEntries);
-        for (const block of group.querySelectorAll(".fe-entry-block")) {
-          const icon = block.querySelector(".fe-entry-content .icon-content")
-            || block.querySelector(".fe-entry-content .icon");
-          const content = block.querySelector(".fe-entry-content");
-          if (icon && content) applyIconAccent(content, icon, "--entry-accent");
-        }
         if (prepareEntry) {
           const blocks = [...group.querySelectorAll(".fe-entry-block")];
           for (const entry of dayEntries) {
@@ -7598,6 +7686,7 @@ function renderAccountEditPage(repoId, accountType, accountId) {
     });
   }
 
+  let deletingAccount = false;
   wrapper.querySelectorAll(".edit-panel").forEach(panel => {
     const zh = currentLang === "zh";
     const rows = [...panel.children];
@@ -7708,6 +7797,179 @@ function renderAccountEditPage(repoId, accountType, accountId) {
       activeRepoId: repoId, mode: "sub", accountType, accountId
     });
   });
+
+  wrapper.querySelectorAll(".edit-panel").forEach(panel => {
+    const subIndex = panel.dataset.tab === "main" ? null : Number(panel.dataset.tab.slice(4));
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "account-edit-delete";
+    deleteButton.textContent = currentLang === "zh"
+      ? (subIndex === null ? "删除主账户" : "删除子账户")
+      : (subIndex === null ? "Delete primary account" : "Delete sub-account");
+    panel.appendChild(deleteButton);
+    deleteButton.addEventListener("click", () => {
+      if (deletingAccount) return;
+      const zh = currentLang === "zh";
+      if (subIndex === null && (account["sub-accounts"] || []).length) {
+        alert(zh ? "请先删除所有子账户，才能删除主账户。" : "Delete all sub-accounts before deleting the primary account.");
+        return;
+      }
+      const target = subIndex === null ? account : subs[subIndex];
+      let entryIds;
+      try {
+        entryIds = getAccountDeletionEntryIds(repoId, account, target);
+      } catch (error) {
+        console.error("Cannot determine account transactions for deletion", error);
+        alert(zh
+          ? "无法确定部分交易所属的账户。请先检查同名同币种账户及相关历史交易，再删除账户。"
+          : "Some transactions cannot be reliably matched to an account. Check accounts with the same name and currency and their historical transactions before deleting the account.");
+        return;
+      }
+      const draftWarning = getDraftState() !== initialDraft
+        ? (zh ? "<br><br>尚未保存的账户修改将丢失。" : "<br><br>Unsaved account changes will be lost.")
+        : "";
+      const defaultsWarning = accountIsDefault(repoId, accountType, target)
+        ? (zh ? "<br><br>该账户用于交易模版；删除后将改用其他可用账户，若没有可用账户则需先新增账户。" : "<br><br>This account is used in transaction templates. Another available account will be used, or you will need to add an account.")
+        : "";
+      showPopupWindow({
+        title: zh ? "确认删除账户" : "Confirm account deletion",
+        message: (zh
+          ? `删除该账户将永久删除其下的所有交易（共 ${entryIds.size} 条），包括关联的转账。此操作无法撤销。`
+          : `Deleting this account will permanently delete all of its transactions (${entryIds.size}), including transfers. This cannot be undone.`) + defaultsWarning + draftWarning,
+        buttons: [
+          { text: zh ? "取消" : "Cancel", primary: true, onClick: () => {} },
+          {
+            text: zh ? "删除" : "Delete",
+            onClick: async () => {
+              if (deletingAccount) return;
+              deletingAccount = true;
+              wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = true; });
+              addSubButton.disabled = true;
+              const saveButton = document.getElementById("save-btn-headerbar");
+              saveButton.disabled = true;
+              try {
+                await deleteManagedAccount(repoId, accountType, accountId, target.id, subIndex !== null, entryIds);
+              } catch (error) {
+                console.error("Failed to delete account", error);
+                alert(zh ? "删除账户失败或同步未完成，请检查账户、交易和网络状态。" : "Account deletion failed or sync did not complete. Check your accounts, transactions, and connection.");
+              } finally {
+                deletingAccount = false;
+                wrapper.querySelectorAll(".account-edit-delete").forEach(button => { button.disabled = false; });
+                addSubButton.disabled = false;
+                saveButton.disabled = false;
+              }
+              const currentParent = settingsMap[repoId]?.accounts[accountType]?.find(item => item.id === accountId);
+              if (!currentParent) {
+                historyStack = historyStack.filter((item, index) =>
+                  index === historyStack.length - 1 || item[0] !== "account-detail" ||
+                  item[2]?.activeRepoId !== repoId || item[2]?.accountId !== accountId);
+                await goBack();
+              } else if (subIndex !== null && !(currentParent["sub-accounts"] || []).some(item => item.id === target.id)) {
+                renderAccountEditPage(repoId, accountType, accountId);
+              }
+            }
+          }
+        ],
+        onOutsideClick: overlay => overlay.remove()
+      });
+    });
+  });
+}
+
+function accountDefaultFields(settings) {
+  return [
+    [settings.defaults.expense, "accountType", "account", "accountIcon"],
+    [settings.defaults.income, "accountType", "account", "accountIcon"],
+    [settings.defaults.balance, "accountType", "account", "accountIcon"],
+    [settings.defaults.transfer, "fromType", "fromAccount", "fromAccountIcon"],
+    [settings.defaults.transfer, "toType", "toAccount", "toAccountIcon"]
+  ];
+}
+
+function accountIsDefault(repoId, accountType, account) {
+  return accountDefaultFields(settingsMap[repoId]).some(([defaults, type, name]) =>
+    defaults[type] === accountType && defaults[name] === account.name);
+}
+
+function repairAccountDefaults(repoId, deletedType = "", deletedName = "") {
+  const settings = settingsMap[repoId];
+  const replacement = accountTypes.flatMap(type =>
+    (settings.accounts[type] || []).flatMap(account =>
+      (account["sub-accounts"] || []).length
+        ? account["sub-accounts"].map(sub => ({ type, account: sub }))
+        : [{ type, account }])
+  )[0];
+  for (const [defaults, type, name, icon] of accountDefaultFields(settings)) {
+    if (deletedType
+      ? defaults[type] !== deletedType || defaults[name] !== deletedName
+      : defaults[type] || defaults[name]) continue;
+    if (findSelectedAccount(repoId, defaults[type], defaults[name], false)) continue;
+    defaults[type] = replacement?.type || "";
+    defaults[name] = replacement?.account.name || "";
+    defaults[icon] = replacement?.account.icon || "";
+  }
+}
+
+function getAccountDeletionEntryIds(repoId, parent, target) {
+  if (!target?.id || !localLedgerDataMap[repoId]) throw new Error("Account or ledger data is unavailable");
+  const entries = localLedgerDataMap[repoId];
+  const ids = new Set();
+  for (const match of getAccountMatches(repoId)) {
+    const entry = entries[match.entryId];
+    if (!entry) throw new Error("Account match refers to a missing transaction");
+    if (match.status === "unresolved" && match.candidates.length === 0) {
+      throw new Error("A transaction account cannot be matched");
+    }
+    const idField = match.side === "fromAccount" ? "fromAccountId"
+      : match.side === "toAccount" ? "toAccountId" : "accountId";
+    const mayMatch = match.candidates.some(candidate => candidate.source === target) ||
+      entry[idField] === target.id ||
+      (target !== parent && entry[idField] === parent.id && match.candidates.length === 0);
+    if (!mayMatch) continue;
+    if (match.status === "unresolved") throw new Error("Ambiguous account transaction");
+    const currencyField = match.side === "fromAccount" ? "fromCurrency"
+      : match.side === "toAccount" ? "toCurrency" : "currency";
+    const possibleParents = accountTypes.flatMap(type => settingsMap[repoId].accounts[type] || [])
+      .filter(account => (account["sub-accounts"] || []).length &&
+        (!entry[idField] || entry[idField] === account.id) &&
+        account.name === entry[match.side] && account.currency === entry[currencyField]);
+    if (possibleParents.length) throw new Error("Transaction may belong to a primary account");
+    if (match.candidates[0].source === target) ids.add(match.entryId);
+  }
+  return ids;
+}
+
+async function deleteManagedAccount(repoId, accountType, accountId, targetId, isSubAccount, confirmedEntryIds) {
+  const accounts = settingsMap[repoId].accounts[accountType];
+  const parent = accounts.find(account => account.id === accountId);
+  if (!parent) throw new Error("Primary account no longer exists");
+  const subs = parent["sub-accounts"] || [];
+  const target = isSubAccount ? subs.find(sub => sub.id === targetId) : parent;
+  if (!target || (!isSubAccount && subs.length)) throw new Error("Account cannot be deleted");
+  const entryIds = getAccountDeletionEntryIds(repoId, parent, target);
+  if (entryIds.size !== confirmedEntryIds.size || [...entryIds].some(id => !confirmedEntryIds.has(id))) {
+    throw new Error("Account transactions changed after confirmation");
+  }
+  for (const entryId of entryIds) {
+    const entry = localLedgerDataMap[repoId][entryId];
+    removeEntryFromTagMap(settingsMap, repoId, entry);
+    delete localLedgerDataMap[repoId][entryId];
+  }
+  if (isSubAccount) {
+    subs.splice(subs.indexOf(target), 1);
+    delete parent._pendingSubOrder;
+  } else {
+    accounts.splice(accounts.indexOf(parent), 1);
+  }
+  repairAccountDefaults(repoId, accountType, target.name);
+  settingsMap[repoId].updatedAt = Math.max(Date.now(), (settingsMap[repoId].updatedAt || 0) + 1);
+  await saveLocalJsonData("localLedgerDataMap.json", localLedgerDataMap);
+  await saveLocalJsonData("ledger-settings.json", settingsMap);
+  await smartSync(selectedRepos, token, { push: true, syncLedgerData: true, repoId });
+  const syncedParent = settingsMap[repoId]?.accounts[accountType]?.find(account => account.id === accountId);
+  if (isSubAccount ? syncedParent?.["sub-accounts"]?.some(sub => sub.id === targetId) : syncedParent) {
+    throw new Error("Cloud data restored the deleted account during sync");
+  }
 }
 
 function createSectionHeader(text) {
@@ -8041,6 +8303,7 @@ async function saveAccountAdd({ activeRepoId, mode, accountType, accountId }) {
 
     account["sub-accounts"].push(base);
   }
+  repairAccountDefaults(activeRepoId);
 
   // -----------------------------
   // 6. Persist + Sync
@@ -9331,7 +9594,10 @@ function enablePageSwipe(pageEl) {
       return;
     }
 
-    if (e.target.closest("input, textarea, [contenteditable]")) return;
+    if (e.target.closest("input, textarea, [contenteditable], .fe-entry-block")) {
+      isDragging = false;
+      return;
+    }
 
     e.stopPropagation();
     startX = x;
@@ -10381,7 +10647,7 @@ async function updateKanbanRow(title, kanbanIndex, filters) {
 
 let kanbanEntryGrouping = { kanbanIndex: null, mode: "month", collapsed: new Set() };
 
-function showFilteredEntries(entries, { today = false } = {}) {
+function showFilteredEntries(entries, { today = false, upcoming = false } = {}) {
   const page = document.getElementById("filtered-entries-page");
   const scroll = page.querySelector(".scroll");
 
@@ -10401,8 +10667,9 @@ function showFilteredEntries(entries, { today = false } = {}) {
   }
   renderGroupedEntryList({
     container: scroll,
-    entries: [...entries].sort((a, b) =>
-      String(b.transactionTime || "").localeCompare(String(a.transactionTime || ""))),
+    entries: [...entries].sort((a, b) => upcoming
+      ? String(a.transactionTime || "").localeCompare(String(b.transactionTime || ""))
+      : String(b.transactionTime || "").localeCompare(String(a.transactionTime || ""))),
     getEntryFlow: entry => {
       if (entry.type !== "income" && entry.type !== "expense") return null;
       const raw = entry.amount;
@@ -10493,6 +10760,7 @@ function renderEntryByType(e) {
   const collection = e.collection || "";
   const items = e.items || [];
   const notes = e.notes || "";
+  const merchant = e.merchant || "";
 
   const tagStr = (e.tags && e.tags.length > 0)
     ? e.tags.map(t => `#${t}`).join(" ")
@@ -10521,7 +10789,7 @@ function renderEntryByType(e) {
                 ${renderCurrencyAmount(e.amount, e.currency)}
               </div>
             </div>
-            ${renderNotesItemsTags(notes, items)}
+            ${renderEntryDetails(merchant, items, notes)}
             <div class="fe-entry-meta">${tagStr ? tagStr : ""}</div>
             <div class="fe-entry-meta">${time} · ${account} · ${subject} · ${collection}</div>
           </div>
@@ -10553,7 +10821,7 @@ function renderEntryByType(e) {
                 ${renderCurrencyAmount(e.amount, e.fromCurrency)}
               </div>
             </div>
-            ${renderNotesItemsTags(notes, items)}
+            ${renderEntryDetails(merchant, items, notes)}
             <div class="fe-entry-meta">${time}</div>
           </div>
         </div>
@@ -10584,7 +10852,7 @@ function renderEntryByType(e) {
                 ${renderCurrencyAmount(e.amount, e.currency)}
               </div>
             </div>
-            ${renderNotesItemsTags(notes, items)}
+            ${renderEntryDetails(merchant, items, notes)}
             <div class="fe-entry-meta">${time}</div>
           </div>
         </div>
@@ -10602,32 +10870,26 @@ function renderEntryByType(e) {
   return "";
 }
 
-function renderNotesItemsTags(notes, items) {
-  const hasNotes = notes && notes.trim() !== "";
-  const hasItems = Array.isArray(items) && items.length > 0;
-
-  if (!hasNotes && !hasItems) return "";
-
+function renderEntryDetails(merchant, items, notes) {
   const lines = [];
-
-  // Notes
-  if (hasNotes) {
-    lines.push(notes.trim());
+  if (typeof merchant === "string" && merchant.trim()) lines.push(merchant.trim());
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (!item) continue;
+      const line = [item.name, item.unitPrice ?? item.unit_price, item.price ?? item.item_total]
+        .filter(value => value != null && String(value).trim() !== "")
+        .map(value => String(value).trim())
+        .join(" ");
+      if (line) lines.push(line);
+    }
   }
+  if (typeof notes === "string" && notes.trim()) lines.push(notes.trim());
+  if (!lines.length) return "";
 
-  // Items: "name unitPrice price"
-  if (hasItems) {
-    items.forEach(it => {
-      const name = it.name || "";
-      const unitPrice = it.unitPrice || "";
-      const price = it.price || "";
-      lines.push(`${name} ${unitPrice} ${price}`.trim());
-    });
-  }
-
-  const combinedText = lines.join("\n").trim();
-
-  return `<div class="fe-notes-text">${combinedText}</div>`;
+  const content = document.createElement("div");
+  content.className = "fe-notes-text";
+  content.textContent = lines.join("\n");
+  return content.outerHTML;
 }
 
 function getCategoryIcon(repoId, type, primary, secondary) {
@@ -11174,6 +11436,7 @@ function createList(col, values) {
     // -----------------------------
     if (v && typeof v === "object") {
       const hasNote = "note" in v;
+      if (v.id != null) div.dataset.id = v.id;
 
       const valueDiv = document.createElement("div");
       valueDiv.className = "selector-item";
@@ -11209,7 +11472,7 @@ function createList(col, values) {
 }
 
 /* Snap after scroll stops */
-function ScrollToSelectItem(col, value = null) {
+function ScrollToSelectItem(col, value = null, id = null) {
   // Helper to update selection
   function selectItem(item) {
     if (!item) return;
@@ -11223,7 +11486,9 @@ function ScrollToSelectItem(col, value = null) {
 
   let target;
 
-  if (typeof value === "number") {
+  if (id != null && items.some(item => item.dataset.id === String(id))) {
+    target = items.find(item => item.dataset.id === String(id));
+  } else if (typeof value === "number") {
     target = items.find(i => {
 
       const labelEl = i.querySelector(".selector-item-label"); // look for this class
@@ -11464,7 +11729,13 @@ function updateSelectorPreview(updatedCol) {
 
       const accountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      subWorkspace[inputType].accountInfo = findSelectedAccount(inputRepoId, subWorkspace[inputType].accountInfo.type, accountName);
+      const selectedId = accountCol.querySelector(".dt-item.selected")?.dataset.id;
+      subWorkspace[inputType].accountInfo = findAccountById(inputRepoId, selectedId);
+      if (!subWorkspace[inputType].accountInfo) {
+        console.error("Selected account could not be identified", selectedId);
+        showStatusMessage(currentLang === "zh" ? "无法识别所选账户。" : "Could not identify the selected account.", "error");
+        return;
+      }
 
       // Extract account info
       const info = subWorkspace[inputType].accountInfo;
@@ -11484,8 +11755,13 @@ function updateSelectorPreview(updatedCol) {
       const fromAccountName = pName.replace(/\s*\([^)]*\)$/, "");
       const toAccountName = sName.replace(/\s*\([^)]*\)$/, "");
 
-      subWorkspace.transfer.fromAccountInfo = findSelectedAccount(inputRepoId, null, fromAccountName);
-      subWorkspace.transfer.toAccountInfo = findSelectedAccount(inputRepoId, null, toAccountName);
+      subWorkspace.transfer.fromAccountInfo = findAccountById(inputRepoId, accountTypeCol.querySelector(".dt-item.selected")?.dataset.id);
+      subWorkspace.transfer.toAccountInfo = findAccountById(inputRepoId, accountCol.querySelector(".dt-item.selected")?.dataset.id);
+      if (!subWorkspace.transfer.fromAccountInfo || !subWorkspace.transfer.toAccountInfo) {
+        console.error("Selected transfer accounts could not be identified");
+        showStatusMessage(currentLang === "zh" ? "无法识别所选账户。" : "Could not identify the selected account.", "error");
+        return;
+      }
 
       const from = subWorkspace.transfer.fromAccountInfo.account;
       const fromIcon = from.icon || "";
@@ -11673,6 +11949,7 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
         // Use sub-accounts
         subs.forEach(sub => {
           secondaryList.push({
+            id: sub.id,
             icon: sub.icon,
             name: `${sub.name} (${sub.currency})`
           });
@@ -11680,6 +11957,7 @@ function updateSecondaryColumn(lastButton, subWorkspace, secondaryCol) {
       } else {
         // Use the account itself
         secondaryList.push({
+          id: acc.id,
           icon: acc.icon,
           name: `${acc.name} (${acc.currency})`
         });
@@ -12332,12 +12610,12 @@ document.querySelectorAll(".selector-button[data-type='account']").
 
       if (["expense", "income", "balance"].includes(inputType)) {
         ScrollToSelectItem(accountSelector.querySelector(".primary-col"), t[subWorkspace[inputType].accountInfo.type]);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].accountInfo.account.name} (${subWorkspace[inputType].accountInfo.account.currency})`, subWorkspace[inputType].accountInfo.account.id);
       }
 
       if (inputType === "transfer") {
-        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`);
-        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`);
+        ScrollToSelectItem(accountSelector.querySelector(".primary-col"), `${subWorkspace[inputType].fromAccountInfo.account.name} (${subWorkspace[inputType].fromAccountInfo.account.currency})`, subWorkspace[inputType].fromAccountInfo.account.id);
+        ScrollToSelectItem(accountSelector.querySelector(".secondary-col"), `${subWorkspace[inputType].toAccountInfo.account.name} (${subWorkspace[inputType].toAccountInfo.account.currency})`, subWorkspace[inputType].toAccountInfo.account.id);
       }
     };
   });
