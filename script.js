@@ -5047,6 +5047,8 @@ window.openWeatherSite = openWeatherSite;
 
 // history stacks
 let historyStack = [["home", "homeTitle", "Xiaoxin's Ledger App"]];
+let pageStackReturning = false;
+let pageStackDeparting = null;
 
 const accountTitleHeader = document.querySelector(".header-bar");
 const accountTitle = document.getElementById("app-title");
@@ -5099,6 +5101,19 @@ document.fonts.ready.then(fitAccountTitle);
 async function showPage(name, title = latestTitle, options = {}) {
   const t = translations[currentLang];
 
+  const listPage = document.getElementById("filtered-entries-page");
+  if (name === "filtered-entries" &&
+      document.getElementById("pages-wrapper").classList.contains("page-stack-layout") &&
+      listPage.classList.contains("stack-visible") &&
+      historyStack[historyStack.length - 1][0] !== name) {
+    const listIndex = findFilteredEntriesHistoryIndex();
+    if (listIndex !== -1) {
+      historyStack[listIndex] = [name, title, options, historyStack[listIndex][3]];
+      await renderFilteredEntriesPage(options);
+      return;
+    }
+  }
+
   if (name === "create" || name === "transaction") {
     const repoId = options.repoId || (name === "transaction"
       ? workspace.transactions[options.transactionId]?.[workspace.transactions[options.transactionId]?.inputType]?.repoId
@@ -5131,6 +5146,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   let target = null;
   let latest = null;
+  let pageWasAdded = false;
 
   vibrate(30); // milliseconds
 
@@ -5144,10 +5160,18 @@ async function showPage(name, title = latestTitle, options = {}) {
     latestPage = name;
     latestTitle = title;
     latestOptions = options;
+    pageWasAdded = true;
 
     // push a new history entry for this new page
     history.pushState({ page: latestPage }, "", location.href);
     historyStack.push([latestPage, latestTitle, options]); // add to the historyStack
+  } else if (name === "filtered-entries" || name === "transaction") {
+    const sameTransaction = name !== "transaction" ||
+      latestOptions?.transactionId === options.transactionId;
+    const focused = sameTransaction && historyStack[historyStack.length - 1][3];
+    latestTitle = title;
+    latestOptions = options;
+    historyStack[historyStack.length - 1] = [name, title, options, focused];
   }
 
   if (latestPage.includes("create")) { // when creating an entry
@@ -5201,6 +5225,8 @@ async function showPage(name, title = latestTitle, options = {}) {
   // show the page
   target.style.display = ["account-detail", "filtered-entries"].includes(latestPage) ? "flex" : "block";
   target.style.zIndex = historyStack.length;
+  syncPageStackLayout(target, pageWasAdded && !pageStackReturning);
+  pageStackReturning = false;
   
   // Page special handling
   if (latestPage.includes("transaction") || latestPage.includes("create")) {
@@ -5474,11 +5500,7 @@ async function showPage(name, title = latestTitle, options = {}) {
 
   } else if (latestPage === "filtered-entries") {
 
-    if (kanbanEntryGrouping.kanbanIndex !== options.kanbanIndex) {
-      kanbanEntryGrouping = { kanbanIndex: options.kanbanIndex, mode: "month", collapsed: new Set() };
-    }
     if (options.kanbanIndex == 0) {
-      // Special case: presetToday loads all entries up to today
       const filters = getDateRange('upToToday');
       const [, month, day] = filters.dateTo.split("-").map(Number);
       const todayLabel = currentLang === "zh"
@@ -5487,31 +5509,18 @@ async function showPage(name, title = latestTitle, options = {}) {
       document.getElementById("app-title").textContent = "";
       document.getElementById("return-btn").textContent = translations[currentLang].today + " " + todayLabel;
 
-      let filteredEntries = await getFilteredEntries(filters);
-
-      showFilteredEntries(filteredEntries, { today: true });
-
       document.getElementById("search-btn-headerbar").style.display = "block";
 
       const addBtn = document.getElementById("add-btn-headerbar");
       addBtn.style.display = "block";
 
       addBtn.onclick = () => showPage("create", "navTransaction");
-    } else {
-      if (options.kanbanIndex == 3) options.filters = getDateRange("upcoming");
-      let filteredEntries = await getFilteredEntries(options.filters);
-      console.log(options.filters)
-      showFilteredEntries(filteredEntries, { upcoming: options.kanbanIndex == 3 });
-
-      const [y, m] = options.filters.dateFrom.split("-");
-      currentMonthState.year = Number(y);
-      currentMonthState.month = Number(m);
     }
 
-    target.dataset.kanbanIndex = options.kanbanIndex;
-
+    await renderFilteredEntriesPage(options);
     attachEntryGestures(target, () => {
-      if (latestPage === "filtered-entries") return showPage("filtered-entries", latestTitle, latestOptions);
+      const index = findFilteredEntriesHistoryIndex();
+      if (index !== -1) return renderFilteredEntriesPage(historyStack[index][2]);
     }, (e, el) => {
       const kanbanIndex = Number(el.dataset.kanbanIndex);
       const scrollEl = findScrollEl(el);
@@ -5585,6 +5594,8 @@ async function goBack() {
   closeSelector();
 
   if (historyStack.length > 1) {
+    const pagesWrapper = document.getElementById("pages-wrapper");
+    const stackLayout = pagesWrapper.classList.contains("page-stack-layout");
     if (latestPage.includes("create")) { // when creating an entry
       const target = document.getElementById("transaction-page");
       target.style.transform = "translateX(110%)";
@@ -5592,14 +5603,18 @@ async function goBack() {
       const target = document.getElementById(latestPage + "-page");
       target.style.transform = "translateX(110%)";
     }
+    const currentTarget = getStackPageElement(latestPage);
+    if (stackLayout && !currentTarget?.dataset.pageSwipeDismissed) {
+      previewPageStackReturn(currentTarget, true);
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    pageStackDeparting = null;
+    if (currentTarget) delete currentTarget.dataset.pageSwipeDismissed;
     historyStack.pop(); // remove current page
 
     const [prevPage, prevTitle, prevOptions] = historyStack[historyStack.length - 1]; // get the previous entry
 
-    if (historyStack.length > 1) {
-      historyStack.pop(); // remove the previous page as well because it will be added later if it is not a base nav page
-    }
-
+    pageStackReturning = true;
     showPage(prevPage, prevTitle, prevOptions);
   }
 }
@@ -5612,6 +5627,34 @@ let currentMonthState = {
   year: null,
   month: null
 };
+
+function findFilteredEntriesHistoryIndex() {
+  for (let i = historyStack.length - 1; i >= 0; i--) {
+    if (historyStack[i][0] === "filtered-entries") return i;
+  }
+  return -1;
+}
+
+let filteredEntriesRenderVersion = 0;
+
+async function renderFilteredEntriesPage(options) {
+  const version = ++filteredEntriesRenderVersion;
+  if (kanbanEntryGrouping.kanbanIndex !== options.kanbanIndex) {
+    kanbanEntryGrouping = { kanbanIndex: options.kanbanIndex, mode: "month", collapsed: new Set() };
+  }
+  if (options.kanbanIndex == 3) options.filters = getDateRange("upcoming");
+  const filters = options.kanbanIndex == 0 ? getDateRange("upToToday") : options.filters;
+  const entries = await getFilteredEntries(filters);
+  if (version !== filteredEntriesRenderVersion) return;
+
+  if (options.kanbanIndex != 0) {
+    const [year, month] = options.filters.dateFrom.split("-");
+    currentMonthState.year = Number(year);
+    currentMonthState.month = Number(month);
+  }
+  document.getElementById("filtered-entries-page").dataset.kanbanIndex = options.kanbanIndex;
+  showFilteredEntries(entries, { today: options.kanbanIndex == 0, upcoming: options.kanbanIndex == 3 });
+}
 
 function loadPreviousRange(el) {
   const kanbanIndex = Number(el.dataset.kanbanIndex);
@@ -5632,6 +5675,9 @@ function loadNextRange(el) {
 }
 
 async function shiftMonth(delta) {
+  const index = findFilteredEntriesHistoryIndex();
+  if (index === -1) return;
+  const entry = historyStack[index];
   // Update current month state
   currentMonthState.month += delta;
 
@@ -5652,9 +5698,7 @@ async function shiftMonth(delta) {
   const dateTo = `${y}-${m}-${daysInMonth(y, currentMonthState.month)}`;
 
   // Fetch and display
-  latestOptions.filters = { ...latestOptions.filters, dateFrom, dateTo };
-  const filteredEntries = await getFilteredEntries(latestOptions.filters);
-  showFilteredEntries(filteredEntries);
+  entry[2].filters = { ...entry[2].filters, dateFrom, dateTo };
 
   function formatMonthTitle(year, month, currentLang) {
     if (currentLang === "zh") {
@@ -5666,12 +5710,18 @@ async function shiftMonth(delta) {
 
   // Update title
   const titleText = formatMonthTitle(currentMonthState.year, currentMonthState.month, currentLang);
-  latestTitle = titleText;
-  historyStack[historyStack.length - 1][1] = titleText;
-  document.getElementById("app-title").textContent = titleText;
+  entry[1] = titleText;
+  if (index === historyStack.length - 1) {
+    latestTitle = titleText;
+    document.getElementById("app-title").textContent = titleText;
+  }
+  await renderFilteredEntriesPage(entry[2]);
 }
 
 async function shiftYear(delta) {
+  const index = findFilteredEntriesHistoryIndex();
+  if (index === -1) return;
+  const entry = historyStack[index];
   currentMonthState.year += delta;
 
   // Build new date range
@@ -5680,9 +5730,7 @@ async function shiftYear(delta) {
   const dateTo   = `${y}-12-31`;
 
   // Fetch + render
-  latestOptions.filters = { ...latestOptions.filters, dateFrom, dateTo };
-  const filteredEntries = await getFilteredEntries(latestOptions.filters);
-  showFilteredEntries(filteredEntries);
+  entry[2].filters = { ...entry[2].filters, dateFrom, dateTo };
 
   function formatYearTitle(year, currentLang) {
   if (currentLang === "zh") {
@@ -5694,9 +5742,12 @@ async function shiftYear(delta) {
 
   // Update title
   const titleText = formatYearTitle(y, currentLang);
-  latestTitle = titleText;
-  historyStack[historyStack.length - 1][1] = titleText;
-  document.getElementById("app-title").textContent = titleText;
+  entry[1] = titleText;
+  if (index === historyStack.length - 1) {
+    latestTitle = titleText;
+    document.getElementById("app-title").textContent = titleText;
+  }
+  await renderFilteredEntriesPage(entry[2]);
 }
 
 function renderAlertCenter() {
@@ -9688,6 +9739,14 @@ function enablePageSwipe(pageEl) {
   const MAX_VERTICAL = 100;    // max vertical movement allowed for back swipe
 
   const onStart = e => {
+    const pagesWrapper = document.getElementById("pages-wrapper");
+    const activeRoute = historyStack[historyStack.length - 1]?.[0];
+    if (pagesWrapper.classList.contains("page-stack-layout") &&
+        pageEl !== getStackPageElement(activeRoute)) {
+      isDragging = false;
+      return;
+    }
+
     const t = e.touches[0];
     const x = t.clientX;
     const y = t.clientY;
@@ -9708,6 +9767,7 @@ function enablePageSwipe(pageEl) {
     dx = dy = 0;
     direction = null;
     isDragging = true;
+    document.body.style.setProperty("--active-pane-swipe-x", "0px");
     pageEl.style.transition = "none";
   };
 
@@ -9719,7 +9779,7 @@ function enablePageSwipe(pageEl) {
     dy = Math.abs(t.clientY - startY);
 
     // Not enough movement yet → don't decide
-    if (!direction && dx < LOCK_THRESHOLD && dy < LOCK_THRESHOLD) {
+    if (!direction && Math.abs(dx) < LOCK_THRESHOLD && dy < LOCK_THRESHOLD) {
       return;
     }
 
@@ -9737,6 +9797,9 @@ function enablePageSwipe(pageEl) {
     // Horizontal swipe
     if (dx > 0) {
       pageEl.style.transform = `translateX(${dx}px)`;
+      if (document.getElementById("pages-wrapper").classList.contains("page-stack-layout")) {
+        document.body.style.setProperty("--active-pane-swipe-x", `${dx}px`);
+      }
     }
   };
 
@@ -9744,14 +9807,20 @@ function enablePageSwipe(pageEl) {
     if (!isDragging) return;
     isDragging = false;
 
-    const threshold = window.innerWidth * 1 / 5;
+    const threshold = pageEl.clientWidth * 1 / 5;
     pageEl.style.transition = "transform 0.3s ease";
 
     if (dx > threshold && dy < MAX_VERTICAL) {
       pageEl.style.transform = "translateX(110%)";
+      document.body.style.setProperty("--active-pane-swipe-x", `${pageEl.clientWidth * 1.1}px`);
+      pageEl.dataset.pageSwipeDismissed = "true";
+      if (document.getElementById("pages-wrapper").classList.contains("page-stack-layout")) {
+        previewPageStackReturn(pageEl);
+      }
       setTimeout(() => onReturnButton(), 300);
     } else {
       pageEl.style.transform = "translateX(0)";
+      document.body.style.setProperty("--active-pane-swipe-x", "0px");
     }
   };
 
@@ -9776,11 +9845,163 @@ function disablePageSwipe(pageEl) {
   pageEl._swipeHandlers = null;
 }
 
+function getStackPageElement(pageName) {
+  const pageId = pageName.includes("create") ? "transaction-page" : `${pageName}-page`;
+  return document.getElementById(pageId);
+}
+
+function toggleFocusedPage() {
+  const entry = historyStack[historyStack.length - 1];
+  entry[3] = !entry[3];
+  syncPageStackLayout();
+}
+window.toggleFocusedPage = toggleFocusedPage;
+
+function updateFocusPageButton() {
+  const button = document.getElementById("focus-page-btn");
+  const focused = button.getAttribute("aria-pressed") === "true";
+  const label = focused
+    ? (currentLang === "zh" ? "恢复多页面视图" : "Restore multiple pages")
+    : (currentLang === "zh" ? "展开当前页面" : "Expand current page");
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  button.querySelector("path").setAttribute("d", focused
+    ? "M3 8h5V3m8 0v5h5M8 21v-5H3m18 0h-5v5"
+    : "M8 3H3v5M16 3h5v5M3 16v5h5m13-5v5h-5");
+}
+
+function previewPageStackReturn(page, moveHeader = false) {
+  if (historyStack.slice(0, -1).some(([name]) => getStackPageElement(name) === page)) return;
+  page.classList.remove("stack-entering");
+  pageStackDeparting = page;
+  pageStackDeparting.moveHeaderOnReturn = moveHeader;
+  syncPageStackLayout();
+}
+
+function syncPageStackLayout(enteringPage = null, animateEntry = false) {
+  const pagesWrapper = document.getElementById("pages-wrapper");
+  if (!pagesWrapper) return;
+
+  const maxVisiblePages = Math.min(4, Math.max(1, Math.floor(pagesWrapper.clientWidth / 360)));
+  const pageEntries = new Map();
+  const layoutStack = pageStackDeparting ? historyStack.slice(0, -1) : historyStack;
+  layoutStack.forEach(([pageName], historyIndex) => {
+    const element = getStackPageElement(pageName);
+    if (element) {
+      const entry = pageEntries.get(element);
+      if (entry) {
+        entry.lastIndex = historyIndex;
+        entry.pageName = pageName;
+      } else {
+        pageEntries.set(element, { pageName, element, firstIndex: historyIndex, lastIndex: historyIndex });
+      }
+    }
+  });
+
+  const visiblePages = [...pageEntries.values()]
+    .sort((a, b) => b.lastIndex - a.lastIndex)
+    .slice(0, maxVisiblePages)
+    .sort((a, b) => a.firstIndex - b.firstIndex);
+  const activeEntry = layoutStack[layoutStack.length - 1];
+  const focused = Boolean(activeEntry?.[3]);
+  if (focused && visiblePages.length > 1) {
+    const activeElement = getStackPageElement(activeEntry[0]);
+    visiblePages.splice(0, visiblePages.length, ...visiblePages.filter(({ element }) => element === activeElement));
+  }
+  const visibleElements = new Set(visiblePages.map(({ element }) => element));
+
+  const isStackLayout = visiblePages.length > 1 || !!pageStackDeparting || (focused && pageEntries.size > 1);
+  pagesWrapper.classList.toggle("page-stack-layout", isStackLayout);
+  document.body.classList.toggle("page-stack-layout", isStackLayout);
+
+  if (!pageStackDeparting) {
+    const focusButton = document.getElementById("focus-page-btn");
+    const canFocus = maxVisiblePages > 1 && pageEntries.size > 1;
+    focusButton.style.display = focused || canFocus ? "flex" : "none";
+    focusButton.setAttribute("aria-pressed", String(focused));
+    updateFocusPageButton();
+  }
+
+  if (!isStackLayout) {
+    for (const page of pagesWrapper.querySelectorAll(".stack-positioned")) {
+      page.classList.remove("stack-positioned", "stack-visible", "stack-hidden");
+      page.style.removeProperty("left");
+      page.style.removeProperty("right");
+      page.style.removeProperty("width");
+      page.style.removeProperty("height");
+      page.style.removeProperty("transition");
+      page.style.removeProperty("z-index");
+      page.style.removeProperty("transform");
+      if (page === visiblePages[visiblePages.length - 1]?.element) {
+        page.style.transform = "translateX(0%)";
+      }
+    }
+    document.body.style.removeProperty("--active-pane-left");
+    document.body.style.removeProperty("--active-pane-width");
+    document.body.style.removeProperty("--active-pane-swipe-x");
+    document.body.style.removeProperty("--header-pane-left");
+    document.body.style.removeProperty("--header-pane-width");
+    return;
+  }
+
+  const activePage = getStackPageElement(layoutStack[layoutStack.length - 1]?.[0]);
+  const activeIndex = visiblePages.findIndex(({ element }) => element === activePage);
+  const activePaneIndex = activeIndex < 0 ? visiblePages.length - 1 : activeIndex;
+  if (!pageStackDeparting) {
+    document.body.style.setProperty("--active-pane-left", `${activePaneIndex * 100 / visiblePages.length}%`);
+    document.body.style.setProperty("--active-pane-width", `${100 / visiblePages.length}%`);
+    document.body.style.removeProperty("--header-pane-left");
+    document.body.style.removeProperty("--header-pane-width");
+  } else if (pageStackDeparting.moveHeaderOnReturn) {
+    document.body.style.setProperty("--header-pane-left", `${activePaneIndex * 100 / visiblePages.length}%`);
+    document.body.style.setProperty("--header-pane-width", `${100 / visiblePages.length}%`);
+  }
+
+  for (const page of pagesWrapper.querySelectorAll(".base-page, .page")) {
+    page.classList.add("stack-positioned");
+    const visible = visibleElements.has(page) || page === pageStackDeparting;
+    page.classList.toggle("stack-hidden", !visible);
+    page.classList.toggle("stack-visible", visible);
+  }
+  if (pageStackDeparting) {
+    pageStackDeparting.style.zIndex = String(visiblePages.length + 2);
+  }
+
+  visiblePages.forEach(({ element }, index) => {
+    element.style.left = `${index * 100 / visiblePages.length}%`;
+    element.style.right = "auto";
+    element.style.width = `${100 / visiblePages.length}%`;
+    element.style.height = "calc(100% - 3.5rem - var(--banner-height))";
+    element.style.zIndex = String(element === activePage ? visiblePages.length + 1 : index + 1);
+    element.style.transition = "left 0.3s ease, width 0.3s ease, transform 0.3s ease";
+    element.style.transform = "translateX(0)";
+
+    if (element === enteringPage && animateEntry) {
+      element.classList.remove("stack-entering");
+      void element.offsetWidth;
+      element.classList.add("stack-entering");
+      element.addEventListener("animationend", event => {
+        if (event.target === element && event.animationName === "stack-page-enter") {
+          element.classList.remove("stack-entering");
+        }
+      }, { once: true });
+    }
+  });
+  if (!pageStackDeparting) {
+    document.body.style.setProperty("--active-pane-swipe-x", "0px");
+  }
+}
+
+const pageStackResizeObserver = new ResizeObserver(() => syncPageStackLayout());
+pageStackResizeObserver.observe(document.getElementById("pages-wrapper"));
+window.addEventListener("resize", () => syncPageStackLayout());
+
 // --- Language Switcher ---
 async function setLanguage(lang, sync = true) {
   currentLang = lang;
   const t = translations[lang];
   updateExchangeRateStatus();
+  updateFocusPageButton();
 
   // Login text
   document.getElementById("return-btn").textContent = t.back;

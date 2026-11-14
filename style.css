@@ -6883,3 +6883,42 @@ button.secondary {
   box-shadow: var(--shadow);
   overflow-wrap: anywhere;
 }
+
+.pages-wrapper.page-stack-layout .stack-hidden {
+  display: none !important;
+}
+
+.pages-wrapper.page-stack-layout .stack-visible {
+  transition: left 0.3s ease, width 0.3s ease, transform 0.3s ease;
+}
+
+.pages-wrapper.page-stack-layout .stack-visible.stack-entering {
+  animation: stack-page-enter 0.3s ease both;
+}
+
+@keyframes stack-page-enter {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.pages-wrapper.page-stack-layout .stack-visible > .scroll {
+  width: 100%;
+}
+
+body.page-stack-layout .header-bar {
+  left: var(--header-pane-left, var(--active-pane-left));
+  width: var(--header-pane-width, var(--active-pane-width));
+  transform: translateX(var(--active-pane-swipe-x, 0px));
+  transition: left 0.3s ease, width 0.3s ease, transform 0.3s ease;
+}
+
+body.page-stack-layout .transaction-nav {
+  left: var(--active-pane-left);
+  width: var(--active-pane-width);
+  transform: translateX(var(--active-pane-swipe-x, 0px));
+  transition: left 0.3s ease, width 0.3s ease, transform 0.3s ease;
+}
