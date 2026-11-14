@@ -4994,13 +4994,6 @@ textarea:focus-visible {
   white-space: normal;
 }
 
-@media (min-width: 700px) {
-  #home-page .scroll {
-    max-width: 900px;
-    margin-inline: auto;
-  }
-}
-
 body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: var(--bg);
@@ -6022,13 +6015,6 @@ button.secondary {
 
 #accounts-page .due-warning {
   margin-left: 0;
-}
-
-@media (min-width: 700px) {
-  #accounts-page .scroll {
-    max-width: 900px;
-    margin-inline: auto;
-  }
 }
 
 #home-overview-title,
